@@ -74,7 +74,11 @@ main {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  /* auto-fit, not auto-fill: with fewer games than columns (today, just
+     one), auto-fill leaves phantom empty columns and the real card stays
+     stuck at its minimum width instead of filling the row — same fix
+     already in place on the portfolio's own .card-grid. */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
 }
 
@@ -104,6 +108,21 @@ main {
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   opacity: 0.55;
   transition: opacity 0.15s ease;
+}
+
+/* A card that's nothing but a game's own og-card image — no separate
+   icon/title/description because the image already carries them (same
+   pattern as the portfolio's Embergale entry in its Playground). */
+.card--image-only {
+  padding: 0;
+}
+
+.card-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
 }
 
 .card-icon {
