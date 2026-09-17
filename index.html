@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>F1 Racer — ottobit arcade</title>
   <link rel="stylesheet" href="../../assets/css/style.css" />
   <link rel="stylesheet" href="style.css" />
@@ -19,7 +19,18 @@
     </div>
   </div>
 
-  <div id="hint">WASD / frecce per guidare — time trial, nessun avversario in questa versione</div>
+  <div id="hint">WASD / frecce per guidare — time trial, le altre auto non contano il tempo</div>
+
+  <div id="touch-controls">
+    <div class="touch-group touch-group--steer">
+      <button id="btn-left" class="touch-btn" aria-label="Sterza a sinistra">◀</button>
+      <button id="btn-right" class="touch-btn" aria-label="Sterza a destra">▶</button>
+    </div>
+    <div class="touch-group touch-group--throttle">
+      <button id="btn-brake" class="touch-btn" aria-label="Freno">▼</button>
+      <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">▲</button>
+    </div>
+  </div>
 
   <script type="module" src="main.js"></script>
 </body>
