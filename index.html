@@ -5,14 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>F1 Racer — ottobit arcade</title>
   <link rel="stylesheet" href="../../assets/css/style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1>F1 Racer</h1>
-    <p>In sviluppo — meccaniche ancora da definire.</p>
-  </header>
-  <footer>
-    <a href="../../">← torna all'arcade</a>
-  </footer>
+  <div id="app"></div>
+
+  <div id="hud">
+    <a class="back-link" href="../../">← arcade</a>
+    <div class="stats">
+      <div id="lap" class="lap">Giro 0</div>
+      <div id="time" class="time">Tempo 0:00.00</div>
+      <div id="best" class="best">Migliore --:--.--</div>
+    </div>
+  </div>
+
+  <div id="hint">WASD / frecce per guidare — time trial, nessun avversario in questa versione</div>
+
+  <script type="module" src="main.js"></script>
 </body>
 </html>
