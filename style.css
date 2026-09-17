@@ -66,51 +66,52 @@ canvas {
   display: none;
 }
 
-/* Touch controls: only on devices with a coarse pointer and no hover
-   (phones/tablets), so desktop keeps keyboard-only, uncluttered UI. */
-@media (hover: none) and (pointer: coarse) {
-  #hint {
-    display: none;
-  }
+/* Touch controls: shown only when JS (see index.html) detects real touch
+   support and adds .touch to <html>. Detecting it in JS instead of relying
+   purely on the (hover: none)/(pointer: coarse) media query, because that
+   query is reported inconsistently by some mobile browsers and was hiding
+   the buttons on real devices that clearly are touchscreens. */
+html.touch #hint {
+  display: none;
+}
 
-  #touch-controls {
-    display: flex;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    justify-content: space-between;
-    align-items: flex-end;
-    padding: 0 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
-    touch-action: none;
-  }
+html.touch #touch-controls {
+  display: flex;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  touch-action: none;
+}
 
-  .touch-group {
-    display: flex;
-    gap: 0.75rem;
-  }
+.touch-group {
+  display: flex;
+  gap: 1rem;
+}
 
-  .touch-btn {
-    width: 3.5rem;
-    height: 3.5rem;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    background: rgba(20, 22, 28, 0.55);
-    color: var(--text, #e7e9ee);
-    font-size: 1.3rem;
-    line-height: 1;
-    -webkit-user-select: none;
-    user-select: none;
-    touch-action: none;
-  }
+.touch-btn {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(20, 22, 28, 0.55);
+  color: var(--text, #e7e9ee);
+  font-size: 1.8rem;
+  line-height: 1;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
 
-  .touch-btn:active {
-    background: rgba(225, 6, 0, 0.55);
-  }
+.touch-btn:active {
+  background: rgba(225, 6, 0, 0.55);
+}
 
-  .touch-btn--big {
-    width: 4.25rem;
-    height: 4.25rem;
-    font-size: 1.6rem;
-  }
+.touch-btn--big {
+  width: 6rem;
+  height: 6rem;
+  font-size: 2.2rem;
 }

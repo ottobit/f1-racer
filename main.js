@@ -36,6 +36,16 @@ const AI = {
   lookahead: 10, // centerline samples ahead to steer toward
 };
 
+// Collisions: running wide costs grip (grass), hitting the wall costs most
+// of your speed, and cars bumping each other lose speed and get pushed
+// apart rather than overlapping. All tuned for arcade feel, not real physics.
+const GRASS_LIMIT = TRACK_WIDTH / 2; // asphalt edge
+const WALL_LIMIT = TRACK_WIDTH / 2 + 1.5; // just inside the barrier line
+const GRASS_MAX_DECEL = 35; // units/s^2 of extra drag at the wall edge
+const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
+const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
+const CAR_BUMP_SPEED_FACTOR = 0.7; // speed kept by both cars on contact
+
 // --- Track centerline sampling -------------------------------------------
 
 const CENTERLINE_SAMPLES = 360;
@@ -55,20 +65,24 @@ function sideNormal(p) {
   return { x: p.tz, z: -p.tx };
 }
 
-function closestProgress(x, z) {
+// Nearest centerline sample to (x, z): its index (for progress/lookahead),
+// its own coordinates, and the straight-line distance to it (used as a
+// stand-in for lateral offset from the track for the boundary collision).
+function nearestTrackInfo(x, z) {
   let bestIdx = 0;
-  let bestDist = Infinity;
+  let bestDistSq = Infinity;
   for (let i = 0; i < centerline.length; i++) {
     const p = centerline[i];
     const dx = p.x - x;
     const dz = p.z - z;
-    const dist = dx * dx + dz * dz;
-    if (dist < bestDist) {
-      bestDist = dist;
+    const distSq = dx * dx + dz * dz;
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq;
       bestIdx = i;
     }
   }
-  return bestIdx;
+  const p = centerline[bestIdx];
+  return { idx: bestIdx, x: p.x, z: p.z, dist: Math.sqrt(bestDistSq) };
 }
 
 // --- Scene setup -----------------------------------------------------------
@@ -407,9 +421,56 @@ function applyToMesh(model, x, z, heading, speed, dt) {
   for (const wheel of model.wheels) wheel.rotation.x -= spin;
 }
 
+// Keeps a car (player or AI) on the track: grass beyond the asphalt bleeds
+// speed off faster (lost grip), and the wall beyond that stops it hard and
+// pushes it back in-bounds, instead of letting it drive through scenery.
+function applyTrackBoundary(car, dt, info) {
+  info = info || nearestTrackInfo(car.x, car.z);
+  if (info.dist > WALL_LIMIT) {
+    const inv = info.dist > 0 ? 1 / info.dist : 0;
+    const nx = (car.x - info.x) * inv;
+    const nz = (car.z - info.z) * inv;
+    car.x = info.x + nx * WALL_LIMIT;
+    car.z = info.z + nz * WALL_LIMIT;
+    car.speed *= WALL_BOUNCE_SPEED_FACTOR;
+  } else if (info.dist > GRASS_LIMIT) {
+    const t = (info.dist - GRASS_LIMIT) / (WALL_LIMIT - GRASS_LIMIT);
+    const decel = GRASS_MAX_DECEL * t * dt;
+    if (car.speed > 0) car.speed = Math.max(0, car.speed - decel);
+    else if (car.speed < 0) car.speed = Math.min(0, car.speed + decel);
+  }
+  return info;
+}
+
+// Cheap circle-vs-circle bump: push overlapping cars apart and dock both
+// some speed, so contact costs you something instead of cars overlapping.
+function resolveCarCollisions(cars) {
+  for (let i = 0; i < cars.length; i++) {
+    for (let j = i + 1; j < cars.length; j++) {
+      const a = cars[i];
+      const b = cars[j];
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const dist = Math.hypot(dx, dz) || 0.0001;
+      const minDist = CAR_RADIUS * 2;
+      if (dist < minDist) {
+        const overlap = minDist - dist;
+        const nx = dx / dist;
+        const nz = dz / dist;
+        a.x -= nx * overlap * 0.5;
+        a.z -= nz * overlap * 0.5;
+        b.x += nx * overlap * 0.5;
+        b.z += nz * overlap * 0.5;
+        a.speed *= CAR_BUMP_SPEED_FACTOR;
+        b.speed *= CAR_BUMP_SPEED_FACTOR;
+      }
+    }
+  }
+}
+
 function updateAiCar(car, dt) {
-  const idx = closestProgress(car.x, car.z);
-  const target = centerline[(idx + AI.lookahead) % centerline.length];
+  const info = nearestTrackInfo(car.x, car.z);
+  const target = centerline[(info.idx + AI.lookahead) % centerline.length];
   const toTarget = Math.atan2(target.x - car.x, target.z - car.z);
   let err = toTarget - car.heading;
   while (err > Math.PI) err -= 2 * Math.PI;
@@ -422,8 +483,7 @@ function updateAiCar(car, dt) {
 
   car.x += Math.sin(car.heading) * car.speed * dt;
   car.z += Math.cos(car.heading) * car.speed * dt;
-
-  applyToMesh(car, car.x, car.z, car.heading, car.speed, dt);
+  applyTrackBoundary(car, dt);
 }
 
 function update(dt) {
@@ -456,7 +516,8 @@ function update(dt) {
   state.z += Math.cos(state.heading) * state.speed * dt;
 
   // Lap detection: watch progress wrap around the start/finish line
-  const progress = closestProgress(state.x, state.z) / centerline.length;
+  const info = nearestTrackInfo(state.x, state.z);
+  const progress = info.idx / centerline.length;
   if (state.prevProgress > 0.85 && progress < 0.15) {
     const now = performance.now();
     const lapTime = now - state.lapStartTime;
@@ -471,8 +532,12 @@ function update(dt) {
   state.prevProgress = progress;
   state.currentLapTime = performance.now() - state.lapStartTime;
 
-  applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt);
+  applyTrackBoundary(state, dt, info);
   for (const car of aiCars) updateAiCar(car, dt);
+  resolveCarCollisions([state, ...aiCars]);
+
+  applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt);
+  for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, car.speed, dt);
 
   // Chase camera: behind and above the car, looking slightly ahead of it
   const camDistance = 9;
