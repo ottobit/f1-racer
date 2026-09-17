@@ -7,7 +7,6 @@
   --accent: #8b5cf6; /* arcade violet — site chrome, not tied to any one game */
   --accent-2: #22d3ee; /* cyan, used sparingly for the hover glow gradient */
   --accent-soft: rgba(139, 92, 246, 0.14);
-  --display-font: "Chakra Petch", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 * {
@@ -37,7 +36,6 @@ header {
 
 .wordmark {
   margin: 0;
-  font-family: var(--display-font);
   font-weight: 700;
   font-size: 2.1rem;
   letter-spacing: 0.04em;
@@ -143,7 +141,6 @@ main {
   display: flex;
   align-items: center;
   gap: 0.4em;
-  font-family: var(--display-font);
   font-weight: 600;
   font-size: 1.15rem;
   letter-spacing: 0.01em;
