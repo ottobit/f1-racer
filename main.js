@@ -477,6 +477,50 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
 
 // --- State -------------------------------------------------------------
 
+// --- Ghost lap ---------------------------------------------------------
+// A translucent replay of the player's own best lap on this circuit,
+// persisted in localStorage so it's already there next time this circuit
+// loads (mirrors the "race your own best lap" ghost in modern F1 games).
+const GHOST_STORAGE_KEY = "f1racer-ghost-v1";
+const GHOST_SAMPLE_INTERVAL_MS = 100;
+
+function loadGhost(circuitId) {
+  try {
+    const raw = localStorage.getItem(GHOST_STORAGE_KEY);
+    const all = raw ? JSON.parse(raw) : null;
+    return all && all[circuitId] ? all[circuitId] : null;
+  } catch (e) {
+    return null; // corrupt or inaccessible localStorage: just start without a ghost
+  }
+}
+
+function saveGhost(circuitId, ghost) {
+  try {
+    const raw = localStorage.getItem(GHOST_STORAGE_KEY);
+    const all = raw ? JSON.parse(raw) : {};
+    all[circuitId] = ghost;
+    localStorage.setItem(GHOST_STORAGE_KEY, JSON.stringify(all));
+  } catch (e) {
+    // Private browsing / storage disabled: the ghost won't persist across
+    // reloads, which is a reasonable degradation.
+  }
+}
+
+let ghostLap = loadGhost(circuit.id); // { lapTimeMs, samples: [{t, x, z, heading}] } | null
+let currentLapSamples = [];
+let lastGhostSampleT = -Infinity;
+
+const ghostCar = buildCar(0xffffff);
+ghostCar.group.visible = false;
+ghostCar.group.traverse((obj) => {
+  if (obj.isMesh) {
+    obj.material.transparent = true;
+    obj.material.opacity = 0.35;
+    obj.material.depthWrite = false;
+  }
+});
+scene.add(ghostCar.group);
+
 // Race position/lap counting uses `totalProgress`, a monotonic "laps
 // travelled since the start" accumulator, rather than each car's raw
 // track-progress fraction. Raw progress depends on where a car started
@@ -1025,10 +1069,48 @@ function update(dt) {
     const lapTime = now - state.lapStartTime;
     if (state.bestLapTime === null || lapTime < state.bestLapTime) {
       state.bestLapTime = lapTime;
+      // Only a lap that just beat the record becomes the new ghost — the
+      // buffer being flushed here is the lap that just ended, sampled as
+      // it happened (see below), not a lap replayed after the fact.
+      if (currentLapSamples.length > 1) {
+        ghostLap = { lapTimeMs: lapTime, samples: currentLapSamples };
+        saveGhost(circuit.id, ghostLap);
+      }
     }
     state.lapStartTime = now;
+    currentLapSamples = [];
+    lastGhostSampleT = -Infinity;
   }
   state.currentLapTime = now - state.lapStartTime;
+
+  if (state.currentLapTime - lastGhostSampleT >= GHOST_SAMPLE_INTERVAL_MS) {
+    currentLapSamples.push({ t: state.currentLapTime, x: state.x, z: state.z, heading: state.heading });
+    lastGhostSampleT = state.currentLapTime;
+  }
+
+  // Ghost playback: replay the best-lap samples on a loop keyed to the
+  // current lap's own clock, so the ghost always shows where that lap was
+  // at this same moment in time.
+  if (ghostLap && ghostLap.samples.length > 1) {
+    const samples = ghostLap.samples;
+    const t = state.currentLapTime % ghostLap.lapTimeMs;
+    let i = 0;
+    while (i < samples.length - 1 && samples[i + 1].t < t) i++;
+    const a = samples[i];
+    const b = samples[Math.min(i + 1, samples.length - 1)];
+    const span = b.t - a.t || 1;
+    const frac = Math.min(Math.max((t - a.t) / span, 0), 1);
+    const gx = a.x + (b.x - a.x) * frac;
+    const gz = a.z + (b.z - a.z) * frac;
+    let dh = b.heading - a.heading;
+    while (dh > Math.PI) dh -= Math.PI * 2;
+    while (dh < -Math.PI) dh += Math.PI * 2;
+    const gheading = a.heading + dh * frac;
+    applyToMesh(ghostCar, gx, gz, gheading, 0, dt);
+    ghostCar.group.visible = true;
+  } else {
+    ghostCar.group.visible = false;
+  }
 
   if (raceState === "racing" && state.totalProgress >= LAPS_PER_RACE) {
     finishRace();
