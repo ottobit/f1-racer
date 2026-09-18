@@ -116,6 +116,33 @@ canvas {
   pointer-events: none;
 }
 
+/* Real F1 broadcasts flash a "TRACK LIMITS - TIME PENALTY" banner; this is
+   the same idea shrunk to fit a HUD that's deliberately kept out of the
+   way of the car (see the harmonisation pass earlier in the project) — a
+   brief, small notice instead of a screen-filling one. Shown for ~2.5s via
+   the .visible class (toggled in main.js) right after a penalized lap. */
+#penalty-notice {
+  position: fixed;
+  top: 4.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(-0.4rem);
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  background: rgba(225, 6, 0, 0.85);
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#penalty-notice.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 /* Wide bar across the very top of the screen, clear of the horizon at any
    viewport shape (see the comment by #speedbar in race.html for why it
    moved here from a small corner badge): shift lights, a horizontal speed
