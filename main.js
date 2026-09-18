@@ -394,6 +394,9 @@ bindHoldButton("btn-brake", "back");
 const lapEl = document.getElementById("lap");
 const timeEl = document.getElementById("time");
 const bestEl = document.getElementById("best");
+const speedValueEl = document.getElementById("speed-value");
+
+const KMH_PER_UNIT = 3.6; // treat CAR.maxSpeed's units as m/s for display
 
 function formatTime(ms) {
   const totalSeconds = ms / 1000;
@@ -408,6 +411,7 @@ function updateHud() {
   bestEl.textContent = state.bestLapTime
     ? `Migliore ${formatTime(state.bestLapTime)}`
     : "Migliore --:--.--";
+  speedValueEl.textContent = Math.round(Math.abs(state.speed) * KMH_PER_UNIT);
 }
 
 // --- Main loop -------------------------------------------------------------
@@ -430,9 +434,21 @@ function applyTrackBoundary(car, dt, info) {
     const inv = info.dist > 0 ? 1 / info.dist : 0;
     const nx = (car.x - info.x) * inv;
     const nz = (car.z - info.z) * inv;
-    car.x = info.x + nx * WALL_LIMIT;
-    car.z = info.z + nz * WALL_LIMIT;
+    // Pull back inside the limit with a little clearance, not pinned
+    // exactly on it — sitting exactly at the boundary re-triggers this
+    // every single frame, which used to keep the car permanently glued
+    // to the wall at near-zero speed even while still accelerating.
+    car.x = info.x + nx * (WALL_LIMIT - 0.3);
+    car.z = info.z + nz * (WALL_LIMIT - 0.3);
     car.speed *= WALL_BOUNCE_SPEED_FACTOR;
+    // Turn the car back toward the track instead of leaving it aimed at
+    // the wall — otherwise holding the throttle just drives it straight
+    // back into the same spot next frame.
+    const inward = Math.atan2(-nx, -nz);
+    let diff = inward - car.heading;
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+    car.heading += diff * 0.6;
   } else if (info.dist > GRASS_LIMIT) {
     const t = (info.dist - GRASS_LIMIT) / (WALL_LIMIT - GRASS_LIMIT);
     const decel = GRASS_MAX_DECEL * t * dt;
@@ -554,6 +570,13 @@ function update(dt) {
     state.z + Math.cos(state.heading) * 4
   );
   camera.lookAt(lookTarget);
+
+  // Widening the FOV with speed is a cheap, common trick for a felt sense
+  // of acceleration — the world seems to rush past faster at the edges.
+  const speedFov = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
+  const targetFov = 58 + speedFov * 12;
+  camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 4);
+  camera.updateProjectionMatrix();
 
   updateHud();
 }
