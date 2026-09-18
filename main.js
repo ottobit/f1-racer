@@ -76,6 +76,35 @@ for (let i = 0; i < CENTERLINE_SAMPLES; i++) {
   centerline.push({ x: p.x, z: p.z, tx: tan.x, tz: tan.z });
 }
 
+// --- Minimap geometry ------------------------------------------------------
+// The track never moves, so the world-to-minimap mapping (scale + offset
+// to fit the circuit's bounding box into the canvas, preserving its aspect
+// ratio) is worked out once here rather than every frame.
+const MINIMAP_CANVAS_SIZE = 130;
+const MINIMAP_PADDING = 10;
+let minimapScale = 1;
+let minimapOffsetX = 0;
+let minimapOffsetZ = 0;
+{
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const p of centerline) {
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minZ = Math.min(minZ, p.z);
+    maxZ = Math.max(maxZ, p.z);
+  }
+  const spanX = maxX - minX;
+  const spanZ = maxZ - minZ;
+  const innerSize = MINIMAP_CANVAS_SIZE - MINIMAP_PADDING * 2;
+  minimapScale = innerSize / Math.max(spanX, spanZ);
+  minimapOffsetX = MINIMAP_PADDING + (innerSize - spanX * minimapScale) / 2 - minX * minimapScale;
+  minimapOffsetZ = MINIMAP_PADDING + (innerSize - spanZ * minimapScale) / 2 - minZ * minimapScale;
+}
+function minimapPoint(x, z) {
+  return { x: x * minimapScale + minimapOffsetX, y: z * minimapScale + minimapOffsetZ };
+}
+const minimapTrackPoints = centerline.map((p) => minimapPoint(p.x, p.z));
+
 function headingOf(p) {
   return Math.atan2(p.tx, p.tz);
 }
@@ -465,6 +494,7 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
   return {
     ...model,
     driverId: driver.id,
+    color: driver.color,
     x: pos.x,
     z: pos.z,
     heading: pos.heading,
@@ -715,6 +745,7 @@ const speedValueEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearValueEl = document.getElementById("gear-value");
 const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
+const minimapCtx = document.getElementById("minimap").getContext("2d");
 const GAUGE_MAX_KMH = 300; // bar reads full at a realistic F1 top speed
 let lastGearLabel = null;
 let gearFlashTimeout = null;
@@ -728,6 +759,46 @@ function formatTime(ms) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = (totalSeconds % 60).toFixed(2).padStart(5, "0");
   return `${minutes}:${seconds}`;
+}
+
+// Redraws the top-down circuit trace and every car's live dot. The track
+// outline itself never changes, so only its points are precomputed; the
+// dots are the only thing recomputed each call.
+function drawMinimap() {
+  const ctx = minimapCtx;
+  ctx.clearRect(0, 0, MINIMAP_CANVAS_SIZE, MINIMAP_CANVAS_SIZE);
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  minimapTrackPoints.forEach((p, i) => {
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  });
+  ctx.closePath();
+  ctx.stroke();
+
+  const drawDot = (x, z, fillStyle, radius) => {
+    const p = minimapPoint(x, z);
+    ctx.fillStyle = fillStyle;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  for (const car of aiCars) {
+    drawDot(car.x, car.z, `#${car.color.toString(16).padStart(6, "0")}`, 2.5);
+  }
+  // Drawn last (and outlined) so the player's own dot never gets buried
+  // under an AI one when they're close together on track.
+  const playerPoint = minimapPoint(state.x, state.z);
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(playerPoint.x, playerPoint.y, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
 }
 
 // Ranks all three cars by race progress (see `advanceProgress`), most
@@ -779,6 +850,7 @@ function updateHud() {
   shiftLedEls.forEach((led, i) => led.classList.toggle("is-lit", i < litCount));
 
   updateEngineSound(Math.abs(state.speed) / CAR.maxSpeed, rpmRatio);
+  drawMinimap();
 }
 
 // --- Main loop -------------------------------------------------------------

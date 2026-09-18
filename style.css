@@ -116,6 +116,20 @@ canvas {
   pointer-events: none;
 }
 
+/* Small top-down circuit trace. Sits in the flow of #hud-row next to the
+   stats panel (not a fixed overlay) so it wraps along with the rest of
+   the HUD instead of ever sitting on top of it on a narrow viewport. */
+#minimap {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  background: rgba(11, 12, 17, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  flex-shrink: 0;
+}
+
 /* Wide bar across the very top of the screen, clear of the horizon at any
    viewport shape (see the comment by #speedbar in race.html for why it
    moved here from a small corner badge): shift lights, a horizontal speed
