@@ -40,9 +40,22 @@ const CAR = {
 };
 const CAR_SCALE = 0.55;
 
+// AI difficulty: chosen on the circuit menu (menu.js), carried here as a
+// query param, scaling how fast and how hard the rivals accelerate. Turn
+// rate is left alone — they already steer within track limits regardless
+// of difficulty, so a harder AI should out-pace you, not out-corner you
+// unrealistically.
+const DIFFICULTY_PRESETS = {
+  facile: { speedMul: 0.88, accelMul: 0.85 },
+  normale: { speedMul: 1, accelMul: 1 },
+  difficile: { speedMul: 1.1, accelMul: 1.12 },
+};
+const difficulty = new URLSearchParams(location.search).get("difficulty");
+const diffPreset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.normale;
+
 const AI = {
-  maxSpeed: 71,
-  accel: 41,
+  maxSpeed: 71 * diffPreset.speedMul,
+  accel: 41 * diffPreset.accelMul,
   turnRate: 2.1,
   lookahead: 10, // centerline samples ahead to steer toward
 };
