@@ -360,9 +360,13 @@ function gridSlot(row, lane) {
   };
 }
 
+// A real F1 grid is paired, not single-file: two cars side by side per row,
+// each row staggered back from the one in front, sides alternating (odd
+// positions on one side, even on the other) — not a zig-zag of one car
+// per row.
 const AI_GRID_SLOTS = [
-  { row: 1, lane: -1 }, // P2, just behind and left of pole
-  { row: 2, lane: 1 }, // P3, one more row back, right side
+  { row: 0, lane: 1 }, // P2, alongside pole, opposite side
+  { row: 1, lane: -1 }, // P3, one row back, same side as pole
 ];
 const aiCars = AI_DRIVERS.map((driver, i) => {
   const model = buildCar(driver.color);
@@ -392,11 +396,11 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
 // so comparing raw fractions directly would unfairly credit whoever
 // started closer to the line. Accumulating deltas since each car's own
 // start makes lap count and race position fair regardless of start offset.
-const start = centerline[0];
+const start = gridSlot(0, -1); // pole position, left side of the front row
 const state = {
   x: start.x,
   z: start.z,
-  heading: headingOf(start),
+  heading: gridHeading,
   speed: 0,
   lap: 0,
   lapStartTime: performance.now(),
@@ -744,7 +748,11 @@ function update(dt) {
   const keyboardSteer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   const steerAmount = touchSteer !== 0 ? touchSteer : keyboardSteer;
   if (Math.abs(state.speed) > 0.05 && steerAmount !== 0) {
-    state.heading += turnRate * dt * steerSign * steerAmount;
+    // steerAmount is positive for "right" (right arrow, or a drag to the
+    // right half of the wheel) — heading decreases for a right turn, which
+    // got flipped by mistake when the wheel became analog. That's what
+    // made the car turn opposite to the input.
+    state.heading -= turnRate * dt * steerSign * steerAmount;
   }
 
   // Integrate position (matches the heading convention used by the track)

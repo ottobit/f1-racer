@@ -95,10 +95,6 @@
   <div id="countdown-overlay" hidden></div>
 
   <div id="touch-controls">
-    <div class="touch-group touch-group--throttle">
-      <button id="btn-brake" class="touch-btn" aria-label="Freno">▼</button>
-      <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">▲</button>
-    </div>
     <div id="wheel-control" class="touch-group touch-group--steer" role="slider" aria-label="Sterzo">
       <svg viewBox="0 0 140 140" aria-hidden="true">
         <defs>
@@ -132,6 +128,10 @@
         <circle cx="70" cy="70" r="18" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="1" />
         <circle cx="65" cy="64" r="5" fill="rgba(255,255,255,0.25)" />
       </svg>
+    </div>
+    <div class="touch-group touch-group--throttle">
+      <button id="btn-brake" class="touch-btn" aria-label="Freno">▼</button>
+      <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">▲</button>
     </div>
   </div>
 
