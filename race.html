@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" class="race">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -17,7 +17,7 @@
   <meta name="twitter:description" content="Time trial 3D su circuito misto, con due auto sulla pista. Giocabile subito nel browser." />
   <meta name="twitter:image" content="https://ottobit.github.io/portfolio-arcade/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="../../assets/css/style.css" />
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css?v=13" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -97,15 +97,39 @@
       <button id="btn-brake" class="touch-btn" aria-label="Freno">▼</button>
       <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">▲</button>
     </div>
-    <div id="wheel-control" class="touch-group touch-group--steer">
+    <div id="wheel-control" class="touch-group touch-group--steer" role="slider" aria-label="Sterzo">
       <svg viewBox="0 0 140 140" aria-hidden="true">
+        <defs>
+          <radialGradient id="wheel-rim-gradient" cx="50%" cy="32%" r="80%">
+            <stop offset="0%" stop-color="#33363f" />
+            <stop offset="100%" stop-color="#0e0f14" />
+          </radialGradient>
+          <linearGradient id="wheel-hub-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#ff3226" />
+            <stop offset="100%" stop-color="#a80700" />
+          </linearGradient>
+          <pattern id="wheel-grip" width="5" height="5" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+            <line x1="0" y1="0" x2="0" y2="5" stroke="rgba(255,255,255,0.07)" stroke-width="1.6" />
+          </pattern>
+          <clipPath id="wheel-rim-clip">
+            <path d="M20,68 A50,50 0 1 1 120,68 L120,96 A12,12 0 0 1 108,108 L32,108 A12,12 0 0 1 20,96 Z" />
+          </clipPath>
+        </defs>
+
         <path d="M20,68 A50,50 0 1 1 120,68 L120,96 A12,12 0 0 1 108,108 L32,108 A12,12 0 0 1 20,96 Z"
-          fill="rgba(20,22,28,0.85)" stroke="rgba(255,255,255,0.15)" stroke-width="3" />
-        <rect x="63" y="18" width="14" height="24" rx="3" fill="#e6c229" />
-        <circle cx="70" cy="70" r="16" fill="#e10600" stroke="rgba(255,255,255,0.4)" stroke-width="2" />
+          fill="url(#wheel-rim-gradient)" stroke="rgba(255,255,255,0.2)" stroke-width="2.5" />
+        <rect x="18" y="16" width="104" height="94" fill="url(#wheel-grip)" clip-path="url(#wheel-rim-clip)" />
+        <path d="M26,62 A44,44 0 0 1 114,62" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-linecap="round" />
+
+        <circle cx="33" cy="49" r="4.5" fill="#1c5fd6" stroke="rgba(255,255,255,0.35)" stroke-width="1" />
+        <circle cx="107" cy="49" r="4.5" fill="#1c5fd6" stroke="rgba(255,255,255,0.35)" stroke-width="1" />
+
+        <rect x="63" y="16" width="14" height="24" rx="3" fill="#e6c229" stroke="rgba(0,0,0,0.25)" stroke-width="1" />
+
+        <circle cx="70" cy="70" r="18" fill="url(#wheel-hub-gradient)" stroke="rgba(255,255,255,0.5)" stroke-width="2" />
+        <circle cx="70" cy="70" r="18" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="1" />
+        <circle cx="65" cy="64" r="5" fill="rgba(255,255,255,0.25)" />
       </svg>
-      <button id="btn-left" class="wheel-zone wheel-zone--left" aria-label="Sterza a sinistra"></button>
-      <button id="btn-right" class="wheel-zone wheel-zone--right" aria-label="Sterza a destra"></button>
     </div>
   </div>
 
@@ -121,6 +145,6 @@
     </div>
   </div>
 
-  <script type="module" src="main.js?v=7"></script>
+  <script type="module" src="main.js?v=8"></script>
 </body>
 </html>

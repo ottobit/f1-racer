@@ -423,10 +423,46 @@ function bindHoldButton(id, action) {
   el.addEventListener("pointerleave", release);
   el.addEventListener("pointercancel", release);
 }
-bindHoldButton("btn-left", "left");
-bindHoldButton("btn-right", "right");
 bindHoldButton("btn-gas", "forward");
 bindHoldButton("btn-brake", "back");
+
+// The wheel is one continuous drag surface, not two independent buttons:
+// a finger pressed on the left half and dragged to the right half (without
+// lifting) needs to switch from steering left to steering right. Two plain
+// buttons can't do that — a touch is implicitly captured by whichever
+// element it started on, so sliding across never reaches the sibling's own
+// pointerdown. Tracking pointermove on one element with setPointerCapture
+// sidesteps that entirely.
+const wheelEl = document.getElementById("wheel-control");
+if (wheelEl) {
+  let activePointerId = null;
+
+  const steerFromEvent = (e) => {
+    const rect = wheelEl.getBoundingClientRect();
+    const goLeft = e.clientX < rect.left + rect.width / 2;
+    input.left = goLeft;
+    input.right = !goLeft;
+  };
+
+  wheelEl.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    activePointerId = e.pointerId;
+    wheelEl.setPointerCapture(e.pointerId);
+    steerFromEvent(e);
+  });
+  wheelEl.addEventListener("pointermove", (e) => {
+    if (e.pointerId !== activePointerId) return;
+    steerFromEvent(e);
+  });
+  const releaseWheel = (e) => {
+    if (e.pointerId !== activePointerId) return;
+    activePointerId = null;
+    input.left = false;
+    input.right = false;
+  };
+  wheelEl.addEventListener("pointerup", releaseWheel);
+  wheelEl.addEventListener("pointercancel", releaseWheel);
+}
 
 // --- HUD -----------------------------------------------------------------
 

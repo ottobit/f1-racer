@@ -1,4 +1,8 @@
-html, body {
+/* Fullscreen-no-scroll is only right for the race page (fixed canvas +
+   HUD overlay) — the menu page below it needs to scroll normally, so this
+   is scoped to race.html's own <html class="race">, not shared globally. */
+html.race,
+html.race body {
   height: 100%;
   overflow: hidden;
 }
@@ -252,9 +256,9 @@ html.touch #touch-controls {
 }
 
 /* F1-style steering wheel: an actual wheel shape (flat-bottom rim, center
-   hub, top marker) instead of two arrow buttons. The left/right halves are
-   transparent buttons layered over it — same #btn-left/#btn-right ids and
-   press behaviour as before, just a wheel-shaped hit area now. */
+   hub, top marker). It's one continuous drag surface (see main.js) rather
+   than two side-by-side buttons, so a finger can slide across it without
+   losing the press — that's what a wheel needs to be usable one-handed. */
 #wheel-control {
   position: relative;
   width: 7rem;
@@ -262,6 +266,8 @@ html.touch #touch-controls {
   border-radius: 50% 50% 20% 20%;
   overflow: hidden;
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #wheel-control svg {
@@ -269,31 +275,6 @@ html.touch #touch-controls {
   height: 100%;
   display: block;
   pointer-events: none;
-}
-
-.wheel-zone {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 50%;
-  background: transparent;
-  border: none;
-  padding: 0;
-  -webkit-user-select: none;
-  user-select: none;
-  touch-action: none;
-}
-
-.wheel-zone--left {
-  left: 0;
-}
-
-.wheel-zone--right {
-  right: 0;
-}
-
-.wheel-zone:active {
-  background: rgba(225, 6, 0, 0.3);
 }
 
 /* --- Post-race results overlay ------------------------------------------- */
