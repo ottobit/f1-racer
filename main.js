@@ -28,7 +28,10 @@ const CAR = {
   accel: 25,
   brakeDecel: 40,
   coastDecel: 15,
-  maxTurnRate: 2.4, // rad/s at full speed
+  maxTurnRate: 2.0, // rad/s ceiling; actual rate is scaled down further by
+  // speed in update() below — a single quick tap used to be enough to spin
+  // off track at top speed, so turn authority now drops off as you speed up
+  // instead of maxing out there.
 };
 const CAR_SCALE = 0.55;
 
@@ -334,26 +337,47 @@ function buildCar(paintColor) {
 const playerCar = buildCar(0xe10600);
 scene.add(playerCar.group);
 
-// Two AI rivals, colors matched to their championship driver ids.
+// Two AI rivals, colors matched to their championship driver ids. All three
+// cars now line up on a real starting grid behind the start/finish line
+// (staggered left/right like an F1 grid) instead of being scattered partway
+// around the track already at speed — see startCountdown() for the 3-2-1.
 const AI_DRIVERS = [
   { id: "rival-blue", color: 0x1c5fd6 },
   { id: "rival-yellow", color: 0xe6c229 },
 ];
-const AI_START_OFFSETS = [70, 200]; // centerline sample offsets, staggered
+
+const gridStart = centerline[0];
+const gridHeading = headingOf(gridStart);
+const gridBack = { x: -Math.sin(gridHeading), z: -Math.cos(gridHeading) };
+const gridLateral = sideNormal(gridStart);
+const GRID_ROW_GAP = 5; // meters behind the previous row
+const GRID_LANE_OFFSET = Math.min(TRACK_WIDTH / 4, 3.2); // stay clear of grass
+
+function gridSlot(row, lane) {
+  return {
+    x: gridStart.x + gridBack.x * GRID_ROW_GAP * row + gridLateral.x * GRID_LANE_OFFSET * lane,
+    z: gridStart.z + gridBack.z * GRID_ROW_GAP * row + gridLateral.z * GRID_LANE_OFFSET * lane,
+  };
+}
+
+const AI_GRID_SLOTS = [
+  { row: 1, lane: -1 }, // P2, just behind and left of pole
+  { row: 2, lane: 1 }, // P3, one more row back, right side
+];
 const aiCars = AI_DRIVERS.map((driver, i) => {
   const model = buildCar(driver.color);
   scene.add(model.group);
-  const startIdx = AI_START_OFFSETS[i];
-  const p = centerline[startIdx];
-  const startProgress = startIdx / centerline.length;
+  const slot = AI_GRID_SLOTS[i];
+  const pos = gridSlot(slot.row, slot.lane);
+  const info = nearestTrackInfo(pos.x, pos.z);
   return {
     ...model,
     driverId: driver.id,
-    x: p.x,
-    z: p.z,
-    heading: headingOf(p),
-    speed: AI.maxSpeed * 0.6,
-    prevRawProgress: startProgress,
+    x: pos.x,
+    z: pos.z,
+    heading: gridHeading,
+    speed: 0,
+    prevRawProgress: info.idx / centerline.length,
     totalProgress: 0,
     lap: 0,
   };
@@ -382,7 +406,8 @@ const state = {
   totalProgress: 0,
 };
 
-let raceOver = false;
+// "countdown" (grid, frozen, waiting for the 3-2-1) -> "racing" -> "finished"
+let raceState = "countdown";
 
 const input = { forward: false, back: false, left: false, right: false };
 const KEY_MAP = {
@@ -433,15 +458,21 @@ bindHoldButton("btn-brake", "back");
 // element it started on, so sliding across never reaches the sibling's own
 // pointerdown. Tracking pointermove on one element with setPointerCapture
 // sidesteps that entirely.
+// Analog, not on/off: how far the drag sits from the wheel's centre sets
+// how hard you're turning (-1 full left .. 1 full right). A binary "which
+// half is the finger on" meant every touch was a full-lock turn, which at
+// speed was enough to run off track from a single light tap.
+let touchSteer = 0;
+
 const wheelEl = document.getElementById("wheel-control");
 if (wheelEl) {
   let activePointerId = null;
 
   const steerFromEvent = (e) => {
     const rect = wheelEl.getBoundingClientRect();
-    const goLeft = e.clientX < rect.left + rect.width / 2;
-    input.left = goLeft;
-    input.right = !goLeft;
+    const centerX = rect.left + rect.width / 2;
+    const raw = (e.clientX - centerX) / (rect.width / 2);
+    touchSteer = Math.max(-1, Math.min(1, raw));
   };
 
   wheelEl.addEventListener("pointerdown", (e) => {
@@ -457,8 +488,7 @@ if (wheelEl) {
   const releaseWheel = (e) => {
     if (e.pointerId !== activePointerId) return;
     activePointerId = null;
-    input.left = false;
-    input.right = false;
+    touchSteer = 0;
   };
   wheelEl.addEventListener("pointerup", releaseWheel);
   wheelEl.addEventListener("pointercancel", releaseWheel);
@@ -620,7 +650,7 @@ function driverName(driverId) {
 }
 
 function finishRace() {
-  raceOver = true;
+  raceState = "finished";
   const order = currentRaceOrder().map((o) => o.driverId);
   const state2 = recordRaceResult(circuit.id, order);
 
@@ -658,8 +688,35 @@ function getNextUnracedCircuitId(champState) {
   return next ? next.id : null;
 }
 
+// Chase camera math, shared by the countdown grid shot and the race loop.
+function updateChaseCamera(dt) {
+  const camDistance = 9;
+  const camHeight = 4.5;
+  const desiredX = state.x - Math.sin(state.heading) * camDistance;
+  const desiredZ = state.z - Math.cos(state.heading) * camDistance;
+  camera.position.lerp(
+    new THREE.Vector3(desiredX, camHeight, desiredZ),
+    1 - Math.pow(0.001, dt)
+  );
+  const lookTarget = new THREE.Vector3(
+    state.x + Math.sin(state.heading) * 4,
+    1,
+    state.z + Math.cos(state.heading) * 4
+  );
+  camera.lookAt(lookTarget);
+}
+
 function update(dt) {
-  if (raceOver) return;
+  if (raceState === "finished") return;
+
+  if (raceState === "countdown") {
+    // Cars sit frozen on the grid until the lights go out.
+    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt);
+    for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, 0, dt);
+    updateChaseCamera(dt);
+    updateHud();
+    return;
+  }
 
   // Longitudinal control
   if (input.forward) {
@@ -676,13 +733,18 @@ function update(dt) {
     Math.min(CAR.maxSpeed, state.speed)
   );
 
-  // Steering (disabled when nearly stationary; direction flips in reverse)
+  // Steering (disabled when nearly stationary; direction flips in reverse).
+  // Turn authority tapers off with speed — real cars don't snap-turn flat
+  // out, and without that a single quick tap at top speed was enough to
+  // run off track. Touch input is analog (touchSteer); keyboard is digital,
+  // full deflection either way.
   const speedFactor = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
-  const turnRate = CAR.maxTurnRate * (0.35 + 0.65 * speedFactor);
+  const turnRate = CAR.maxTurnRate * (1 - 0.55 * speedFactor);
   const steerSign = state.speed >= 0 ? 1 : -1;
-  if (Math.abs(state.speed) > 0.05) {
-    if (input.left) state.heading += turnRate * dt * steerSign;
-    if (input.right) state.heading -= turnRate * dt * steerSign;
+  const keyboardSteer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+  const steerAmount = touchSteer !== 0 ? touchSteer : keyboardSteer;
+  if (Math.abs(state.speed) > 0.05 && steerAmount !== 0) {
+    state.heading += turnRate * dt * steerSign * steerAmount;
   }
 
   // Integrate position (matches the heading convention used by the track)
@@ -710,25 +772,11 @@ function update(dt) {
   }
   state.currentLapTime = now - state.lapStartTime;
 
-  if (!raceOver && state.totalProgress >= LAPS_PER_RACE) {
+  if (raceState === "racing" && state.totalProgress >= LAPS_PER_RACE) {
     finishRace();
   }
 
-  // Chase camera: behind and above the car, looking slightly ahead of it
-  const camDistance = 9;
-  const camHeight = 4.5;
-  const desiredX = state.x - Math.sin(state.heading) * camDistance;
-  const desiredZ = state.z - Math.cos(state.heading) * camDistance;
-  camera.position.lerp(
-    new THREE.Vector3(desiredX, camHeight, desiredZ),
-    1 - Math.pow(0.001, dt)
-  );
-  const lookTarget = new THREE.Vector3(
-    state.x + Math.sin(state.heading) * 4,
-    1,
-    state.z + Math.cos(state.heading) * 4
-  );
-  camera.lookAt(lookTarget);
+  updateChaseCamera(dt);
 
   // Widening the FOV with speed is a cheap, common trick for a felt sense
   // of acceleration — the world seems to rush past faster at the edges.
@@ -740,6 +788,32 @@ function update(dt) {
   updateHud();
 }
 
+// Real standing start: cars sit on the grid (see AI_GRID_SLOTS above) while
+// this counts down, then everyone is free to move at once. state.lapStartTime
+// is reset to the moment the lights go out, not construction time, so the
+// on-screen lap clock doesn't start ticking during the countdown itself.
+function startCountdown() {
+  const el = document.getElementById("countdown-overlay");
+  const steps = ["3", "2", "1", "VIA!"];
+  let i = 0;
+  function tick() {
+    if (!el) return;
+    el.textContent = steps[i];
+    el.hidden = false;
+    i++;
+    if (i < steps.length) {
+      setTimeout(tick, 900);
+    } else {
+      setTimeout(() => {
+        el.hidden = true;
+        state.lapStartTime = performance.now();
+        raceState = "racing";
+      }, 600);
+    }
+  }
+  tick();
+}
+
 function animate() {
   const dt = Math.min(clock.getDelta(), 0.1);
   update(dt);
@@ -747,4 +821,5 @@ function animate() {
   requestAnimationFrame(animate);
 }
 
+startCountdown();
 animate();
