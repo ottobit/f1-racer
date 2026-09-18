@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>F1 Racer — ottobit arcade</title>
+  <meta name="description" content="Time trial 3D su circuito misto, con due auto sulla pista. Giocabile subito nel browser." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ottobit.github.io/portfolio-arcade/games/f1-racer/" />
+  <meta property="og:title" content="F1 Racer — ottobit arcade" />
+  <meta property="og:description" content="Time trial 3D su circuito misto, con due auto sulla pista. Giocabile subito nel browser." />
+  <meta property="og:image" content="https://ottobit.github.io/portfolio-arcade/assets/images/og-f1-racer.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="F1 Racer — ottobit arcade" />
+  <meta name="twitter:description" content="Time trial 3D su circuito misto, con due auto sulla pista. Giocabile subito nel browser." />
+  <meta name="twitter:image" content="https://ottobit.github.io/portfolio-arcade/assets/images/og-f1-racer.jpg" />
+  <link rel="stylesheet" href="../../assets/css/style.css" />
+  <link rel="stylesheet" href="style.css?v=11" />
+  <script>
+    // Touch-capability detection done in JS, not just CSS: the
+    // (hover: none) and (pointer: coarse) media query is the "correct"
+    // way to ask this, but some mobile browsers report it inconsistently,
+    // which was hiding the on-screen controls on real devices. Checking
+    // touch support directly is more reliable. `?touch=1` / `?touch=0` in
+    // the URL forces it either way, for testing without a phone in hand.
+    (function () {
+      var forced = new URLSearchParams(location.search).get("touch");
+      var isTouch =
+        forced === "1" ||
+        (forced !== "0" &&
+          ("ontouchstart" in window || navigator.maxTouchPoints > 0));
+      if (isTouch) document.documentElement.classList.add("touch");
+    })();
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud">
+    <div id="hud-left" class="hud-panel">
+      <a class="back-link" href="index.html">← circuiti</a>
+      <div id="speedo">
+        <div id="shift-lights" aria-hidden="true">
+          <span class="shift-led"></span><span class="shift-led"></span>
+          <span class="shift-led"></span><span class="shift-led"></span>
+          <span class="shift-led"></span><span class="shift-led"></span>
+          <span class="shift-led"></span><span class="shift-led"></span>
+        </div>
+        <svg id="speedo-gauge" viewBox="0 0 200 115" aria-hidden="true">
+          <defs>
+            <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#22d3ee" />
+              <stop offset="50%" stop-color="#e6c229" />
+              <stop offset="100%" stop-color="#e10600" />
+            </linearGradient>
+          </defs>
+          <path d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="10" stroke-linecap="round" />
+          <path id="gauge-fill" d="M 10 100 A 90 90 0 0 1 190 100" fill="none" stroke="url(#gauge-gradient)" stroke-width="10" stroke-linecap="round" />
+          <!-- Dial labels for 0 / 60 / 120 / 180 km/h, precomputed on a
+               radius-68 ring around the same pivot (100,100) the needle
+               rotates around. -->
+          <text x="32" y="104" class="gauge-label">0</text>
+          <text x="66" y="45" class="gauge-label">60</text>
+          <text x="134" y="45" class="gauge-label">120</text>
+          <text x="168" y="104" class="gauge-label">180</text>
+          <g id="gauge-needle-group">
+            <line x1="0" y1="0" x2="0" y2="-78" stroke="#fff" stroke-width="4" stroke-linecap="round" />
+          </g>
+          <circle cx="100" cy="100" r="7" fill="#fff" />
+        </svg>
+        <div class="speedo-readout">
+          <span id="speed-value">0</span>
+          <span class="speedo-unit">km/h</span>
+        </div>
+      </div>
+    </div>
+    <div class="stats hud-panel">
+      <div id="circuit-name" class="circuit-name"></div>
+      <div class="stats-row stats-row--primary">
+        <span id="position">P-</span>
+        <span class="stats-sep">·</span>
+        <span id="lap">Giro 0/3</span>
+      </div>
+      <div class="stats-row">
+        <span id="time">0:00.00</span>
+        <span id="best">Migliore --:--.--</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="hint">WASD / frecce per guidare — 3 giri contro 2 rivali</div>
+
+  <div id="touch-controls">
+    <div class="touch-group touch-group--throttle">
+      <button id="btn-brake" class="touch-btn" aria-label="Freno">▼</button>
+      <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">▲</button>
+    </div>
+    <div id="wheel-control" class="touch-group touch-group--steer">
+      <svg viewBox="0 0 140 140" aria-hidden="true">
+        <path d="M20,68 A50,50 0 1 1 120,68 L120,96 A12,12 0 0 1 108,108 L32,108 A12,12 0 0 1 20,96 Z"
+          fill="rgba(20,22,28,0.85)" stroke="rgba(255,255,255,0.15)" stroke-width="3" />
+        <rect x="63" y="18" width="14" height="24" rx="3" fill="#e6c229" />
+        <circle cx="70" cy="70" r="16" fill="#e10600" stroke="rgba(255,255,255,0.4)" stroke-width="2" />
+      </svg>
+      <button id="btn-left" class="wheel-zone wheel-zone--left" aria-label="Sterza a sinistra"></button>
+      <button id="btn-right" class="wheel-zone wheel-zone--right" aria-label="Sterza a destra"></button>
+    </div>
+  </div>
+
+  <div id="results-overlay" hidden>
+    <div class="results-card">
+      <h2 id="results-title">Gara finita</h2>
+      <ol id="results-order"></ol>
+      <p id="results-points"></p>
+      <div class="results-actions">
+        <a id="results-next" class="results-btn results-btn--primary" href="index.html">Prossimo circuito</a>
+        <a class="results-btn" href="index.html">Torna ai circuiti</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="main.js?v=7"></script>
+</body>
+</html>

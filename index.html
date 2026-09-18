@@ -2,69 +2,47 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>F1 Racer — ottobit arcade</title>
-  <meta name="description" content="Time trial 3D su circuito misto, con due auto sulla pista. Giocabile subito nel browser." />
+  <meta name="description" content="Mini-campionato 3D: 3 circuiti, 2 rivali, classifica a punti. Giocabile subito nel browser." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://ottobit.github.io/portfolio-arcade/games/f1-racer/" />
   <meta property="og:title" content="F1 Racer — ottobit arcade" />
-  <meta property="og:description" content="Time trial 3D su circuito misto, con due auto sulla pista. Giocabile subito nel browser." />
+  <meta property="og:description" content="Mini-campionato 3D: 3 circuiti, 2 rivali, classifica a punti. Giocabile subito nel browser." />
   <meta property="og:image" content="https://ottobit.github.io/portfolio-arcade/assets/images/og-f1-racer.jpg" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="F1 Racer — ottobit arcade" />
-  <meta name="twitter:description" content="Time trial 3D su circuito misto, con due auto sulla pista. Giocabile subito nel browser." />
-  <meta name="twitter:image" content="https://ottobit.github.io/portfolio-arcade/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="../../assets/css/style.css" />
-  <link rel="stylesheet" href="style.css?v=2" />
-  <script>
-    // Touch-capability detection done in JS, not just CSS: the
-    // (hover: none) and (pointer: coarse) media query is the "correct"
-    // way to ask this, but some mobile browsers report it inconsistently,
-    // which was hiding the on-screen controls on real devices. Checking
-    // touch support directly is more reliable. `?touch=1` / `?touch=0` in
-    // the URL forces it either way, for testing without a phone in hand.
-    (function () {
-      var forced = new URLSearchParams(location.search).get("touch");
-      var isTouch =
-        forced === "1" ||
-        (forced !== "0" &&
-          ("ontouchstart" in window || navigator.maxTouchPoints > 0));
-      if (isTouch) document.documentElement.classList.add("touch");
-    })();
-  </script>
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
-<body>
-  <div id="app"></div>
+<body style="overflow: auto; height: auto;">
+  <header>
+    <h1 class="wordmark">F1 Racer</h1>
+    <p>3 circuiti, 2 rivali, classifica a punti. Vinci più gare degli altri per diventare campione del mondo.</p>
+  </header>
 
-  <div id="hud">
-    <a class="back-link" href="../../">← arcade</a>
-    <div class="stats">
-      <div id="lap" class="lap">Giro 0</div>
-      <div id="time" class="time">Tempo 0:00.00</div>
-      <div id="best" class="best">Migliore --:--.--</div>
-    </div>
+  <div id="champion-banner" hidden></div>
+
+  <div class="menu-standings">
+    <table>
+      <thead>
+        <tr><th>Pos.</th><th>Pilota</th><th>Punti</th></tr>
+      </thead>
+      <tbody id="standings-body"></tbody>
+    </table>
   </div>
 
-  <div id="speedo">
-    <span id="speed-value">0</span>
-    <span class="speedo-unit">km/h</span>
+  <main>
+    <div id="circuit-list" class="grid"></div>
+  </main>
+
+  <div class="menu-actions">
+    <button id="reset-btn" class="reset-btn" type="button">Azzera campionato</button>
   </div>
 
-  <div id="hint">WASD / frecce per guidare — time trial, le altre auto non contano il tempo</div>
+  <footer>
+    <a href="../../">← arcade</a>
+  </footer>
 
-  <div id="touch-controls">
-    <div class="touch-group touch-group--steer">
-      <button id="btn-left" class="touch-btn" aria-label="Sterza a sinistra">◀</button>
-      <button id="btn-right" class="touch-btn" aria-label="Sterza a destra">▶</button>
-    </div>
-    <div class="touch-group touch-group--throttle">
-      <button id="btn-brake" class="touch-btn" aria-label="Freno">▼</button>
-      <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">▲</button>
-    </div>
-  </div>
-
-  <script type="module" src="main.js?v=2"></script>
+  <script type="module" src="menu.js"></script>
 </body>
 </html>

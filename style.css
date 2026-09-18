@@ -11,19 +11,39 @@ canvas {
   display: block;
 }
 
+/* One shared "glass" surface for every HUD chrome piece (top stats, the
+   speedo badge, the back link) so they read as one system instead of a
+   scatter of differently-styled boxes. */
+.hud-panel {
+  background: linear-gradient(180deg, rgba(22, 24, 31, 0.45), rgba(11, 12, 17, 0.35));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
 #hud {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: flex-start;
+  gap: 0.75rem;
   padding: 1rem 1.25rem;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--text, #e7e9ee);
   pointer-events: none;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* One continuous panel for the back link + speedo, so there's no ugly gap
+   of empty space between two separately-floating boxes — a thin divider
+   line marks the boundary between them instead. */
+#hud-left {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 #hud .back-link {
@@ -31,23 +51,47 @@ canvas {
   color: var(--text-dim, #9aa1b0);
   text-decoration: none;
   font-size: 0.85rem;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #hud .stats {
   text-align: right;
   font-variant-numeric: tabular-nums;
   line-height: 1.5;
+  padding: 0.5rem 0.85rem;
 }
 
-#hud .stats .lap {
-  font-size: 1.3rem;
-  font-weight: 600;
-}
-
-#hud .stats .time,
-#hud .stats .best {
-  font-size: 0.95rem;
+#hud .stats .circuit-name {
+  font-size: 0.7rem;
   color: var(--text-dim, #9aa1b0);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.15rem;
+}
+
+.stats-row {
+  font-size: 0.85rem;
+  color: var(--text-dim, #9aa1b0);
+}
+
+.stats-row--primary {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text, #e7e9ee);
+}
+
+.stats-sep {
+  margin: 0 0.35em;
+  color: var(--text-dim, #9aa1b0);
+}
+
+.stats-row + .stats-row {
+  margin-top: 0.1rem;
+}
+
+.stats-row span + span {
+  margin-left: 0.6em;
 }
 
 #hint {
@@ -62,37 +106,95 @@ canvas {
   pointer-events: none;
 }
 
+/* Styled like an F1 steering wheel's center display cluster: a dark
+   angular panel, a row of shift-light LEDs across the top, then the
+   analog dial and digital readout underneath. */
+/* Small badge in a top corner, out of the way of both the car (the chase
+   camera keeps it lower-center) and, on touch, the pedal/wheel controls
+   at the bottom. Kept deliberately compact — this is a HUD readout, not
+   the main thing on screen. */
 #speedo {
-  position: fixed;
-  bottom: 3rem;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
-  align-items: baseline;
-  gap: 0.35em;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.85rem 0.4rem;
   color: var(--text, #e7e9ee);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.85);
   pointer-events: none;
+  opacity: 0.9;
+}
+
+#shift-lights {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.shift-led {
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #2ecc71; /* the lit color, via currentColor below */
+  transition: background-color 0.08s linear, box-shadow 0.08s linear;
+}
+
+.shift-led:nth-child(5),
+.shift-led:nth-child(6) {
+  color: #e6c229;
+}
+
+.shift-led:nth-child(7),
+.shift-led:nth-child(8) {
+  color: #e10600;
+}
+
+.shift-led.is-lit {
+  background: currentColor;
+  box-shadow: 0 0 4px 1px currentColor;
+}
+
+.speedo-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3em;
 }
 
 #speed-value {
-  font-size: 2.6rem;
+  font-size: 1.4rem;
   font-weight: 700;
   line-height: 1;
 }
 
 .speedo-unit {
-  font-size: 0.9rem;
+  font-size: 0.65rem;
   color: var(--text-dim, #9aa1b0);
 }
 
-/* Clear the on-screen buttons when they're showing (see the touch-controls
-   rule below): the speedo sits centered above them instead of in the gap
-   between the two button groups, which can be too narrow on small phones. */
-html.touch #speedo {
-  bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+/* Analog-style speedometer gauge: a half-circle dial with a needle and
+   numeric labels, like a real dashboard, instead of a plain bar. The
+   needle rotation and the colored arc's fill are both driven by JS as a
+   0..1 ratio of current speed over the dial's labeled 180 km/h max. */
+#speedo-gauge {
+  width: 4.5rem;
+  height: auto;
+  overflow: visible;
+}
+
+.gauge-label {
+  font-size: 20px;
+  fill: var(--text-dim, #9aa1b0);
+  text-anchor: middle;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+#gauge-fill {
+  transition: stroke-dashoffset 0.08s linear;
+}
+
+#gauge-needle-group {
+  transition: transform 0.08s linear;
 }
 
 #touch-controls {
@@ -129,7 +231,7 @@ html.touch #touch-controls {
   width: 5rem;
   height: 5rem;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(20, 22, 28, 0.55);
   color: var(--text, #e7e9ee);
   font-size: 1.8rem;
@@ -147,4 +249,203 @@ html.touch #touch-controls {
   width: 6rem;
   height: 6rem;
   font-size: 2.2rem;
+}
+
+/* F1-style steering wheel: an actual wheel shape (flat-bottom rim, center
+   hub, top marker) instead of two arrow buttons. The left/right halves are
+   transparent buttons layered over it — same #btn-left/#btn-right ids and
+   press behaviour as before, just a wheel-shaped hit area now. */
+#wheel-control {
+  position: relative;
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50% 50% 20% 20%;
+  overflow: hidden;
+  touch-action: none;
+}
+
+#wheel-control svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.wheel-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+
+.wheel-zone--left {
+  left: 0;
+}
+
+.wheel-zone--right {
+  right: 0;
+}
+
+.wheel-zone:active {
+  background: rgba(225, 6, 0, 0.3);
+}
+
+/* --- Post-race results overlay ------------------------------------------- */
+
+#results-overlay[hidden] {
+  display: none;
+}
+
+#results-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(5, 6, 10, 0.85);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.results-card {
+  width: 100%;
+  max-width: 26rem;
+  background: var(--surface, #14171f);
+  border: 1px solid var(--border, #262b36);
+  border-radius: 14px;
+  padding: 1.75rem;
+  color: var(--text, #e7e9ee);
+  text-align: center;
+}
+
+.results-card h2 {
+  margin: 0 0 1rem;
+}
+
+#results-order {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  text-align: left;
+}
+
+#results-order li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid var(--border, #262b36);
+}
+
+#results-order li.is-player {
+  font-weight: 700;
+  color: var(--accent, #e10600);
+}
+
+#results-points {
+  color: var(--text-dim, #9aa1b0);
+  margin: 0 0 1.25rem;
+}
+
+.results-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.results-btn {
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #262b36);
+  color: var(--text, #e7e9ee);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.results-btn--primary {
+  background: var(--accent, #e10600);
+  border-color: var(--accent, #e10600);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* --- Circuit menu (index.html) ------------------------------------------- */
+
+.menu-standings {
+  max-width: 640px;
+  margin: 0 auto 2rem;
+  padding: 0 1.5rem;
+}
+
+.menu-standings table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface, #14171f);
+  border: 1px solid var(--border, #262b36);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.menu-standings th,
+.menu-standings td {
+  padding: 0.6rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border, #262b36);
+}
+
+.menu-standings tr:last-child td {
+  border-bottom: none;
+}
+
+.menu-standings td:last-child,
+.menu-standings th:last-child {
+  text-align: right;
+}
+
+#champion-banner {
+  max-width: 640px;
+  margin: 0 auto 1.5rem;
+  padding: 0.9rem 1.25rem;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--accent, #8b5cf6), var(--accent-2, #22d3ee));
+  color: #05060a;
+  font-weight: 700;
+  text-align: center;
+}
+
+.menu-actions {
+  max-width: 640px;
+  margin: 0 auto 2rem;
+  padding: 0 1.5rem;
+  text-align: right;
+}
+
+.reset-btn {
+  background: none;
+  border: 1px solid var(--border, #262b36);
+  color: var(--text-dim, #9aa1b0);
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.circuit-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.circuit-status {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--accent, #8b5cf6);
+  font-weight: 600;
 }

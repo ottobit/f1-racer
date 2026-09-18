@@ -1,21 +1,24 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js";
+import { DRIVERS, recordRaceResult } from "./championship.js";
 
 /*
- * F1 Racer — v1 (time trial; two AI cars for company, not scored/raced).
- * Placeholder car/track geometry: primitives, not real models.
- * Track is a closed Catmull-Rom spline through hand-placed control points
- * (irregular loop, not a symmetric oval) — validated offline for minimum
- * curvature radius and self-intersection before shipping.
+ * F1 Racer — championship mode: a fixed-lap race against two AI rivals on
+ * one of several circuits, feeding into a persisted points standings (see
+ * championship.js / menu.js). Placeholder car/track geometry: primitives,
+ * not real models. Track is a closed Catmull-Rom spline through
+ * hand-placed control points — validated offline for minimum curvature
+ * radius and self-intersection before shipping (see circuits.js).
  *
  * Heading convention used throughout: heading 0 means "facing world +Z",
  * and moving forward means dx = sin(heading), dz = cos(heading).
  */
 
-const TRACK_WIDTH = 14;
-const CONTROL_POINTS = [
-  [-100, 65], [30, 80], [100, 40], [90, -30], [40, -80], [-50, -95],
-  [-120, -50], [-135, 10],
-].map(([x, z]) => new THREE.Vector3(x, 0, z));
+const circuitId = new URLSearchParams(location.search).get("circuit");
+const circuit = getCircuit(circuitId);
+
+const TRACK_WIDTH = circuit.width;
+const CONTROL_POINTS = circuit.points.map(([x, z]) => new THREE.Vector3(x, 0, z));
 
 const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom", 0.5);
 
@@ -83,6 +86,24 @@ function nearestTrackInfo(x, z) {
   }
   const p = centerline[bestIdx];
   return { idx: bestIdx, x: p.x, z: p.z, dist: Math.sqrt(bestDistSq) };
+}
+
+// Updates a car's fair, start-offset-independent progress accumulator (see
+// the comment by `state` below for why raw track-progress isn't enough) and
+// returns true the frame a lap just ticked over.
+function advanceProgress(car, rawProgress) {
+  let delta = rawProgress - car.prevRawProgress;
+  if (delta < -0.5) delta += 1; // wrapped forward past 1 -> 0
+  else if (delta > 0.5) delta -= 1; // wrapped backward past 0 -> 1
+  car.prevRawProgress = rawProgress;
+  car.totalProgress += delta;
+
+  const newLap = Math.floor(car.totalProgress);
+  if (newLap > car.lap) {
+    car.lap = newLap;
+    return true;
+  }
+  return false;
 }
 
 // --- Scene setup -----------------------------------------------------------
@@ -313,25 +334,40 @@ function buildCar(paintColor) {
 const playerCar = buildCar(0xe10600);
 scene.add(playerCar.group);
 
-// Two AI cars driving the track for company (not raced/scored against).
-const AI_COLORS = [0x1c5fd6, 0xe6c229];
+// Two AI rivals, colors matched to their championship driver ids.
+const AI_DRIVERS = [
+  { id: "rival-blue", color: 0x1c5fd6 },
+  { id: "rival-yellow", color: 0xe6c229 },
+];
 const AI_START_OFFSETS = [70, 200]; // centerline sample offsets, staggered
-const aiCars = AI_COLORS.map((color, i) => {
-  const model = buildCar(color);
+const aiCars = AI_DRIVERS.map((driver, i) => {
+  const model = buildCar(driver.color);
   scene.add(model.group);
   const startIdx = AI_START_OFFSETS[i];
   const p = centerline[startIdx];
+  const startProgress = startIdx / centerline.length;
   return {
     ...model,
+    driverId: driver.id,
     x: p.x,
     z: p.z,
     heading: headingOf(p),
     speed: AI.maxSpeed * 0.6,
+    prevRawProgress: startProgress,
+    totalProgress: 0,
+    lap: 0,
   };
 });
 
 // --- State -------------------------------------------------------------
 
+// Race position/lap counting uses `totalProgress`, a monotonic "laps
+// travelled since the start" accumulator, rather than each car's raw
+// track-progress fraction. Raw progress depends on where a car started
+// (the AI cars begin partway around the track to stagger them visually),
+// so comparing raw fractions directly would unfairly credit whoever
+// started closer to the line. Accumulating deltas since each car's own
+// start makes lap count and race position fair regardless of start offset.
 const start = centerline[0];
 const state = {
   x: start.x,
@@ -342,8 +378,11 @@ const state = {
   lapStartTime: performance.now(),
   currentLapTime: 0,
   bestLapTime: null,
-  prevProgress: 0,
+  prevRawProgress: 0,
+  totalProgress: 0,
 };
+
+let raceOver = false;
 
 const input = { forward: false, back: false, left: false, right: false };
 const KEY_MAP = {
@@ -391,10 +430,20 @@ bindHoldButton("btn-brake", "back");
 
 // --- HUD -----------------------------------------------------------------
 
+const circuitNameEl = document.getElementById("circuit-name");
+const positionEl = document.getElementById("position");
 const lapEl = document.getElementById("lap");
 const timeEl = document.getElementById("time");
 const bestEl = document.getElementById("best");
 const speedValueEl = document.getElementById("speed-value");
+const gaugeFillEl = document.getElementById("gauge-fill");
+const gaugeNeedleEl = document.getElementById("gauge-needle-group");
+const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
+const GAUGE_ARC_LENGTH = Math.PI * 90; // matches the SVG arc's radius (90)
+const GAUGE_MAX_KMH = 180; // matches the dial's printed 0/60/120/180 labels
+gaugeFillEl.style.strokeDasharray = `${GAUGE_ARC_LENGTH}`;
+
+circuitNameEl.textContent = circuit.name;
 
 const KMH_PER_UNIT = 3.6; // treat CAR.maxSpeed's units as m/s for display
 
@@ -405,13 +454,39 @@ function formatTime(ms) {
   return `${minutes}:${seconds}`;
 }
 
+// Ranks all three cars by race progress (see `advanceProgress`), most
+// distance travelled first. Used for both the live HUD position and the
+// final classification when the race ends.
+function currentRaceOrder() {
+  return [
+    { driverId: "player", totalProgress: state.totalProgress },
+    ...aiCars.map((c) => ({ driverId: c.driverId, totalProgress: c.totalProgress })),
+  ].sort((a, b) => b.totalProgress - a.totalProgress);
+}
+
 function updateHud() {
-  lapEl.textContent = `Giro ${state.lap}`;
-  timeEl.textContent = `Tempo ${formatTime(state.currentLapTime)}`;
+  const order = currentRaceOrder();
+  const position = order.findIndex((o) => o.driverId === "player") + 1;
+  positionEl.textContent = `P${position}`;
+  lapEl.textContent = `Giro ${Math.min(state.lap + 1, LAPS_PER_RACE)}/${LAPS_PER_RACE}`;
+  timeEl.textContent = formatTime(state.currentLapTime);
   bestEl.textContent = state.bestLapTime
     ? `Migliore ${formatTime(state.bestLapTime)}`
     : "Migliore --:--.--";
-  speedValueEl.textContent = Math.round(Math.abs(state.speed) * KMH_PER_UNIT);
+  const speedKmh = Math.abs(state.speed) * KMH_PER_UNIT;
+  speedValueEl.textContent = Math.round(speedKmh);
+
+  const gaugeRatio = Math.min(speedKmh / GAUGE_MAX_KMH, 1);
+  gaugeFillEl.style.strokeDashoffset = `${GAUGE_ARC_LENGTH * (1 - gaugeRatio)}`;
+  gaugeNeedleEl.setAttribute(
+    "transform",
+    `translate(100,100) rotate(${-90 + gaugeRatio * 180})`
+  );
+
+  // Shift lights: an F1-wheel touch, lighting up left to right with speed
+  // rather than RPM (this car has no gearbox to shift), green -> red.
+  const litCount = Math.round(gaugeRatio * shiftLedEls.length);
+  shiftLedEls.forEach((led, i) => led.classList.toggle("is-lit", i < litCount));
 }
 
 // --- Main loop -------------------------------------------------------------
@@ -499,10 +574,57 @@ function updateAiCar(car, dt) {
 
   car.x += Math.sin(car.heading) * car.speed * dt;
   car.z += Math.cos(car.heading) * car.speed * dt;
-  applyTrackBoundary(car, dt);
+  const afterInfo = applyTrackBoundary(car, dt);
+  advanceProgress(car, afterInfo.idx / centerline.length);
+}
+
+function driverName(driverId) {
+  const driver = DRIVERS.find((d) => d.id === driverId);
+  return driver ? driver.name : driverId;
+}
+
+function finishRace() {
+  raceOver = true;
+  const order = currentRaceOrder().map((o) => o.driverId);
+  const state2 = recordRaceResult(circuit.id, order);
+
+  const position = order.indexOf("player") + 1;
+  const points = [25, 18, 15][position - 1] || 0;
+
+  document.getElementById("results-title").textContent =
+    position === 1 ? "Vittoria!" : `Arrivato ${position}°`;
+  document.getElementById("results-order").innerHTML = order
+    .map((driverId, i) => {
+      const isPlayer = driverId === "player";
+      return `<li class="${isPlayer ? "is-player" : ""}"><span>${i + 1}. ${driverName(
+        driverId
+      )}</span></li>`;
+    })
+    .join("");
+  document.getElementById("results-points").textContent = `+${points} punti`;
+
+  const nextCircuitId = getNextUnracedCircuitId(state2);
+  const nextLink = document.getElementById("results-next");
+  if (nextCircuitId) {
+    nextLink.href = `race.html?circuit=${nextCircuitId}`;
+    nextLink.textContent = "Prossimo circuito";
+  } else {
+    nextLink.href = "index.html";
+    nextLink.textContent = "Vedi classifica finale";
+  }
+
+  document.getElementById("results-overlay").hidden = false;
+}
+
+function getNextUnracedCircuitId(champState) {
+  const raced = new Set(Object.keys(champState.raceResults));
+  const next = CIRCUITS.find((c) => !raced.has(c.id));
+  return next ? next.id : null;
 }
 
 function update(dt) {
+  if (raceOver) return;
+
   // Longitudinal control
   if (input.forward) {
     state.speed += CAR.accel * dt;
@@ -531,29 +653,30 @@ function update(dt) {
   state.x += Math.sin(state.heading) * state.speed * dt;
   state.z += Math.cos(state.heading) * state.speed * dt;
 
-  // Lap detection: watch progress wrap around the start/finish line
   const info = nearestTrackInfo(state.x, state.z);
-  const progress = info.idx / centerline.length;
-  if (state.prevProgress > 0.85 && progress < 0.15) {
-    const now = performance.now();
-    const lapTime = now - state.lapStartTime;
-    if (state.lap > 0) {
-      if (state.bestLapTime === null || lapTime < state.bestLapTime) {
-        state.bestLapTime = lapTime;
-      }
-    }
-    state.lap += 1;
-    state.lapStartTime = now;
-  }
-  state.prevProgress = progress;
-  state.currentLapTime = performance.now() - state.lapStartTime;
-
   applyTrackBoundary(state, dt, info);
   for (const car of aiCars) updateAiCar(car, dt);
   resolveCarCollisions([state, ...aiCars]);
 
   applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt);
   for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, car.speed, dt);
+
+  // Lap timing (current/best lap) uses the same fair progress accumulator
+  // that drives race position, so it lines up with the lap count shown.
+  const justCompletedLap = advanceProgress(state, info.idx / centerline.length);
+  const now = performance.now();
+  if (justCompletedLap) {
+    const lapTime = now - state.lapStartTime;
+    if (state.bestLapTime === null || lapTime < state.bestLapTime) {
+      state.bestLapTime = lapTime;
+    }
+    state.lapStartTime = now;
+  }
+  state.currentLapTime = now - state.lapStartTime;
+
+  if (!raceOver && state.totalProgress >= LAPS_PER_RACE) {
+    finishRace();
+  }
 
   // Chase camera: behind and above the car, looking slightly ahead of it
   const camDistance = 9;
