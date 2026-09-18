@@ -50,8 +50,17 @@ const AI = {
 // Collisions: running wide costs grip (grass), hitting the wall costs most
 // of your speed, and cars bumping each other lose speed and get pushed
 // apart rather than overlapping. All tuned for arcade feel, not real physics.
-const GRASS_LIMIT = TRACK_WIDTH / 2; // asphalt edge
-const WALL_LIMIT = TRACK_WIDTH / 2 + 1.5; // just inside the barrier line
+const GRASS_LIMIT = TRACK_WIDTH / 2; // asphalt edge, right where the kerb is painted
+// Real curbs are meant to be driven over — riding one, or running a bit wide
+// onto the grass past it, should only cost grip, never trigger the wall
+// bounce below. At 1.5 units this margin was thin enough that clipping a
+// kerb at speed (much easier now that top speed is ~2x what it was) would
+// often overshoot straight into the wall in a single frame, which read as
+// bouncing off the kerb itself. Widened to a real runoff area — checked
+// against all three circuits' tightest corners (see the offline validation
+// script) so opposing sides of a corner never get close enough for their
+// off-track zones to overlap.
+const WALL_LIMIT = TRACK_WIDTH / 2 + 4;
 const GRASS_MAX_DECEL = 65; // units/s^2 of extra drag at the wall edge
 const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
 const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
