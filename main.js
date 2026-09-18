@@ -1,6 +1,6 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js";
-import { DRIVERS, recordRaceResult } from "./championship.js";
+import { DRIVERS, POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
 
 /*
  * F1 Racer — championship mode: a fixed-lap race against two AI rivals on
@@ -22,12 +22,17 @@ const CONTROL_POINTS = circuit.points.map(([x, z]) => new THREE.Vector3(x, 0, z)
 
 const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom", 0.5);
 
+// Top speed is tuned to a realistic F1 figure (maxSpeed is treated as m/s
+// for the km/h readout below, so 84 -> ~302 km/h on a straight) rather than
+// the earlier, much slower placeholder value — accel/brakeDecel/coastDecel
+// scale up with it so 0-100%, braking distance, and grass drag all still
+// feel like the same car, just faster.
 const CAR = {
-  maxSpeed: 45,
-  reverseMaxSpeed: -15,
-  accel: 25,
-  brakeDecel: 40,
-  coastDecel: 15,
+  maxSpeed: 84,
+  reverseMaxSpeed: -28,
+  accel: 47,
+  brakeDecel: 75,
+  coastDecel: 28,
   maxTurnRate: 2.0, // rad/s ceiling; actual rate is scaled down further by
   // speed in update() below — a single quick tap used to be enough to spin
   // off track at top speed, so turn authority now drops off as you speed up
@@ -36,8 +41,8 @@ const CAR = {
 const CAR_SCALE = 0.55;
 
 const AI = {
-  maxSpeed: 38,
-  accel: 22,
+  maxSpeed: 71,
+  accel: 41,
   turnRate: 2.1,
   lookahead: 10, // centerline samples ahead to steer toward
 };
@@ -47,7 +52,7 @@ const AI = {
 // apart rather than overlapping. All tuned for arcade feel, not real physics.
 const GRASS_LIMIT = TRACK_WIDTH / 2; // asphalt edge
 const WALL_LIMIT = TRACK_WIDTH / 2 + 1.5; // just inside the barrier line
-const GRASS_MAX_DECEL = 35; // units/s^2 of extra drag at the wall edge
+const GRASS_MAX_DECEL = 65; // units/s^2 of extra drag at the wall edge
 const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
 const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
 const CAR_BUMP_SPEED_FACTOR = 0.7; // speed kept by both cars on contact
@@ -231,6 +236,41 @@ scene.add(buildBarriers());
   scene.add(lineGroup);
 }
 
+// Paints a numbered grid box on the tarmac at a starting slot — what
+// actually makes a grid a *grid* rather than just "three cars parked in a
+// row": each position is its own marked, numbered spot on the track.
+function buildGridNumberTexture(number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  ctx.strokeStyle = "rgba(255,255,255,0.85)";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(9, 9, canvas.width - 18, canvas.height - 18);
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.font = "bold 130px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(number), canvas.width / 2, canvas.height / 2 + 6);
+  return new THREE.CanvasTexture(canvas);
+}
+
+function addGridBoxMarking(slot, number) {
+  const group = new THREE.Group();
+  group.position.set(slot.x, 0.03, slot.z);
+  group.rotation.y = slot.heading;
+
+  const material = new THREE.MeshBasicMaterial({
+    map: buildGridNumberTexture(number),
+    transparent: true,
+    depthWrite: false,
+  });
+  const box = new THREE.Mesh(new THREE.PlaneGeometry(3, 6), material);
+  box.rotation.x = -Math.PI / 2;
+  group.add(box);
+  scene.add(group);
+}
+
 // Narrows the +Z half of a box geometry's X extent, turning it into a
 // wedge that tapers toward the front (local +Z is "front" throughout).
 function taperFront(geometry, frontScale) {
@@ -337,36 +377,65 @@ function buildCar(paintColor) {
 const playerCar = buildCar(0xe10600);
 scene.add(playerCar.group);
 
-// Two AI rivals, colors matched to their championship driver ids. All three
-// cars now line up on a real starting grid behind the start/finish line
-// (staggered left/right like an F1 grid) instead of being scattered partway
-// around the track already at speed — see startCountdown() for the 3-2-1.
+// Nine AI rivals in five colour pairs (teammates share a livery, like real
+// F1 teams) plus the player makes a full ten-car grid. Colors matched to
+// their championship driver ids in championship.js. All ten cars line up on
+// a real starting grid behind the start/finish line instead of being
+// scattered partway around the track already at speed — see
+// startCountdown() for the 3-2-1.
 const AI_DRIVERS = [
+  { id: "rival-red", color: 0xe10600 }, // player's teammate
   { id: "rival-blue", color: 0x1c5fd6 },
+  { id: "rival-blue-2", color: 0x1c5fd6 },
   { id: "rival-yellow", color: 0xe6c229 },
+  { id: "rival-yellow-2", color: 0xe6c229 },
+  { id: "rival-green-1", color: 0x1f9d4a },
+  { id: "rival-green-2", color: 0x1f9d4a },
+  { id: "rival-white-1", color: 0xf5f5f5 },
+  { id: "rival-white-2", color: 0xf5f5f5 },
 ];
 
-const gridStart = centerline[0];
-const gridHeading = headingOf(gridStart);
-const gridBack = { x: -Math.sin(gridHeading), z: -Math.cos(gridHeading) };
-const gridLateral = sideNormal(gridStart);
 const GRID_ROW_GAP = 5; // meters behind the previous row
 const GRID_LANE_OFFSET = Math.min(TRACK_WIDTH / 4, 3.2); // stay clear of grass
+const TRACK_LENGTH = trackCurve.getLength();
+const GRID_ROW_SAMPLES = Math.max(
+  1,
+  Math.round((GRID_ROW_GAP / TRACK_LENGTH) * centerline.length)
+);
 
+// Places a grid slot by walking backward along the actual centerline from
+// the start/finish line, not offsetting in one fixed direction — a couple
+// of these circuits have the line sitting just before a bend, and a
+// straight-line offset there cut across the grass instead of following the
+// road. Each slot also takes its own heading from the curve at that point.
 function gridSlot(row, lane) {
+  const idx =
+    (((-row * GRID_ROW_SAMPLES) % centerline.length) + centerline.length) %
+    centerline.length;
+  const p = centerline[idx];
+  const lateral = sideNormal(p);
   return {
-    x: gridStart.x + gridBack.x * GRID_ROW_GAP * row + gridLateral.x * GRID_LANE_OFFSET * lane,
-    z: gridStart.z + gridBack.z * GRID_ROW_GAP * row + gridLateral.z * GRID_LANE_OFFSET * lane,
+    x: p.x + lateral.x * GRID_LANE_OFFSET * lane,
+    z: p.z + lateral.z * GRID_LANE_OFFSET * lane,
+    heading: headingOf(p),
   };
 }
 
 // A real F1 grid is paired, not single-file: two cars side by side per row,
 // each row staggered back from the one in front, sides alternating (odd
 // positions on one side, even on the other) — not a zig-zag of one car
-// per row.
+// per row. Each colour pair shares a row, so teammates start side by side,
+// just like the player's own row-0 teammate.
 const AI_GRID_SLOTS = [
-  { row: 0, lane: 1 }, // P2, alongside pole, opposite side
-  { row: 1, lane: -1 }, // P3, one row back, same side as pole
+  { row: 0, lane: 1 }, // P2, red teammate, alongside pole
+  { row: 1, lane: -1 }, // P3
+  { row: 1, lane: 1 }, // P4, blue teammate
+  { row: 2, lane: -1 }, // P5
+  { row: 2, lane: 1 }, // P6, yellow teammate
+  { row: 3, lane: -1 }, // P7
+  { row: 3, lane: 1 }, // P8, green teammate
+  { row: 4, lane: -1 }, // P9
+  { row: 4, lane: 1 }, // P10, white teammate
 ];
 const aiCars = AI_DRIVERS.map((driver, i) => {
   const model = buildCar(driver.color);
@@ -379,7 +448,7 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     driverId: driver.id,
     x: pos.x,
     z: pos.z,
-    heading: gridHeading,
+    heading: pos.heading,
     speed: 0,
     prevRawProgress: info.idx / centerline.length,
     totalProgress: 0,
@@ -400,7 +469,7 @@ const start = gridSlot(0, -1); // pole position, left side of the front row
 const state = {
   x: start.x,
   z: start.z,
-  heading: gridHeading,
+  heading: start.heading,
   speed: 0,
   lap: 0,
   lapStartTime: performance.now(),
@@ -409,6 +478,9 @@ const state = {
   prevRawProgress: 0,
   totalProgress: 0,
 };
+
+addGridBoxMarking(start, 1);
+aiCars.forEach((car, i) => addGridBoxMarking(car, i + 2));
 
 // "countdown" (grid, frozen, waiting for the 3-2-1) -> "racing" -> "finished"
 let raceState = "countdown";
@@ -498,6 +570,69 @@ if (wheelEl) {
   wheelEl.addEventListener("pointercancel", releaseWheel);
 }
 
+// --- Engine sound ----------------------------------------------------------
+//
+// Synthesised, not a sample — this site has no audio assets and no build
+// step to fetch/bundle one. Two detuned oscillators (a low sawtooth for
+// body, a square an octave-and-a-half up for grit) through a lowpass filter
+// whose cutoff opens up with speed, roughly like an engine's tone brightening
+// as revs climb. Browsers block audio before any user gesture, so the
+// AudioContext is only created lazily on the first key/touch input.
+
+let audioCtx = null;
+let engineGain = null;
+let engineFilter = null;
+let engineOsc1 = null;
+let engineOsc2 = null;
+
+function initEngineSound() {
+  if (audioCtx) return;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return; // no Web Audio support: fail silent, not fatal
+  audioCtx = new Ctx();
+
+  engineGain = audioCtx.createGain();
+  engineGain.gain.value = 0;
+
+  engineFilter = audioCtx.createBiquadFilter();
+  engineFilter.type = "lowpass";
+  engineFilter.frequency.value = 300;
+
+  engineOsc1 = audioCtx.createOscillator();
+  engineOsc1.type = "sawtooth";
+  engineOsc1.frequency.value = 45;
+
+  engineOsc2 = audioCtx.createOscillator();
+  engineOsc2.type = "square";
+  engineOsc2.frequency.value = 45 * 1.5;
+  const osc2Gain = audioCtx.createGain();
+  osc2Gain.gain.value = 0.25;
+
+  engineOsc1.connect(engineFilter);
+  engineOsc2.connect(osc2Gain).connect(engineFilter);
+  engineFilter.connect(engineGain).connect(audioCtx.destination);
+
+  engineOsc1.start();
+  engineOsc2.start();
+}
+
+// speedRatio: 0..1 of the player's own top speed. Silent during the grid
+// countdown (raceState isn't "racing" yet) so the engine note only kicks in
+// once the lights go out.
+function updateEngineSound(speedRatio) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const baseFreq = 42 + speedRatio * 220;
+  engineOsc1.frequency.setTargetAtTime(baseFreq, now, 0.05);
+  engineOsc2.frequency.setTargetAtTime(baseFreq * 1.5, now, 0.05);
+  engineFilter.frequency.setTargetAtTime(280 + speedRatio * 2600, now, 0.05);
+  const targetGain = raceState === "racing" ? 0.05 + speedRatio * 0.09 : 0;
+  engineGain.gain.setTargetAtTime(targetGain, now, 0.08);
+}
+
+window.addEventListener("keydown", initEngineSound, { once: true });
+window.addEventListener("pointerdown", initEngineSound, { once: true });
+
 // --- HUD -----------------------------------------------------------------
 
 const circuitNameEl = document.getElementById("circuit-name");
@@ -506,12 +641,9 @@ const lapEl = document.getElementById("lap");
 const timeEl = document.getElementById("time");
 const bestEl = document.getElementById("best");
 const speedValueEl = document.getElementById("speed-value");
-const gaugeFillEl = document.getElementById("gauge-fill");
-const gaugeNeedleEl = document.getElementById("gauge-needle-group");
+const speedFillEl = document.getElementById("speed-fill");
 const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
-const GAUGE_ARC_LENGTH = Math.PI * 90; // matches the SVG arc's radius (90)
-const GAUGE_MAX_KMH = 180; // matches the dial's printed 0/60/120/180 labels
-gaugeFillEl.style.strokeDasharray = `${GAUGE_ARC_LENGTH}`;
+const GAUGE_MAX_KMH = 300; // bar reads full at a realistic F1 top speed
 
 circuitNameEl.textContent = circuit.name;
 
@@ -547,16 +679,14 @@ function updateHud() {
   speedValueEl.textContent = Math.round(speedKmh);
 
   const gaugeRatio = Math.min(speedKmh / GAUGE_MAX_KMH, 1);
-  gaugeFillEl.style.strokeDashoffset = `${GAUGE_ARC_LENGTH * (1 - gaugeRatio)}`;
-  gaugeNeedleEl.setAttribute(
-    "transform",
-    `translate(100,100) rotate(${-90 + gaugeRatio * 180})`
-  );
+  speedFillEl.style.width = `${gaugeRatio * 100}%`;
 
   // Shift lights: an F1-wheel touch, lighting up left to right with speed
   // rather than RPM (this car has no gearbox to shift), green -> red.
   const litCount = Math.round(gaugeRatio * shiftLedEls.length);
   shiftLedEls.forEach((led, i) => led.classList.toggle("is-lit", i < litCount));
+
+  updateEngineSound(Math.abs(state.speed) / CAR.maxSpeed);
 }
 
 // --- Main loop -------------------------------------------------------------
@@ -629,10 +759,37 @@ function resolveCarCollisions(cars) {
   }
 }
 
-function updateAiCar(car, dt) {
+// AI steering had no idea other cars existed — it always aimed straight at
+// the centerline, so with ten cars on the grid, any two side by side would
+// both steer back onto the same line and stay locked together, re-colliding
+// every frame instead of the one push-apart nudge resolving it. This adds a
+// lateral-only nudge (along the track's own side-normal, not back toward or
+// away along it) away from anything within AI_AVOID_RADIUS, so cars settle
+// into their own line instead of fighting over one.
+const AI_AVOID_RADIUS = 4.5;
+const AI_AVOID_STRENGTH = 10;
+
+function updateAiCar(car, dt, allCars) {
   const info = nearestTrackInfo(car.x, car.z);
   const target = centerline[(info.idx + AI.lookahead) % centerline.length];
-  const toTarget = Math.atan2(target.x - car.x, target.z - car.z);
+
+  const lateral = sideNormal(centerline[info.idx]);
+  let avoidPush = 0;
+  for (const other of allCars) {
+    if (other === car) continue;
+    const dx = car.x - other.x;
+    const dz = car.z - other.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > 0.001 && dist < AI_AVOID_RADIUS) {
+      const closeness = (AI_AVOID_RADIUS - dist) / AI_AVOID_RADIUS;
+      const side = dx * lateral.x + dz * lateral.z;
+      if (side !== 0) avoidPush += Math.sign(side) * closeness;
+    }
+  }
+  const aimX = target.x + lateral.x * avoidPush * AI_AVOID_STRENGTH;
+  const aimZ = target.z + lateral.z * avoidPush * AI_AVOID_STRENGTH;
+
+  const toTarget = Math.atan2(aimX - car.x, aimZ - car.z);
   let err = toTarget - car.heading;
   while (err > Math.PI) err -= 2 * Math.PI;
   while (err < -Math.PI) err += 2 * Math.PI;
@@ -659,7 +816,7 @@ function finishRace() {
   const state2 = recordRaceResult(circuit.id, order);
 
   const position = order.indexOf("player") + 1;
-  const points = [25, 18, 15][position - 1] || 0;
+  const points = POINTS_BY_POSITION[position - 1] || 0;
 
   document.getElementById("results-title").textContent =
     position === 1 ? "Vittoria!" : `Arrivato ${position}°`;
@@ -761,8 +918,9 @@ function update(dt) {
 
   const info = nearestTrackInfo(state.x, state.z);
   applyTrackBoundary(state, dt, info);
-  for (const car of aiCars) updateAiCar(car, dt);
-  resolveCarCollisions([state, ...aiCars]);
+  const allCars = [state, ...aiCars];
+  for (const car of aiCars) updateAiCar(car, dt, allCars);
+  resolveCarCollisions(allCars);
 
   applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt);
   for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, car.speed, dt);

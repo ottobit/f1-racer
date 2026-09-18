@@ -32,22 +32,18 @@ canvas {
   left: 0;
   right: 0;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem 1.25rem;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--text, #e7e9ee);
   pointer-events: none;
 }
 
-/* One continuous panel for the back link + speedo, so there's no ugly gap
-   of empty space between two separately-floating boxes — a thin divider
-   line marks the boundary between them instead. */
-#hud-left {
+#hud-row {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  justify-content: center;
+  gap: 0.75rem;
 }
 
 #hud .back-link {
@@ -55,8 +51,8 @@ canvas {
   color: var(--text-dim, #9aa1b0);
   text-decoration: none;
   font-size: 0.85rem;
-  padding: 0.5rem 0.85rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.6rem 0.85rem;
+  align-self: flex-start;
 }
 
 #hud .stats {
@@ -110,34 +106,30 @@ canvas {
   pointer-events: none;
 }
 
-/* Styled like an F1 steering wheel's center display cluster: a dark
-   angular panel, a row of shift-light LEDs across the top, then the
-   analog dial and digital readout underneath. */
-/* Small badge in a top corner, out of the way of both the car (the chase
-   camera keeps it lower-center) and, on touch, the pedal/wheel controls
-   at the bottom. Kept deliberately compact — this is a HUD readout, not
-   the main thing on screen. */
-#speedo {
+/* Wide bar across the very top of the screen, clear of the horizon at any
+   viewport shape (see the comment by #speedbar in race.html for why it
+   moved here from a small corner badge): shift lights, a horizontal speed
+   bar, and a big digital readout in one row. */
+#speedbar {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.5rem 0.85rem 0.4rem;
+  gap: 1rem;
+  padding: 0.55rem 1.1rem;
   color: var(--text, #e7e9ee);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
-  opacity: 0.9;
 }
 
 #shift-lights {
   display: flex;
-  gap: 0.2rem;
+  gap: 0.25rem;
+  flex: 0 0 auto;
 }
 
 .shift-led {
-  width: 0.3rem;
-  height: 0.3rem;
+  width: 0.4rem;
+  height: 0.4rem;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.12);
   color: #2ecc71; /* the lit color, via currentColor below */
@@ -159,46 +151,46 @@ canvas {
   box-shadow: 0 0 4px 1px currentColor;
 }
 
+/* The bar itself: a track that fills left to right with speed, cyan at
+   idle through to red near the top — reads at a glance, and unlike the
+   old analog dial it naturally fills the wide bar shape instead of
+   leaving empty space around a small circle. */
+#speed-track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 3rem;
+  height: 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+#speed-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22d3ee, #e6c229, #e10600);
+  transition: width 0.08s linear;
+}
+
 .speedo-readout {
   display: flex;
   align-items: baseline;
+  justify-content: flex-end;
   gap: 0.3em;
+  flex: 0 0 auto;
+  min-width: 5.5rem;
 }
 
 #speed-value {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.6rem;
+  font-weight: 800;
   line-height: 1;
 }
 
 .speedo-unit {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--text-dim, #9aa1b0);
-}
-
-/* Analog-style speedometer gauge: a half-circle dial with a needle and
-   numeric labels, like a real dashboard, instead of a plain bar. The
-   needle rotation and the colored arc's fill are both driven by JS as a
-   0..1 ratio of current speed over the dial's labeled 180 km/h max. */
-#speedo-gauge {
-  width: 4.5rem;
-  height: auto;
-  overflow: visible;
-}
-
-.gauge-label {
-  font-size: 20px;
-  fill: var(--text-dim, #9aa1b0);
-  text-anchor: middle;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-
-#gauge-fill {
-  transition: stroke-dashoffset 0.08s linear;
-}
-
-#gauge-needle-group {
-  transition: transform 0.08s linear;
 }
 
 #touch-controls {
@@ -320,29 +312,45 @@ html.touch #touch-controls {
 .results-card {
   width: 100%;
   max-width: 26rem;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   background: var(--surface, #14171f);
   border: 1px solid var(--border, #262b36);
   border-radius: 14px;
-  padding: 1.75rem;
+  padding: 1.25rem 1.75rem;
   color: var(--text, #e7e9ee);
   text-align: center;
 }
 
 .results-card h2 {
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
+  flex: 0 0 auto;
 }
 
+/* With up to ten finishers, the list can get taller than the viewport —
+   only it scrolls (min-height: 0 is what lets a flex child shrink below
+   its content size at all), so the title, points and action buttons stay
+   in view instead of getting pushed off top or bottom. */
 #results-order {
   list-style: none;
-  margin: 0 0 1rem;
+  margin: 0;
   padding: 0;
   text-align: left;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* A harmless fade at the very bottom edge — invisible when the list
+     fits, but on a short screen it hints there's more below instead of
+     the list just quietly ending after however many rows fit. */
+  mask-image: linear-gradient(to bottom, black calc(100% - 14px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 14px), transparent 100%);
 }
 
 #results-order li {
   display: flex;
   justify-content: space-between;
-  padding: 0.5rem 0.25rem;
+  padding: 0.35rem 0.25rem;
   border-bottom: 1px solid var(--border, #262b36);
 }
 
@@ -353,13 +361,15 @@ html.touch #touch-controls {
 
 #results-points {
   color: var(--text-dim, #9aa1b0);
-  margin: 0 0 1.25rem;
+  margin: 0.75rem 0 1rem;
+  flex: 0 0 auto;
 }
 
 .results-actions {
   display: flex;
   gap: 0.75rem;
   justify-content: center;
+  flex: 0 0 auto;
 }
 
 .results-btn {

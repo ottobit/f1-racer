@@ -4,14 +4,24 @@
 
 const STORAGE_KEY = "f1racer-championship-v1";
 
+// Five fictional scuderie (one per grid colour, own livery, not a real F1
+// team) with two drivers each — the player rides for Fenice alongside an
+// AI teammate, matching the paired grid in main.js.
 export const DRIVERS = [
-  { id: "player", name: "Tu" },
-  { id: "rival-blue", name: "Rivale Blu" },
-  { id: "rival-yellow", name: "Rivale Giallo" },
+  { id: "player", name: "Tu (Fenice)" },
+  { id: "rival-red", name: "Ventura (Fenice)" },
+  { id: "rival-blue", name: "Marino (Nettuno)" },
+  { id: "rival-blue-2", name: "Corsaro (Nettuno)" },
+  { id: "rival-yellow", name: "Solari (Solare)" },
+  { id: "rival-yellow-2", name: "Raggio (Solare)" },
+  { id: "rival-green-1", name: "Bosconi (Smeraldo)" },
+  { id: "rival-green-2", name: "Selvaggi (Smeraldo)" },
+  { id: "rival-white-1", name: "Gelidi (Artica)" },
+  { id: "rival-white-2", name: "Brina (Artica)" },
 ];
 
-// Classic-ish top-3 points; there are only ever 3 cars in a race.
-export const POINTS_BY_POSITION = [25, 18, 15];
+// Real F1 points system (top 10 score) — fits a ten-car grid exactly.
+export const POINTS_BY_POSITION = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
 
 export function loadState() {
   try {
