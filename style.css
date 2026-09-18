@@ -225,6 +225,25 @@ canvas {
   }
 }
 
+/* Dim and inert until the zone + gap conditions in updateDrsEligibility()
+   are both met, then lights up green like a real F1 dash's DRS prompt. */
+#drs-indicator {
+  flex: 0 0 auto;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#drs-indicator.drs-active {
+  color: #05060a;
+  background: #2ecc71;
+  box-shadow: 0 0 6px 1px rgba(46, 204, 113, 0.7);
+}
+
 #speed-value {
   font-size: 1.35rem;
   font-weight: 800;
