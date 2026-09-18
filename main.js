@@ -189,26 +189,36 @@ function buildRoadMesh() {
 }
 scene.add(buildRoadMesh());
 
-// Barriers along both edges (visual only, no collision in v1)
-function buildBarriers() {
+// Kerbs ("cordoli"): the red-and-white painted strip along the edge of the
+// tarmac on a real circuit — flat, part of the road surface, not a wall.
+// The previous version here was a row of standing red boxes (0.8 units
+// tall, sparsely spaced) that read as a barrier/wall rather than a curb.
+// This paints a low, near-continuous alternating stripe right at the
+// asphalt edge instead — the actual off-track boundary (grass drag, then
+// the invisible wall) still sits further out, unchanged; this is purely
+// the visual marker real curbs are.
+function buildKerbs() {
   const group = new THREE.Group();
-  const halfWidth = TRACK_WIDTH / 2 + 0.6;
-  const barrierMaterial = new THREE.MeshStandardMaterial({ color: 0xdd2222 });
-  const step = 6;
+  const halfWidth = TRACK_WIDTH / 2; // right at the tarmac edge
+  const redMat = new THREE.MeshStandardMaterial({ color: 0xcc1f1f, roughness: 0.75 });
+  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.75 });
+  const step = 3;
+  const segmentLength = (trackCurve.getLength() / centerline.length) * step * 1.08; // slight overlap so bands read as continuous, not gapped
 
   for (let i = 0; i < centerline.length; i += step) {
     const p = centerline[i];
     const n = sideNormal(p);
     const heading = headingOf(p);
+    const material = Math.floor(i / step) % 2 === 0 ? redMat : whiteMat;
 
     for (const side of [1, -1]) {
       const box = new THREE.Mesh(
-        new THREE.BoxGeometry(1.2, 0.8, 2.4),
-        barrierMaterial
+        new THREE.BoxGeometry(0.9, 0.05, segmentLength),
+        material
       );
       box.position.set(
         p.x + n.x * halfWidth * side,
-        0.4,
+        0.015,
         p.z + n.z * halfWidth * side
       );
       box.rotation.y = heading;
@@ -217,7 +227,7 @@ function buildBarriers() {
   }
   return group;
 }
-scene.add(buildBarriers());
+scene.add(buildKerbs());
 
 // Start/finish line: a group so the flattening rotation (local X) and the
 // heading rotation (group Y) don't get tangled up in Euler order.
@@ -570,14 +580,45 @@ if (wheelEl) {
   wheelEl.addEventListener("pointercancel", releaseWheel);
 }
 
+// --- Gears -------------------------------------------------------------
+//
+// Eight forward gears (typical of a modern F1 car), mapped onto the 0..1
+// fraction of top speed at which each one tops out — not evenly spaced,
+// since a real gearbox's lower gears cover much less ground than its
+// higher ones. There's no manual shifting; the gear is purely a function
+// of current speed.
+const GEAR_THRESHOLDS = [0.09, 0.19, 0.31, 0.45, 0.6, 0.75, 0.89, 1.0];
+
+// Which gear a fraction of top speed falls in, plus how far through that
+// gear's own speed band the car sits (0..1, resets to 0 on every shift).
+// That second number is what makes the engine note and shift lights climb
+// through a gear and drop back down at the next shift, instead of just
+// tracking raw speed in a straight line.
+function gearInfo(speedRatio) {
+  const ratio = Math.min(Math.max(speedRatio, 0), 1);
+  let gear = GEAR_THRESHOLDS.length;
+  for (let g = 0; g < GEAR_THRESHOLDS.length; g++) {
+    if (ratio <= GEAR_THRESHOLDS[g]) {
+      gear = g + 1;
+      break;
+    }
+  }
+  const lower = gear === 1 ? 0 : GEAR_THRESHOLDS[gear - 2];
+  const upper = GEAR_THRESHOLDS[gear - 1];
+  const rpmRatio = upper > lower ? (ratio - lower) / (upper - lower) : 1;
+  return { gear, rpmRatio: Math.min(Math.max(rpmRatio, 0), 1) };
+}
+
 // --- Engine sound ----------------------------------------------------------
 //
 // Synthesised, not a sample — this site has no audio assets and no build
 // step to fetch/bundle one. Two detuned oscillators (a low sawtooth for
 // body, a square an octave-and-a-half up for grit) through a lowpass filter
-// whose cutoff opens up with speed, roughly like an engine's tone brightening
-// as revs climb. Browsers block audio before any user gesture, so the
-// AudioContext is only created lazily on the first key/touch input.
+// whose cutoff opens up with revs, roughly like an engine's tone
+// brightening as it climbs through a gear — see gearInfo() above for why
+// that's gear-relative "revs" and not just raw speed. Browsers block audio
+// before any user gesture, so the AudioContext is only created lazily on
+// the first key/touch input.
 
 let audioCtx = null;
 let engineGain = null;
@@ -616,18 +657,39 @@ function initEngineSound() {
   engineOsc2.start();
 }
 
-// speedRatio: 0..1 of the player's own top speed. Silent during the grid
-// countdown (raceState isn't "racing" yet) so the engine note only kicks in
+// speedRatio (0..1 of top speed) drives volume, which should keep rising
+// with real speed; rpmRatio (0..1, resets each gear — see gearInfo()) drives
+// pitch and filter brightness, which should climb through a gear and drop
+// at the next shift, the way an engine actually sounds. Silent during the
+// grid countdown (raceState isn't "racing" yet) so the note only kicks in
 // once the lights go out.
-function updateEngineSound(speedRatio) {
+function updateEngineSound(speedRatio, rpmRatio) {
   if (!audioCtx) return;
   const now = audioCtx.currentTime;
-  const baseFreq = 42 + speedRatio * 220;
-  engineOsc1.frequency.setTargetAtTime(baseFreq, now, 0.05);
-  engineOsc2.frequency.setTargetAtTime(baseFreq * 1.5, now, 0.05);
-  engineFilter.frequency.setTargetAtTime(280 + speedRatio * 2600, now, 0.05);
+  const baseFreq = 55 + rpmRatio * 190;
+  engineOsc1.frequency.setTargetAtTime(baseFreq, now, 0.04);
+  engineOsc2.frequency.setTargetAtTime(baseFreq * 1.5, now, 0.04);
+  engineFilter.frequency.setTargetAtTime(320 + rpmRatio * 2400, now, 0.04);
   const targetGain = raceState === "racing" ? 0.05 + speedRatio * 0.09 : 0;
   engineGain.gain.setTargetAtTime(targetGain, now, 0.08);
+}
+
+// A short percussive "thunk" layered over the continuous engine tone, fired
+// once per gear change (see updateHud). The pitch drop in the engine note
+// already implies a shift; a discrete click sells it as one.
+function playShiftClick() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  osc.type = "square";
+  osc.frequency.setValueAtTime(180, now);
+  osc.frequency.exponentialRampToValueAtTime(80, now + 0.05);
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.16, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.08);
 }
 
 window.addEventListener("keydown", initEngineSound, { once: true });
@@ -642,8 +704,11 @@ const timeEl = document.getElementById("time");
 const bestEl = document.getElementById("best");
 const speedValueEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
+const gearValueEl = document.getElementById("gear-value");
 const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
 const GAUGE_MAX_KMH = 300; // bar reads full at a realistic F1 top speed
+let lastGearLabel = null;
+let gearFlashTimeout = null;
 
 circuitNameEl.textContent = circuit.name;
 
@@ -681,12 +746,30 @@ function updateHud() {
   const gaugeRatio = Math.min(speedKmh / GAUGE_MAX_KMH, 1);
   speedFillEl.style.width = `${gaugeRatio * 100}%`;
 
-  // Shift lights: an F1-wheel touch, lighting up left to right with speed
-  // rather than RPM (this car has no gearbox to shift), green -> red.
-  const litCount = Math.round(gaugeRatio * shiftLedEls.length);
+  const { gear, rpmRatio } = gearInfo(Math.abs(state.speed) / CAR.maxSpeed);
+  const gearLabel = Math.abs(state.speed) < 0.6 ? "N" : state.speed < 0 ? "R" : String(gear);
+  if (gearLabel !== lastGearLabel) {
+    gearValueEl.textContent = gearLabel;
+    if (lastGearLabel !== null) {
+      // Restart the CSS flash animation even if it's still mid-run from a
+      // rapid-fire shift, and give the audio "thunk" its visual half.
+      clearTimeout(gearFlashTimeout);
+      gearValueEl.classList.remove("gear-shift");
+      void gearValueEl.offsetWidth;
+      gearValueEl.classList.add("gear-shift");
+      gearFlashTimeout = setTimeout(() => gearValueEl.classList.remove("gear-shift"), 220);
+      playShiftClick();
+    }
+    lastGearLabel = gearLabel;
+  }
+
+  // Shift lights sweep through each gear and reset at the next one, green
+  // -> red, like a rev limiter — tied to rpmRatio (gear-relative), not
+  // overall speed, so they visibly reset on every shift.
+  const litCount = Math.round(rpmRatio * shiftLedEls.length);
   shiftLedEls.forEach((led, i) => led.classList.toggle("is-lit", i < litCount));
 
-  updateEngineSound(Math.abs(state.speed) / CAR.maxSpeed);
+  updateEngineSound(Math.abs(state.speed) / CAR.maxSpeed, rpmRatio);
 }
 
 // --- Main loop -------------------------------------------------------------
