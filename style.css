@@ -26,15 +26,25 @@ canvas {
   border-radius: 10px;
 }
 
+/* A real F1 dash is one compact instrument cluster, not a stack of boxes —
+   the previous column layout (speed bar, then a second row of stats below
+   it) was tall enough to eat a big chunk of a landscape phone screen, since
+   landscape has width to spare but very little height. Wrapping instead of
+   stacking lets the two pieces share one row whenever there's room (any
+   landscape viewport, most desktop widths) and only drop to two rows when
+   there genuinely isn't (narrow portrait) — no separate compact layout to
+   maintain, the same markup just reflows. */
 #hud {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.85rem 1.25rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.5rem 1rem;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--text, #e7e9ee);
   pointer-events: none;
@@ -43,23 +53,23 @@ canvas {
 #hud-row {
   display: flex;
   justify-content: center;
-  gap: 0.75rem;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 #hud .back-link {
   pointer-events: auto;
   color: var(--text-dim, #9aa1b0);
   text-decoration: none;
-  font-size: 0.85rem;
-  padding: 0.6rem 0.85rem;
-  align-self: flex-start;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.7rem;
 }
 
 #hud .stats {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  line-height: 1.5;
-  padding: 0.5rem 0.85rem;
+  line-height: 1.3;
+  padding: 0.35rem 0.7rem;
 }
 
 #hud .stats .circuit-name {
@@ -113,8 +123,9 @@ canvas {
 #speedbar {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.55rem 1.1rem;
+  gap: 0.75rem;
+  flex: 1 1 260px;
+  padding: 0.4rem 0.9rem;
   color: var(--text, #e7e9ee);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-variant-numeric: tabular-nums;
@@ -123,13 +134,13 @@ canvas {
 
 #shift-lights {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.2rem;
   flex: 0 0 auto;
 }
 
 .shift-led {
-  width: 0.4rem;
-  height: 0.4rem;
+  width: 0.35rem;
+  height: 0.35rem;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.12);
   color: #2ecc71; /* the lit color, via currentColor below */
@@ -159,7 +170,7 @@ canvas {
   position: relative;
   flex: 1 1 auto;
   min-width: 3rem;
-  height: 0.85rem;
+  height: 0.65rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
   overflow: hidden;
@@ -179,11 +190,11 @@ canvas {
   justify-content: flex-end;
   gap: 0.3em;
   flex: 0 0 auto;
-  min-width: 5.5rem;
+  min-width: 4.75rem;
 }
 
 #speed-value {
-  font-size: 1.6rem;
+  font-size: 1.35rem;
   font-weight: 800;
   line-height: 1;
 }
