@@ -47,6 +47,18 @@ const AI = {
   lookahead: 10, // centerline samples ahead to steer toward
 };
 
+// Tire wear: grip degrades gradually over the race distance, for both the
+// player and the AI, cutting into cornering rate — real tires lose grip
+// long before they lose straight-line pace, so only turn rate is affected,
+// never top speed or acceleration. No pit stops in this game, so wear is
+// simply a function of total race distance covered (reaches full wear
+// exactly at the finish, same curve for everyone).
+const TIRE_WEAR_MAX_TURN_PENALTY = 0.22; // steering authority lost at full wear
+function tireGripFactor(totalProgress) {
+  const wear = Math.min(totalProgress / LAPS_PER_RACE, 1);
+  return 1 - TIRE_WEAR_MAX_TURN_PENALTY * wear;
+}
+
 // Collisions: running wide costs grip (grass), hitting the wall costs most
 // of your speed, and cars bumping each other lose speed and get pushed
 // apart rather than overlapping. All tuned for arcade feel, not real physics.
@@ -711,6 +723,7 @@ const positionEl = document.getElementById("position");
 const lapEl = document.getElementById("lap");
 const timeEl = document.getElementById("time");
 const bestEl = document.getElementById("best");
+const tireWearEl = document.getElementById("tire-wear");
 const speedValueEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearValueEl = document.getElementById("gear-value");
@@ -749,6 +762,7 @@ function updateHud() {
   bestEl.textContent = state.bestLapTime
     ? `Migliore ${formatTime(state.bestLapTime)}`
     : "Migliore --:--.--";
+  tireWearEl.textContent = `Gomme ${Math.round(tireGripFactor(state.totalProgress) * 100)}%`;
   const speedKmh = Math.abs(state.speed) * KMH_PER_UNIT;
   speedValueEl.textContent = Math.round(speedKmh);
 
@@ -887,7 +901,10 @@ function updateAiCar(car, dt, allCars) {
   while (err < -Math.PI) err += 2 * Math.PI;
 
   car.speed = Math.min(AI.maxSpeed, car.speed + AI.accel * dt);
-  const rate = AI.turnRate * (0.35 + 0.65 * Math.min(car.speed / AI.maxSpeed, 1));
+  const rate =
+    AI.turnRate *
+    (0.35 + 0.65 * Math.min(car.speed / AI.maxSpeed, 1)) *
+    tireGripFactor(car.totalProgress);
   if (err > 0.02) car.heading += rate * dt;
   if (err < -0.02) car.heading -= rate * dt;
 
@@ -992,7 +1009,8 @@ function update(dt) {
   // run off track. Touch input is analog (touchSteer); keyboard is digital,
   // full deflection either way.
   const speedFactor = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
-  const turnRate = CAR.maxTurnRate * (1 - 0.55 * speedFactor);
+  const turnRate =
+    CAR.maxTurnRate * (1 - 0.55 * speedFactor) * tireGripFactor(state.totalProgress);
   const steerSign = state.speed >= 0 ? 1 : -1;
   const keyboardSteer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   const steerAmount = touchSteer !== 0 ? touchSteer : keyboardSteer;
