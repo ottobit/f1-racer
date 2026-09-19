@@ -26,35 +26,44 @@ canvas {
   border-radius: 10px;
 }
 
-/* A real F1 dash is one compact instrument cluster, not a stack of boxes —
-   the previous column layout (speed bar, then a second row of stats below
-   it) was tall enough to eat a big chunk of a landscape phone screen, since
-   landscape has width to spare but very little height. Wrapping instead of
-   stacking lets the two pieces share one row whenever there's room (any
-   landscape viewport, most desktop widths) and only drop to two rows when
-   there genuinely isn't (narrow portrait) — no separate compact layout to
-   maintain, the same markup just reflows. */
+/* Two stacked instrument cards flush against the top edge, always in the
+   same order (speed bar, then the circuit/lap/time card) rather than
+   sharing a row on wide viewports — the previous side-by-side layout put
+   the two cards at slightly different heights (they don't share a natural
+   baseline) and read as loose pieces floating in empty space rather than
+   one dash. Stacking costs a little vertical room, but there's headroom to
+   spare above the horizon on every circuit. */
 #hud {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem 0.75rem;
-  padding: 0.5rem 1rem;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: var(--text, #e7e9ee);
   pointer-events: none;
 }
 
+#speedbar {
+  width: 100%;
+  max-width: 30rem;
+}
+
+/* Sized to its own content, not stretched to match #speedbar's width —
+   speedbar has a stretchy speed-track bar that visually wants the full
+   30rem, this card doesn't have an equivalent filler, so forcing the same
+   width just left dead air on both sides instead of removing it (which is
+   the same complaint the extra space above the whole HUD was about). */
 #hud-row {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
 }
 
 #hud .back-link {
@@ -66,10 +75,18 @@ canvas {
 }
 
 #hud .stats {
-  text-align: right;
+  /* Sized to its own content, not stretched to fill the row — flex:1 1 auto
+     here used to grow the box to fill whatever space back-link and the
+     minimap left over, then right-align the text inside that oversized
+     box, which just relocated the "empty space" complaint to inside this
+     card instead of removing it. */
+  flex: 0 1 auto;
+  text-align: center;
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
-  padding: 0.35rem 0.7rem;
+  padding: 0.35rem 0.9rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #hud .stats .circuit-name {
@@ -167,16 +184,13 @@ canvas {
 }
 
 /* Small top-down circuit trace. Sits in the flow of #hud-row next to the
-   stats panel (not a fixed overlay) so it wraps along with the rest of
-   the HUD instead of ever sitting on top of it on a narrow viewport. */
+   stats panel, inside #hud-row's own card now (see .hud-panel on #hud-row)
+   rather than carrying a second nested panel background of its own. */
 #minimap {
-  width: 72px;
-  height: 72px;
-  border-radius: 10px;
-  background: rgba(11, 12, 17, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
 }
 
@@ -188,7 +202,7 @@ canvas {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex: 1 1 260px;
+  flex: 0 0 auto;
   padding: 0.4rem 0.9rem;
   color: var(--text, #e7e9ee);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -350,13 +364,14 @@ html.touch #touch-controls {
 }
 
 .touch-btn {
-  width: 5rem;
-  height: 5rem;
+  width: 6.5rem;
+  height: 6.5rem;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(20, 22, 28, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(20, 22, 28, 0.6);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   color: var(--text, #e7e9ee);
-  font-size: 1.8rem;
+  font-size: 2.1rem;
   line-height: 1;
   -webkit-user-select: none;
   user-select: none;
@@ -364,28 +379,33 @@ html.touch #touch-controls {
 }
 
 .touch-btn:active {
-  background: rgba(225, 6, 0, 0.55);
+  background: rgba(225, 6, 0, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .touch-btn--big {
-  width: 6rem;
-  height: 6rem;
-  font-size: 2.2rem;
+  width: 7.5rem;
+  height: 7.5rem;
+  font-size: 2.6rem;
 }
 
 /* F1-style steering wheel: an actual wheel shape (flat-bottom rim, center
    hub, top marker). It's one continuous drag surface (see main.js) rather
    than two side-by-side buttons, so a finger can slide across it without
-   losing the press — that's what a wheel needs to be usable one-handed. */
+   losing the press — that's what a wheel needs to be usable one-handed.
+   Sized up from the original 7rem and given its own drop shadow (the SVG
+   itself has no shadow — it's flat artwork) so it reads as a solid object
+   sitting on the glass instead of a flat sticker, and is comfortably
+   bigger under a thumb. */
 #wheel-control {
   position: relative;
-  width: 7rem;
-  height: 7rem;
+  width: 10rem;
+  height: 10rem;
   border-radius: 50% 50% 20% 20%;
-  overflow: hidden;
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.5));
 }
 
 #wheel-control svg {
