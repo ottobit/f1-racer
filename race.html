@@ -33,6 +33,28 @@
         (forced !== "0" &&
           ("ontouchstart" in window || navigator.maxTouchPoints > 0));
       if (isTouch) document.documentElement.classList.add("touch");
+      if (isTouch) {
+        // iOS Safari can still trigger page zoom despite viewport metadata
+        // and touch-action CSS. Cancel its legacy gesture events on the race
+        // page, and suppress rapid double-tap defaults without affecting links.
+        document.addEventListener("gesturestart", function (event) {
+          event.preventDefault();
+        }, { passive: false });
+        document.addEventListener("gesturechange", function (event) {
+          event.preventDefault();
+        }, { passive: false });
+        document.addEventListener("gestureend", function (event) {
+          event.preventDefault();
+        }, { passive: false });
+
+        var lastTouchEnd = 0;
+        document.addEventListener("touchend", function (event) {
+          if (event.target.closest("a")) return;
+          var now = Date.now();
+          if (now - lastTouchEnd <= 350) event.preventDefault();
+          lastTouchEnd = now;
+        }, { passive: false });
+      }
     })();
   </script>
 </head>
