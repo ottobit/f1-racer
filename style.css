@@ -447,6 +447,33 @@ html.touch #touch-controls {
 
 /* --- Circuit menu (index.html) ------------------------------------------- */
 
+.difficulty-select {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 640px;
+  margin: 0 auto 1.5rem;
+  padding: 0 1.5rem;
+}
+
+.difficulty-btn {
+  flex: 1 1 0;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #262b36);
+  background: var(--surface, #14171f);
+  color: var(--text-dim, #9aa1b0);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.difficulty-btn.active {
+  background: var(--accent, #e10600);
+  border-color: var(--accent, #e10600);
+  color: #fff;
+}
+
 .menu-standings {
   max-width: 640px;
   margin: 0 auto 2rem;
