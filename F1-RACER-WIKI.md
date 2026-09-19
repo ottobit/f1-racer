@@ -121,9 +121,7 @@ Player movement is currently concentrated in `integratePlayerMotion(dt)`.
 - incident logging.
 
 ### Current limitation
-The model is primarily arcade/kinematic. It does **not** yet model a full tyre-force system with explicit lateral velocity, slip angle, load transfer, front/rear grip balance, or physical understeer/oversteer.
-
-That is the main target of Issue #41.
+The model now has a lightweight dynamic layer: explicit lateral velocity, finite yaw response and grip-limited cornering. Excess lateral motion feeds a corner-drag penalty into longitudinal speed. This is still an arcade-oriented model rather than a full tyre-force simulation; explicit slip-angle/load-transfer modelling remains a future refinement.
 
 ## 6. Track system
 
@@ -345,7 +343,7 @@ For future work:
 ## 20. Planned evolution
 
 ### Issue #41 — Physics
-Build a more credible car dynamics layer.
+Implemented a first dynamic layer with lateral velocity, finite yaw response, grip-limited cornering and corner-drag feedback.
 
 ### Issue #42 — HUD
 Expose the richer driving model through a better racing interface.

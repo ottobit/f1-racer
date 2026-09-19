@@ -881,6 +881,10 @@ const state = {
   totalProgress: 0,
   damage: 0,
   drsActive: false,
+  // Physics extension: lateral velocity and yaw-rate make the car carry
+  // momentum through corners instead of moving only along its heading.
+  lateralSpeed: 0,
+  yawRate: 0,
   wasOffTrack: false,
   trackLimitViolationsThisLap: 0,
   lastLapPenaltyMs: 0,
@@ -1582,28 +1586,75 @@ function integratePlayerMotion(dt) {
     Math.min(playerMaxSpeed, state.speed)
   );
 
-  // Steering (disabled when nearly stationary; direction flips in reverse).
-  // Turn authority tapers off with speed — real cars don't snap-turn flat
-  // out, and without that a single quick tap at top speed was enough to
-  // run off track. Touch input is analog (touchSteer); keyboard is digital,
-  // full deflection either way.
+  // Steering / cornering.
+  //
+  // The old model changed heading directly and then moved the car only along
+  // that heading. That is stable and arcade-friendly, but it gives the car
+  // no lateral momentum. Keep the same input contract while adding a small
+  // dynamic layer: yaw rate builds toward a grip-limited target and lateral
+  // velocity is damped rather than snapped to zero. This gives us controllable
+  // slip, understeer and tyre-grip effects without turning the browser game
+  // into a full rigid-body simulator.
   const speedFactor = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
-  const turnRate =
-    CAR.maxTurnRate * (1 - 0.55 * speedFactor) * tireGripFactor(state.totalProgress);
+  const grip = tireGripFactor(state.totalProgress);
   const steerSign = state.speed >= 0 ? 1 : -1;
   const keyboardSteer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   const steerAmount = touchSteer !== 0 ? touchSteer : keyboardSteer;
-  if (Math.abs(state.speed) > 0.05 && steerAmount !== 0) {
-    // steerAmount is positive for "right" (right arrow, or a drag to the
-    // right half of the wheel) — heading decreases for a right turn, which
-    // got flipped by mistake when the wheel became analog. That's what
-    // made the car turn opposite to the input.
-    state.heading -= turnRate * dt * steerSign * steerAmount;
+
+  const speedSteerLimit = 1 - 0.55 * speedFactor;
+  const targetYawRate =
+    -steerAmount *
+    CAR.maxTurnRate *
+    speedSteerLimit *
+    grip *
+    steerSign;
+
+  // Steering response is intentionally finite: changing direction creates
+  // a short transition instead of an instantaneous heading change.
+  const yawResponse = 7.5;
+  state.yawRate += (targetYawRate - state.yawRate) * Math.min(1, yawResponse * dt);
+  if (Math.abs(state.speed) < 0.05 || steerAmount === 0) {
+    state.yawRate *= Math.max(0, 1 - dt * 5);
+  }
+  state.heading += state.yawRate * dt;
+
+  // Lateral momentum. The target is proportional to speed and steering, but
+  // tyre grip limits how much of it survives. Low grip therefore produces a
+  // wider line and more slide rather than simply reducing turn rate.
+  const lateralAxisX = -Math.cos(state.heading);
+  const lateralAxisZ = Math.sin(state.heading);
+  const maxLateral = Math.abs(state.speed) * 0.32;
+  const desiredLateral =
+    steerAmount * Math.abs(state.speed) * 0.16 * (0.55 + 0.45 * grip) * steerSign;
+  const lateralResponse = 5.0 + grip * 3.0;
+  state.lateralSpeed +=
+    (desiredLateral - state.lateralSpeed) *
+    Math.min(1, lateralResponse * dt);
+
+  // Tyre slip grows when requested lateral motion exceeds available grip.
+  // A small slip penalty feeds back into longitudinal speed, so entering a
+  // corner too aggressively costs exit speed instead of producing a free
+  // pivot around the car's centre.
+  state.lateralSpeed = Math.max(
+    -maxLateral,
+    Math.min(maxLateral, state.lateralSpeed)
+  );
+  const slipRatio =
+    maxLateral > 0.001
+      ? Math.min(Math.abs(state.lateralSpeed) / maxLateral, 1)
+      : 0;
+  const cornerDrag = 1 + slipRatio * (1.8 - grip);
+  if (state.speed > 0) {
+    state.speed = Math.max(0, state.speed - state.speed * (cornerDrag - 1) * 0.9 * dt);
   }
 
-  // Integrate position (matches the heading convention used by the track)
-  state.x += Math.sin(state.heading) * state.speed * dt;
-  state.z += Math.cos(state.heading) * state.speed * dt;
+  // Integrate both velocity components in world space.
+  const forwardX = Math.sin(state.heading);
+  const forwardZ = Math.cos(state.heading);
+  state.x +=
+    (forwardX * state.speed + lateralAxisX * state.lateralSpeed) * dt;
+  state.z +=
+    (forwardZ * state.speed + lateralAxisZ * state.lateralSpeed) * dt;
 
   const info = nearestTrackInfo(state.x, state.z);
   applyTrackBoundary(state, dt, info);
@@ -1653,9 +1704,13 @@ function applyGridPositions(order) {
     car.z = pos.z;
     car.heading = pos.heading;
     car.speed = 0;
+    car.lateralSpeed = 0;
+    car.yawRate = 0;
     car.prevRawProgress = info.idx / centerline.length;
     car.totalProgress = 0;
     car.lap = 0;
+    car.lateralSpeed = 0;
+    car.yawRate = 0;
   });
 }
 
