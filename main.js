@@ -1496,6 +1496,14 @@ function getNextUnracedCircuitId(champState) {
 // Chase camera math, shared by the countdown grid shot and the race loop.
 const CHASE_CAM_BASE_DISTANCE = 9;
 const CHASE_CAM_BASE_FOV = 58; // matches updateSpeedFov's resting FOV
+// camera.fov is a VERTICAL field of view — on a wide-and-short viewport
+// (a phone in landscape, aspect ratio well past 2:1) that same vertical FOV
+// implies a much wider horizontal FOV than on a taller/squarer screen, so
+// everything at a fixed distance (the car included) reads smaller purely
+// from the aspect ratio, independent of the speed-FOV effect below. Only
+// pulls the camera in for screens wider than this baseline — never pushes
+// it out for taller ones, which already frame the car generously.
+const CHASE_CAM_BASE_ASPECT = 1.7; // roughly 16:9, a typical landscape desktop/tablet
 
 function updateChaseCamera(dt) {
   // updateSpeedFov widens the FOV with speed for a sense of acceleration,
@@ -1507,7 +1515,8 @@ function updateChaseCamera(dt) {
   const fovScale =
     Math.tan(THREE.MathUtils.degToRad(CHASE_CAM_BASE_FOV / 2)) /
     Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const camDistance = CHASE_CAM_BASE_DISTANCE * fovScale;
+  const aspectScale = Math.min(1, CHASE_CAM_BASE_ASPECT / camera.aspect);
+  const camDistance = CHASE_CAM_BASE_DISTANCE * fovScale * aspectScale;
   const camHeight = 4.5;
   const desiredX = state.x - Math.sin(state.heading) * camDistance;
   const desiredZ = state.z - Math.cos(state.heading) * camDistance;
