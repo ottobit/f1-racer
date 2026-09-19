@@ -40,49 +40,53 @@
   <div id="app"></div>
 
   <div id="hud">
-    <!-- Used to live tucked in the top-left corner, small enough that it sat
-         right on the horizon — half against the dark sky, half against the
-         lighter track surface behind it. A full-width bar right at the very
-         top of the screen stays clear of that seam regardless of viewport
-         shape, and reads as a proper speed readout instead of a tiny badge. -->
-    <div id="speedbar" class="hud-panel">
-      <div id="shift-lights" aria-hidden="true">
-        <span class="shift-led"></span><span class="shift-led"></span>
-        <span class="shift-led"></span><span class="shift-led"></span>
-        <span class="shift-led"></span><span class="shift-led"></span>
-        <span class="shift-led"></span><span class="shift-led"></span>
-      </div>
-      <span id="drs-indicator" aria-hidden="true">DRS</span>
-      <div id="speed-track" aria-hidden="true">
-        <div id="speed-fill"></div>
-      </div>
-      <div class="speedo-readout">
-        <span id="gear-value" aria-hidden="true">N</span>
-        <span id="speed-value">0</span>
-        <span class="speedo-unit">km/h</span>
-      </div>
-    </div>
-    <div id="hud-row" class="hud-panel">
-      <a class="back-link" href="index.html">← circuiti</a>
-      <div class="stats">
-        <div id="circuit-name" class="circuit-name"></div>
-        <div class="stats-row stats-row--primary">
-          <span id="position">P-</span>
-          <span class="stats-sep">·</span>
-          <span id="lap">Giro 0/3</span>
+    <a class="back-link" href="index.html">← circuiti</a>
+    <!-- One bordered instrument cluster (speed row on top, stats row below)
+         instead of two separate pill-shaped cards — the previous version
+         put speedbar and stats at slightly different heights/widths with
+         nothing tying them together as one dash. The minimap sits beside
+         it as its own card, stretched to match this cluster's full height
+         (see #hud-main's align-items: stretch) instead of being squeezed
+         inside the stats card. -->
+    <div id="hud-main">
+      <div id="hud-cluster" class="hud-panel">
+        <div id="speedbar">
+          <div id="shift-lights" aria-hidden="true">
+            <span class="shift-led"></span><span class="shift-led"></span>
+            <span class="shift-led"></span><span class="shift-led"></span>
+            <span class="shift-led"></span><span class="shift-led"></span>
+            <span class="shift-led"></span><span class="shift-led"></span>
+          </div>
+          <span id="drs-indicator" aria-hidden="true">DRS</span>
+          <div id="speed-track" aria-hidden="true">
+            <div id="speed-fill"></div>
+          </div>
+          <div class="speedo-readout">
+            <span id="gear-value" aria-hidden="true">N</span>
+            <span id="speed-value">0</span>
+            <span class="speedo-unit">km/h</span>
+          </div>
         </div>
-        <div class="stats-row">
-          <span id="time">0:00.00</span>
-          <span id="best">Migliore --:--.--</span>
-        </div>
-        <div class="stats-row">
-          <span id="tire-wear">Gomme 100%</span>
-        </div>
-        <div id="damage-row" class="stats-row" hidden>
-          <span id="damage">Danni 0%</span>
+        <div class="stats">
+          <div id="circuit-name" class="circuit-name"></div>
+          <div class="stats-row stats-row--primary">
+            <span id="position">P-</span>
+            <span class="stats-sep">·</span>
+            <span id="lap">Giro 0/3</span>
+          </div>
+          <div class="stats-row">
+            <span id="time">0:00.00</span>
+            <span id="best">Migliore --:--.--</span>
+          </div>
+          <div class="stats-row">
+            <span id="tire-wear">Gomme 100%</span>
+          </div>
+          <div id="damage-row" class="stats-row" hidden>
+            <span id="damage">Danni 0%</span>
+          </div>
         </div>
       </div>
-      <canvas id="minimap" width="130" height="130" aria-hidden="true"></canvas>
+      <canvas id="minimap" class="hud-panel" width="130" height="130" aria-hidden="true"></canvas>
     </div>
   </div>
 
