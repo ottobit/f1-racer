@@ -66,6 +66,15 @@ const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
 const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
 const CAR_BUMP_SPEED_FACTOR = 0.7; // speed kept by both cars on contact
 
+// Collision damage: a hard wall impact costs some top speed for the rest
+// of the race (front wing / suspension knock) — same rule for the player
+// and every AI car. A gentle graze under the threshold leaves no mark, and
+// total damage is capped well short of crippling, so a couple of offs hurt
+// your pace without ending the race.
+const DAMAGE_MIN_IMPACT_SPEED = 20; // wall hits below this speed leave no mark
+const DAMAGE_PER_IMPACT_SPEED = 0.0015; // max-speed fraction lost per unit of speed above the threshold
+const DAMAGE_MAX_SPEED_PENALTY = 0.25; // hard cap: never lose more than this
+
 // --- Track centerline sampling -------------------------------------------
 
 const CENTERLINE_SAMPLES = 360;
@@ -472,6 +481,7 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     prevRawProgress: info.idx / centerline.length,
     totalProgress: 0,
     lap: 0,
+    damage: 0,
   };
 });
 
@@ -496,6 +506,7 @@ const state = {
   bestLapTime: null,
   prevRawProgress: 0,
   totalProgress: 0,
+  damage: 0,
 };
 
 addGridBoxMarking(start, 1);
@@ -711,6 +722,8 @@ const positionEl = document.getElementById("position");
 const lapEl = document.getElementById("lap");
 const timeEl = document.getElementById("time");
 const bestEl = document.getElementById("best");
+const damageRowEl = document.getElementById("damage-row");
+const damageEl = document.getElementById("damage");
 const speedValueEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearValueEl = document.getElementById("gear-value");
@@ -749,6 +762,8 @@ function updateHud() {
   bestEl.textContent = state.bestLapTime
     ? `Migliore ${formatTime(state.bestLapTime)}`
     : "Migliore --:--.--";
+  damageRowEl.hidden = state.damage <= 0;
+  damageEl.textContent = `Danni ${Math.round(state.damage * 100)}%`;
   const speedKmh = Math.abs(state.speed) * KMH_PER_UNIT;
   speedValueEl.textContent = Math.round(speedKmh);
 
@@ -798,6 +813,11 @@ function applyToMesh(model, x, z, heading, speed, dt) {
 function applyTrackBoundary(car, dt, info) {
   info = info || nearestTrackInfo(car.x, car.z);
   if (info.dist > WALL_LIMIT) {
+    const impactSpeed = Math.abs(car.speed);
+    if (impactSpeed > DAMAGE_MIN_IMPACT_SPEED) {
+      const extra = (impactSpeed - DAMAGE_MIN_IMPACT_SPEED) * DAMAGE_PER_IMPACT_SPEED;
+      car.damage = Math.min(DAMAGE_MAX_SPEED_PENALTY, car.damage + extra);
+    }
     const inv = info.dist > 0 ? 1 / info.dist : 0;
     const nx = (car.x - info.x) * inv;
     const nz = (car.z - info.z) * inv;
@@ -886,7 +906,7 @@ function updateAiCar(car, dt, allCars) {
   while (err > Math.PI) err -= 2 * Math.PI;
   while (err < -Math.PI) err += 2 * Math.PI;
 
-  car.speed = Math.min(AI.maxSpeed, car.speed + AI.accel * dt);
+  car.speed = Math.min(AI.maxSpeed * (1 - car.damage), car.speed + AI.accel * dt);
   const rate = AI.turnRate * (0.35 + 0.65 * Math.min(car.speed / AI.maxSpeed, 1));
   if (err > 0.02) car.heading += rate * dt;
   if (err < -0.02) car.heading -= rate * dt;
@@ -983,7 +1003,7 @@ function update(dt) {
   }
   state.speed = Math.max(
     CAR.reverseMaxSpeed,
-    Math.min(CAR.maxSpeed, state.speed)
+    Math.min(CAR.maxSpeed * (1 - state.damage), state.speed)
   );
 
   // Steering (disabled when nearly stationary; direction flips in reverse).
