@@ -701,21 +701,21 @@ function gridSlot(row, lane) {
   };
 }
 
-// A real F1 grid is paired, not single-file: two cars side by side per row,
-// each row staggered back from the one in front, sides alternating (odd
-// positions on one side, even on the other) — not a zig-zag of one car
-// per row. Each colour pair shares a row, so teammates start side by side,
-// just like the player's own row-0 teammate.
+// A real F1 grid is single-file, not paired: each position steps back from
+// the one before it and alternates side, so P1/P3/P5/... form one diagonal
+// line and P2/P4/P6/... form the other — not two cars sharing a row before
+// the next pair steps back. (An earlier version of this paired them up
+// instead, which doesn't match what a real F1 grid looks like.)
 const AI_GRID_SLOTS = [
-  { row: 0, lane: 1 }, // P2, red teammate, alongside pole
-  { row: 1, lane: -1 }, // P3
-  { row: 1, lane: 1 }, // P4, blue teammate
-  { row: 2, lane: -1 }, // P5
-  { row: 2, lane: 1 }, // P6, yellow teammate
-  { row: 3, lane: -1 }, // P7
-  { row: 3, lane: 1 }, // P8, green teammate
-  { row: 4, lane: -1 }, // P9
-  { row: 4, lane: 1 }, // P10, white teammate
+  { row: 1, lane: 1 }, // P2
+  { row: 2, lane: -1 }, // P3
+  { row: 3, lane: 1 }, // P4
+  { row: 4, lane: -1 }, // P5
+  { row: 5, lane: 1 }, // P6
+  { row: 6, lane: -1 }, // P7
+  { row: 7, lane: 1 }, // P8
+  { row: 8, lane: -1 }, // P9
+  { row: 9, lane: 1 }, // P10
 ];
 const aiCars = AI_DRIVERS.map((driver, i) => {
   const model = buildCar(driver.color);
