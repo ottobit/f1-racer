@@ -401,7 +401,8 @@ scene.add(playerCar.group);
 // their championship driver ids in championship.js. All ten cars line up on
 // a real starting grid behind the start/finish line instead of being
 // scattered partway around the track already at speed — see
-// startCountdown() for the 3-2-1.
+// startRaceCountdown() for the 3-2-1. Grid order itself comes from
+// qualifying (see finishQualifying()), not this fixed identity order.
 const AI_DRIVERS = [
   { id: "rival-red", color: 0xe10600 }, // player's teammate
   { id: "rival-blue", color: 0x1c5fd6 },
@@ -475,6 +476,16 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
   };
 });
 
+// All 10 physical grid slots, pole first — used to place whoever ends up
+// in each position once qualifying (below) decides the order. The visual
+// grid-box markings further down are painted at these same fixed slots
+// regardless of who ends up there, so they don't need this list themselves.
+const ALL_GRID_SLOTS = [{ row: 0, lane: -1 }, ...AI_GRID_SLOTS];
+
+// The AI only appears once the grid order is set (see finishQualifying) —
+// during qualifying it's a solo flying lap, no traffic.
+aiCars.forEach((car) => (car.group.visible = false));
+
 // --- State -------------------------------------------------------------
 
 // Race position/lap counting uses `totalProgress`, a monotonic "laps
@@ -503,6 +514,15 @@ aiCars.forEach((car, i) => addGridBoxMarking(car, i + 2));
 
 // "countdown" (grid, frozen, waiting for the 3-2-1) -> "racing" -> "finished"
 let raceState = "countdown";
+
+// A short solo qualifying session decides the grid order below, before the
+// race itself begins — see startQualifyingCountdown()/finishQualifying().
+// "qualifying" -> "race" (raceState then takes over exactly as before).
+let sessionPhase = "qualifying";
+let qualiState = "countdown"; // "countdown" -> "running"
+const QUALIFYING_DURATION_MS = 90000;
+let qualiTimeRemainingMs = QUALIFYING_DURATION_MS;
+let qualiBestTime = null;
 
 const input = { forward: false, back: false, left: false, right: false };
 const KEY_MAP = {
@@ -715,11 +735,14 @@ const speedValueEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearValueEl = document.getElementById("gear-value");
 const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
+const hintEl = document.getElementById("hint");
 const GAUGE_MAX_KMH = 300; // bar reads full at a realistic F1 top speed
 let lastGearLabel = null;
 let gearFlashTimeout = null;
 
-circuitNameEl.textContent = circuit.name;
+const RACE_HINT_TEXT = hintEl.textContent;
+circuitNameEl.textContent = `${circuit.name} · Qualifica`;
+hintEl.textContent = "Giro di qualifica: fai il miglior tempo per partire davanti in griglia";
 
 const KMH_PER_UNIT = 3.6; // treat CAR.maxSpeed's units as m/s for display
 
@@ -740,15 +763,10 @@ function currentRaceOrder() {
   ].sort((a, b) => b.totalProgress - a.totalProgress);
 }
 
-function updateHud() {
-  const order = currentRaceOrder();
-  const position = order.findIndex((o) => o.driverId === "player") + 1;
-  positionEl.textContent = `P${position}`;
-  lapEl.textContent = `Giro ${Math.min(state.lap + 1, LAPS_PER_RACE)}/${LAPS_PER_RACE}`;
-  timeEl.textContent = formatTime(state.currentLapTime);
-  bestEl.textContent = state.bestLapTime
-    ? `Migliore ${formatTime(state.bestLapTime)}`
-    : "Migliore --:--.--";
+// Speed/gear/shift-lights/engine sound: identical whether qualifying or
+// racing, so both HUD update functions below share this instead of
+// duplicating it.
+function updateSpeedoHud() {
   const speedKmh = Math.abs(state.speed) * KMH_PER_UNIT;
   speedValueEl.textContent = Math.round(speedKmh);
 
@@ -779,6 +797,33 @@ function updateHud() {
   shiftLedEls.forEach((led, i) => led.classList.toggle("is-lit", i < litCount));
 
   updateEngineSound(Math.abs(state.speed) / CAR.maxSpeed, rpmRatio);
+}
+
+function updateHud() {
+  const order = currentRaceOrder();
+  const position = order.findIndex((o) => o.driverId === "player") + 1;
+  positionEl.textContent = `P${position}`;
+  lapEl.textContent = `Giro ${Math.min(state.lap + 1, LAPS_PER_RACE)}/${LAPS_PER_RACE}`;
+  timeEl.textContent = formatTime(state.currentLapTime);
+  bestEl.textContent = state.bestLapTime
+    ? `Migliore ${formatTime(state.bestLapTime)}`
+    : "Migliore --:--.--";
+  updateSpeedoHud();
+}
+
+// Reuses the same stat readouts as the race HUD (position/lap/time/best),
+// repurposed for the session timer and this lap's/best qualifying time —
+// no separate markup needed for what is, visually, the same instrument
+// cluster in a different mode.
+function updateQualifyingHud() {
+  positionEl.textContent = "Q";
+  const remainingSeconds = Math.max(0, Math.ceil(qualiTimeRemainingMs / 1000));
+  lapEl.textContent = `${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")}`;
+  timeEl.textContent = formatTime(state.currentLapTime);
+  bestEl.textContent = qualiBestTime !== null
+    ? `Migliore ${formatTime(qualiBestTime)}`
+    : "Migliore --:--.--";
+  updateSpeedoHud();
 }
 
 // --- Main loop -------------------------------------------------------------
@@ -959,18 +1004,12 @@ function updateChaseCamera(dt) {
   camera.lookAt(lookTarget);
 }
 
-function update(dt) {
-  if (raceState === "finished") return;
-
-  if (raceState === "countdown") {
-    // Cars sit frozen on the grid until the lights go out.
-    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt);
-    for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, 0, dt);
-    updateChaseCamera(dt);
-    updateHud();
-    return;
-  }
-
+// Player-only physics (throttle/brake, steering, position integration,
+// track-limit collision) — shared by qualifying (solo) and the race
+// (alongside the AI), so the two stay in perfect lockstep instead of two
+// hand-maintained copies drifting apart. Returns the resulting
+// nearestTrackInfo, which the caller needs for lap-progress tracking.
+function integratePlayerMotion(dt) {
   // Longitudinal control
   if (input.forward) {
     state.speed += CAR.accel * dt;
@@ -1010,6 +1049,132 @@ function update(dt) {
 
   const info = nearestTrackInfo(state.x, state.z);
   applyTrackBoundary(state, dt, info);
+  return info;
+}
+
+// Shared speed-effect update (FOV widening) — cosmetic, identical in
+// qualifying and racing.
+function updateSpeedFov(dt) {
+  const speedFov = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
+  const targetFov = 58 + speedFov * 12;
+  camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 4);
+  camera.updateProjectionMatrix();
+}
+
+// Synthesizes a plausible AI qualifying lap time from its own pace, rather
+// than actually simulating nine solo flying laps — invisible to the
+// player either way, and this is far cheaper. A flat-out reference time
+// (track length / top speed) scaled up for the corners an AI can't take at
+// full speed, plus a little per-driver spread so the AI grid order isn't
+// identical every single qualifying session.
+function synthesizeAiQualiTime() {
+  const idealLapTimeMs = (TRACK_LENGTH / AI.maxSpeed) * 1000;
+  const CORNERING_LOSS_FACTOR = 1.35;
+  const variance = 0.94 + Math.random() * 0.12; // +/-6% spread between AI drivers
+  return idealLapTimeMs * CORNERING_LOSS_FACTOR * variance;
+}
+
+// Places whichever driver qualified into each of the 10 fixed physical
+// grid slots (pole first), and resets that car's per-lap bookkeeping for
+// the race about to start.
+function applyGridPositions(order) {
+  order.forEach((driverId, i) => {
+    const slot = ALL_GRID_SLOTS[i];
+    const pos = gridSlot(slot.row, slot.lane);
+    const info = nearestTrackInfo(pos.x, pos.z);
+    const car = driverId === "player" ? state : aiCars.find((c) => c.driverId === driverId);
+    car.x = pos.x;
+    car.z = pos.z;
+    car.heading = pos.heading;
+    car.speed = 0;
+    car.prevRawProgress = info.idx / centerline.length;
+    car.totalProgress = 0;
+    car.lap = 0;
+  });
+}
+
+// Ends the qualifying session: combines the player's best flying lap (or
+// no time at all, if they never completed one — same as a real DNF in
+// qualifying, sent to the back) with synthesized AI times, sorts fastest
+// first, and hands that order to applyGridPositions() before handing off
+// to the race's own countdown.
+function finishQualifying() {
+  const results = [
+    { id: "player", time: qualiBestTime === null ? Infinity : qualiBestTime },
+    ...AI_DRIVERS.map((driver) => ({ id: driver.id, time: synthesizeAiQualiTime() })),
+  ];
+  results.sort((a, b) => a.time - b.time);
+  applyGridPositions(results.map((r) => r.id));
+  aiCars.forEach((car) => {
+    car.group.visible = true;
+    applyToMesh(car, car.x, car.z, car.heading, 0, 0);
+  });
+  applyToMesh(playerCar, state.x, state.z, state.heading, 0, 0);
+
+  state.speed = 0;
+  state.currentLapTime = 0;
+  state.bestLapTime = null;
+  circuitNameEl.textContent = circuit.name;
+  hintEl.textContent = RACE_HINT_TEXT;
+
+  sessionPhase = "race";
+  raceState = "countdown";
+  startRaceCountdown();
+}
+
+function updateQualifying(dt) {
+  if (qualiState === "countdown") {
+    // Car sits frozen at the line until the lights go out, same as the
+    // race's own grid start.
+    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt);
+    updateChaseCamera(dt);
+    updateQualifyingHud();
+    return;
+  }
+
+  const info = integratePlayerMotion(dt);
+  applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt);
+
+  // Multiple flying laps are allowed within the session — only the best
+  // one counts, same as a real qualifying hour.
+  const justCompletedLap = advanceProgress(state, info.idx / centerline.length);
+  const now = performance.now();
+  if (justCompletedLap) {
+    const lapTime = now - state.lapStartTime;
+    if (qualiBestTime === null || lapTime < qualiBestTime) {
+      qualiBestTime = lapTime;
+    }
+    state.lapStartTime = now;
+  }
+  state.currentLapTime = now - state.lapStartTime;
+
+  qualiTimeRemainingMs = Math.max(0, qualiTimeRemainingMs - dt * 1000);
+
+  updateChaseCamera(dt);
+  updateSpeedFov(dt);
+  updateQualifyingHud();
+
+  if (qualiTimeRemainingMs <= 0) finishQualifying();
+}
+
+function update(dt) {
+  if (sessionPhase === "qualifying") {
+    updateQualifying(dt);
+    return;
+  }
+
+  if (raceState === "finished") return;
+
+  if (raceState === "countdown") {
+    // Cars sit frozen on the grid until the lights go out.
+    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt);
+    for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, 0, dt);
+    updateChaseCamera(dt);
+    updateHud();
+    return;
+  }
+
+  const info = integratePlayerMotion(dt);
   const allCars = [state, ...aiCars];
   for (const car of aiCars) updateAiCar(car, dt, allCars);
   resolveCarCollisions(allCars);
@@ -1035,22 +1200,15 @@ function update(dt) {
   }
 
   updateChaseCamera(dt);
-
-  // Widening the FOV with speed is a cheap, common trick for a felt sense
-  // of acceleration — the world seems to rush past faster at the edges.
-  const speedFov = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
-  const targetFov = 58 + speedFov * 12;
-  camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 4);
-  camera.updateProjectionMatrix();
-
+  updateSpeedFov(dt);
   updateHud();
 }
 
-// Real standing start: cars sit on the grid (see AI_GRID_SLOTS above) while
-// this counts down, then everyone is free to move at once. state.lapStartTime
-// is reset to the moment the lights go out, not construction time, so the
-// on-screen lap clock doesn't start ticking during the countdown itself.
-function startCountdown() {
+// Real standing start: the car(s) sit still while this counts down, then
+// everyone is free to move at once. Shared by the qualifying launch and
+// the race start — same 3-2-1-VIA, different thing happens once the
+// lights go out (see the two wrappers below).
+function runStartCountdown(onGo) {
   const el = document.getElementById("countdown-overlay");
   const steps = ["3", "2", "1", "VIA!"];
   let i = 0;
@@ -1064,12 +1222,28 @@ function startCountdown() {
     } else {
       setTimeout(() => {
         el.hidden = true;
-        state.lapStartTime = performance.now();
-        raceState = "racing";
+        onGo();
       }, 600);
     }
   }
   tick();
+}
+
+function startQualifyingCountdown() {
+  runStartCountdown(() => {
+    state.lapStartTime = performance.now();
+    qualiState = "running";
+  });
+}
+
+function startRaceCountdown() {
+  runStartCountdown(() => {
+    // state.lapStartTime is reset to the moment the lights go out, not
+    // construction time, so the on-screen lap clock doesn't start ticking
+    // during the countdown itself.
+    state.lapStartTime = performance.now();
+    raceState = "racing";
+  });
 }
 
 function animate() {
@@ -1079,5 +1253,5 @@ function animate() {
   requestAnimationFrame(animate);
 }
 
-startCountdown();
+startQualifyingCountdown();
 animate();
