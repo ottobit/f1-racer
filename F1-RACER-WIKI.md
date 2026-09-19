@@ -353,4 +353,4 @@ Implemented lightweight tyre compounds and degradation, manual ERS with recharge
 Implemented lightweight rain particles, impact sparks, camera-impact shake and retained the synthesized engine audio as the core audio layer. Further asset-level art/audio can be added later without changing the simulation model.
 
 ### Issue #46 — Release hardening
-Regression-test the complete experience and establish a repeatable release checklist.
+Added `RELEASE-CHECKLIST.md` with source-level gates and desktop/mobile browser smoke tests. Automated browser/physics CI remains a future infrastructure improvement.

@@ -1,0 +1,70 @@
+# F1 Racer — Release Checklist
+
+## Purpose
+
+Manual regression checklist for the static browser release of F1 Racer. The project has no CI/browser automation configured, so these checks are the release gate until a browser test harness is introduced.
+
+## Static/source checks
+
+- [x] `games/f1-racer/main.js` loads Three.js from the configured CDN.
+- [x] `race.html` references `main.js` and `style.css`.
+- [x] HUD element IDs referenced by `main.js` exist in `race.html`.
+- [x] Current physics state fields are initialized and reset on grid placement.
+- [x] AI state fields are initialized and reset on grid placement.
+- [x] Race systems (tyres, ERS, pit state) are represented in the wiki.
+- [x] No backend/server dependency was introduced.
+
+## Browser smoke test — desktop
+
+Run one complete pass on a current Chromium/Firefox/Safari browser.
+
+1. [ ] Open the F1 Racer menu.
+2. [ ] Select each difficulty once.
+3. [ ] Open each available circuit.
+4. [ ] Confirm the page renders without a blank canvas.
+5. [ ] Confirm the qualifying countdown starts.
+6. [ ] Drive at least one complete qualifying lap.
+7. [ ] Confirm a qualifying time is recorded.
+8. [ ] Let qualifying finish and confirm a 10-car grid is produced.
+9. [ ] Confirm the race countdown freezes all cars until GO.
+10. [ ] Drive one clean lap and verify position/lap/time HUD.
+11. [ ] Verify steering works at low and high speed.
+12. [ ] Verify lateral/slip telemetry changes in corners.
+13. [ ] Verify gear/shift lights and engine audio respond to speed.
+14. [ ] Verify DRS can activate when eligible.
+15. [ ] Verify ERS toggles with `E` and charge drains/recharges.
+16. [ ] Verify tyre selection with `1`/`2`/`3` before the race.
+17. [ ] Verify tyre grip changes with distance.
+18. [ ] Verify pit service can be triggered with `P` at low speed in the pit zone.
+19. [ ] Verify pit service resets tyre wear, restores ERS and reduces damage.
+20. [ ] Verify AI cars follow corners, brake before turns and can change line around traffic.
+21. [ ] Verify hard impacts produce damage, sparks and player camera shake.
+22. [ ] Verify wet circuits show rain and reduced grip.
+23. [ ] Finish the race and verify classification and points.
+24. [ ] Continue to the next circuit.
+25. [ ] Complete the championship and verify final standings.
+26. [ ] Reload and confirm championship persistence.
+27. [ ] Reload a circuit and confirm the best-lap ghost still works.
+
+## Browser smoke test — mobile/touch
+
+1. [ ] Open the race on a touch device.
+2. [ ] Confirm gas/brake controls are visible.
+3. [ ] Confirm the steering wheel is draggable and analog.
+4. [ ] Confirm HUD remains readable without covering the controls.
+5. [ ] Confirm race rendering remains responsive.
+6. [ ] Confirm cockpit/chase camera toggle still works where a keyboard is available.
+7. [ ] Confirm results overlay is usable on a short viewport.
+
+## Release criteria
+
+A release is considered ready when:
+- no blank/uncaught runtime error appears during the smoke test;
+- qualifying → grid → race → result flow completes;
+- championship persistence works;
+- desktop and touch controls both remain usable;
+- the new physics/race systems do not prevent completing a clean race.
+
+## Known test limitation
+
+This repository currently has no automated browser/physics test runner and no GitHub Actions release gate. Source-level assertions can catch wiring regressions, but they cannot replace a real browser smoke test for rendering, controls, audio and gameplay feel.
