@@ -433,9 +433,14 @@ scene.add(buildKerbs());
 // heading rotation (group Y) don't get tangled up in Euler order.
 {
   const p = centerline[0];
+  const heading = headingOf(p);
+  // Grid boxes (see addGridBoxMarking below) are 6 units long, centered on
+  // this same point for row 0 — drawing the line here too cut pole and P2's
+  // boxes in half instead of sitting ahead of them like a real line does.
+  // Shifted forward by half a box length so the boxes sit behind it.
   const lineGroup = new THREE.Group();
-  lineGroup.position.set(p.x, 0.02, p.z);
-  lineGroup.rotation.y = headingOf(p);
+  lineGroup.position.set(p.x + Math.sin(heading) * 3, 0.02, p.z + Math.cos(heading) * 3);
+  lineGroup.rotation.y = heading;
 
   const line = new THREE.Mesh(
     new THREE.PlaneGeometry(TRACK_WIDTH, 2),
