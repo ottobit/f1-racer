@@ -93,6 +93,19 @@ Player state currently includes:
 
 The visual car is updated separately through `applyToMesh()`.
 
+### Visual model
+The player car is still generated directly in Three.js rather than loaded from an external GLB/GLTF asset. Its current visual model includes:
+- tapered tub and nose;
+- sidepods;
+- front and rear wings with additional flap planes;
+- open wheels and rims;
+- halo structure;
+- simplified suspension wishbones;
+- engine-cover/shark-fin profile;
+- rear exhaust/crash-structure detail.
+
+The player car also has a dedicated visual scale (`PLAYER_VISUAL_SCALE`) applied only to the rendered group. Shared car scale, physics state and collision behaviour remain separate, so visual size changes do not implicitly change handling or collision dimensions.
+
 ## 5. Current driving model
 
 Player movement is currently concentrated in `integratePlayerMotion(dt)`.
@@ -256,6 +269,8 @@ HUD currently exposes:
 - penalty notification;
 - minimap.
 
+The main gear/speed instrument cluster (shift LEDs, DRS/ERS, speed bar, gear and speed readout) is positioned at the **top center** of the viewport, keeping it in the forward sight line and away from the bottom-corner touch controls.
+
 Input:
 - Arrow keys / WASD;
 - touch gas/brake;
@@ -298,6 +313,8 @@ This means the game remains fully client-side.
 ## 17. Mobile
 
 Touch controls are implemented in `main.js` and styled in `style.css`.
+
+On the race page, browser zoom/gesture handling is explicitly suppressed for gameplay surfaces on touch devices. CSS `touch-action: none` is combined with iOS Safari gesture-event and rapid-double-tap guards, while normal link interaction remains available.
 
 The steering wheel uses pointer capture and an analog horizontal position rather than two binary left/right buttons.
 
