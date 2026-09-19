@@ -1164,6 +1164,8 @@ const speedValueEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearValueEl = document.getElementById("gear-value");
 const drsIndicatorEl = document.getElementById("drs-indicator");
+const slipValueEl = document.getElementById("slip-value");
+const lateralValueEl = document.getElementById("lateral-value");
 const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
 const hintEl = document.getElementById("hint");
 const penaltyNoticeEl = document.getElementById("penalty-notice");
@@ -1263,7 +1265,14 @@ function updateSpeedoHud() {
   speedFillEl.style.width = `${gaugeRatio * 100}%`;
 
   drsIndicatorEl.classList.toggle("drs-active", state.drsActive);
-  tireWearEl.textContent = `Gomme ${Math.round(tireGripFactor(state.totalProgress) * 100)}%`;
+  const gripPercent = Math.round(tireGripFactor(state.totalProgress) * 100);
+  const lateralLimit = Math.max(Math.abs(state.speed) * 0.32, 1);
+  const slipPercent = Math.round(
+    Math.min(Math.abs(state.lateralSpeed) / lateralLimit, 1) * 100
+  );
+  tireWearEl.textContent = `Gomme ${gripPercent}%`;
+  if (slipValueEl) slipValueEl.textContent = `${slipPercent}%`;
+  if (lateralValueEl) lateralValueEl.textContent = `${Math.round(Math.abs(state.lateralSpeed) * KMH_PER_UNIT)} km/h`;
   damageRowEl.hidden = state.damage <= 0;
   damageEl.textContent = `Danni ${Math.round(state.damage * 100)}%`;
 
