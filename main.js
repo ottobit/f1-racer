@@ -77,9 +77,29 @@ const AI = {
 // simply a function of total race distance covered (reaches full wear
 // exactly at the finish, same curve for everyone).
 const TIRE_WEAR_MAX_TURN_PENALTY = 0.22; // steering authority lost at full wear
-function tireGripFactor(totalProgress) {
-  const wear = Math.min(totalProgress / LAPS_PER_RACE, 1);
-  return 1 - TIRE_WEAR_MAX_TURN_PENALTY * wear;
+
+// Lightweight race compounds. The race remains browser-friendly, but tyre
+// choice now changes initial grip and the rate at which grip is lost.
+const TYRE_COMPOUNDS = {
+  soft: { label: "SOFT", grip: 1.06, wearRate: 1.35 },
+  medium: { label: "MED", grip: 1.0, wearRate: 1.0 },
+  hard: { label: "HARD", grip: 0.95, wearRate: 0.75 },
+};
+const TYRE_ORDER = ["soft", "medium", "hard"];
+const ERS_SPEED_MULTIPLIER = 1.05;
+const ERS_DRAIN_PER_SECOND = 24;
+const ERS_RECHARGE_PER_SECOND = 7;
+const PIT_ZONE_START = 0.94;
+const PIT_ZONE_END = 0.06;
+const PIT_SPEED_LIMIT = 18;
+const PIT_SERVICE_MS = 2200;
+
+function tireGripFactor(totalProgress, car = null) {
+  const tyre = TYRE_COMPOUNDS[car?.tyreCompound] || TYRE_COMPOUNDS.medium;
+  const distance = car?.tyreProgress ?? totalProgress;
+  const wear = Math.min(Math.max(distance / LAPS_PER_RACE, 0), 1);
+  const wetGrip = isRaining ? 0.82 : 1;
+  return tyre.grip * (1 - TIRE_WEAR_MAX_TURN_PENALTY * wear * tyre.wearRate) * wetGrip;
 }
 
 // Collisions: running wide costs grip (grass), hitting the wall costs most
@@ -214,6 +234,7 @@ function advanceProgress(car, rawProgress) {
   else if (delta > 0.5) delta -= 1; // wrapped backward past 0 -> 1
   car.prevRawProgress = rawProgress;
   car.totalProgress += delta;
+  car.tyreProgress = Math.max(0, (car.tyreProgress || 0) + delta);
 
   const newLap = Math.floor(car.totalProgress);
   if (newLap > car.lap) {
@@ -803,6 +824,13 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     lap: 0,
     damage: 0,
     drsActive: false,
+    tyreCompound: "medium",
+    tyreProgress: 0,
+    ersCharge: 100,
+    ersActive: false,
+    pitState: "none",
+    pitServiceEndTime: 0,
+    hasPitted: false,
   };
 });
 
@@ -883,6 +911,13 @@ const state = {
   totalProgress: 0,
   damage: 0,
   drsActive: false,
+  tyreCompound: "medium",
+  tyreProgress: 0,
+  ersCharge: 100,
+  ersActive: false,
+  pitState: "none",
+  pitServiceEndTime: 0,
+  pitRequested: false,
   // Physics extension: lateral velocity and yaw-rate make the car carry
   // momentum through corners instead of moving only along its heading.
   lateralSpeed: 0,
@@ -959,6 +994,24 @@ window.addEventListener("keydown", (e) => {
 window.addEventListener("keyup", (e) => {
   const action = KEY_MAP[e.code];
   if (action) input[action] = false;
+});
+
+function setTyreCompound(name) {
+  if (!TYRE_COMPOUNDS[name]) return;
+  if (raceState === "racing" && state.pitState !== "servicing") return;
+  state.tyreCompound = name;
+}
+
+window.addEventListener("keydown", (e) => {
+  if (e.code === "KeyE" && raceState === "racing" && state.pitState === "none") {
+    state.ersActive = !state.ersActive;
+  }
+  if (e.code === "KeyP" && raceState === "racing") {
+    state.pitRequested = true;
+  }
+  if (e.code === "Digit1") setTyreCompound("soft");
+  if (e.code === "Digit2") setTyreCompound("medium");
+  if (e.code === "Digit3") setTyreCompound("hard");
 });
 
 // Camera mode: chase (default, third-person) or cockpit (first-person, from
@@ -1166,6 +1219,8 @@ const speedValueEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearValueEl = document.getElementById("gear-value");
 const drsIndicatorEl = document.getElementById("drs-indicator");
+const ersIndicatorEl = document.getElementById("ers-indicator");
+const tyreCompoundEl = document.getElementById("tyre-compound");
 const slipValueEl = document.getElementById("slip-value");
 const lateralValueEl = document.getElementById("lateral-value");
 const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
@@ -1267,7 +1322,15 @@ function updateSpeedoHud() {
   speedFillEl.style.width = `${gaugeRatio * 100}%`;
 
   drsIndicatorEl.classList.toggle("drs-active", state.drsActive);
-  const gripPercent = Math.round(tireGripFactor(state.totalProgress) * 100);
+  const gripPercent = Math.round(tireGripFactor(state.totalProgress, state) * 100);
+  if (ersIndicatorEl) {
+    ersIndicatorEl.textContent = `ERS ${Math.round(state.ersCharge)}%`;
+    ersIndicatorEl.classList.toggle("ers-active", state.ersActive);
+  }
+  if (tyreCompoundEl) {
+    tyreCompoundEl.textContent = TYRE_COMPOUNDS[state.tyreCompound].label;
+    tyreCompoundEl.dataset.compound = state.tyreCompound;
+  }
   const lateralLimit = Math.max(Math.abs(state.speed) * 0.32, 1);
   const slipPercent = Math.round(
     Math.min(Math.abs(state.lateralSpeed) / lateralLimit, 1) * 100
@@ -1458,6 +1521,9 @@ function progressGapAhead(from, to) {
 }
 
 function updateAiCar(car, dt, allCars) {
+  const now = performance.now();
+  if (updateAiPitStop(car, now)) return;
+
   const info = nearestTrackInfo(car.x, car.z);
   const profile = aiCornerProfile(info.idx);
   const speedRatio = Math.min(Math.abs(car.speed) / AI.maxSpeed, 1);
@@ -1544,6 +1610,7 @@ function updateAiCar(car, dt, allCars) {
     tacticalBoost *
     (1 - car.damage) *
     (car.drsActive ? DRS_SPEED_MULTIPLIER : 1) *
+    (car.ersActive ? ERS_SPEED_MULTIPLIER : 1) *
     cautionSpeedMultiplier();
 
   if (car.speed > aiMaxSpeed) {
@@ -1555,7 +1622,7 @@ function updateAiCar(car, dt, allCars) {
   const rate =
     AI.turnRate *
     (0.35 + 0.65 * Math.min(car.speed / AI.maxSpeed, 1)) *
-    tireGripFactor(car.totalProgress);
+    tireGripFactor(car.totalProgress, car);
   if (err > 0.02) car.heading += rate * dt;
   if (err < -0.02) car.heading -= rate * dt;
 
@@ -1692,6 +1759,7 @@ function integratePlayerMotion(dt) {
     CAR.maxSpeed *
     (1 - state.damage) *
     (state.drsActive ? DRS_SPEED_MULTIPLIER : 1) *
+    (state.ersActive ? ERS_SPEED_MULTIPLIER : 1) *
     cautionSpeedMultiplier();
   state.speed = Math.max(
     CAR.reverseMaxSpeed,
@@ -1708,7 +1776,7 @@ function integratePlayerMotion(dt) {
   // slip, understeer and tyre-grip effects without turning the browser game
   // into a full rigid-body simulator.
   const speedFactor = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
-  const grip = tireGripFactor(state.totalProgress);
+  const grip = tireGripFactor(state.totalProgress, state);
   const steerSign = state.speed >= 0 ? 1 : -1;
   const keyboardSteer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   const steerAmount = touchSteer !== 0 ? touchSteer : keyboardSteer;
@@ -1820,9 +1888,13 @@ function applyGridPositions(order) {
     car.yawRate = 0;
     car.prevRawProgress = info.idx / centerline.length;
     car.totalProgress = 0;
+    car.tyreProgress = 0;
     car.lap = 0;
-    car.lateralSpeed = 0;
-    car.yawRate = 0;
+    car.ersCharge = 100;
+    car.ersActive = false;
+    car.pitState = "none";
+    car.pitServiceEndTime = 0;
+    car.hasPitted = false;
   });
 }
 
@@ -1871,7 +1943,6 @@ function updateQualifying(dt) {
   // Multiple flying laps are allowed within the session — only the best
   // one counts, same as a real qualifying hour.
   const justCompletedLap = advanceProgress(state, info.idx / centerline.length);
-  const now = performance.now();
   if (justCompletedLap) {
     const lapTime = now - state.lapStartTime;
     if (qualiBestTime === null || lapTime < qualiBestTime) {
@@ -1888,6 +1959,120 @@ function updateQualifying(dt) {
   updateQualifyingHud();
 
   if (qualiTimeRemainingMs <= 0) finishQualifying();
+}
+
+function isInPitZone(car) {
+  const fraction = car.totalProgress - Math.floor(car.totalProgress);
+  return fraction >= PIT_ZONE_START || fraction <= PIT_ZONE_END;
+}
+
+function updateEnergyRecovery(cars, dt) {
+  for (const car of cars) {
+    if (car === state) {
+      if (state.pitState === "servicing") {
+        state.ersActive = false;
+        continue;
+      }
+      if (state.ersActive && state.ersCharge > 0) {
+        state.ersCharge = Math.max(0, state.ersCharge - ERS_DRAIN_PER_SECOND * dt);
+        if (state.ersCharge <= 0) state.ersActive = false;
+      } else {
+        const recharge = input.back ? ERS_RECHARGE_PER_SECOND * 1.8 : ERS_RECHARGE_PER_SECOND;
+        state.ersCharge = Math.min(100, state.ersCharge + recharge * dt);
+      }
+    } else {
+      if (
+        car.ersCharge > 0 &&
+        car.drsActive &&
+        car.speed > AI.maxSpeed * 0.62 &&
+        cautionState !== "active"
+      ) {
+        car.ersActive = true;
+      } else {
+        car.ersActive = false;
+      }
+      if (car.ersActive) {
+        car.ersCharge = Math.max(0, car.ersCharge - ERS_DRAIN_PER_SECOND * 0.75 * dt);
+        if (car.ersCharge <= 0) car.ersActive = false;
+      } else {
+        car.ersCharge = Math.min(100, car.ersCharge + ERS_RECHARGE_PER_SECOND * dt);
+      }
+    }
+  }
+}
+
+function startPitStop() {
+  if (
+    raceState !== "racing" ||
+    state.pitState !== "none" ||
+    !isInPitZone(state) ||
+    Math.abs(state.speed) > PIT_SPEED_LIMIT
+  ) {
+    state.pitRequested = false;
+    return;
+  }
+  state.pitRequested = false;
+  state.pitState = "servicing";
+  state.pitServiceEndTime = performance.now() + PIT_SERVICE_MS;
+  state.speed = 0;
+  state.lateralSpeed = 0;
+  state.yawRate = 0;
+  state.ersActive = false;
+}
+
+function updatePitStop(now) {
+  if (state.pitState !== "servicing") return false;
+  state.speed = 0;
+  state.lateralSpeed = 0;
+  state.yawRate = 0;
+  if (now < state.pitServiceEndTime) return true;
+
+  state.pitState = "none";
+  state.tyreProgress = 0;
+  state.damage *= 0.25;
+  state.ersCharge = 100;
+  return false;
+}
+
+function updateAiPitStop(car, now) {
+  if (car.pitState === "servicing") {
+    car.speed = 0;
+    car.lateralSpeed = 0;
+    car.yawRate = 0;
+    if (now >= car.pitServiceEndTime) {
+      car.pitState = "none";
+      car.tyreProgress = 0;
+      car.damage *= 0.25;
+      car.ersCharge = 100;
+      car.hasPitted = true;
+    }
+    return true;
+  }
+
+  // One optional stop after lap 1 gives the AI a simple strategy layer while
+  // keeping the three-lap browser race understandable.
+  if (
+    !car.hasPitted &&
+    car.lap >= 1 &&
+    isInPitZone(car) &&
+    Math.abs(car.speed) < PIT_SPEED_LIMIT * 1.25
+  ) {
+    car.pitState = "servicing";
+    car.pitServiceEndTime = now + PIT_SERVICE_MS;
+    car.speed = 0;
+    car.lateralSpeed = 0;
+    car.yawRate = 0;
+    car.ersActive = false;
+    return true;
+  }
+
+  // Start lifting for the pit entry when the car reaches the final part of
+  // the lap, so the service condition above can actually be reached.
+  const fraction = car.totalProgress - Math.floor(car.totalProgress);
+  if (!car.hasPitted && car.lap >= 1 && fraction > 0.9) {
+    car.speed = Math.min(car.speed, PIT_SPEED_LIMIT * 0.75);
+  }
+  return false;
 }
 
 function update(dt) {
@@ -1907,7 +2092,18 @@ function update(dt) {
     return;
   }
 
+  const now = performance.now();
+  if (state.pitRequested) startPitStop();
+  if (updatePitStop(now)) {
+    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt);
+    updateCamera(dt);
+    updateSpeedFov(dt);
+    updateHud();
+    return;
+  }
+
   updateDrsEligibility([state, ...aiCars]);
+  updateEnergyRecovery([state, ...aiCars], dt);
 
   const info = integratePlayerMotion(dt);
   const allCars = [state, ...aiCars];
