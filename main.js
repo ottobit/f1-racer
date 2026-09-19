@@ -437,9 +437,15 @@ scene.add(buildKerbs());
   // Grid boxes (see addGridBoxMarking below) are 6 units long, centered on
   // this same point for row 0 — drawing the line here too cut pole and P2's
   // boxes in half instead of sitting ahead of them like a real line does.
-  // Shifted forward by half a box length so the boxes sit behind it.
+  // Shifted forward past the box's own front edge (half its length, +3)
+  // plus a clear gap so the line reads as its own separate marking.
+  const LINE_OFFSET = 5;
   const lineGroup = new THREE.Group();
-  lineGroup.position.set(p.x + Math.sin(heading) * 3, 0.02, p.z + Math.cos(heading) * 3);
+  lineGroup.position.set(
+    p.x + Math.sin(heading) * LINE_OFFSET,
+    0.02,
+    p.z + Math.cos(heading) * LINE_OFFSET
+  );
   lineGroup.rotation.y = heading;
 
   const line = new THREE.Mesh(
