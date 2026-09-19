@@ -55,6 +55,24 @@ export const CIRCUITS = [
       [-120, 0], [-87, -50], [-33, -56], [0, -50], [38, -65], [95, -55],
     ],
   },
+  {
+    id: "colleverde",
+    name: "Circuito di Colleverde",
+    // A flowing, mostly high-speed hillside circuit rather than a technical
+    // one (that's Montenero's job) — wide, sweeping corners with generous
+    // curvature throughout, for a fifth layout that plays differently from
+    // all four above instead of just being a fifth version of the same
+    // shape. Star-convex around the origin like Montenero's points (each
+    // one at its own angle, further out or in than its neighbours), which
+    // is what keeps the closed spline from looping back and crossing
+    // itself — checked offline (min curvature radius comfortably above the
+    // wall margin, no grid slot off track) before being added here.
+    width: 13,
+    points: [
+      [148, 26], [84, 78], [20, 77], [-30, 90], [-101, 82], [-144, 16],
+      [-108, -53], [-46, -77], [2, -70], [57, -82], [125, -52],
+    ],
+  },
 ];
 
 export function getCircuit(id) {
