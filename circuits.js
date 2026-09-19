@@ -21,6 +21,9 @@ export const CIRCUITS = [
     id: "portoscuro",
     name: "Circuito di Portoscuro",
     width: 12,
+    // The one circuit that's always wet — a fixed trait of this track (like
+    // Spa's weather reputation in real F1), not a random per-race dice roll.
+    weather: "pioggia",
     points: [
       [-70, 40], [-20, 55], [30, 50], [52, 12], [48, -18], [45, -45],
       [30, -60], [-20, -65], [-55, -40], [-75, -5],

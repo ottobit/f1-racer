@@ -42,7 +42,7 @@ function render() {
         <article class="card">
           <span class="card-icon" aria-hidden="true">🏁</span>
           <h2>${circuit.name}</h2>
-          <p>${LAPS_PER_RACE} giri contro 9 rivali</p>
+          <p>${LAPS_PER_RACE} giri contro 9 rivali${circuit.weather === "pioggia" ? " · 🌧️ sempre bagnato" : ""}</p>
           <span class="circuit-status">${status}</span>
         </article>
       </a>
