@@ -15,6 +15,18 @@ canvas {
   display: block;
 }
 
+/* The race viewport is an interaction surface, not a document: prevent
+   Safari/iOS from turning repeated taps or pinch gestures on the WebGL
+   canvas into page zoom. Keep this scoped to #app so HUD links/results
+   retain normal browser behaviour. */
+html.race #app,
+html.race #app canvas {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 /* One shared "glass" surface for HUD chrome that still needs one — just
    the speed/gear cluster now (below); every other piece is plain text with
    a drop shadow instead (see #hud-topleft/#hud-topright). */

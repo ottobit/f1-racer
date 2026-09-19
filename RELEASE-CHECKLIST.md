@@ -51,10 +51,12 @@ Run one complete pass on a current Chromium/Firefox/Safari browser.
 1. [ ] Open the race on a touch device.
 2. [ ] Confirm gas/brake controls are visible.
 3. [ ] Confirm the steering wheel is draggable and analog.
-4. [ ] Confirm HUD remains readable without covering the controls.
-5. [ ] Confirm race rendering remains responsive.
-6. [ ] Confirm cockpit/chase camera toggle still works where a keyboard is available.
-7. [ ] Confirm results overlay is usable on a short viewport.
+4. [ ] Repeated tap, double-tap and pinch on the race canvas must not zoom or move the browser viewport.
+5. [ ] Confirm steering drag and simultaneous gas/brake touches do not trigger browser zoom/gesture handling.
+6. [ ] Confirm HUD remains readable without covering the controls.
+7. [ ] Confirm race rendering remains responsive.
+8. [ ] Confirm cockpit/chase camera toggle still works where a keyboard is available.
+9. [ ] Confirm results overlay is usable on a short viewport.
 
 ## Release criteria
 
