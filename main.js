@@ -1117,7 +1117,7 @@ let raceState = "countdown";
 // "qualifying" -> "race" (raceState then takes over exactly as before).
 let sessionPhase = "qualifying";
 let qualiState = "countdown"; // "countdown" -> "running"
-const QUALIFYING_DURATION_MS = 30000;
+const QUALIFYING_DURATION_MS = 60000;
 let qualiTimeRemainingMs = QUALIFYING_DURATION_MS;
 let qualiBestTime = null;
 

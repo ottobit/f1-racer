@@ -22,7 +22,7 @@ Run one complete pass on a current Chromium/Firefox/Safari browser.
 2. [ ] Select each difficulty once.
 3. [ ] Open each available circuit.
 4. [ ] Confirm the page renders without a blank canvas.
-5. [ ] Confirm the qualifying countdown starts and the qualifying/demo session is 30 seconds.
+5. [ ] Confirm the qualifying countdown starts and the qualifying session is 60 seconds.
 6. [ ] Drive at least one complete qualifying lap.
 7. [ ] Confirm a qualifying time is recorded.
 8. [ ] Let qualifying finish and confirm a 10-car grid is produced.

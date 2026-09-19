@@ -60,7 +60,7 @@ The game has two high-level phases:
 Qualifying has:
 - countdown;
 - solo player driving;
-- a 30-second session;
+- a 60-second session;
 - multiple flying laps;
 - best lap time;
 - synthesized AI qualifying times;
