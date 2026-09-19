@@ -47,6 +47,7 @@ const CAR = {
   // instead of maxing out there.
 };
 const CAR_SCALE = 0.55;
+const PLAYER_VISUAL_SCALE = 1.25;
 
 // AI difficulty: chosen on the circuit menu (menu.js), carried here as a
 // query param, scaling how fast and how hard the rivals accelerate. Turn
@@ -799,6 +800,9 @@ function buildCar(paintColor) {
 
 // Player car
 const playerCar = buildCar(0xe10600);
+// Make the player's car easier to read in chase view without changing the
+// shared car geometry, wheel metadata, physics or collision dimensions.
+playerCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
 scene.add(playerCar.group);
 
 // Nine AI rivals in five colour pairs (teammates share a livery, like real
