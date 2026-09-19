@@ -465,6 +465,38 @@ const AI_DRIVERS = [
   { id: "rival-white-2", color: 0xf5f5f5 },
 ];
 
+// --- DRS ---------------------------------------------------------------
+//
+// A short zone near the start/finish straight: a car within roughly one
+// second of the car directly ahead gets a temporary top-speed boost while
+// in the zone — the rubber-banding real DRS gives on a pit straight,
+// simplified to no separate detection point and no manual button (this
+// game has no extra input to spare for one).
+const DRS_ZONE_FRACTION = 0.1; // first 10% of the lap, right after the line
+const DRS_GAP_SECONDS = 1.0;
+const DRS_SPEED_MULTIPLIER = 1.15;
+
+// Sets car.drsActive for this frame on every car in `cars` (player state
+// object + aiCars), based on each one's gap — in seconds, estimated from
+// its own current speed — to whoever is directly ahead of it on track.
+// Uses each car's totalProgress from the end of the previous frame, which
+// is what's available before this frame has moved anyone yet.
+function updateDrsEligibility(cars) {
+  const order = [...cars].sort((a, b) => b.totalProgress - a.totalProgress);
+  for (let i = 0; i < order.length; i++) {
+    const car = order[i];
+    const lapFraction = car.totalProgress - Math.floor(car.totalProgress);
+    if (i === 0 || lapFraction >= DRS_ZONE_FRACTION) {
+      car.drsActive = false;
+      continue;
+    }
+    const ahead = order[i - 1];
+    const gapMeters = (ahead.totalProgress - car.totalProgress) * TRACK_LENGTH;
+    const gapSeconds = gapMeters / Math.max(Math.abs(car.speed), 1);
+    car.drsActive = gapSeconds < DRS_GAP_SECONDS;
+  }
+}
+
 const GRID_ROW_GAP = 5; // meters behind the previous row
 const GRID_LANE_OFFSET = Math.min(TRACK_WIDTH / 4, 3.2); // stay clear of grass
 const TRACK_LENGTH = trackCurve.getLength();
@@ -524,6 +556,7 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     prevRawProgress: info.idx / centerline.length,
     totalProgress: 0,
     lap: 0,
+    drsActive: false,
   };
 });
 
@@ -592,6 +625,7 @@ const state = {
   bestLapTime: null,
   prevRawProgress: 0,
   totalProgress: 0,
+  drsActive: false,
   wasOffTrack: false,
   trackLimitViolationsThisLap: 0,
   lastLapPenaltyMs: 0,
@@ -813,6 +847,7 @@ const bestEl = document.getElementById("best");
 const speedValueEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearValueEl = document.getElementById("gear-value");
+const drsIndicatorEl = document.getElementById("drs-indicator");
 const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
 const penaltyNoticeEl = document.getElementById("penalty-notice");
 const minimapCtx = document.getElementById("minimap").getContext("2d");
@@ -906,6 +941,8 @@ function updateHud() {
 
   const gaugeRatio = Math.min(speedKmh / GAUGE_MAX_KMH, 1);
   speedFillEl.style.width = `${gaugeRatio * 100}%`;
+
+  drsIndicatorEl.classList.toggle("drs-active", state.drsActive);
 
   const { gear, rpmRatio } = gearInfo(Math.abs(state.speed) / CAR.maxSpeed);
   const gearLabel = Math.abs(state.speed) < 0.6 ? "N" : state.speed < 0 ? "R" : String(gear);
@@ -1039,7 +1076,8 @@ function updateAiCar(car, dt, allCars) {
   while (err > Math.PI) err -= 2 * Math.PI;
   while (err < -Math.PI) err += 2 * Math.PI;
 
-  car.speed = Math.min(AI.maxSpeed, car.speed + AI.accel * dt);
+  const aiMaxSpeed = AI.maxSpeed * (car.drsActive ? DRS_SPEED_MULTIPLIER : 1);
+  car.speed = Math.min(aiMaxSpeed, car.speed + AI.accel * dt);
   const rate = AI.turnRate * (0.35 + 0.65 * Math.min(car.speed / AI.maxSpeed, 1));
   if (err > 0.02) car.heading += rate * dt;
   if (err < -0.02) car.heading -= rate * dt;
@@ -1124,6 +1162,8 @@ function update(dt) {
     return;
   }
 
+  updateDrsEligibility([state, ...aiCars]);
+
   // Longitudinal control
   if (input.forward) {
     state.speed += CAR.accel * dt;
@@ -1134,9 +1174,10 @@ function update(dt) {
     if (state.speed > 0) state.speed = Math.max(0, state.speed - decel);
     else if (state.speed < 0) state.speed = Math.min(0, state.speed + decel);
   }
+  const playerMaxSpeed = CAR.maxSpeed * (state.drsActive ? DRS_SPEED_MULTIPLIER : 1);
   state.speed = Math.max(
     CAR.reverseMaxSpeed,
-    Math.min(CAR.maxSpeed, state.speed)
+    Math.min(playerMaxSpeed, state.speed)
   );
 
   // Steering (disabled when nearly stationary; direction flips in reverse).
