@@ -465,9 +465,10 @@ function buildGridNumberTexture(number) {
   ctx.lineWidth = 10;
   ctx.strokeRect(9, 9, w - 18, h - 18);
 
-  // Checkered strip along the front edge (local +Z, drawn at the top of the
-  // canvas — see addGridBoxMarking's plane orientation below) — the one
-  // detail every real starting-grid box has that a plain rectangle doesn't.
+  // Checkered strip along the front edge — the edge the car's nose points
+  // toward, which the plane's rotation (see addGridBoxMarking) puts at the
+  // BOTTOM of this canvas, not the top: canvas-top ends up behind the car
+  // instead, which is where an earlier version of this wrongly drew it.
   const checkRows = 2;
   const checkCols = 6;
   const checkH = 16;
@@ -476,7 +477,7 @@ function buildGridNumberTexture(number) {
     for (let col = 0; col < checkCols; col++) {
       const isDark = (row + col) % 2 === 0;
       ctx.fillStyle = isDark ? "rgba(20,20,24,0.9)" : "rgba(255,255,255,0.9)";
-      ctx.fillRect(9 + col * cellW, 9 + row * checkH, cellW, checkH);
+      ctx.fillRect(9 + col * cellW, h - 9 - (row + 1) * checkH, cellW, checkH);
     }
   }
 
