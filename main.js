@@ -94,7 +94,13 @@ const GRASS_LIMIT = TRACK_WIDTH / 2; // asphalt edge, right where the kerb is pa
 // script) so opposing sides of a corner never get close enough for their
 // off-track zones to overlap.
 const WALL_LIMIT = TRACK_WIDTH / 2 + 4;
-const GRASS_MAX_DECEL = 65; // units/s^2 of extra drag at the wall edge
+// Ramped from zero at the grass edge up to this at the wall, 65 (barely
+// above coastDecel) never shed enough speed over a typical excursion at
+// top speed to avoid still slamming the wall at near-full pace — the
+// runoff read as decorative rather than as grass. Raised well past
+// brakeDecel and front-loaded (see the 0.45 floor below) so running wide
+// costs real speed immediately, not just right before the wall.
+const GRASS_MAX_DECEL = 240; // units/s^2 of extra drag in the runoff
 const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
 const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
 const CAR_BUMP_SPEED_FACTOR = 0.7; // speed kept by both cars on contact
@@ -383,17 +389,30 @@ function addGridBoxMarking(slot, number) {
   scene.add(group);
 }
 
-// Narrows the +Z half of a box geometry's X extent, turning it into a
-// wedge that tapers toward the front (local +Z is "front" throughout).
-function taperFront(geometry, frontScale) {
+// Narrows a box geometry's width and/or height toward its +Z and -Z ends
+// (local +Z is "front" throughout) instead of leaving them flat slabs —
+// this is what turns a plain BoxGeometry into a rounded-looking tub, side
+// pod or cockpit surround without reaching for a modelling tool. Each
+// *Scale defaults to 1 (no change at that end); pass width and/or height
+// scales below 1 to pinch that end in.
+function taperEnds(geometry, { frontW = 1, frontH = 1, rearW = 1, rearH = 1 } = {}) {
   const pos = geometry.attributes.position;
   let maxZ = 0;
-  for (let i = 0; i < pos.count; i++) maxZ = Math.max(maxZ, pos.getZ(i));
+  let minZ = 0;
+  for (let i = 0; i < pos.count; i++) {
+    maxZ = Math.max(maxZ, pos.getZ(i));
+    minZ = Math.min(minZ, pos.getZ(i));
+  }
   for (let i = 0; i < pos.count; i++) {
     const z = pos.getZ(i);
-    if (z > 0) {
+    if (z > 0 && maxZ > 0) {
       const t = z / maxZ;
-      pos.setX(i, pos.getX(i) * (1 - t * (1 - frontScale)));
+      pos.setX(i, pos.getX(i) * (1 - t * (1 - frontW)));
+      pos.setY(i, pos.getY(i) * (1 - t * (1 - frontH)));
+    } else if (z < 0 && minZ < 0) {
+      const t = z / minZ;
+      pos.setX(i, pos.getX(i) * (1 - t * (1 - rearW)));
+      pos.setY(i, pos.getY(i) * (1 - t * (1 - rearH)));
     }
   }
   pos.needsUpdate = true;
@@ -421,7 +440,15 @@ function buildCar(paintColor) {
   });
 
   const tub = new THREE.Mesh(
-    taperFront(new THREE.BoxGeometry(1.7, 0.5, 3, 4, 1, 4), 0.45),
+    // Tapers narrower and lower toward the nose (meets the cone below
+    // without a hard step) and, more subtly, toward the tail too, instead
+    // of staying a flat-sided slab along its whole length.
+    taperEnds(new THREE.BoxGeometry(1.7, 0.5, 3, 4, 2, 8), {
+      frontW: 0.4,
+      frontH: 0.55,
+      rearW: 0.8,
+      rearH: 0.85,
+    }),
     paint
   );
   tub.position.y = 0.42;
@@ -432,12 +459,28 @@ function buildCar(paintColor) {
   nose.position.set(0, 0.38, 2.0);
   group.add(nose);
 
-  const cockpit = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.32, 0.9), dark);
+  const cockpit = new THREE.Mesh(
+    // Canopy taper toward the front (like a windscreen sloping back) rather
+    // than a plain rectangular block dropped onto the tub.
+    taperEnds(new THREE.BoxGeometry(0.7, 0.32, 0.9, 2, 2, 4), { frontW: 0.65, frontH: 0.7 }),
+    dark
+  );
   cockpit.position.set(0, 0.78, 0.1);
   group.add(cockpit);
 
   for (const side of [1, -1]) {
-    const pod = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.32, 1.3), paint);
+    const pod = new THREE.Mesh(
+      // Pinched in at both the inlet (front) and outlet (rear) ends —
+      // widest at the middle — for the teardrop side-pod profile real F1
+      // cars have, instead of a plain rectangular box.
+      taperEnds(new THREE.BoxGeometry(0.4, 0.34, 1.3, 2, 2, 6), {
+        frontW: 0.55,
+        frontH: 0.65,
+        rearW: 0.35,
+        rearH: 0.5,
+      }),
+      paint
+    );
     pod.position.set(0.68 * side, 0.4, -0.4);
     group.add(pod);
   }
@@ -445,6 +488,13 @@ function buildCar(paintColor) {
   const frontWing = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.06, 0.4), accent);
   frontWing.position.set(0, 0.2, 2.35);
   group.add(frontWing);
+  // Endplates: the single detail that reads as "real wing" instead of "flat
+  // slab" at a glance, closing off each end of the wing.
+  for (const side of [1, -1]) {
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.26, 0.42), accent);
+    plate.position.set(0.925 * side, 0.22, 2.35);
+    group.add(plate);
+  }
 
   const rearWing = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.07, 0.45), dark);
   rearWing.position.set(0, 0.95, -1.55);
@@ -453,6 +503,10 @@ function buildCar(paintColor) {
     const strut = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, 0.06), dark);
     strut.position.set(0.65 * side, 0.72, -1.55);
     group.add(strut);
+
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.5, 0.47), dark);
+    plate.position.set(0.86 * side, 0.95, -1.55);
+    group.add(plate);
   }
 
   const wheelRadius = 0.4;
@@ -1160,7 +1214,9 @@ function applyTrackBoundary(car, dt, info) {
     car.heading += diff * 0.6;
   } else if (info.dist > GRASS_LIMIT) {
     const t = (info.dist - GRASS_LIMIT) / (WALL_LIMIT - GRASS_LIMIT);
-    const decel = GRASS_MAX_DECEL * t * dt;
+    // Front-loaded rather than ramped from zero — the moment you're on the
+    // grass it already bites, not just once you're nearly at the wall.
+    const decel = GRASS_MAX_DECEL * (0.45 + 0.55 * t) * dt;
     if (car.speed > 0) car.speed = Math.max(0, car.speed - decel);
     else if (car.speed < 0) car.speed = Math.min(0, car.speed + decel);
   }
@@ -1292,8 +1348,20 @@ function getNextUnracedCircuitId(champState) {
 }
 
 // Chase camera math, shared by the countdown grid shot and the race loop.
+const CHASE_CAM_BASE_DISTANCE = 9;
+const CHASE_CAM_BASE_FOV = 58; // matches updateSpeedFov's resting FOV
+
 function updateChaseCamera(dt) {
-  const camDistance = 9;
+  // updateSpeedFov widens the FOV with speed for a sense of acceleration,
+  // but a wider FOV alone makes everything at a fixed distance — the car
+  // included — read smaller, which was the opposite of "feels faster".
+  // Pulling the camera in as the FOV widens keeps the car's own size on
+  // screen roughly constant; the world rushing past at the (still wider)
+  // edges is what should carry the speed sensation, not the car shrinking.
+  const fovScale =
+    Math.tan(THREE.MathUtils.degToRad(CHASE_CAM_BASE_FOV / 2)) /
+    Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const camDistance = CHASE_CAM_BASE_DISTANCE * fovScale;
   const camHeight = 4.5;
   const desiredX = state.x - Math.sin(state.heading) * camDistance;
   const desiredZ = state.z - Math.cos(state.heading) * camDistance;
