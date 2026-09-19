@@ -218,9 +218,107 @@ function advanceProgress(car, rawProgress) {
 // --- Scene setup -----------------------------------------------------------
 
 const scene = new THREE.Scene();
-const skyColor = isRaining ? 0x1b232c : 0x05060a;
-scene.background = new THREE.Color(skyColor);
-scene.fog = new THREE.Fog(skyColor, isRaining ? 90 : 150, isRaining ? 260 : 420);
+
+// Sky: a gradient dome (vertex-colored, no texture/shader needed) instead of
+// a flat background color, which read as an unfinished void behind an
+// otherwise daylit green ground and track. A real 3D dome — unlike setting
+// scene.background to a flat 2D texture — properly turns with the camera as
+// the car corners instead of the sky sticking to the screen.
+const SKY_HORIZON = isRaining ? 0xaab0b8 : 0xbfe0f5;
+const SKY_ZENITH = isRaining ? 0x6b7480 : 0x1e5fc0;
+scene.background = new THREE.Color(SKY_HORIZON);
+scene.fog = new THREE.Fog(SKY_HORIZON, isRaining ? 90 : 150, isRaining ? 260 : 420);
+
+{
+  const skyGeometry = new THREE.SphereGeometry(700, 24, 16);
+  const skyPos = skyGeometry.attributes.position;
+  const skyColors = new Float32Array(skyPos.count * 3);
+  const zenith = new THREE.Color(SKY_ZENITH);
+  const horizon = new THREE.Color(SKY_HORIZON);
+  const blended = new THREE.Color();
+  for (let i = 0; i < skyPos.count; i++) {
+    // Blend only above the horizon line (y=0) — below it the dome is behind
+    // the ground/fog anyway, so there's no point spending gradient range on
+    // sky colors that never show.
+    const t = THREE.MathUtils.clamp(skyPos.getY(i) / 700, 0, 1);
+    blended.copy(horizon).lerp(zenith, Math.pow(t, 0.6));
+    skyColors[i * 3] = blended.r;
+    skyColors[i * 3 + 1] = blended.g;
+    skyColors[i * 3 + 2] = blended.b;
+  }
+  skyGeometry.setAttribute("color", new THREE.BufferAttribute(skyColors, 3));
+  const sky = new THREE.Mesh(
+    skyGeometry,
+    new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      side: THREE.BackSide,
+      fog: false,
+      depthWrite: false,
+    })
+  );
+  scene.add(sky);
+}
+
+// A handful of soft cloud billboards scattered around the circuit, high up
+// and always facing the camera (THREE.Sprite) — cheap compared to a real
+// volumetric or textured skybox, and enough to read as "sky" rather than
+// an empty dome. Excluded from fog (like the dome itself) so they don't
+// fade into invisibility at the distance they're placed.
+function buildCloudTexture() {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  // A few overlapping soft puffs instead of one perfect circle, so it
+  // reads as an irregular cloud rather than a flat glowing disc.
+  const puffs = [
+    [0.5, 0.55, 0.42],
+    [0.3, 0.52, 0.3],
+    [0.7, 0.52, 0.3],
+    [0.5, 0.34, 0.3],
+  ];
+  for (const [cx, cy, r] of puffs) {
+    const grad = ctx.createRadialGradient(cx * size, cy * size, 0, cx * size, cy * size, r * size);
+    grad.addColorStop(0, "rgba(255,255,255,0.95)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx * size, cy * size, r * size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  return new THREE.CanvasTexture(canvas);
+}
+
+const cloudGroup = new THREE.Group();
+{
+  const cloudTexture = buildCloudTexture();
+  const cloudTint = isRaining ? 0x9aa3ad : 0xffffff;
+  const cloudCount = isRaining ? 14 : 8;
+  const cloudOpacity = isRaining ? 0.6 : 0.8;
+  for (let i = 0; i < cloudCount; i++) {
+    const cloud = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: cloudTexture,
+        color: cloudTint,
+        transparent: true,
+        opacity: cloudOpacity,
+        depthWrite: false,
+        fog: false,
+      })
+    );
+    const angle = (i / cloudCount) * Math.PI * 2 + Math.random() * 0.4;
+    const radius = 260 + Math.random() * 220;
+    const scale = 70 + Math.random() * 90;
+    cloud.scale.set(scale, scale * 0.55, 1);
+    cloud.position.set(
+      Math.cos(angle) * radius,
+      (isRaining ? 65 : 110) + Math.random() * 60,
+      Math.sin(angle) * radius
+    );
+    cloudGroup.add(cloud);
+  }
+  scene.add(cloudGroup);
+}
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -356,14 +454,50 @@ function buildGridNumberTexture(number) {
   canvas.width = 128;
   canvas.height = 256;
   const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // A faint fill instead of just an outline on transparent — real grid
+  // boxes are painted panels, not wireframes.
+  ctx.fillStyle = "rgba(255,255,255,0.08)";
+  ctx.fillRect(9, 9, w - 18, h - 18);
   ctx.strokeStyle = "rgba(255,255,255,0.85)";
   ctx.lineWidth = 10;
-  ctx.strokeRect(9, 9, canvas.width - 18, canvas.height - 18);
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.font = "bold 130px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.strokeRect(9, 9, w - 18, h - 18);
+
+  // Checkered strip along the front edge (local +Z, drawn at the top of the
+  // canvas — see addGridBoxMarking's plane orientation below) — the one
+  // detail every real starting-grid box has that a plain rectangle doesn't.
+  const checkRows = 2;
+  const checkCols = 6;
+  const checkH = 16;
+  const cellW = (w - 18) / checkCols;
+  for (let row = 0; row < checkRows; row++) {
+    for (let col = 0; col < checkCols; col++) {
+      const isDark = (row + col) % 2 === 0;
+      ctx.fillStyle = isDark ? "rgba(20,20,24,0.9)" : "rgba(255,255,255,0.9)";
+      ctx.fillRect(9 + col * cellW, 9 + row * checkH, cellW, checkH);
+    }
+  }
+
+  // Number badge: a filled roundel behind the digit reads as an actual
+  // marking at a glance, rather than plain outlined text floating on the
+  // panel.
+  const badgeY = h / 2 + 10;
+  const badgeR = 58;
+  ctx.beginPath();
+  ctx.arc(w / 2, badgeY, badgeR, 0, Math.PI * 2);
+  ctx.fillStyle = number === 1 ? "rgba(225,6,0,0.85)" : "rgba(255,255,255,0.16)";
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(255,255,255,0.7)";
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  ctx.font = "bold 96px -apple-system, BlinkMacSystemFont, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(String(number), canvas.width / 2, canvas.height / 2 + 6);
+  ctx.fillText(String(number), w / 2, badgeY + 4);
   return new THREE.CanvasTexture(canvas);
 }
 
@@ -1645,6 +1779,7 @@ function startRaceCountdown() {
 function animate() {
   const dt = Math.min(clock.getDelta(), 0.1);
   update(dt);
+  cloudGroup.rotation.y += dt * 0.004; // slow drift, always running regardless of session phase
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
