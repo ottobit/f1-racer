@@ -40,9 +40,22 @@ const CAR = {
 };
 const CAR_SCALE = 0.55;
 
+// AI difficulty: chosen on the circuit menu (menu.js), carried here as a
+// query param, scaling how fast and how hard the rivals accelerate. Turn
+// rate is left alone — they already steer within track limits regardless
+// of difficulty, so a harder AI should out-pace you, not out-corner you
+// unrealistically.
+const DIFFICULTY_PRESETS = {
+  facile: { speedMul: 0.88, accelMul: 0.85 },
+  normale: { speedMul: 1, accelMul: 1 },
+  difficile: { speedMul: 1.1, accelMul: 1.12 },
+};
+const difficulty = new URLSearchParams(location.search).get("difficulty");
+const diffPreset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.normale;
+
 const AI = {
-  maxSpeed: 71,
-  accel: 41,
+  maxSpeed: 71 * diffPreset.speedMul,
+  accel: 41 * diffPreset.accelMul,
   turnRate: 2.1,
   lookahead: 10, // centerline samples ahead to steer toward
 };
@@ -84,6 +97,35 @@ for (let i = 0; i < CENTERLINE_SAMPLES; i++) {
   const tan = trackCurve.getTangentAt(i / CENTERLINE_SAMPLES);
   centerline.push({ x: p.x, z: p.z, tx: tan.x, tz: tan.z });
 }
+
+// --- Minimap geometry ------------------------------------------------------
+// The track never moves, so the world-to-minimap mapping (scale + offset
+// to fit the circuit's bounding box into the canvas, preserving its aspect
+// ratio) is worked out once here rather than every frame.
+const MINIMAP_CANVAS_SIZE = 130;
+const MINIMAP_PADDING = 10;
+let minimapScale = 1;
+let minimapOffsetX = 0;
+let minimapOffsetZ = 0;
+{
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const p of centerline) {
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minZ = Math.min(minZ, p.z);
+    maxZ = Math.max(maxZ, p.z);
+  }
+  const spanX = maxX - minX;
+  const spanZ = maxZ - minZ;
+  const innerSize = MINIMAP_CANVAS_SIZE - MINIMAP_PADDING * 2;
+  minimapScale = innerSize / Math.max(spanX, spanZ);
+  minimapOffsetX = MINIMAP_PADDING + (innerSize - spanX * minimapScale) / 2 - minX * minimapScale;
+  minimapOffsetZ = MINIMAP_PADDING + (innerSize - spanZ * minimapScale) / 2 - minZ * minimapScale;
+}
+function minimapPoint(x, z) {
+  return { x: x * minimapScale + minimapOffsetX, y: z * minimapScale + minimapOffsetZ };
+}
+const minimapTrackPoints = centerline.map((p) => minimapPoint(p.x, p.z));
 
 function headingOf(p) {
   return Math.atan2(p.tx, p.tz);
@@ -474,6 +516,7 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
   return {
     ...model,
     driverId: driver.id,
+    color: driver.color,
     x: pos.x,
     z: pos.z,
     heading: pos.heading,
@@ -485,6 +528,50 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
 });
 
 // --- State -------------------------------------------------------------
+
+// --- Ghost lap ---------------------------------------------------------
+// A translucent replay of the player's own best lap on this circuit,
+// persisted in localStorage so it's already there next time this circuit
+// loads (mirrors the "race your own best lap" ghost in modern F1 games).
+const GHOST_STORAGE_KEY = "f1racer-ghost-v1";
+const GHOST_SAMPLE_INTERVAL_MS = 100;
+
+function loadGhost(circuitId) {
+  try {
+    const raw = localStorage.getItem(GHOST_STORAGE_KEY);
+    const all = raw ? JSON.parse(raw) : null;
+    return all && all[circuitId] ? all[circuitId] : null;
+  } catch (e) {
+    return null; // corrupt or inaccessible localStorage: just start without a ghost
+  }
+}
+
+function saveGhost(circuitId, ghost) {
+  try {
+    const raw = localStorage.getItem(GHOST_STORAGE_KEY);
+    const all = raw ? JSON.parse(raw) : {};
+    all[circuitId] = ghost;
+    localStorage.setItem(GHOST_STORAGE_KEY, JSON.stringify(all));
+  } catch (e) {
+    // Private browsing / storage disabled: the ghost won't persist across
+    // reloads, which is a reasonable degradation.
+  }
+}
+
+let ghostLap = loadGhost(circuit.id); // { lapTimeMs, samples: [{t, x, z, heading}] } | null
+let currentLapSamples = [];
+let lastGhostSampleT = -Infinity;
+
+const ghostCar = buildCar(0xffffff);
+ghostCar.group.visible = false;
+ghostCar.group.traverse((obj) => {
+  if (obj.isMesh) {
+    obj.material.transparent = true;
+    obj.material.opacity = 0.35;
+    obj.material.depthWrite = false;
+  }
+});
+scene.add(ghostCar.group);
 
 // Race position/lap counting uses `totalProgress`, a monotonic "laps
 // travelled since the start" accumulator, rather than each car's raw
@@ -728,6 +815,7 @@ const speedFillEl = document.getElementById("speed-fill");
 const gearValueEl = document.getElementById("gear-value");
 const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
 const penaltyNoticeEl = document.getElementById("penalty-notice");
+const minimapCtx = document.getElementById("minimap").getContext("2d");
 const GAUGE_MAX_KMH = 300; // bar reads full at a realistic F1 top speed
 let lastGearLabel = null;
 let gearFlashTimeout = null;
@@ -752,6 +840,46 @@ function showPenaltyNotice(penaltyMs) {
   clearTimeout(penaltyNoticeTimeout);
   penaltyNoticeEl.classList.add("visible");
   penaltyNoticeTimeout = setTimeout(() => penaltyNoticeEl.classList.remove("visible"), 2500);
+}
+
+// Redraws the top-down circuit trace and every car's live dot. The track
+// outline itself never changes, so only its points are precomputed; the
+// dots are the only thing recomputed each call.
+function drawMinimap() {
+  const ctx = minimapCtx;
+  ctx.clearRect(0, 0, MINIMAP_CANVAS_SIZE, MINIMAP_CANVAS_SIZE);
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  minimapTrackPoints.forEach((p, i) => {
+    if (i === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  });
+  ctx.closePath();
+  ctx.stroke();
+
+  const drawDot = (x, z, fillStyle, radius) => {
+    const p = minimapPoint(x, z);
+    ctx.fillStyle = fillStyle;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  for (const car of aiCars) {
+    drawDot(car.x, car.z, `#${car.color.toString(16).padStart(6, "0")}`, 2.5);
+  }
+  // Drawn last (and outlined) so the player's own dot never gets buried
+  // under an AI one when they're close together on track.
+  const playerPoint = minimapPoint(state.x, state.z);
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(playerPoint.x, playerPoint.y, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
 }
 
 // Ranks all three cars by race progress (see `advanceProgress`), most
@@ -803,6 +931,7 @@ function updateHud() {
   shiftLedEls.forEach((led, i) => led.classList.toggle("is-lit", i < litCount));
 
   updateEngineSound(Math.abs(state.speed) / CAR.maxSpeed, rpmRatio);
+  drawMinimap();
 }
 
 // --- Main loop -------------------------------------------------------------
@@ -1061,13 +1190,51 @@ function update(dt) {
     const lapTime = now - state.lapStartTime + penaltyMs;
     if (state.bestLapTime === null || lapTime < state.bestLapTime) {
       state.bestLapTime = lapTime;
+      // Only a lap that just beat the record becomes the new ghost — the
+      // buffer being flushed here is the lap that just ended, sampled as
+      // it happened (see below), not a lap replayed after the fact.
+      if (currentLapSamples.length > 1) {
+        ghostLap = { lapTimeMs: lapTime, samples: currentLapSamples };
+        saveGhost(circuit.id, ghostLap);
+      }
     }
     state.lastLapPenaltyMs = penaltyMs;
     state.trackLimitViolationsThisLap = 0;
     state.lapStartTime = now;
     if (penaltyMs > 0) showPenaltyNotice(penaltyMs);
+    currentLapSamples = [];
+    lastGhostSampleT = -Infinity;
   }
   state.currentLapTime = now - state.lapStartTime;
+
+  if (state.currentLapTime - lastGhostSampleT >= GHOST_SAMPLE_INTERVAL_MS) {
+    currentLapSamples.push({ t: state.currentLapTime, x: state.x, z: state.z, heading: state.heading });
+    lastGhostSampleT = state.currentLapTime;
+  }
+
+  // Ghost playback: replay the best-lap samples on a loop keyed to the
+  // current lap's own clock, so the ghost always shows where that lap was
+  // at this same moment in time.
+  if (ghostLap && ghostLap.samples.length > 1) {
+    const samples = ghostLap.samples;
+    const t = state.currentLapTime % ghostLap.lapTimeMs;
+    let i = 0;
+    while (i < samples.length - 1 && samples[i + 1].t < t) i++;
+    const a = samples[i];
+    const b = samples[Math.min(i + 1, samples.length - 1)];
+    const span = b.t - a.t || 1;
+    const frac = Math.min(Math.max((t - a.t) / span, 0), 1);
+    const gx = a.x + (b.x - a.x) * frac;
+    const gz = a.z + (b.z - a.z) * frac;
+    let dh = b.heading - a.heading;
+    while (dh > Math.PI) dh -= Math.PI * 2;
+    while (dh < -Math.PI) dh += Math.PI * 2;
+    const gheading = a.heading + dh * frac;
+    applyToMesh(ghostCar, gx, gz, gheading, 0, dt);
+    ghostCar.group.visible = true;
+  } else {
+    ghostCar.group.visible = false;
+  }
 
   if (raceState === "racing" && state.totalProgress >= LAPS_PER_RACE) {
     finishRace();
