@@ -65,7 +65,9 @@ const AI = {
   maxSpeed: 71 * diffPreset.speedMul * (isRaining ? RAIN_MAX_SPEED_MULTIPLIER : 1),
   accel: 41 * diffPreset.accelMul,
   turnRate: 2.1 * (isRaining ? RAIN_TURN_RATE_MULTIPLIER : 1),
-  lookahead: 10, // centerline samples ahead to steer toward
+  lookahead: 10, // base centerline samples ahead to steer toward
+  cornerLookahead: 22, // samples used to preview upcoming bends
+  brakeDecel: 68,
 };
 
 // Tire wear: grip degrades gradually over the race distance, for both the
@@ -1418,11 +1420,95 @@ function resolveCarCollisions(cars) {
 const AI_AVOID_RADIUS = 4.5;
 const AI_AVOID_STRENGTH = 10;
 
+// Builds a lightweight racing profile from the actual centerline. The
+// accumulated heading change over the next few samples tells the AI whether
+// a corner is coming and how severe it is, so it can brake before the apex
+// instead of discovering the bend only when the waypoint is already beside
+// the car.
+function aiCornerProfile(startIdx) {
+  let totalTurn = 0;
+  let maxTurnStep = 0;
+  let previousHeading = headingOf(centerline[startIdx]);
+
+  for (let step = 1; step <= AI.cornerLookahead; step++) {
+    const idx = (startIdx + step) % centerline.length;
+    const heading = headingOf(centerline[idx]);
+    let delta = heading - previousHeading;
+    while (delta > Math.PI) delta -= Math.PI * 2;
+    while (delta < -Math.PI) delta += Math.PI * 2;
+    totalTurn += delta;
+    maxTurnStep = Math.max(maxTurnStep, Math.abs(delta));
+    previousHeading = heading;
+  }
+
+  // A full corner can accumulate roughly a radian or more of heading change
+  // over the preview window. Clamp to keep the controller predictable on
+  // the hand-authored circuits.
+  const severity = Math.min(
+    1,
+    Math.max(Math.abs(totalTurn) * 0.72, maxTurnStep * 6)
+  );
+  return { turn: totalTurn, severity };
+}
+
+function progressGapAhead(from, to) {
+  let gap = to.totalProgress - from.totalProgress;
+  while (gap < 0) gap += 1;
+  return gap;
+}
+
 function updateAiCar(car, dt, allCars) {
   const info = nearestTrackInfo(car.x, car.z);
-  const target = centerline[(info.idx + AI.lookahead) % centerline.length];
+  const profile = aiCornerProfile(info.idx);
+  const speedRatio = Math.min(Math.abs(car.speed) / AI.maxSpeed, 1);
+
+  // Look farther ahead at speed, but shorten the preview in a heavy corner
+  // so the target does not jump across the apex.
+  const dynamicLookahead = Math.max(
+    6,
+    AI.lookahead + Math.round(speedRatio * 10) - Math.round(profile.severity * 5)
+  );
+  const targetIndex = (info.idx + dynamicLookahead) % centerline.length;
+  const target = centerline[targetIndex];
 
   const lateral = sideNormal(centerline[info.idx]);
+  let lineOffset = -Math.sign(profile.turn || 1) * (0.3 + profile.severity * 0.9);
+
+  // Tactical traffic layer: if another car is close ahead, move to the side
+  // opposite its current lateral position. If another car is close behind,
+  // favour the inside of the next corner to defend without teleporting lanes.
+  let nearestAhead = null;
+  let nearestAheadGap = Infinity;
+  let nearestBehindGap = Infinity;
+  let nearestBehind = null;
+  for (const other of allCars) {
+    if (other === car) continue;
+    const gapAhead = progressGapAhead(car, other);
+    const gapBehind = progressGapAhead(other, car);
+    const worldDist = Math.hypot(car.x - other.x, car.z - other.z);
+
+    if (gapAhead > 0 && gapAhead < 0.012 && worldDist < 14 && gapAhead < nearestAheadGap) {
+      nearestAhead = other;
+      nearestAheadGap = gapAhead;
+    }
+    if (gapBehind > 0 && gapBehind < 0.012 && worldDist < 10 && gapBehind < nearestBehindGap) {
+      nearestBehind = other;
+      nearestBehindGap = gapBehind;
+    }
+  }
+
+  if (nearestAhead) {
+    const otherSide = (nearestAhead.x - target.x) * lateral.x +
+      (nearestAhead.z - target.z) * lateral.z;
+    const passSide = otherSide >= 0 ? -1 : 1;
+    lineOffset = passSide * (0.8 + profile.severity * 0.45);
+  } else if (nearestBehind) {
+    lineOffset = -Math.sign(profile.turn || 1) * (0.9 + profile.severity * 0.35);
+  }
+
+  // Small avoidance force remains useful for actual contact, but the target
+  // line now gives the AI a deliberate place to race rather than constantly
+  // steering back to the centreline.
   let avoidPush = 0;
   for (const other of allCars) {
     if (other === car) continue;
@@ -1435,20 +1521,37 @@ function updateAiCar(car, dt, allCars) {
       if (side !== 0) avoidPush += Math.sign(side) * closeness;
     }
   }
-  const aimX = target.x + lateral.x * avoidPush * AI_AVOID_STRENGTH;
-  const aimZ = target.z + lateral.z * avoidPush * AI_AVOID_STRENGTH;
+
+  const aimX =
+    target.x +
+    lateral.x * (lineOffset + avoidPush * AI_AVOID_STRENGTH * 0.12);
+  const aimZ =
+    target.z +
+    lateral.z * (lineOffset + avoidPush * AI_AVOID_STRENGTH * 0.12);
 
   const toTarget = Math.atan2(aimX - car.x, aimZ - car.z);
   let err = toTarget - car.heading;
-  while (err > Math.PI) err -= 2 * Math.PI;
-  while (err < -Math.PI) err += 2 * Math.PI;
+  while (err > Math.PI) err -= Math.PI * 2;
+  while (err < -Math.PI) err += Math.PI * 2;
 
+  // Corner speed model: reduce target speed before the turn, then accelerate
+  // once the preview is clear. Damage, DRS and caution still layer on top.
+  const cornerSpeedFactor = 1 - profile.severity * 0.48;
+  const baseTargetSpeed = AI.maxSpeed * cornerSpeedFactor;
+  const tacticalBoost = nearestAhead && profile.severity < 0.25 ? 1.04 : 1;
   const aiMaxSpeed =
-    AI.maxSpeed *
+    baseTargetSpeed *
+    tacticalBoost *
     (1 - car.damage) *
     (car.drsActive ? DRS_SPEED_MULTIPLIER : 1) *
     cautionSpeedMultiplier();
-  car.speed = Math.min(aiMaxSpeed, car.speed + AI.accel * dt);
+
+  if (car.speed > aiMaxSpeed) {
+    car.speed = Math.max(aiMaxSpeed, car.speed - AI.brakeDecel * dt);
+  } else {
+    car.speed = Math.min(aiMaxSpeed, car.speed + AI.accel * dt);
+  }
+
   const rate =
     AI.turnRate *
     (0.35 + 0.65 * Math.min(car.speed / AI.maxSpeed, 1)) *

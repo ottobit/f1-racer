@@ -168,26 +168,21 @@ AI cars currently have:
 - caution speed multiplier;
 - collision avoidance.
 
-The current controller:
-1. finds a point ahead on the centerline;
-2. computes a heading error;
-3. adds a lateral avoidance push for nearby cars;
-4. accelerates toward the current maximum;
-5. turns toward the target.
+The controller now has three layers:
+1. preview the centerline and estimate upcoming corner severity;
+2. choose a dynamic lookahead and a racing-line offset;
+3. use a corner-speed target to brake before bends and accelerate once the preview clears.
+
+Traffic is also considered tactically:
+- a nearby car ahead can trigger a passing-side line;
+- a nearby car behind can trigger a defensive line;
+- the existing short-range collision avoidance remains as a safety layer.
 
 ### Current limitation
 
-AI is waypoint/centerline-driven rather than a full racing controller.
+AI is now a lightweight racing controller, but it is not yet a full driver model. It does not simulate explicit tyre temperature, individual driver error profiles, multi-lap strategic decisions, or a detailed overtaking state machine.
 
-It does not yet reason explicitly about:
-- braking points;
-- corner entry/exit speeds;
-- racing line selection;
-- attack/defence;
-- overtaking opportunities;
-- driver-specific mistakes/behaviour.
-
-These are targets for Issue #43.
+Those are future refinements for the race-systems phase.
 
 ## 9. Qualifying
 
@@ -349,7 +344,7 @@ Implemented a first dynamic layer with lateral velocity, finite yaw response, gr
 Expose the richer driving model through a better racing interface.
 
 ### Issue #43 — AI
-Use the track and physics model to create actual racing behaviour.
+Implemented corner preview, dynamic lookahead, pre-corner speed control, racing-line offsets and basic attack/defence behaviour.
 
 ### Issue #44 — Race systems
 Deepen tyres, strategy, pit stops, DRS/ERS and weather.
