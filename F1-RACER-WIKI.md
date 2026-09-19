@@ -128,13 +128,7 @@ Player movement is currently concentrated in `integratePlayerMotion(dt)`.
 - heading is directly integrated from steering input.
 
 ### Track interaction
-`applyTrackBoundary()` handles:
-- grass deceleration;
-- wall collision;
-- wall bounce;
-- heading correction after impacts;
-- damage from hard impacts;
-- incident logging.
+`applyTrackBoundary()` applies progressive runoff drag once the car leaves the asphalt/kerb edge. Runoff remains traversable: it slows the car without snapping it back to an invisible track-width boundary or reducing momentum to zero. Hard collision behaviour should be tied to explicit physical barrier geometry rather than generic distance from the centerline.
 
 ### Current limitation
 The model now has a lightweight dynamic layer: explicit lateral velocity, finite yaw response and grip-limited cornering. Excess lateral motion feeds a corner-drag penalty into longitudinal speed. This is still an arcade-oriented model rather than a full tyre-force simulation; explicit slip-angle/load-transfer modelling remains a future refinement.
@@ -297,8 +291,9 @@ The player's visual car is hidden in cockpit mode.
 The engine sound is synthesized with Web Audio rather than external audio assets.
 
 It uses:
-- oscillators;
-- filter;
+- three layered oscillators/harmonics;
+- low-pass and high-pass filtering;
+- dynamics compression;
 - speed ratio for volume;
 - gear-relative RPM ratio for pitch/filter;
 - shift click sound.

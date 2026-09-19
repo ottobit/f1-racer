@@ -73,3 +73,10 @@ A release is considered ready when:
 ## Known test limitation
 
 This repository currently has no automated browser/physics test runner and no GitHub Actions release gate. Source-level assertions can catch wiring regressions, but they cannot replace a real browser smoke test for rendering, controls, audio and gameplay feel.
+
+
+## Runoff / audio / home regression
+
+- [ ] Drive across a kerb and beyond the asphalt: the car must slow progressively but remain movable; no invisible hard stop at the old track-width wall limit.
+- [ ] Verify engine note rises through each gear, drops on shifts, and remains free of obvious clipping/distortion on desktop and mobile.
+- [ ] Verify the F1 Racer home shows the new hero, difficulty, standings and circuit sections, and that difficulty/circuit/championship interactions still work.

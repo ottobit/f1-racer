@@ -116,7 +116,7 @@ const GRASS_LIMIT = TRACK_WIDTH / 2; // asphalt edge, right where the kerb is pa
 // against all three circuits' tightest corners (see the offline validation
 // script) so opposing sides of a corner never get close enough for their
 // off-track zones to overlap.
-const WALL_LIMIT = TRACK_WIDTH / 2 + 4;
+const WALL_LIMIT = TRACK_WIDTH / 2 + 4; // legacy distance used for runoff drag ramp; no invisible hard stop
 // Ramped from zero at the grass edge up to this at the wall, 65 (barely
 // above coastDecel) never shed enough speed over a typical excursion at
 // top speed to avoid still slamming the wall at near-full pace — the
@@ -1313,6 +1313,9 @@ let engineGain = null;
 let engineFilter = null;
 let engineOsc1 = null;
 let engineOsc2 = null;
+let engineOsc3 = null;
+let engineHighpass = null;
+let engineCompressor = null;
 
 function initEngineSound() {
   if (audioCtx) return;
@@ -1332,17 +1335,33 @@ function initEngineSound() {
   engineOsc1.frequency.value = 45;
 
   engineOsc2 = audioCtx.createOscillator();
-  engineOsc2.type = "square";
-  engineOsc2.frequency.value = 45 * 1.5;
+  engineOsc2.type = "triangle";
+  engineOsc2.frequency.value = 45 * 2;
   const osc2Gain = audioCtx.createGain();
-  osc2Gain.gain.value = 0.25;
+  osc2Gain.gain.value = 0.32;
+
+  engineOsc3 = audioCtx.createOscillator();
+  engineOsc3.type = "sawtooth";
+  engineOsc3.frequency.value = 45 * 3;
+  const osc3Gain = audioCtx.createGain();
+  osc3Gain.gain.value = 0.1;
+
+  engineHighpass = audioCtx.createBiquadFilter();
+  engineHighpass.type = "highpass";
+  engineHighpass.frequency.value = 70;
+  engineCompressor = audioCtx.createDynamicsCompressor();
+  engineCompressor.threshold.value = -18;
+  engineCompressor.knee.value = 12;
+  engineCompressor.ratio.value = 4;
 
   engineOsc1.connect(engineFilter);
   engineOsc2.connect(osc2Gain).connect(engineFilter);
-  engineFilter.connect(engineGain).connect(audioCtx.destination);
+  engineOsc3.connect(osc3Gain).connect(engineFilter);
+  engineFilter.connect(engineHighpass).connect(engineGain).connect(engineCompressor).connect(audioCtx.destination);
 
   engineOsc1.start();
   engineOsc2.start();
+  engineOsc3.start();
 }
 
 // speedRatio (0..1 of top speed) drives volume, which should keep rising
@@ -1354,11 +1373,13 @@ function initEngineSound() {
 function updateEngineSound(speedRatio, rpmRatio) {
   if (!audioCtx) return;
   const now = audioCtx.currentTime;
-  const baseFreq = 55 + rpmRatio * 190;
-  engineOsc1.frequency.setTargetAtTime(baseFreq, now, 0.04);
-  engineOsc2.frequency.setTargetAtTime(baseFreq * 1.5, now, 0.04);
-  engineFilter.frequency.setTargetAtTime(320 + rpmRatio * 2400, now, 0.04);
-  const targetGain = raceState === "racing" ? 0.05 + speedRatio * 0.09 : 0;
+  const baseFreq = 70 + rpmRatio * 260;
+  engineOsc1.frequency.setTargetAtTime(baseFreq, now, 0.025);
+  engineOsc2.frequency.setTargetAtTime(baseFreq * 2.01, now, 0.025);
+  engineOsc3.frequency.setTargetAtTime(baseFreq * 3.02, now, 0.025);
+  engineFilter.frequency.setTargetAtTime(650 + rpmRatio * 4200 + speedRatio * 900, now, 0.035);
+  engineHighpass.frequency.setTargetAtTime(65 + speedRatio * 70, now, 0.08);
+  const targetGain = raceState === "racing" ? 0.045 + speedRatio * 0.11 : 0;
   engineGain.gain.setTargetAtTime(targetGain, now, 0.08);
 }
 
@@ -1590,45 +1611,17 @@ function applyToMesh(model, x, z, heading, speed, dt) {
 // pushes it back in-bounds, instead of letting it drive through scenery.
 function applyTrackBoundary(car, dt, info) {
   info = info || nearestTrackInfo(car.x, car.z);
-  if (info.dist > WALL_LIMIT) {
-    logIncident(car === state ? "player" : car.driverId);
-    const impactSpeed = Math.abs(car.speed);
-    if (impactSpeed > DAMAGE_MIN_IMPACT_SPEED) {
-      const extra = (impactSpeed - DAMAGE_MIN_IMPACT_SPEED) * DAMAGE_PER_IMPACT_SPEED;
-      car.damage = Math.min(DAMAGE_MAX_SPEED_PENALTY, car.damage + extra);
-
-      const now = performance.now();
-      if (now - car.lastImpactEffectTime > 500) {
-        spawnImpactSparks(car.x, car.z);
-        if (car === state) state.cameraShake = Math.max(state.cameraShake, 0.32);
-        car.lastImpactEffectTime = now;
-      }
-    }
-    const inv = info.dist > 0 ? 1 / info.dist : 0;
-    const nx = (car.x - info.x) * inv;
-    const nz = (car.z - info.z) * inv;
-    // Pull back inside the limit with a little clearance, not pinned
-    // exactly on it — sitting exactly at the boundary re-triggers this
-    // every single frame, which used to keep the car permanently glued
-    // to the wall at near-zero speed even while still accelerating.
-    car.x = info.x + nx * (WALL_LIMIT - 0.3);
-    car.z = info.z + nz * (WALL_LIMIT - 0.3);
-    car.speed *= WALL_BOUNCE_SPEED_FACTOR;
-    // Turn the car back toward the track instead of leaving it aimed at
-    // the wall — otherwise holding the throttle just drives it straight
-    // back into the same spot next frame.
-    const inward = Math.atan2(-nx, -nz);
-    let diff = inward - car.heading;
-    while (diff > Math.PI) diff -= 2 * Math.PI;
-    while (diff < -Math.PI) diff += 2 * Math.PI;
-    car.heading += diff * 0.6;
-  } else if (info.dist > GRASS_LIMIT) {
-    const t = (info.dist - GRASS_LIMIT) / (WALL_LIMIT - GRASS_LIMIT);
-    // Front-loaded rather than ramped from zero — the moment you're on the
-    // grass it already bites, not just once you're nearly at the wall.
-    const decel = GRASS_MAX_DECEL * (0.45 + 0.55 * t) * dt;
-    if (car.speed > 0) car.speed = Math.max(0, car.speed - decel);
-    else if (car.speed < 0) car.speed = Math.min(0, car.speed + decel);
+  if (info.dist > GRASS_LIMIT) {
+    // Kerbs/runoff are traversable. Going wider progressively adds drag,
+    // but never snaps the car back to an invisible boundary or kills all
+    // momentum. Physical barrier meshes remain visual; a future barrier
+    // collider can use explicit geometry rather than track-width distance.
+    const runoffDepth = Math.max(0, info.dist - GRASS_LIMIT);
+    const t = Math.min(runoffDepth / Math.max(WALL_LIMIT - GRASS_LIMIT, 0.01), 1);
+    const decel = GRASS_MAX_DECEL * (0.28 + 0.72 * t) * dt;
+    const crawlSpeed = 8;
+    if (car.speed > crawlSpeed) car.speed = Math.max(crawlSpeed, car.speed - decel);
+    else if (car.speed < -crawlSpeed) car.speed = Math.min(-crawlSpeed, car.speed + decel);
   }
   return info;
 }
