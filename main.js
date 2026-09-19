@@ -2035,6 +2035,8 @@ function finishQualifying() {
 }
 
 function updateQualifying(dt) {
+  const now = performance.now();
+
   if (qualiState === "countdown") {
     // Car sits frozen at the line until the lights go out, same as the
     // race's own grid start.
