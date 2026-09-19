@@ -210,6 +210,52 @@ canvas {
   pointer-events: none;
 }
 
+/* Stacking the two HUD cards (see #hud above) reads better and closes up
+   dead space on most screens, but on a short landscape phone there isn't
+   the vertical room to spare — two full-height cards stacked was eating
+   enough of the viewport to cover the track itself. Below this height, go
+   back to sharing one row instead, same as before that change existed.
+   Placed after both #speedbar rules above (same specificity, equal-weight
+   cascade — source order decides) so its flex/width overrides reliably
+   win instead of silently losing to them when this condition is active. */
+@media (max-height: 480px) {
+  #hud {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    padding: 0.25rem 0.6rem 0;
+  }
+  #speedbar {
+    /* No longer growing to its 480px max — on a landscape phone that ate
+       all the width before #hud-row got a chance to sit beside it, so it
+       wrapped to a second row anyway and this whole override was moot.
+       Left at its own compact content width instead. */
+    width: auto;
+    max-width: none;
+    flex: 0 0 auto;
+    padding: 0.25rem 0.6rem;
+    gap: 0.5rem;
+  }
+  #hud-row {
+    padding: 0.2rem 0.5rem;
+    gap: 0.4rem;
+  }
+  #hud .stats {
+    padding: 0.15rem 0.5rem;
+    line-height: 1.15;
+  }
+  /* First thing to drop for height, not the numbers a driver actually
+     needs mid-lap — the circuit name is already on the results/menu
+     screens either side of the race itself. */
+  #hud .stats .circuit-name {
+    display: none;
+  }
+  #minimap {
+    width: 42px;
+    height: 42px;
+  }
+}
+
 #shift-lights {
   display: flex;
   gap: 0.2rem;
