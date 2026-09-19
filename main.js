@@ -20,6 +20,14 @@ const circuit = getCircuit(circuitId);
 const TRACK_WIDTH = circuit.width;
 const CONTROL_POINTS = circuit.points.map(([x, z]) => new THREE.Vector3(x, 0, z));
 
+// Light dynamic weather: a fixed per-circuit trait (see circuits.js), not
+// randomized per race. Rain only touches cornering grip and top speed —
+// braking/acceleration feel is left alone — plus a darker, closer sky and
+// fog so it also reads as wet at a glance, not just plays different.
+const isRaining = circuit.weather === "pioggia";
+const RAIN_TURN_RATE_MULTIPLIER = 0.82;
+const RAIN_MAX_SPEED_MULTIPLIER = 0.93;
+
 const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom", 0.5);
 
 // Top speed is tuned to a realistic F1 figure (maxSpeed is treated as m/s
@@ -28,12 +36,12 @@ const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom"
 // scale up with it so 0-100%, braking distance, and grass drag all still
 // feel like the same car, just faster.
 const CAR = {
-  maxSpeed: 84,
+  maxSpeed: 84 * (isRaining ? RAIN_MAX_SPEED_MULTIPLIER : 1),
   reverseMaxSpeed: -28,
   accel: 47,
   brakeDecel: 75,
   coastDecel: 28,
-  maxTurnRate: 2.0, // rad/s ceiling; actual rate is scaled down further by
+  maxTurnRate: 2.0 * (isRaining ? RAIN_TURN_RATE_MULTIPLIER : 1), // rad/s ceiling; actual rate is scaled down further by
   // speed in update() below — a single quick tap used to be enough to spin
   // off track at top speed, so turn authority now drops off as you speed up
   // instead of maxing out there.
@@ -54,9 +62,9 @@ const difficulty = new URLSearchParams(location.search).get("difficulty");
 const diffPreset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.normale;
 
 const AI = {
-  maxSpeed: 71 * diffPreset.speedMul,
+  maxSpeed: 71 * diffPreset.speedMul * (isRaining ? RAIN_MAX_SPEED_MULTIPLIER : 1),
   accel: 41 * diffPreset.accelMul,
-  turnRate: 2.1,
+  turnRate: 2.1 * (isRaining ? RAIN_TURN_RATE_MULTIPLIER : 1),
   lookahead: 10, // centerline samples ahead to steer toward
 };
 
@@ -198,8 +206,9 @@ function advanceProgress(car, rawProgress) {
 // --- Scene setup -----------------------------------------------------------
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x05060a);
-scene.fog = new THREE.Fog(0x05060a, 150, 420);
+const skyColor = isRaining ? 0x1b232c : 0x05060a;
+scene.background = new THREE.Color(skyColor);
+scene.fog = new THREE.Fog(skyColor, isRaining ? 90 : 150, isRaining ? 260 : 420);
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -220,8 +229,8 @@ window.addEventListener("resize", () => {
 });
 
 // Lights
-scene.add(new THREE.HemisphereLight(0x8899bb, 0x0a0a10, 1.1));
-const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+scene.add(new THREE.HemisphereLight(0x8899bb, 0x0a0a10, isRaining ? 0.7 : 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, isRaining ? 0.7 : 1.2);
 sun.position.set(80, 120, 40);
 scene.add(sun);
 
@@ -882,7 +891,7 @@ let lastGearLabel = null;
 let gearFlashTimeout = null;
 let penaltyNoticeTimeout = null;
 
-circuitNameEl.textContent = circuit.name;
+circuitNameEl.textContent = isRaining ? `${circuit.name} · 🌧️ Pioggia` : circuit.name;
 
 const KMH_PER_UNIT = 3.6; // treat CAR.maxSpeed's units as m/s for display
 
