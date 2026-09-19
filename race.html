@@ -41,16 +41,13 @@
 
   <div id="hud">
     <a class="back-link" href="index.html">← circuiti</a>
-    <!-- One bordered instrument cluster (speed row on top, stats row below)
-         instead of two separate pill-shaped cards — the previous version
-         put speedbar and stats at slightly different heights/widths with
-         nothing tying them together as one dash. The minimap sits beside
-         it as its own card, stretched to match this cluster's full height
-         (see #hud-main's align-items: stretch) instead of being squeezed
-         inside the stats card. -->
+    <!-- Two separate cards (speed row, stats row) with a gap between them
+         — not fused into one bordered box — plus the minimap as its own
+         card beside them, matching their combined height so it reads as a
+         real track shape instead of a thin stretched sliver. -->
     <div id="hud-main">
-      <div id="hud-cluster" class="hud-panel">
-        <div id="speedbar">
+      <div id="hud-cluster">
+        <div id="speedbar" class="hud-panel">
           <div id="shift-lights" aria-hidden="true">
             <span class="shift-led"></span><span class="shift-led"></span>
             <span class="shift-led"></span><span class="shift-led"></span>
@@ -67,7 +64,7 @@
             <span class="speedo-unit">km/h</span>
           </div>
         </div>
-        <div class="stats">
+        <div class="stats hud-panel">
           <div id="circuit-name" class="circuit-name"></div>
           <div class="stats-row stats-row--primary">
             <span id="position">P-</span>
