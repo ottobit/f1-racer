@@ -28,23 +28,24 @@ Run one complete pass on a current Chromium/Firefox/Safari browser.
 8. [ ] Let qualifying finish and confirm a 10-car grid is produced.
 9. [ ] Confirm the race countdown freezes all cars until GO.
 10. [ ] Drive one clean lap and verify position/lap/time HUD.
-11. [ ] Verify steering works at low and high speed.
-12. [ ] Verify lateral/slip telemetry changes in corners.
-13. [ ] Verify gear/shift lights and engine audio respond to speed.
-14. [ ] Verify DRS can activate when eligible.
-15. [ ] Verify ERS toggles with `E` and charge drains/recharges.
-16. [ ] Verify tyre selection with `1`/`2`/`3` before the race.
-17. [ ] Verify tyre grip changes with distance.
-18. [ ] Verify pit service can be triggered with `P` at low speed in the pit zone.
-19. [ ] Verify pit service resets tyre wear, restores ERS and reduces damage.
-20. [ ] Verify AI cars follow corners, brake before turns and can change line around traffic.
-21. [ ] Verify hard impacts produce damage, sparks and player camera shake.
-22. [ ] Verify wet circuits show rain and reduced grip.
-23. [ ] Finish the race and verify classification and points.
-24. [ ] Continue to the next circuit.
-25. [ ] Complete the championship and verify final standings.
-26. [ ] Reload and confirm championship persistence.
-27. [ ] Reload a circuit and confirm the best-lap ghost still works.
+11. [ ] Confirm gear/speed instrument panel is centered at the top and does not overlap left/right HUD.
+12. [ ] Verify steering works at low and high speed.
+13. [ ] Verify lateral/slip telemetry changes in corners.
+14. [ ] Verify gear/shift lights and engine audio respond to speed.
+15. [ ] Verify DRS can activate when eligible.
+16. [ ] Verify ERS toggles with `E` and charge drains/recharges.
+17. [ ] Verify tyre selection with `1`/`2`/`3` before the race.
+18. [ ] Verify tyre grip changes with distance.
+19. [ ] Verify pit service can be triggered with `P` at low speed in the pit zone.
+20. [ ] Verify pit service resets tyre wear, restores ERS and reduces damage.
+21. [ ] Verify AI cars follow corners, brake before turns and can change line around traffic.
+22. [ ] Verify hard impacts produce damage, sparks and player camera shake.
+23. [ ] Verify wet circuits show rain and reduced grip.
+24. [ ] Finish the race and verify classification and points.
+25. [ ] Continue to the next circuit.
+26. [ ] Complete the championship and verify final standings.
+27. [ ] Reload and confirm championship persistence.
+28. [ ] Reload a circuit and confirm the best-lap ghost still works.
 
 ## Browser smoke test — mobile/touch
 

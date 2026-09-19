@@ -768,6 +768,65 @@ function buildCar(paintColor) {
     group.add(plate);
   }
 
+  // Lightweight open-wheel details: enough silhouette/depth to read clearly
+  // from the chase camera without importing a heavy external model.
+  const carbon = new THREE.MeshStandardMaterial({ color: 0x08090b, roughness: 0.5, metalness: 0.25 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x737982, roughness: 0.28, metalness: 0.8 });
+
+  // Halo: three slim structural members around the cockpit.
+  const haloTop = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.055, 6, 18, Math.PI), carbon);
+  haloTop.rotation.x = Math.PI / 2;
+  haloTop.rotation.z = Math.PI;
+  haloTop.position.set(0, 1.02, 0.12);
+  group.add(haloTop);
+  const haloPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.55, 8), carbon);
+  haloPillar.position.set(0, 0.83, 0.5);
+  haloPillar.rotation.x = -0.18;
+  group.add(haloPillar);
+
+  // Engine cover / shark-fin profile gives the rear body a stronger silhouette.
+  const engineCover = new THREE.Mesh(
+    taperEnds(new THREE.BoxGeometry(0.38, 0.62, 1.55, 2, 3, 6), { frontW: 0.8, frontH: 0.8, rearW: 0.22, rearH: 0.35 }),
+    paint
+  );
+  engineCover.position.set(0, 0.72, -0.72);
+  group.add(engineCover);
+
+  // Suspension wishbones are deliberately simple cylinders: visually rich,
+  // cheap to render and independent from the gameplay collision model.
+  function addSuspension(x, z, rear = false) {
+    const innerZ = z + (rear ? 0.24 : -0.24);
+    for (const y of [0.28, 0.52]) {
+      const start = new THREE.Vector3(0.48 * Math.sign(x), y, innerZ);
+      const end = new THREE.Vector3(x * 0.9, y - 0.04, z);
+      const delta = end.clone().sub(start);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, delta.length(), 6), carbon);
+      arm.position.copy(start).add(end).multiplyScalar(0.5);
+      arm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.clone().normalize());
+      group.add(arm);
+    }
+  }
+  addSuspension(0.82, 1.05);
+  addSuspension(-0.82, 1.05);
+  addSuspension(0.82, -1.05, true);
+  addSuspension(-0.82, -1.05, true);
+
+  // Rear crash structure / exhaust detail, most visible in chase view.
+  const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.34, 10), metal);
+  exhaust.rotation.x = Math.PI / 2;
+  exhaust.position.set(0, 0.55, -1.7);
+  group.add(exhaust);
+
+  // Second wing planes create depth without materially increasing footprint.
+  const frontFlap = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.045, 0.22), accent);
+  frontFlap.position.set(0, 0.27, 2.22);
+  frontFlap.rotation.x = -0.12;
+  group.add(frontFlap);
+  const rearFlap = new THREE.Mesh(new THREE.BoxGeometry(1.58, 0.06, 0.25), dark);
+  rearFlap.position.set(0, 1.08, -1.48);
+  rearFlap.rotation.x = 0.12;
+  group.add(rearFlap);
+
   const wheelRadius = 0.4;
   const wheelPositions = [
     [0.82, wheelRadius, 1.05],

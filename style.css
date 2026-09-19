@@ -225,28 +225,20 @@ html.race #app canvas {
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
 }
 
-/* Bottom-right instrument cluster: shift lights, DRS indicator, a
-   horizontal speed bar, and the gear/speed readout — the one HUD piece
-   still worth a background pill, since several different numbers share
-   tight quarters here. */
+/* Top-center instrument cluster: shift lights, DRS/ERS, speed bar and
+   gear/speed readout stay in the driver's forward sight line and away
+   from the touch controls at the bottom corners. */
 #hud-bottomright {
   position: absolute;
-  bottom: 0.7rem;
-  right: 0.8rem;
+  top: 0.7rem;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 0.6rem;
   padding: 0.4rem 0.7rem;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
-}
-
-/* On touch the throttle button sits bottom-right too (see #touch-controls
-   below) — its own height plus the container's bottom padding puts its
-   top edge at roughly 8.5rem from the bottom, which this cluster would
-   otherwise sit right on top of. */
-html.touch #hud-bottomright {
-  bottom: 9rem;
 }
 
 /* Below this height (a landscape phone) there isn't much vertical room to
