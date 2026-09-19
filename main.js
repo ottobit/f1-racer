@@ -2225,7 +2225,6 @@ function update(dt) {
   // Lap timing (current/best lap) uses the same fair progress accumulator
   // that drives race position, so it lines up with the lap count shown.
   const justCompletedLap = advanceProgress(state, info.idx / centerline.length);
-  const now = performance.now();
   if (justCompletedLap) {
     const penaltyMs =
       state.trackLimitViolationsThisLap > TRACK_LIMIT_WARNING_THRESHOLD
