@@ -22,13 +22,14 @@ Run one complete pass on a current Chromium/Firefox/Safari browser.
 2. [ ] Select each difficulty once.
 3. [ ] Open each available circuit.
 4. [ ] Confirm the page renders without a blank canvas.
-5. [ ] Confirm the qualifying countdown starts.
+5. [ ] Confirm the qualifying countdown starts and the qualifying/demo session is 30 seconds.
 6. [ ] Drive at least one complete qualifying lap.
 7. [ ] Confirm a qualifying time is recorded.
 8. [ ] Let qualifying finish and confirm a 10-car grid is produced.
 9. [ ] Confirm the race countdown freezes all cars until GO.
-10. [ ] Drive one clean lap and verify position/lap/time HUD.
-11. [ ] Confirm gear/speed instrument panel is centered at the top and does not overlap left/right HUD.
+10. [ ] Confirm grid-position digits face toward the start/finish direction.
+11. [ ] Drive one clean lap and verify position/lap/time HUD.
+12. [ ] Confirm gear/speed instrument panel is centered at the top and does not overlap left/right HUD.
 12. [ ] Verify steering works at low and high speed.
 13. [ ] Verify lateral/slip telemetry changes in corners.
 14. [ ] Verify gear/shift lights and engine audio respond to speed.
@@ -54,7 +55,7 @@ Run one complete pass on a current Chromium/Firefox/Safari browser.
 3. [ ] Confirm the steering wheel is draggable and analog.
 4. [ ] Repeated tap, double-tap and pinch on the race canvas must not zoom or move the browser viewport.
 5. [ ] Confirm steering drag and simultaneous gas/brake touches do not trigger browser zoom/gesture handling.
-6. [ ] Rotate to landscape and accelerate to high speed: the chase camera must keep the player car clearly readable and must not progressively shrink it.
+6. [ ] Rotate to landscape and accelerate to high speed: the chase camera must keep the player car prominently readable and must not progressively shrink it.
 7. [ ] Confirm HUD remains readable without covering the controls.
 8. [ ] Confirm race rendering remains responsive.
 9. [ ] Confirm cockpit/chase camera toggle still works where a keyboard is available.

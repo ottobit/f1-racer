@@ -60,7 +60,7 @@ The game has two high-level phases:
 Qualifying has:
 - countdown;
 - solo player driving;
-- a 90-second session;
+- a 30-second session;
 - multiple flying laps;
 - best lap time;
 - synthesized AI qualifying times;
@@ -102,7 +102,10 @@ The player car is still generated directly in Three.js rather than loaded from a
 - halo structure;
 - simplified suspension wishbones;
 - engine-cover/shark-fin profile;
-- rear exhaust/crash-structure detail.
+- rear exhaust/crash-structure detail;
+- driver helmet;
+- simplified floor/floor-edge aero;
+- wheel hub detail.
 
 The player car also has a dedicated visual scale (`PLAYER_VISUAL_SCALE`) applied only to the rendered group. Shared car scale, physics state and collision behaviour remain separate, so visual size changes do not implicitly change handling or collision dimensions.
 

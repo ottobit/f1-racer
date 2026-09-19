@@ -628,7 +628,12 @@ function buildGridNumberTexture(number) {
   ctx.font = "bold 96px -apple-system, BlinkMacSystemFont, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(String(number), w / 2, badgeY + 4);
+  // Rotate the digit 180° so it reads toward the start/finish direction.
+  ctx.save();
+  ctx.translate(w / 2, badgeY + 4);
+  ctx.rotate(Math.PI);
+  ctx.fillText(String(number), 0, 0);
+  ctx.restore();
   return new THREE.CanvasTexture(canvas);
 }
 
@@ -827,6 +832,22 @@ function buildCar(paintColor) {
   rearFlap.rotation.x = 0.12;
   group.add(rearFlap);
 
+  // Driver helmet and aerodynamic floor details make the silhouette read as
+  // a modern open-wheel car while staying lightweight enough for mobile.
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), accent);
+  helmet.scale.set(1, 0.82, 1);
+  helmet.position.set(0, 0.91, 0.05);
+  group.add(helmet);
+
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.055, 2.65), carbon);
+  floor.position.set(0, 0.16, -0.08);
+  group.add(floor);
+  for (const side of [1, -1]) {
+    const floorEdge = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.11, 2.15), carbon);
+    floorEdge.position.set(0.82 * side, 0.2, -0.12);
+    group.add(floorEdge);
+  }
+
   const wheelRadius = 0.4;
   const wheelPositions = [
     [0.82, wheelRadius, 1.05],
@@ -848,6 +869,9 @@ function buildCar(paintColor) {
     );
     rim.rotation.z = Math.PI / 2;
     wheel.add(rim);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.35, 10), dark);
+    hub.rotation.z = Math.PI / 2;
+    wheel.add(hub);
     wheel.position.set(x, y, z);
     group.add(wheel);
     return wheel;
@@ -1093,7 +1117,7 @@ let raceState = "countdown";
 // "qualifying" -> "race" (raceState then takes over exactly as before).
 let sessionPhase = "qualifying";
 let qualiState = "countdown"; // "countdown" -> "running"
-const QUALIFYING_DURATION_MS = 90000;
+const QUALIFYING_DURATION_MS = 30000;
 let qualiTimeRemainingMs = QUALIFYING_DURATION_MS;
 let qualiBestTime = null;
 
@@ -1849,7 +1873,7 @@ const CHASE_CAM_BASE_FOV = 58; // matches updateSpeedFov's resting FOV
 // pulls the camera in for screens wider than this baseline — never pushes
 // it out for taller ones, which already frame the car generously.
 const CHASE_CAM_BASE_ASPECT = 1.7; // roughly 16:9, a typical landscape desktop/tablet
-const CHASE_CAM_LANDSCAPE_MAX_DISTANCE = 6.8;
+const CHASE_CAM_LANDSCAPE_MAX_DISTANCE = 5.4;
 
 function isCompactLandscapeViewport() {
   return window.innerWidth > window.innerHeight && window.innerHeight <= 520;
@@ -1875,7 +1899,7 @@ function updateChaseCamera(dt) {
   // desktop distance dominate. This affects only the camera, never physics.
   if (isCompactLandscapeViewport()) {
     camDistance = Math.min(camDistance, CHASE_CAM_LANDSCAPE_MAX_DISTANCE);
-    camHeight = 3.8;
+    camHeight = 3.25;
   }
   const desiredX = state.x - Math.sin(state.heading) * camDistance;
   const desiredZ = state.z - Math.cos(state.heading) * camDistance;
