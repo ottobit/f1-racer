@@ -369,3 +369,10 @@ Implemented lightweight rain particles, impact sparks, camera-impact shake and r
 
 ### Issue #46 — Release hardening
 Added `RELEASE-CHECKLIST.md` with source-level gates and desktop/mobile browser smoke tests. Automated browser/physics CI remains a future infrastructure improvement.
+
+
+## Garage setup
+
+`garage.html` + `garage.js` provide an interactive Three.js setup bay with a 360° rotatable open-wheel car. Components can be mounted by drag-and-drop or click/tap. `garage-setup.js` is the shared data/physics contract and persists the setup under `f1racer-garage-v1`.
+
+Five component families each expose three trade-off variants: front wing, rear wing, floor/diffuser, brakes and suspension. The setup produces modifiers for speed, downforce, braking, stability, traction and runoff behaviour. `main.js` reads these modifiers at race startup, so Garage choices alter actual race physics rather than only UI stats. Front/rear wing choices also alter the Garage car geometry for immediate visual feedback.

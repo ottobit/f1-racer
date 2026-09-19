@@ -1,6 +1,9 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js";
 import { DRIVERS, POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
+import { setupEffects } from "./garage-setup.js";
+
+const GARAGE_EFFECTS = setupEffects();
 
 /*
  * F1 Racer — championship mode: a fixed-lap race against two AI rivals on
@@ -36,12 +39,12 @@ const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom"
 // scale up with it so 0-100%, braking distance, and grass drag all still
 // feel like the same car, just faster.
 const CAR = {
-  maxSpeed: 84 * (isRaining ? RAIN_MAX_SPEED_MULTIPLIER : 1),
+  maxSpeed: 84 * (1 + GARAGE_EFFECTS.speed * 0.006) * (isRaining ? RAIN_MAX_SPEED_MULTIPLIER : 1),
   reverseMaxSpeed: -28,
-  accel: 47,
-  brakeDecel: 75,
+  accel: 47 * (1 + GARAGE_EFFECTS.traction * 0.006),
+  brakeDecel: 75 * (1 + GARAGE_EFFECTS.braking * 0.018),
   coastDecel: 28,
-  maxTurnRate: 2.0 * (isRaining ? RAIN_TURN_RATE_MULTIPLIER : 1), // rad/s ceiling; actual rate is scaled down further by
+  maxTurnRate: 2.0 * (1 + GARAGE_EFFECTS.downforce * 0.012) * (isRaining ? RAIN_TURN_RATE_MULTIPLIER : 1), // rad/s ceiling; actual rate is scaled down further by
   // speed in update() below — a single quick tap used to be enough to spin
   // off track at top speed, so turn authority now drops off as you speed up
   // instead of maxing out there.
@@ -123,7 +126,7 @@ const WALL_LIMIT = TRACK_WIDTH / 2 + 4; // legacy distance used for runoff drag 
 // runoff read as decorative rather than as grass. Raised well past
 // brakeDecel and front-loaded (see the 0.45 floor below) so running wide
 // costs real speed immediately, not just right before the wall.
-const GRASS_MAX_DECEL = 240; // units/s^2 of extra drag in the runoff
+const GRASS_MAX_DECEL = 240 * (1 - GARAGE_EFFECTS.runoff * 0.035); // units/s^2 of extra drag in the runoff
 const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
 const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
 const CAR_BUMP_SPEED_FACTOR = 0.7; // speed kept by both cars on contact
@@ -1992,7 +1995,7 @@ function integratePlayerMotion(dt) {
 
   // Steering response is intentionally finite: changing direction creates
   // a short transition instead of an instantaneous heading change.
-  const yawResponse = 7.5;
+  const yawResponse = 7.5 * (1 + GARAGE_EFFECTS.stability * 0.012);
   state.yawRate += (targetYawRate - state.yawRate) * Math.min(1, yawResponse * dt);
   if (Math.abs(state.speed) < 0.05 || steerAmount === 0) {
     state.yawRate *= Math.max(0, 1 - dt * 5);

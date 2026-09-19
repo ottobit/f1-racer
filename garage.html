@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Garage — F1 Racer</title>
+  <link rel="stylesheet" href="../../assets/css/style.css" />
+  <link rel="stylesheet" href="style.css?v=16" />
+</head>
+<body class="garage-page">
+  <header class="garage-head"><a href="./">← F1 Racer</a><div><span>SETUP LAB</span><h1>Garage</h1><p>Costruisci il compromesso giusto. Nessun pezzo è migliore ovunque.</p></div></header>
+  <main class="garage-layout">
+    <section class="garage-car-panel">
+      <div id="garage-canvas" aria-label="Monoposto 3D ruotabile"></div>
+      <p class="garage-hint">Trascina per ruotare la monoposto a 360°</p>
+      <div id="garage-drop" class="garage-drop">Trascina qui un componente per montarlo</div>
+    </section>
+    <aside class="garage-config">
+      <div id="garage-stats" class="garage-stats"></div>
+      <div id="garage-parts"></div>
+    </aside>
+  </main>
+  <script type="module" src="garage.js"></script>
+</body>
+</html>

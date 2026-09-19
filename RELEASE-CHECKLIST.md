@@ -80,3 +80,15 @@ This repository currently has no automated browser/physics test runner and no Gi
 - [ ] Drive across a kerb and beyond the asphalt: the car must slow progressively but remain movable; no invisible hard stop at the old track-width wall limit.
 - [ ] Verify engine note rises through each gear, drops on shifts, and remains free of obvious clipping/distortion on desktop and mobile.
 - [ ] Verify the F1 Racer home shows the new hero, difficulty, standings and circuit sections, and that difficulty/circuit/championship interactions still work.
+
+
+## Garage regression
+
+- [ ] Home Garage entry opens `garage.html` and Back returns to F1 Racer.
+- [ ] Car is visible and rotates 360° with pointer/touch drag.
+- [ ] Every component variant can be mounted by drag-and-drop on desktop and click/tap fallback on touch devices.
+- [ ] Selected setup survives page reload via localStorage.
+- [ ] Live Speed/Downforce/Braking/Stability/Traction bars react to setup changes.
+- [ ] Front/rear wing variants visibly change wing geometry in the Garage.
+- [ ] Start a race after changing setup and verify top speed, braking, turn authority/stability, traction and runoff behaviour respond to the relevant choices.
+- [ ] Balanced setup remains close to the pre-Garage baseline and no variant is a universal upgrade.
