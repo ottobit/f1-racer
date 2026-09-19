@@ -39,51 +39,51 @@
 <body>
   <div id="app"></div>
 
+  <!-- Corner HUD, not a center-top cluster of bordered cards — the boxes
+       kept fighting for limited space above the horizon and drew attention
+       to themselves instead of the track. Real sim HUDs (this was modeled
+       directly on a screenshot of one) float plain text with a drop shadow
+       for legibility in each corner instead, leaving the whole middle of
+       the screen clear. Only the speed/gear readout keeps a background
+       pill, same as the reference — it's the one place a lot of different
+       numbers share tight quarters. -->
   <div id="hud">
-    <a class="back-link" href="index.html">← circuiti</a>
-    <!-- Two separate cards (speed row, stats row) with a gap between them
-         — not fused into one bordered box — plus the minimap as its own
-         card beside them, matching their combined height so it reads as a
-         real track shape instead of a thin stretched sliver. -->
-    <div id="hud-main">
-      <div id="hud-cluster">
-        <div id="speedbar" class="hud-panel">
-          <div id="shift-lights" aria-hidden="true">
-            <span class="shift-led"></span><span class="shift-led"></span>
-            <span class="shift-led"></span><span class="shift-led"></span>
-            <span class="shift-led"></span><span class="shift-led"></span>
-            <span class="shift-led"></span><span class="shift-led"></span>
-          </div>
-          <span id="drs-indicator" aria-hidden="true">DRS</span>
-          <div id="speed-track" aria-hidden="true">
-            <div id="speed-fill"></div>
-          </div>
-          <div class="speedo-readout">
-            <span id="gear-value" aria-hidden="true">N</span>
-            <span id="speed-value">0</span>
-            <span class="speedo-unit">km/h</span>
-          </div>
-        </div>
-        <div class="stats hud-panel">
-          <div id="circuit-name" class="circuit-name"></div>
-          <div class="stats-row stats-row--primary">
-            <span id="position">P-</span>
-            <span class="stats-sep">·</span>
-            <span id="lap">Giro 0/3</span>
-          </div>
-          <div class="stats-row">
-            <span id="time">0:00.00</span>
-            <span id="best">Migliore --:--.--</span>
-          </div>
-          <div class="stats-row">
-            <span id="tire-wear">Gomme 100%</span>
-          </div>
-          <div id="damage-row" class="stats-row" hidden>
-            <span id="damage">Danni 0%</span>
-          </div>
-        </div>
+    <div id="hud-topleft">
+      <a class="back-link" href="index.html">← circuiti</a>
+      <div id="time">0:00.00</div>
+      <div id="hud-topleft-row">
+        <span id="position">P-</span>
+        <span class="stats-sep">·</span>
+        <span id="lap">Giro 0/3</span>
       </div>
-      <canvas id="minimap" class="hud-panel" width="130" height="130" aria-hidden="true"></canvas>
+    </div>
+
+    <div id="hud-topright">
+      <div id="circuit-name" class="circuit-name"></div>
+      <div id="best">Migliore --:--.--</div>
+      <div id="hud-topright-row">
+        <span id="tire-wear">Gomme 100%</span>
+        <span id="damage-row" hidden><span id="damage">Danni 0%</span></span>
+      </div>
+      <canvas id="minimap" width="130" height="130" aria-hidden="true"></canvas>
+    </div>
+
+    <div id="hud-bottomright" class="hud-panel">
+      <div id="shift-lights" aria-hidden="true">
+        <span class="shift-led"></span><span class="shift-led"></span>
+        <span class="shift-led"></span><span class="shift-led"></span>
+        <span class="shift-led"></span><span class="shift-led"></span>
+        <span class="shift-led"></span><span class="shift-led"></span>
+      </div>
+      <span id="drs-indicator" aria-hidden="true">DRS</span>
+      <div id="speed-track" aria-hidden="true">
+        <div id="speed-fill"></div>
+      </div>
+      <div class="speedo-readout">
+        <span id="gear-value" aria-hidden="true">N</span>
+        <span id="speed-value">0</span>
+        <span class="speedo-unit">km/h</span>
+      </div>
     </div>
   </div>
 
