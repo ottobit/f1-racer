@@ -690,6 +690,17 @@ window.addEventListener("keyup", (e) => {
   if (action) input[action] = false;
 });
 
+// Camera mode: chase (default, third-person) or cockpit (first-person, from
+// the driver's seat). The player's own car model is hidden in cockpit mode
+// — you're sitting inside it, so it would otherwise sit in front of the view
+// blocking most of the track.
+let cameraMode = "chase";
+window.addEventListener("keydown", (e) => {
+  if (e.code !== "KeyC") return;
+  cameraMode = cameraMode === "chase" ? "cockpit" : "chase";
+  playerCar.group.visible = cameraMode !== "cockpit";
+});
+
 // Touch controls (buttons are hidden on non-touch devices via CSS, but the
 // bindings are harmless either way).
 function bindHoldButton(id, action) {
@@ -1197,6 +1208,30 @@ function updateChaseCamera(dt) {
   camera.lookAt(lookTarget);
 }
 
+// Cockpit view: rigidly attached to the car (no lerp/lag, unlike the chase
+// cam above — you're bolted into the seat), roughly at driver eye height
+// and nudged slightly forward of the car's own origin.
+function updateCockpitCamera() {
+  const eyeHeight = 1.0;
+  const forwardOffset = 0.3;
+  camera.position.set(
+    state.x + Math.sin(state.heading) * forwardOffset,
+    eyeHeight,
+    state.z + Math.cos(state.heading) * forwardOffset
+  );
+  const lookTarget = new THREE.Vector3(
+    state.x + Math.sin(state.heading) * 20,
+    eyeHeight - 0.1,
+    state.z + Math.cos(state.heading) * 20
+  );
+  camera.lookAt(lookTarget);
+}
+
+function updateCamera(dt) {
+  if (cameraMode === "cockpit") updateCockpitCamera();
+  else updateChaseCamera(dt);
+}
+
 function update(dt) {
   if (raceState === "finished") return;
 
@@ -1204,7 +1239,7 @@ function update(dt) {
     // Cars sit frozen on the grid until the lights go out.
     applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt);
     for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, 0, dt);
-    updateChaseCamera(dt);
+    updateCamera(dt);
     updateHud();
     return;
   }
@@ -1330,7 +1365,7 @@ function update(dt) {
     finishRace();
   }
 
-  updateChaseCamera(dt);
+  updateCamera(dt);
 
   // Widening the FOV with speed is a cheap, common trick for a felt sense
   // of acceleration — the world seems to rush past faster at the edges.
