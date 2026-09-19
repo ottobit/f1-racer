@@ -66,6 +66,18 @@ const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
 const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
 const CAR_BUMP_SPEED_FACTOR = 0.7; // speed kept by both cars on contact
 
+// Safety car: a real multi-car pile-up (several distinct cars hitting a
+// wall in a short window — not just routine jostling, which happens
+// constantly and involves at most two) triggers a caution period. Nobody
+// gets an actual pace car to follow (that's a lot of extra machinery for
+// an arcade game); everyone's pace is simply capped for a while instead,
+// same rule for player and AI.
+const INCIDENT_WINDOW_MS = 2500; // wall hits within this window count together
+const INCIDENT_CAR_THRESHOLD = 3; // distinct cars hitting a wall = a real incident
+const CAUTION_DURATION_MS = 12000;
+const CAUTION_COOLDOWN_MS = 10000; // minimum gap before another can trigger
+const CAUTION_SPEED_FACTOR = 0.45;
+
 // --- Track centerline sampling -------------------------------------------
 
 const CENTERLINE_SAMPLES = 360;
@@ -504,6 +516,38 @@ aiCars.forEach((car, i) => addGridBoxMarking(car, i + 2));
 // "countdown" (grid, frozen, waiting for the 3-2-1) -> "racing" -> "finished"
 let raceState = "countdown";
 
+// "none" -> "active" (see INCIDENT_CAR_THRESHOLD above) -> "none" again
+// once CAUTION_DURATION_MS elapses.
+let cautionState = "none";
+let cautionEndTime = 0;
+let lastCautionEndTime = -Infinity;
+let incidentLog = []; // { time, carId }
+
+// Called on every hard wall impact (see applyTrackBoundary); tracks how
+// many distinct cars have hit a wall recently and opens a caution period
+// once that count looks like a real incident rather than one car running
+// wide on its own.
+function logIncident(carId) {
+  if (raceState !== "racing") return;
+  const now = performance.now();
+  incidentLog.push({ time: now, carId });
+  incidentLog = incidentLog.filter((e) => now - e.time < INCIDENT_WINDOW_MS);
+  const distinctCars = new Set(incidentLog.map((e) => e.carId));
+  if (
+    distinctCars.size >= INCIDENT_CAR_THRESHOLD &&
+    cautionState === "none" &&
+    now - lastCautionEndTime > CAUTION_COOLDOWN_MS
+  ) {
+    cautionState = "active";
+    cautionEndTime = now + CAUTION_DURATION_MS;
+    cautionBannerEl.hidden = false;
+  }
+}
+
+function cautionSpeedMultiplier() {
+  return cautionState === "active" ? CAUTION_SPEED_FACTOR : 1;
+}
+
 const input = { forward: false, back: false, left: false, right: false };
 const KEY_MAP = {
   ArrowUp: "forward",
@@ -711,6 +755,7 @@ const positionEl = document.getElementById("position");
 const lapEl = document.getElementById("lap");
 const timeEl = document.getElementById("time");
 const bestEl = document.getElementById("best");
+const cautionBannerEl = document.getElementById("caution-banner");
 const speedValueEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearValueEl = document.getElementById("gear-value");
@@ -798,6 +843,7 @@ function applyToMesh(model, x, z, heading, speed, dt) {
 function applyTrackBoundary(car, dt, info) {
   info = info || nearestTrackInfo(car.x, car.z);
   if (info.dist > WALL_LIMIT) {
+    logIncident(car === state ? "player" : car.driverId);
     const inv = info.dist > 0 ? 1 / info.dist : 0;
     const nx = (car.x - info.x) * inv;
     const nz = (car.z - info.z) * inv;
@@ -886,7 +932,7 @@ function updateAiCar(car, dt, allCars) {
   while (err > Math.PI) err -= 2 * Math.PI;
   while (err < -Math.PI) err += 2 * Math.PI;
 
-  car.speed = Math.min(AI.maxSpeed, car.speed + AI.accel * dt);
+  car.speed = Math.min(AI.maxSpeed * cautionSpeedMultiplier(), car.speed + AI.accel * dt);
   const rate = AI.turnRate * (0.35 + 0.65 * Math.min(car.speed / AI.maxSpeed, 1));
   if (err > 0.02) car.heading += rate * dt;
   if (err < -0.02) car.heading -= rate * dt;
@@ -983,7 +1029,7 @@ function update(dt) {
   }
   state.speed = Math.max(
     CAR.reverseMaxSpeed,
-    Math.min(CAR.maxSpeed, state.speed)
+    Math.min(CAR.maxSpeed * cautionSpeedMultiplier(), state.speed)
   );
 
   // Steering (disabled when nearly stationary; direction flips in reverse).
@@ -1029,6 +1075,12 @@ function update(dt) {
     state.lapStartTime = now;
   }
   state.currentLapTime = now - state.lapStartTime;
+
+  if (cautionState === "active" && now >= cautionEndTime) {
+    cautionState = "none";
+    lastCautionEndTime = now;
+    cautionBannerEl.hidden = true;
+  }
 
   if (raceState === "racing" && state.totalProgress >= LAPS_PER_RACE) {
     finishRace();
