@@ -99,6 +99,18 @@ const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
 const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
 const CAR_BUMP_SPEED_FACTOR = 0.7; // speed kept by both cars on contact
 
+// Safety car: a real multi-car pile-up (several distinct cars hitting a
+// wall in a short window — not just routine jostling, which happens
+// constantly and involves at most two) triggers a caution period. Nobody
+// gets an actual pace car to follow (that's a lot of extra machinery for
+// an arcade game); everyone's pace is simply capped for a while instead,
+// same rule for player and AI.
+const INCIDENT_WINDOW_MS = 2500; // wall hits within this window count together
+const INCIDENT_CAR_THRESHOLD = 3; // distinct cars hitting a wall = a real incident
+const CAUTION_DURATION_MS = 12000;
+const CAUTION_COOLDOWN_MS = 10000; // minimum gap before another can trigger
+const CAUTION_SPEED_FACTOR = 0.45;
+
 // Collision damage: a hard wall impact costs some top speed for the rest
 // of the race (front wing / suspension knock) — same rule for the player
 // and every AI car. A gentle graze under the threshold leaves no mark, and
@@ -669,6 +681,38 @@ aiCars.forEach((car, i) => addGridBoxMarking(car, i + 2));
 // "countdown" (grid, frozen, waiting for the 3-2-1) -> "racing" -> "finished"
 let raceState = "countdown";
 
+// "none" -> "active" (see INCIDENT_CAR_THRESHOLD above) -> "none" again
+// once CAUTION_DURATION_MS elapses.
+let cautionState = "none";
+let cautionEndTime = 0;
+let lastCautionEndTime = -Infinity;
+let incidentLog = []; // { time, carId }
+
+// Called on every hard wall impact (see applyTrackBoundary); tracks how
+// many distinct cars have hit a wall recently and opens a caution period
+// once that count looks like a real incident rather than one car running
+// wide on its own.
+function logIncident(carId) {
+  if (raceState !== "racing") return;
+  const now = performance.now();
+  incidentLog.push({ time: now, carId });
+  incidentLog = incidentLog.filter((e) => now - e.time < INCIDENT_WINDOW_MS);
+  const distinctCars = new Set(incidentLog.map((e) => e.carId));
+  if (
+    distinctCars.size >= INCIDENT_CAR_THRESHOLD &&
+    cautionState === "none" &&
+    now - lastCautionEndTime > CAUTION_COOLDOWN_MS
+  ) {
+    cautionState = "active";
+    cautionEndTime = now + CAUTION_DURATION_MS;
+    cautionBannerEl.hidden = false;
+  }
+}
+
+function cautionSpeedMultiplier() {
+  return cautionState === "active" ? CAUTION_SPEED_FACTOR : 1;
+}
+
 const input = { forward: false, back: false, left: false, right: false };
 const KEY_MAP = {
   ArrowUp: "forward",
@@ -887,6 +931,7 @@ const positionEl = document.getElementById("position");
 const lapEl = document.getElementById("lap");
 const timeEl = document.getElementById("time");
 const bestEl = document.getElementById("best");
+const cautionBannerEl = document.getElementById("caution-banner");
 const damageRowEl = document.getElementById("damage-row");
 const damageEl = document.getElementById("damage");
 const tireWearEl = document.getElementById("tire-wear");
@@ -1037,6 +1082,7 @@ function applyToMesh(model, x, z, heading, speed, dt) {
 function applyTrackBoundary(car, dt, info) {
   info = info || nearestTrackInfo(car.x, car.z);
   if (info.dist > WALL_LIMIT) {
+    logIncident(car === state ? "player" : car.driverId);
     const impactSpeed = Math.abs(car.speed);
     if (impactSpeed > DAMAGE_MIN_IMPACT_SPEED) {
       const extra = (impactSpeed - DAMAGE_MIN_IMPACT_SPEED) * DAMAGE_PER_IMPACT_SPEED;
@@ -1131,7 +1177,10 @@ function updateAiCar(car, dt, allCars) {
   while (err < -Math.PI) err += 2 * Math.PI;
 
   const aiMaxSpeed =
-    AI.maxSpeed * (1 - car.damage) * (car.drsActive ? DRS_SPEED_MULTIPLIER : 1);
+    AI.maxSpeed *
+    (1 - car.damage) *
+    (car.drsActive ? DRS_SPEED_MULTIPLIER : 1) *
+    cautionSpeedMultiplier();
   car.speed = Math.min(aiMaxSpeed, car.speed + AI.accel * dt);
   const rate =
     AI.turnRate *
@@ -1257,7 +1306,10 @@ function update(dt) {
     else if (state.speed < 0) state.speed = Math.min(0, state.speed + decel);
   }
   const playerMaxSpeed =
-    CAR.maxSpeed * (1 - state.damage) * (state.drsActive ? DRS_SPEED_MULTIPLIER : 1);
+    CAR.maxSpeed *
+    (1 - state.damage) *
+    (state.drsActive ? DRS_SPEED_MULTIPLIER : 1) *
+    cautionSpeedMultiplier();
   state.speed = Math.max(
     CAR.reverseMaxSpeed,
     Math.min(playerMaxSpeed, state.speed)
@@ -1331,6 +1383,12 @@ function update(dt) {
     lastGhostSampleT = -Infinity;
   }
   state.currentLapTime = now - state.lapStartTime;
+
+  if (cautionState === "active" && now >= cautionEndTime) {
+    cautionState = "none";
+    lastCautionEndTime = now;
+    cautionBannerEl.hidden = true;
+  }
 
   if (state.currentLapTime - lastGhostSampleT >= GHOST_SAMPLE_INTERVAL_MS) {
     currentLapSamples.push({ t: state.currentLapTime, x: state.x, z: state.z, heading: state.heading });
