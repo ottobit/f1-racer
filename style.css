@@ -53,13 +53,16 @@ canvas {
   max-width: 30rem;
 }
 
+/* Sized to its own content, not stretched to match #speedbar's width —
+   speedbar has a stretchy speed-track bar that visually wants the full
+   30rem, this card doesn't have an equivalent filler, so forcing the same
+   width just left dead air on both sides instead of removing it (which is
+   the same complaint the extra space above the whole HUD was about). */
 #hud-row {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 0.5rem;
-  width: 100%;
-  max-width: 30rem;
   padding: 0.3rem 0.6rem;
 }
 
@@ -72,11 +75,16 @@ canvas {
 }
 
 #hud .stats {
-  flex: 1 1 auto;
-  text-align: right;
+  /* Sized to its own content, not stretched to fill the row — flex:1 1 auto
+     here used to grow the box to fill whatever space back-link and the
+     minimap left over, then right-align the text inside that oversized
+     box, which just relocated the "empty space" complaint to inside this
+     card instead of removing it. */
+  flex: 0 1 auto;
+  text-align: center;
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
-  padding: 0.35rem 0.7rem;
+  padding: 0.35rem 0.9rem;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
