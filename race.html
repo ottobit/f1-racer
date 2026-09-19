@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>F1 Racer — ottobit arcade</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>" />
   <meta name="description" content="Time trial 3D su circuito misto, su una griglia da 10 auto. Giocabile subito nel browser." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://ottobit.github.io/portfolio-arcade/games/f1-racer/" />
@@ -17,7 +18,7 @@
   <meta name="twitter:description" content="Time trial 3D su circuito misto, su una griglia da 10 auto. Giocabile subito nel browser." />
   <meta name="twitter:image" content="https://ottobit.github.io/portfolio-arcade/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="../../assets/css/style.css" />
-  <link rel="stylesheet" href="style.css?v=17" />
+  <link rel="stylesheet" href="style.css?v=21" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -51,6 +52,7 @@
         <span class="shift-led"></span><span class="shift-led"></span>
         <span class="shift-led"></span><span class="shift-led"></span>
       </div>
+      <span id="drs-indicator" aria-hidden="true">DRS</span>
       <div id="speed-track" aria-hidden="true">
         <div id="speed-fill"></div>
       </div>
@@ -73,11 +75,22 @@
           <span id="time">0:00.00</span>
           <span id="best">Migliore --:--.--</span>
         </div>
+        <div class="stats-row">
+          <span id="tire-wear">Gomme 100%</span>
+        </div>
+        <div id="damage-row" class="stats-row" hidden>
+          <span id="damage">Danni 0%</span>
+        </div>
       </div>
+      <canvas id="minimap" width="130" height="130" aria-hidden="true"></canvas>
     </div>
   </div>
 
-  <div id="hint">WASD / frecce per guidare — 3 giri contro 9 rivali</div>
+  <div id="hint">WASD / frecce per guidare, C per la camera cockpit — 3 giri contro 9 rivali</div>
+
+  <div id="penalty-notice" aria-hidden="true">Track limits — +1.0s</div>
+
+  <div id="caution-banner" aria-hidden="true" hidden>⚠️ Safety car — andatura ridotta</div>
 
   <div id="countdown-overlay" hidden></div>
 
@@ -134,6 +147,6 @@
     </div>
   </div>
 
-  <script type="module" src="main.js?v=12"></script>
+  <script type="module" src="main.js?v=19"></script>
 </body>
 </html>
