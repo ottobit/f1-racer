@@ -116,6 +116,33 @@ canvas {
   pointer-events: none;
 }
 
+/* Real F1 broadcasts flash a "TRACK LIMITS - TIME PENALTY" banner; this is
+   the same idea shrunk to fit a HUD that's deliberately kept out of the
+   way of the car (see the harmonisation pass earlier in the project) — a
+   brief, small notice instead of a screen-filling one. Shown for ~2.5s via
+   the .visible class (toggled in main.js) right after a penalized lap. */
+#penalty-notice {
+  position: fixed;
+  top: 4.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(-0.4rem);
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  background: rgba(225, 6, 0, 0.85);
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#penalty-notice.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 /* Safety car caution banner: a persistent bar (not a brief toast, unlike
    most other HUD notices) for as long as the caution period lasts, styled
    after a real broadcast's yellow-flag graphic. */
@@ -137,6 +164,20 @@ canvas {
 
 #caution-banner[hidden] {
   display: none;
+}
+
+/* Small top-down circuit trace. Sits in the flow of #hud-row next to the
+   stats panel (not a fixed overlay) so it wraps along with the rest of
+   the HUD instead of ever sitting on top of it on a narrow viewport. */
+#minimap {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  background: rgba(11, 12, 17, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  flex-shrink: 0;
 }
 
 /* Wide bar across the very top of the screen, clear of the horizon at any
@@ -246,6 +287,25 @@ canvas {
     background: rgba(255, 255, 255, 0.12);
     transform: scale(1);
   }
+}
+
+/* Dim and inert until the zone + gap conditions in updateDrsEligibility()
+   are both met, then lights up green like a real F1 dash's DRS prompt. */
+#drs-indicator {
+  flex: 0 0 auto;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#drs-indicator.drs-active {
+  color: #05060a;
+  background: #2ecc71;
+  box-shadow: 0 0 6px 1px rgba(46, 204, 113, 0.7);
 }
 
 #speed-value {
@@ -455,6 +515,33 @@ html.touch #touch-controls {
 }
 
 /* --- Circuit menu (index.html) ------------------------------------------- */
+
+.difficulty-select {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  max-width: 640px;
+  margin: 0 auto 1.5rem;
+  padding: 0 1.5rem;
+}
+
+.difficulty-btn {
+  flex: 1 1 0;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #262b36);
+  background: var(--surface, #14171f);
+  color: var(--text-dim, #9aa1b0);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.difficulty-btn.active {
+  background: var(--accent, #e10600);
+  border-color: var(--accent, #e10600);
+  color: #fff;
+}
 
 .menu-standings {
   max-width: 640px;
