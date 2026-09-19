@@ -349,6 +349,95 @@ const cloudGroup = new THREE.Group();
   scene.add(cloudGroup);
 }
 
+// --- Weather / impact effects ---------------------------------------------
+// Rain is a lightweight world-space particle field, kept deliberately small
+// so the game remains comfortable on mobile GPUs. Particles are recycled
+// around the player instead of allocating new objects every frame.
+const rainCount = isRaining ? 850 : 0;
+let rainPoints = null;
+let rainPositions = null;
+if (isRaining) {
+  rainPositions = new Float32Array(rainCount * 3);
+  for (let i = 0; i < rainCount; i++) {
+    rainPositions[i * 3] = (Math.random() - 0.5) * 90;
+    rainPositions[i * 3 + 1] = 8 + Math.random() * 65;
+    rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 90;
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(rainPositions, 3));
+  const material = new THREE.PointsMaterial({
+    color: 0xbfd8ef,
+    size: 0.09,
+    transparent: true,
+    opacity: 0.42,
+    depthWrite: false,
+  });
+  rainPoints = new THREE.Points(geometry, material);
+  scene.add(rainPoints);
+}
+
+const impactSparks = [];
+
+function spawnImpactSparks(x, z) {
+  for (let i = 0; i < 7; i++) {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.055, 5, 5),
+      new THREE.MeshBasicMaterial({
+        color: 0xffd166,
+        transparent: true,
+        opacity: 0.95,
+      })
+    );
+    mesh.position.set(x, 0.45 + Math.random() * 0.35, z);
+    scene.add(mesh);
+    impactSparks.push({
+      mesh,
+      vx: (Math.random() - 0.5) * 5,
+      vy: 1.5 + Math.random() * 3.5,
+      vz: (Math.random() - 0.5) * 5,
+      life: 0.22 + Math.random() * 0.22,
+    });
+  }
+}
+
+function updateImpactSparks(dt) {
+  for (let i = impactSparks.length - 1; i >= 0; i--) {
+    const spark = impactSparks[i];
+    spark.life -= dt;
+    spark.vy -= 9 * dt;
+    spark.mesh.position.x += spark.vx * dt;
+    spark.mesh.position.y += spark.vy * dt;
+    spark.mesh.position.z += spark.vz * dt;
+    spark.mesh.material.opacity = Math.max(0, spark.life * 4);
+    if (spark.life <= 0) {
+      scene.remove(spark.mesh);
+      spark.mesh.geometry.dispose();
+      spark.mesh.material.dispose();
+      impactSparks.splice(i, 1);
+    }
+  }
+}
+
+function updateRain(dt) {
+  if (!rainPoints || !rainPositions) return;
+  const px = state.x;
+  const pz = state.z;
+  for (let i = 0; i < rainCount; i++) {
+    const j = i * 3;
+    rainPositions[j] += 4 * dt;
+    rainPositions[j + 1] -= 58 * dt;
+    rainPositions[j + 2] += 7 * dt;
+    const dx = rainPositions[j] - px;
+    const dz = rainPositions[j + 2] - pz;
+    if (rainPositions[j + 1] < 0 || dx * dx + dz * dz > 70 * 70) {
+      rainPositions[j] = px + (Math.random() - 0.5) * 90;
+      rainPositions[j + 1] = 38 + Math.random() * 55;
+      rainPositions[j + 2] = pz + (Math.random() - 0.5) * 90;
+    }
+  }
+  rainPoints.geometry.attributes.position.needsUpdate = true;
+}
+
 const camera = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
@@ -831,6 +920,7 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     pitState: "none",
     pitServiceEndTime: 0,
     hasPitted: false,
+    lastImpactEffectTime: 0,
   };
 });
 
@@ -918,6 +1008,8 @@ const state = {
   pitState: "none",
   pitServiceEndTime: 0,
   pitRequested: false,
+  lastImpactEffectTime: 0,
+  cameraShake: 0,
   // Physics extension: lateral velocity and yaw-rate make the car carry
   // momentum through corners instead of moving only along its heading.
   lateralSpeed: 0,
@@ -1417,6 +1509,13 @@ function applyTrackBoundary(car, dt, info) {
     if (impactSpeed > DAMAGE_MIN_IMPACT_SPEED) {
       const extra = (impactSpeed - DAMAGE_MIN_IMPACT_SPEED) * DAMAGE_PER_IMPACT_SPEED;
       car.damage = Math.min(DAMAGE_MAX_SPEED_PENALTY, car.damage + extra);
+
+      const now = performance.now();
+      if (now - car.lastImpactEffectTime > 500) {
+        spawnImpactSparks(car.x, car.z);
+        if (car === state) state.cameraShake = Math.max(state.cameraShake, 0.32);
+        car.lastImpactEffectTime = now;
+      }
     }
     const inv = info.dist > 0 ? 1 / info.dist : 0;
     const nx = (car.x - info.x) * inv;
@@ -1713,6 +1812,14 @@ function updateChaseCamera(dt) {
     state.z + Math.cos(state.heading) * 4
   );
   camera.lookAt(lookTarget);
+
+  if (state.cameraShake > 0) {
+    const shake = state.cameraShake * 0.22;
+    camera.position.x += (Math.random() - 0.5) * shake;
+    camera.position.y += (Math.random() - 0.5) * shake;
+    camera.position.z += (Math.random() - 0.5) * shake;
+    state.cameraShake = Math.max(0, state.cameraShake - dt * 1.8);
+  }
 }
 
 // Cockpit view: rigidly attached to the car (no lerp/lag, unlike the chase
@@ -2231,6 +2338,8 @@ function startRaceCountdown() {
 function animate() {
   const dt = Math.min(clock.getDelta(), 0.1);
   update(dt);
+  updateImpactSparks(dt);
+  updateRain(dt);
   cloudGroup.rotation.y += dt * 0.004; // slow drift, always running regardless of session phase
   renderer.render(scene, camera);
   requestAnimationFrame(animate);

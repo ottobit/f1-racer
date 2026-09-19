@@ -350,7 +350,7 @@ Implemented corner preview, dynamic lookahead, pre-corner speed control, racing-
 Implemented lightweight tyre compounds and degradation, manual ERS with recharge/deployment, player pit service, simple AI pit strategy, and stronger wet-grip effects. DRS remains integrated with the new ERS layer.
 
 ### Issue #45 — Presentation
-Improve visuals, audio and atmosphere.
+Implemented lightweight rain particles, impact sparks, camera-impact shake and retained the synthesized engine audio as the core audio layer. Further asset-level art/audio can be added later without changing the simulation model.
 
 ### Issue #46 — Release hardening
 Regression-test the complete experience and establish a repeatable release checklist.
