@@ -54,10 +54,11 @@ Run one complete pass on a current Chromium/Firefox/Safari browser.
 3. [ ] Confirm the steering wheel is draggable and analog.
 4. [ ] Repeated tap, double-tap and pinch on the race canvas must not zoom or move the browser viewport.
 5. [ ] Confirm steering drag and simultaneous gas/brake touches do not trigger browser zoom/gesture handling.
-6. [ ] Confirm HUD remains readable without covering the controls.
-7. [ ] Confirm race rendering remains responsive.
-8. [ ] Confirm cockpit/chase camera toggle still works where a keyboard is available.
-9. [ ] Confirm results overlay is usable on a short viewport.
+6. [ ] Rotate to landscape and accelerate to high speed: the chase camera must keep the player car clearly readable and must not progressively shrink it.
+7. [ ] Confirm HUD remains readable without covering the controls.
+8. [ ] Confirm race rendering remains responsive.
+9. [ ] Confirm cockpit/chase camera toggle still works where a keyboard is available.
+10. [ ] Confirm results overlay is usable on a short viewport.
 
 ## Release criteria
 

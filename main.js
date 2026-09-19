@@ -1849,6 +1849,11 @@ const CHASE_CAM_BASE_FOV = 58; // matches updateSpeedFov's resting FOV
 // pulls the camera in for screens wider than this baseline — never pushes
 // it out for taller ones, which already frame the car generously.
 const CHASE_CAM_BASE_ASPECT = 1.7; // roughly 16:9, a typical landscape desktop/tablet
+const CHASE_CAM_LANDSCAPE_MAX_DISTANCE = 6.8;
+
+function isCompactLandscapeViewport() {
+  return window.innerWidth > window.innerHeight && window.innerHeight <= 520;
+}
 
 function updateChaseCamera(dt) {
   // updateSpeedFov widens the FOV with speed for a sense of acceleration,
@@ -1861,8 +1866,17 @@ function updateChaseCamera(dt) {
     Math.tan(THREE.MathUtils.degToRad(CHASE_CAM_BASE_FOV / 2)) /
     Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const aspectScale = Math.min(1, CHASE_CAM_BASE_ASPECT / camera.aspect);
-  const camDistance = CHASE_CAM_BASE_DISTANCE * fovScale * aspectScale;
-  const camHeight = 4.5;
+  let camDistance = CHASE_CAM_BASE_DISTANCE * fovScale * aspectScale;
+  let camHeight = 4.5;
+
+  // On short mobile landscape viewports the perceived car size can collapse
+  // as the browser chrome and speed-FOV both change the framing. Use an
+  // explicit close chase framing there instead of letting the generic
+  // desktop distance dominate. This affects only the camera, never physics.
+  if (isCompactLandscapeViewport()) {
+    camDistance = Math.min(camDistance, CHASE_CAM_LANDSCAPE_MAX_DISTANCE);
+    camHeight = 3.8;
+  }
   const desiredX = state.x - Math.sin(state.heading) * camDistance;
   const desiredZ = state.z - Math.cos(state.heading) * camDistance;
   camera.position.lerp(
