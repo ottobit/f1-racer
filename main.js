@@ -79,6 +79,15 @@ const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
 const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
 const CAR_BUMP_SPEED_FACTOR = 0.7; // speed kept by both cars on contact
 
+// Track limits (player only — AI already steers within bounds): running
+// wide costs grip on the spot via the grass drag above, but real stewards
+// also add a time penalty for repeatedly abusing the runoff. Each distinct
+// excursion past the kerb counts once (entering-grass edge, not every
+// frame spent there); more than a few in one lap adds a fixed penalty to
+// that lap's recorded time, so it never beats a clean one on the board.
+const TRACK_LIMIT_WARNING_THRESHOLD = 3; // excursions allowed before it costs time
+const TRACK_LIMIT_PENALTY_MS = 1000;
+
 // --- Track centerline sampling -------------------------------------------
 
 const CENTERLINE_SAMPLES = 360;
@@ -583,6 +592,9 @@ const state = {
   bestLapTime: null,
   prevRawProgress: 0,
   totalProgress: 0,
+  wasOffTrack: false,
+  trackLimitViolationsThisLap: 0,
+  lastLapPenaltyMs: 0,
 };
 
 addGridBoxMarking(start, 1);
@@ -802,10 +814,12 @@ const speedValueEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearValueEl = document.getElementById("gear-value");
 const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
+const penaltyNoticeEl = document.getElementById("penalty-notice");
 const minimapCtx = document.getElementById("minimap").getContext("2d");
 const GAUGE_MAX_KMH = 300; // bar reads full at a realistic F1 top speed
 let lastGearLabel = null;
 let gearFlashTimeout = null;
+let penaltyNoticeTimeout = null;
 
 circuitNameEl.textContent = circuit.name;
 
@@ -816,6 +830,16 @@ function formatTime(ms) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = (totalSeconds % 60).toFixed(2).padStart(5, "0");
   return `${minutes}:${seconds}`;
+}
+
+// One-shot toast for a track-limits penalty, fired from the lap-completion
+// check in update() (not every updateHud() call) so it flashes once per
+// penalized lap instead of staying lit for the whole next one.
+function showPenaltyNotice(penaltyMs) {
+  penaltyNoticeEl.textContent = `Track limits — +${(penaltyMs / 1000).toFixed(1)}s`;
+  clearTimeout(penaltyNoticeTimeout);
+  penaltyNoticeEl.classList.add("visible");
+  penaltyNoticeTimeout = setTimeout(() => penaltyNoticeEl.classList.remove("visible"), 2500);
 }
 
 // Redraws the top-down circuit trace and every car's live dot. The track
@@ -1139,6 +1163,14 @@ function update(dt) {
 
   const info = nearestTrackInfo(state.x, state.z);
   applyTrackBoundary(state, dt, info);
+
+  // One violation per excursion (the moment it crosses out, not every
+  // frame spent off), so lightly touching the runoff for a full second
+  // doesn't rack up dozens of "offences" on its own.
+  const isOffTrack = info.dist > GRASS_LIMIT;
+  if (isOffTrack && !state.wasOffTrack) state.trackLimitViolationsThisLap++;
+  state.wasOffTrack = isOffTrack;
+
   const allCars = [state, ...aiCars];
   for (const car of aiCars) updateAiCar(car, dt, allCars);
   resolveCarCollisions(allCars);
@@ -1151,7 +1183,11 @@ function update(dt) {
   const justCompletedLap = advanceProgress(state, info.idx / centerline.length);
   const now = performance.now();
   if (justCompletedLap) {
-    const lapTime = now - state.lapStartTime;
+    const penaltyMs =
+      state.trackLimitViolationsThisLap > TRACK_LIMIT_WARNING_THRESHOLD
+        ? TRACK_LIMIT_PENALTY_MS
+        : 0;
+    const lapTime = now - state.lapStartTime + penaltyMs;
     if (state.bestLapTime === null || lapTime < state.bestLapTime) {
       state.bestLapTime = lapTime;
       // Only a lap that just beat the record becomes the new ghost — the
@@ -1162,7 +1198,10 @@ function update(dt) {
         saveGhost(circuit.id, ghostLap);
       }
     }
+    state.lastLapPenaltyMs = penaltyMs;
+    state.trackLimitViolationsThisLap = 0;
     state.lapStartTime = now;
+    if (penaltyMs > 0) showPenaltyNotice(penaltyMs);
     currentLapSamples = [];
     lastGhostSampleT = -Infinity;
   }
