@@ -92,3 +92,13 @@ This repository currently has no automated browser/physics test runner and no Gi
 - [ ] Front/rear wing variants visibly change wing geometry in the Garage.
 - [ ] Start a race after changing setup and verify top speed, braking, turn authority/stability, traction and runoff behaviour respond to the relevant choices.
 - [ ] Balanced setup remains close to the pre-Garage baseline and no variant is a universal upgrade.
+
+
+## Driving dynamics regression
+
+- [ ] Compare braking in a straight line vs braking while steering: combined braking/cornering must require more distance and feel less planted.
+- [ ] Enter a corner under braking: turn-in should sharpen while excessive combined demand can loosen stability progressively, not snap instantly.
+- [ ] Accelerate before unwinding steering: traction/acceleration should be weaker than on a straight exit.
+- [ ] Release steering after a slide: lateral motion should recover progressively rather than snap to zero.
+- [ ] Verify keyboard and touch steering remain controllable at low and high speed.
+- [ ] Verify Garage setup effects still alter the evolved physics after a reload.

@@ -376,3 +376,8 @@ Added `RELEASE-CHECKLIST.md` with source-level gates and desktop/mobile browser 
 `garage.html` + `garage.js` provide an interactive Three.js setup bay with a 360° rotatable open-wheel car. Components can be mounted by drag-and-drop or click/tap. `garage-setup.js` is the shared data/physics contract and persists the setup under `f1racer-garage-v1`.
 
 Five component families each expose three trade-off variants: front wing, rear wing, floor/diffuser, brakes and suspension. The setup produces modifiers for speed, downforce, braking, stability, traction and runoff behaviour. `main.js` reads these modifiers at race startup, so Garage choices alter actual race physics rather than only UI stats. Front/rear wing choices also alter the Garage car geometry for immediate visual feedback.
+
+
+## Evolved driving dynamics
+
+Player physics uses a lightweight combined-grip model rather than independent steering/throttle/brake channels. Lateral demand consumes part of the longitudinal grip budget, so braking and accelerating while cornering are less effective. Simplified longitudinal load transfer sharpens front response under braking and reduces it under power; lateral recovery is progressive and rear stability changes with braking/throttle. This produces controllable understeer/oversteer tendencies, trail-braking consequences and cleaner-exit rewards without a full rigid-body tyre simulation. Garage modifiers remain layered into the base car constants.

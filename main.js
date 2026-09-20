@@ -1949,11 +1949,24 @@ function updateCamera(dt) {
 // hand-maintained copies drifting apart. Returns the resulting
 // nearestTrackInfo, which the caller needs for lap-progress tracking.
 function integratePlayerMotion(dt) {
-  // Longitudinal control
+  // Longitudinal control. A lightweight traction circle couples throttle /
+  // braking with lateral demand: asking the tyres to turn leaves less grip
+  // available to accelerate or brake. This makes trail braking and clean
+  // corner exits matter without requiring a full rigid-body tyre model.
+  const preSpeedFactor = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
+  const preLateralDemand = Math.min(
+    Math.abs(state.lateralSpeed) / Math.max(Math.abs(state.speed) * 0.3, 1),
+    1
+  );
+  const brakingLoadTransfer = input.back ? 0.12 + 0.12 * preSpeedFactor : 0;
+  const accelerationLoadTransfer = input.forward ? 0.08 + 0.08 * preSpeedFactor : 0;
+  const longitudinalGripBudget = Math.max(0.5, 1 - preLateralDemand * 0.42);
   if (input.forward) {
-    state.speed += CAR.accel * dt;
+    const traction = longitudinalGripBudget * (1 - accelerationLoadTransfer * 0.35);
+    state.speed += CAR.accel * traction * dt;
   } else if (input.back) {
-    state.speed -= CAR.brakeDecel * dt;
+    const brakeAuthority = longitudinalGripBudget * (1 + brakingLoadTransfer * 0.25);
+    state.speed -= CAR.brakeDecel * brakeAuthority * dt;
   } else {
     const decel = CAR.coastDecel * dt;
     if (state.speed > 0) state.speed = Math.max(0, state.speed - decel);
@@ -1985,7 +1998,13 @@ function integratePlayerMotion(dt) {
   const keyboardSteer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   const steerAmount = touchSteer !== 0 ? touchSteer : keyboardSteer;
 
-  const speedSteerLimit = 1 - 0.55 * speedFactor;
+  // Braking loads the front axle and sharpens initial turn-in; power shifts
+  // load rearward and slightly reduces front authority. At high combined
+  // demand the available grip saturates progressively rather than switching.
+  const loadTransferSteer = input.back ? 1.08 : input.forward ? 0.94 : 1;
+  const combinedDemand = Math.min(Math.abs(state.lateralSpeed) / Math.max(Math.abs(state.speed) * 0.28, 1), 1);
+  const gripSaturation = 1 - combinedDemand * 0.22;
+  const speedSteerLimit = (1 - 0.55 * speedFactor) * loadTransferSteer * gripSaturation;
   const targetYawRate =
     -steerAmount *
     CAR.maxTurnRate *
@@ -1995,7 +2014,7 @@ function integratePlayerMotion(dt) {
 
   // Steering response is intentionally finite: changing direction creates
   // a short transition instead of an instantaneous heading change.
-  const yawResponse = 7.5 * (1 + GARAGE_EFFECTS.stability * 0.012);
+  const yawResponse = 7.5;
   state.yawRate += (targetYawRate - state.yawRate) * Math.min(1, yawResponse * dt);
   if (Math.abs(state.speed) < 0.05 || steerAmount === 0) {
     state.yawRate *= Math.max(0, 1 - dt * 5);
@@ -2010,7 +2029,11 @@ function integratePlayerMotion(dt) {
   const maxLateral = Math.abs(state.speed) * 0.32;
   const desiredLateral =
     steerAmount * Math.abs(state.speed) * 0.16 * (0.55 + 0.45 * grip) * steerSign;
-  const lateralResponse = 5.0 + grip * 3.0;
+  // Recovery is deliberately progressive. Heavy braking while cornering can
+  // loosen the rear; throttle asks for traction and therefore damps lateral
+  // recovery a little until the wheel is unwound.
+  const rearStability = input.back ? 0.86 : input.forward ? 0.92 : 1;
+  const lateralResponse = (5.0 + grip * 3.0) * rearStability;
   state.lateralSpeed +=
     (desiredLateral - state.lateralSpeed) *
     Math.min(1, lateralResponse * dt);
