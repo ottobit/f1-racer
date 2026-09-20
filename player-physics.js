@@ -1,0 +1,105 @@
+export function setupPlayerPhysics({
+  car,
+  state,
+  input,
+  steering,
+  drsSpeedMultiplier,
+  ersSpeedMultiplier,
+  grassLimit,
+  tireGripFactor,
+  cautionSpeedMultiplier,
+  steeringYaw,
+  nearestTrackInfo,
+  applyTrackBoundary,
+}) {
+  function integratePlayerMotion(dt) {
+    const preSpeedFactor = Math.min(Math.abs(state.speed) / car.maxSpeed, 1);
+    const preLateralDemand = Math.min(
+      Math.abs(state.lateralSpeed) / Math.max(Math.abs(state.speed) * 0.3, 1),
+      1
+    );
+    const brakingLoadTransfer = input.back ? 0.12 + 0.12 * preSpeedFactor : 0;
+    const accelerationLoadTransfer = input.forward ? 0.08 + 0.08 * preSpeedFactor : 0;
+    const longitudinalGripBudget = Math.max(0.5, 1 - preLateralDemand * 0.42);
+    if (input.forward) {
+      const traction = longitudinalGripBudget * (1 - accelerationLoadTransfer * 0.35);
+      state.speed += car.accel * traction * dt;
+    } else if (input.back) {
+      const brakeAuthority = longitudinalGripBudget * (1 + brakingLoadTransfer * 0.25);
+      state.speed -= car.brakeDecel * brakeAuthority * dt;
+    } else {
+      const decel = car.coastDecel * dt;
+      if (state.speed > 0) state.speed = Math.max(0, state.speed - decel);
+      else if (state.speed < 0) state.speed = Math.min(0, state.speed + decel);
+    }
+    const playerMaxSpeed =
+      car.maxSpeed *
+      (1 - state.damage) *
+      (state.drsActive ? drsSpeedMultiplier : 1) *
+      (state.ersActive ? ersSpeedMultiplier : 1) *
+      cautionSpeedMultiplier();
+    state.speed = Math.max(
+      car.reverseMaxSpeed,
+      Math.min(playerMaxSpeed, state.speed)
+    );
+
+    const grip = tireGripFactor(state.totalProgress, state);
+    const steerSign = state.speed >= 0 ? 1 : -1;
+    const steerAmount = steering.value;
+
+    const loadTransferSteer = input.back ? 1.08 : input.forward ? 0.94 : 1;
+    const combinedDemand = Math.min(Math.abs(state.lateralSpeed) / Math.max(Math.abs(state.speed) * 0.28, 1), 1);
+    const gripSaturation = 1 - combinedDemand * 0.22;
+    const targetYawRate = steeringYaw(steerAmount, state.speed, car.maxTurnRate, grip, loadTransferSteer * gripSaturation);
+
+    const yawResponse = 7.5;
+    state.yawRate += (targetYawRate - state.yawRate) * (1 - Math.exp(-yawResponse * dt));
+    if (Math.abs(state.speed) < 0.05) state.yawRate = 0;
+    if (steerAmount === 0) {
+      state.yawRate *= Math.max(0, 1 - dt * 5);
+    }
+    state.heading += state.yawRate * dt;
+
+    const lateralAxisX = -Math.cos(state.heading);
+    const lateralAxisZ = Math.sin(state.heading);
+    const maxLateral = Math.abs(state.speed) * 0.32;
+    const desiredLateral =
+      steerAmount * Math.abs(state.speed) * 0.16 * (0.55 + 0.45 * grip) * steerSign;
+    const rearStability = input.back ? 0.86 : input.forward ? 0.92 : 1;
+    const lateralResponse = (5.0 + grip * 3.0) * rearStability;
+    state.lateralSpeed +=
+      (desiredLateral - state.lateralSpeed) *
+      Math.min(1, lateralResponse * dt);
+
+    state.lateralSpeed = Math.max(
+      -maxLateral,
+      Math.min(maxLateral, state.lateralSpeed)
+    );
+    const slipRatio =
+      maxLateral > 0.001
+        ? Math.min(Math.abs(state.lateralSpeed) / maxLateral, 1)
+        : 0;
+    const cornerDrag = 1 + slipRatio * (1.8 - grip);
+    if (state.speed > 0) {
+      state.speed = Math.max(0, state.speed - state.speed * (cornerDrag - 1) * 0.9 * dt);
+    }
+
+    const forwardX = Math.sin(state.heading);
+    const forwardZ = Math.cos(state.heading);
+    state.x +=
+      (forwardX * state.speed + lateralAxisX * state.lateralSpeed) * dt;
+    state.z +=
+      (forwardZ * state.speed + lateralAxisZ * state.lateralSpeed) * dt;
+
+    const info = nearestTrackInfo(state.x, state.z);
+    applyTrackBoundary(state, dt, info);
+
+    const isOffTrack = info.dist > grassLimit;
+    if (isOffTrack && !state.wasOffTrack) state.trackLimitViolationsThisLap++;
+    state.wasOffTrack = isOffTrack;
+
+    return info;
+  }
+
+  return { integratePlayerMotion };
+}

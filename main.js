@@ -8,6 +8,7 @@ import { applyCarToMesh, buildRaceCar } from "./race-car-view.js";
 import { setupRaceInput } from "./race-input.js";
 import { setupRaceHud } from "./race-hud.js";
 import { setupRaceCamera } from "./race-camera.js";
+import { setupPlayerPhysics } from "./player-physics.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
@@ -1408,132 +1409,20 @@ const raceCamera = setupRaceCamera({
   playerCar,
   carMaxSpeed: CAR.maxSpeed,
 });
-
-// Player-only physics (throttle/brake, steering, position integration,
-// track-limit collision) — shared by qualifying (solo) and the race
-// (alongside the AI), so the two stay in perfect lockstep instead of two
-// hand-maintained copies drifting apart. Returns the resulting
-// nearestTrackInfo, which the caller needs for lap-progress tracking.
-function integratePlayerMotion(dt) {
-  // Longitudinal control. A lightweight traction circle couples throttle /
-  // braking with lateral demand: asking the tyres to turn leaves less grip
-  // available to accelerate or brake. This makes trail braking and clean
-  // corner exits matter without requiring a full rigid-body tyre model.
-  const preSpeedFactor = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
-  const preLateralDemand = Math.min(
-    Math.abs(state.lateralSpeed) / Math.max(Math.abs(state.speed) * 0.3, 1),
-    1
-  );
-  const brakingLoadTransfer = input.back ? 0.12 + 0.12 * preSpeedFactor : 0;
-  const accelerationLoadTransfer = input.forward ? 0.08 + 0.08 * preSpeedFactor : 0;
-  const longitudinalGripBudget = Math.max(0.5, 1 - preLateralDemand * 0.42);
-  if (input.forward) {
-    const traction = longitudinalGripBudget * (1 - accelerationLoadTransfer * 0.35);
-    state.speed += CAR.accel * traction * dt;
-  } else if (input.back) {
-    const brakeAuthority = longitudinalGripBudget * (1 + brakingLoadTransfer * 0.25);
-    state.speed -= CAR.brakeDecel * brakeAuthority * dt;
-  } else {
-    const decel = CAR.coastDecel * dt;
-    if (state.speed > 0) state.speed = Math.max(0, state.speed - decel);
-    else if (state.speed < 0) state.speed = Math.min(0, state.speed + decel);
-  }
-  const playerMaxSpeed =
-    CAR.maxSpeed *
-    (1 - state.damage) *
-    (state.drsActive ? DRS_SPEED_MULTIPLIER : 1) *
-    (state.ersActive ? ERS_SPEED_MULTIPLIER : 1) *
-    cautionSpeedMultiplier();
-  state.speed = Math.max(
-    CAR.reverseMaxSpeed,
-    Math.min(playerMaxSpeed, state.speed)
-  );
-
-  // Steering / cornering.
-  //
-  // The old model changed heading directly and then moved the car only along
-  // that heading. That is stable and arcade-friendly, but it gives the car
-  // no lateral momentum. Keep the same input contract while adding a small
-  // dynamic layer: yaw rate builds toward a grip-limited target and lateral
-  // velocity is damped rather than snapped to zero. This gives us controllable
-  // slip, understeer and tyre-grip effects without turning the browser game
-  // into a full rigid-body simulator.
-  const grip = tireGripFactor(state.totalProgress, state);
-  const steerSign = state.speed >= 0 ? 1 : -1;
-  const steerAmount = steering.value;
-
-  // Braking loads the front axle and sharpens initial turn-in; power shifts
-  // load rearward and slightly reduces front authority. At high combined
-  // demand the available grip saturates progressively rather than switching.
-  const loadTransferSteer = input.back ? 1.08 : input.forward ? 0.94 : 1;
-  const combinedDemand = Math.min(Math.abs(state.lateralSpeed) / Math.max(Math.abs(state.speed) * 0.28, 1), 1);
-  const gripSaturation = 1 - combinedDemand * 0.22;
-  const targetYawRate = steeringYaw(steerAmount, state.speed, CAR.maxTurnRate, grip, loadTransferSteer * gripSaturation);
-
-  // Steering response is intentionally finite: changing direction creates
-  // a short transition instead of an instantaneous heading change.
-  const yawResponse = 7.5;
-  state.yawRate += (targetYawRate - state.yawRate) * (1 - Math.exp(-yawResponse * dt));
-  if (Math.abs(state.speed) < 0.05) state.yawRate = 0;
-  if (steerAmount === 0) {
-    state.yawRate *= Math.max(0, 1 - dt * 5);
-  }
-  state.heading += state.yawRate * dt;
-
-  // Lateral momentum. The target is proportional to speed and steering, but
-  // tyre grip limits how much of it survives. Low grip therefore produces a
-  // wider line and more slide rather than simply reducing turn rate.
-  const lateralAxisX = -Math.cos(state.heading);
-  const lateralAxisZ = Math.sin(state.heading);
-  const maxLateral = Math.abs(state.speed) * 0.32;
-  const desiredLateral =
-    steerAmount * Math.abs(state.speed) * 0.16 * (0.55 + 0.45 * grip) * steerSign;
-  // Recovery is deliberately progressive. Heavy braking while cornering can
-  // loosen the rear; throttle asks for traction and therefore damps lateral
-  // recovery a little until the wheel is unwound.
-  const rearStability = input.back ? 0.86 : input.forward ? 0.92 : 1;
-  const lateralResponse = (5.0 + grip * 3.0) * rearStability;
-  state.lateralSpeed +=
-    (desiredLateral - state.lateralSpeed) *
-    Math.min(1, lateralResponse * dt);
-
-  // Tyre slip grows when requested lateral motion exceeds available grip.
-  // A small slip penalty feeds back into longitudinal speed, so entering a
-  // corner too aggressively costs exit speed instead of producing a free
-  // pivot around the car's centre.
-  state.lateralSpeed = Math.max(
-    -maxLateral,
-    Math.min(maxLateral, state.lateralSpeed)
-  );
-  const slipRatio =
-    maxLateral > 0.001
-      ? Math.min(Math.abs(state.lateralSpeed) / maxLateral, 1)
-      : 0;
-  const cornerDrag = 1 + slipRatio * (1.8 - grip);
-  if (state.speed > 0) {
-    state.speed = Math.max(0, state.speed - state.speed * (cornerDrag - 1) * 0.9 * dt);
-  }
-
-  // Integrate both velocity components in world space.
-  const forwardX = Math.sin(state.heading);
-  const forwardZ = Math.cos(state.heading);
-  state.x +=
-    (forwardX * state.speed + lateralAxisX * state.lateralSpeed) * dt;
-  state.z +=
-    (forwardZ * state.speed + lateralAxisZ * state.lateralSpeed) * dt;
-
-  const info = nearestTrackInfo(state.x, state.z);
-  applyTrackBoundary(state, dt, info);
-
-  // One violation per excursion (the moment it crosses out, not every
-  // frame spent off), so lightly touching the runoff for a full second
-  // doesn't rack up dozens of "offences" on its own.
-  const isOffTrack = info.dist > GRASS_LIMIT;
-  if (isOffTrack && !state.wasOffTrack) state.trackLimitViolationsThisLap++;
-  state.wasOffTrack = isOffTrack;
-
-  return info;
-}
+const { integratePlayerMotion } = setupPlayerPhysics({
+  car: CAR,
+  state,
+  input,
+  steering,
+  drsSpeedMultiplier: DRS_SPEED_MULTIPLIER,
+  ersSpeedMultiplier: ERS_SPEED_MULTIPLIER,
+  grassLimit: GRASS_LIMIT,
+  tireGripFactor,
+  cautionSpeedMultiplier,
+  steeringYaw,
+  nearestTrackInfo,
+  applyTrackBoundary,
+});
 
 // Synthesizes a plausible AI qualifying lap time from its own pace, rather
 // than actually simulating nine solo flying laps — invisible to the
