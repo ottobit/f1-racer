@@ -6,6 +6,7 @@ import { setupEffects } from "./garage-setup.js";
 import { createStudioEnvironment } from "./car-model.js";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js";
 import { setupRaceInput } from "./race-input.js";
+import { setupRaceHud } from "./race-hud.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
@@ -935,7 +936,7 @@ function logIncident(carId) {
   ) {
     cautionState = "active";
     cautionEndTime = now + CAUTION_DURATION_MS;
-    cautionBannerEl.hidden = false;
+    hud.setCautionVisible(true);
   }
 }
 
@@ -1112,98 +1113,10 @@ window.addEventListener("pointerdown", initEngineSound, { once: true });
 
 // --- HUD -----------------------------------------------------------------
 
-const circuitNameEl = document.getElementById("circuit-name");
-const positionEl = document.getElementById("position");
-const lapEl = document.getElementById("lap");
-const timeEl = document.getElementById("time");
-const bestEl = document.getElementById("best");
-const cautionBannerEl = document.getElementById("caution-banner");
-const damageRowEl = document.getElementById("damage-row");
-const damageEl = document.getElementById("damage");
-const tireWearEl = document.getElementById("tire-wear");
-const speedValueEl = document.getElementById("speed-value");
-const speedFillEl = document.getElementById("speed-fill");
-const gearValueEl = document.getElementById("gear-value");
-const drsIndicatorEl = document.getElementById("drs-indicator");
-const ersIndicatorEl = document.getElementById("ers-indicator");
-const tyreCompoundEl = document.getElementById("tyre-compound");
-const slipValueEl = document.getElementById("slip-value");
-const lateralValueEl = document.getElementById("lateral-value");
-const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
-const hintEl = document.getElementById("hint");
-const penaltyNoticeEl = document.getElementById("penalty-notice");
-const minimapCtx = document.getElementById("minimap").getContext("2d");
-const GAUGE_MAX_KMH = 300; // bar reads full at a realistic F1 top speed
-let lastGearLabel = null;
-let gearFlashTimeout = null;
-let penaltyNoticeTimeout = null;
-
 // Weather badge stays on the circuit name in every phase; the "Qualifica"
 // suffix only applies until the race itself starts (see finishQualifying).
 function circuitLabel() {
   return isRaining ? `${circuit.name} · 🌧️ Pioggia` : circuit.name;
-}
-const RACE_HINT_TEXT = hintEl.textContent;
-circuitNameEl.textContent = `${circuitLabel()} · Qualifica`;
-hintEl.textContent = "Giro di qualifica: fai il miglior tempo per partire davanti in griglia";
-
-const KMH_PER_UNIT = 3.6; // treat CAR.maxSpeed's units as m/s for display
-
-function formatTime(ms) {
-  const totalSeconds = ms / 1000;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = (totalSeconds % 60).toFixed(2).padStart(5, "0");
-  return `${minutes}:${seconds}`;
-}
-
-// One-shot toast for a track-limits penalty, fired from the lap-completion
-// check in update() (not every updateHud() call) so it flashes once per
-// penalized lap instead of staying lit for the whole next one.
-function showPenaltyNotice(penaltyMs) {
-  penaltyNoticeEl.textContent = `Track limits — +${(penaltyMs / 1000).toFixed(1)}s`;
-  clearTimeout(penaltyNoticeTimeout);
-  penaltyNoticeEl.classList.add("visible");
-  penaltyNoticeTimeout = setTimeout(() => penaltyNoticeEl.classList.remove("visible"), 2500);
-}
-
-// Redraws the top-down circuit trace and every car's live dot. The track
-// outline itself never changes, so only its points are precomputed; the
-// dots are the only thing recomputed each call.
-function drawMinimap() {
-  const ctx = minimapCtx;
-  ctx.clearRect(0, 0, MINIMAP_CANVAS_SIZE, MINIMAP_CANVAS_SIZE);
-
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  minimapTrackPoints.forEach((p, i) => {
-    if (i === 0) ctx.moveTo(p.x, p.y);
-    else ctx.lineTo(p.x, p.y);
-  });
-  ctx.closePath();
-  ctx.stroke();
-
-  const drawDot = (x, z, fillStyle, radius) => {
-    const p = minimapPoint(x, z);
-    ctx.fillStyle = fillStyle;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-    ctx.fill();
-  };
-
-  for (const car of aiCars) {
-    drawDot(car.x, car.z, `#${car.color.toString(16).padStart(6, "0")}`, 2.5);
-  }
-  // Drawn last (and outlined) so the player's own dot never gets buried
-  // under an AI one when they're close together on track.
-  const playerPoint = minimapPoint(state.x, state.z);
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(playerPoint.x, playerPoint.y, 3.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
 }
 
 // Ranks all three cars by race progress (see `advanceProgress`), most
@@ -1216,90 +1129,22 @@ function currentRaceOrder() {
   ].sort((a, b) => b.totalProgress - a.totalProgress);
 }
 
-// Speed/gear/shift-lights/engine sound/tire-damage readouts: identical
-// whether qualifying or racing (all derived from `state` alone, not race
-// progress or the session timer), so both HUD update functions below
-// share this instead of duplicating it.
-function updateSpeedoHud() {
-  const speedKmh = Math.abs(state.speed) * KMH_PER_UNIT;
-  speedValueEl.textContent = Math.round(speedKmh);
-
-  const gaugeRatio = Math.min(speedKmh / GAUGE_MAX_KMH, 1);
-  speedFillEl.style.width = `${gaugeRatio * 100}%`;
-
-  drsIndicatorEl.classList.toggle("drs-active", state.drsActive);
-  const gripPercent = Math.round(tireGripFactor(state.totalProgress, state) * 100);
-  if (ersIndicatorEl) {
-    ersIndicatorEl.textContent = `ERS ${Math.round(state.ersCharge)}%`;
-    ersIndicatorEl.classList.toggle("ers-active", state.ersActive);
-  }
-  if (tyreCompoundEl) {
-    tyreCompoundEl.textContent = TYRE_COMPOUNDS[state.tyreCompound].label;
-    tyreCompoundEl.dataset.compound = state.tyreCompound;
-  }
-  const lateralLimit = Math.max(Math.abs(state.speed) * 0.32, 1);
-  const slipPercent = Math.round(
-    Math.min(Math.abs(state.lateralSpeed) / lateralLimit, 1) * 100
-  );
-  tireWearEl.textContent = `Gomme ${gripPercent}%`;
-  if (slipValueEl) slipValueEl.textContent = `${slipPercent}%`;
-  if (lateralValueEl) lateralValueEl.textContent = `${Math.round(Math.abs(state.lateralSpeed) * KMH_PER_UNIT)} km/h`;
-  damageRowEl.hidden = state.damage <= 0;
-  damageEl.textContent = `Danni ${Math.round(state.damage * 100)}%`;
-
-  const { gear, rpmRatio } = gearInfo(Math.abs(state.speed) / CAR.maxSpeed);
-  const gearLabel = Math.abs(state.speed) < 0.6 ? "N" : state.speed < 0 ? "R" : String(gear);
-  if (gearLabel !== lastGearLabel) {
-    gearValueEl.textContent = gearLabel;
-    if (lastGearLabel !== null) {
-      // Restart the CSS flash animation even if it's still mid-run from a
-      // rapid-fire shift, and give the audio "thunk" its visual half.
-      clearTimeout(gearFlashTimeout);
-      gearValueEl.classList.remove("gear-shift");
-      void gearValueEl.offsetWidth;
-      gearValueEl.classList.add("gear-shift");
-      gearFlashTimeout = setTimeout(() => gearValueEl.classList.remove("gear-shift"), 220);
-      playShiftClick();
-    }
-    lastGearLabel = gearLabel;
-  }
-
-  // Shift lights sweep through each gear and reset at the next one, green
-  // -> red, like a rev limiter — tied to rpmRatio (gear-relative), not
-  // overall speed, so they visibly reset on every shift.
-  const litCount = Math.round(rpmRatio * shiftLedEls.length);
-  shiftLedEls.forEach((led, i) => led.classList.toggle("is-lit", i < litCount));
-
-  updateEngineSound(Math.abs(state.speed) / CAR.maxSpeed, rpmRatio);
-  drawMinimap();
-}
-
-function updateHud() {
-  const order = currentRaceOrder();
-  const position = order.findIndex((o) => o.driverId === "player") + 1;
-  positionEl.textContent = `P${position}`;
-  lapEl.textContent = `Giro ${Math.min(state.lap + 1, LAPS_PER_RACE)}/${LAPS_PER_RACE}`;
-  timeEl.textContent = formatTime(state.currentLapTime);
-  bestEl.textContent = state.bestLapTime
-    ? `Migliore ${formatTime(state.bestLapTime)}`
-    : "Migliore --:--.--";
-  updateSpeedoHud();
-}
-
-// Reuses the same stat readouts as the race HUD (position/lap/time/best),
-// repurposed for the session timer and this lap's/best qualifying time —
-// no separate markup needed for what is, visually, the same instrument
-// cluster in a different mode.
-function updateQualifyingHud() {
-  positionEl.textContent = "Q";
-  const remainingSeconds = Math.max(0, Math.ceil(qualiTimeRemainingMs / 1000));
-  lapEl.textContent = `${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")}`;
-  timeEl.textContent = formatTime(state.currentLapTime);
-  bestEl.textContent = qualiBestTime !== null
-    ? `Migliore ${formatTime(qualiBestTime)}`
-    : "Migliore --:--.--";
-  updateSpeedoHud();
-}
+const hud = setupRaceHud({
+  circuitLabel,
+  lapsPerRace: LAPS_PER_RACE,
+  tyreCompounds: TYRE_COMPOUNDS,
+  carMaxSpeed: CAR.maxSpeed,
+  state,
+  aiCars,
+  tireGripFactor,
+  gearInfo,
+  currentRaceOrder,
+  updateEngineSound,
+  playShiftClick,
+  minimapCanvasSize: MINIMAP_CANVAS_SIZE,
+  minimapTrackPoints,
+  minimapPoint,
+});
 
 // --- Main loop -------------------------------------------------------------
 
@@ -1850,8 +1695,7 @@ function finishQualifying() {
   state.speed = 0;
   state.currentLapTime = 0;
   state.bestLapTime = null;
-  circuitNameEl.textContent = circuitLabel();
-  hintEl.textContent = RACE_HINT_TEXT;
+  hud.setRaceLabel();
 
   sessionPhase = "race";
   raceState = "countdown";
@@ -1866,7 +1710,7 @@ function updateQualifying(dt) {
     // race's own grid start.
     applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
     updateCamera(dt);
-    updateQualifyingHud();
+    hud.updateQualifyingHud(qualiTimeRemainingMs, qualiBestTime);
     return;
   }
 
@@ -1889,7 +1733,7 @@ function updateQualifying(dt) {
 
   updateCamera(dt);
   updateSpeedFov(dt);
-  updateQualifyingHud();
+  hud.updateQualifyingHud(qualiTimeRemainingMs, qualiBestTime);
 
   if (qualiTimeRemainingMs <= 0) finishQualifying();
 }
@@ -2021,7 +1865,7 @@ function update(dt) {
     applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
     for (const car of aiCars) applyCarToMesh(car, car.x, car.z, car.heading, 0, dt);
     updateCamera(dt);
-    updateHud();
+    hud.updateHud();
     return;
   }
 
@@ -2031,7 +1875,7 @@ function update(dt) {
     applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
     updateCamera(dt);
     updateSpeedFov(dt);
-    updateHud();
+    hud.updateHud();
     return;
   }
 
@@ -2068,7 +1912,7 @@ function update(dt) {
     state.lastLapPenaltyMs = penaltyMs;
     state.trackLimitViolationsThisLap = 0;
     state.lapStartTime = now;
-    if (penaltyMs > 0) showPenaltyNotice(penaltyMs);
+    if (penaltyMs > 0) hud.showPenaltyNotice(penaltyMs);
     currentLapSamples = [];
     lastGhostSampleT = -Infinity;
   }
@@ -2077,7 +1921,7 @@ function update(dt) {
   if (cautionState === "active" && now >= cautionEndTime) {
     cautionState = "none";
     lastCautionEndTime = now;
-    cautionBannerEl.hidden = true;
+    hud.setCautionVisible(false);
   }
 
   if (state.currentLapTime - lastGhostSampleT >= GHOST_SAMPLE_INTERVAL_MS) {
@@ -2115,7 +1959,7 @@ function update(dt) {
 
   updateCamera(dt);
   updateSpeedFov(dt);
-  updateHud();
+  hud.updateHud();
 }
 
 // Real standing start: the car(s) sit still while this counts down, then
