@@ -7,6 +7,7 @@ import { createStudioEnvironment } from "./car-model.js";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js";
 import { setupRaceInput } from "./race-input.js";
 import { setupRaceHud } from "./race-hud.js";
+import { setupRaceCamera } from "./race-camera.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
@@ -964,17 +965,6 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Digit3") setTyreCompound("hard");
 });
 
-// Camera mode: chase (default, third-person) or cockpit (first-person, from
-// the driver's seat). The player's own car model is hidden in cockpit mode
-// — you're sitting inside it, so it would otherwise sit in front of the view
-// blocking most of the track.
-let cameraMode = "chase";
-window.addEventListener("keydown", (e) => {
-  if (e.code !== "KeyC") return;
-  cameraMode = cameraMode === "chase" ? "cockpit" : "chase";
-  playerCar.group.visible = cameraMode !== "cockpit";
-});
-
 // --- Gears -------------------------------------------------------------
 //
 // Eight forward gears (typical of a modern F1 car), mapped onto the 0..1
@@ -1412,90 +1402,12 @@ function getNextUnracedCircuitId(champState) {
   return next ? next.id : null;
 }
 
-// Chase camera math, shared by the countdown grid shot and the race loop.
-const CHASE_CAM_BASE_DISTANCE = 6.4;
-const CHASE_CAM_BASE_FOV = 58; // matches updateSpeedFov's resting FOV
-// camera.fov is a VERTICAL field of view — on a wide-and-short viewport
-// (a phone in landscape, aspect ratio well past 2:1) that same vertical FOV
-// implies a much wider horizontal FOV than on a taller/squarer screen, so
-// everything at a fixed distance (the car included) reads smaller purely
-// from the aspect ratio, independent of the speed-FOV effect below. Only
-// pulls the camera in for screens wider than this baseline — never pushes
-// it out for taller ones, which already frame the car generously.
-const CHASE_CAM_BASE_ASPECT = 1.7; // roughly 16:9, a typical landscape desktop/tablet
-const CHASE_CAM_LANDSCAPE_MAX_DISTANCE = 4.35;
-
-function isCompactLandscapeViewport() {
-  return window.innerWidth > window.innerHeight && window.innerHeight <= 520;
-}
-
-function updateChaseCamera(dt) {
-  // updateSpeedFov widens the FOV with speed for a sense of acceleration,
-  // but a wider FOV alone makes everything at a fixed distance — the car
-  // included — read smaller, which was the opposite of "feels faster".
-  // Pulling the camera in as the FOV widens keeps the car's own size on
-  // screen roughly constant; the world rushing past at the (still wider)
-  // edges is what should carry the speed sensation, not the car shrinking.
-  const fovScale =
-    Math.tan(THREE.MathUtils.degToRad(CHASE_CAM_BASE_FOV / 2)) /
-    Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const aspectScale = Math.min(1, CHASE_CAM_BASE_ASPECT / camera.aspect);
-  let camDistance = CHASE_CAM_BASE_DISTANCE * fovScale * aspectScale;
-  let camHeight = 3.55;
-
-  // On short mobile landscape viewports the perceived car size can collapse
-  // as the browser chrome and speed-FOV both change the framing. Use an
-  // explicit close chase framing there instead of letting the generic
-  // desktop distance dominate. This affects only the camera, never physics.
-  if (isCompactLandscapeViewport()) {
-    camDistance = Math.min(camDistance, CHASE_CAM_LANDSCAPE_MAX_DISTANCE);
-    camHeight = 2.85;
-  }
-  const desiredX = state.x - Math.sin(state.heading) * camDistance;
-  const desiredZ = state.z - Math.cos(state.heading) * camDistance;
-  camera.position.lerp(
-    new THREE.Vector3(desiredX, camHeight, desiredZ),
-    1 - Math.pow(0.001, dt)
-  );
-  const lookTarget = new THREE.Vector3(
-    state.x + Math.sin(state.heading) * 4,
-    1,
-    state.z + Math.cos(state.heading) * 4
-  );
-  camera.lookAt(lookTarget);
-
-  if (state.cameraShake > 0) {
-    const shake = state.cameraShake * 0.22;
-    camera.position.x += (Math.random() - 0.5) * shake;
-    camera.position.y += (Math.random() - 0.5) * shake;
-    camera.position.z += (Math.random() - 0.5) * shake;
-    state.cameraShake = Math.max(0, state.cameraShake - dt * 1.8);
-  }
-}
-
-// Cockpit view: rigidly attached to the car (no lerp/lag, unlike the chase
-// cam above — you're bolted into the seat), roughly at driver eye height
-// and nudged slightly forward of the car's own origin.
-function updateCockpitCamera() {
-  const eyeHeight = 1.0;
-  const forwardOffset = 0.3;
-  camera.position.set(
-    state.x + Math.sin(state.heading) * forwardOffset,
-    eyeHeight,
-    state.z + Math.cos(state.heading) * forwardOffset
-  );
-  const lookTarget = new THREE.Vector3(
-    state.x + Math.sin(state.heading) * 20,
-    eyeHeight - 0.1,
-    state.z + Math.cos(state.heading) * 20
-  );
-  camera.lookAt(lookTarget);
-}
-
-function updateCamera(dt) {
-  if (cameraMode === "cockpit") updateCockpitCamera();
-  else updateChaseCamera(dt);
-}
+const raceCamera = setupRaceCamera({
+  camera,
+  state,
+  playerCar,
+  carMaxSpeed: CAR.maxSpeed,
+});
 
 // Player-only physics (throttle/brake, steering, position integration,
 // track-limit collision) — shared by qualifying (solo) and the race
@@ -1623,15 +1535,6 @@ function integratePlayerMotion(dt) {
   return info;
 }
 
-// Shared speed-effect update (FOV widening) — cosmetic, identical in
-// qualifying and racing.
-function updateSpeedFov(dt) {
-  const speedFov = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
-  const targetFov = 58 + speedFov * 12;
-  camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 4);
-  camera.updateProjectionMatrix();
-}
-
 // Synthesizes a plausible AI qualifying lap time from its own pace, rather
 // than actually simulating nine solo flying laps — invisible to the
 // player either way, and this is far cheaper. A flat-out reference time
@@ -1709,7 +1612,7 @@ function updateQualifying(dt) {
     // Car sits frozen at the line until the lights go out, same as the
     // race's own grid start.
     applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
-    updateCamera(dt);
+    raceCamera.updateCamera(dt);
     hud.updateQualifyingHud(qualiTimeRemainingMs, qualiBestTime);
     return;
   }
@@ -1731,8 +1634,8 @@ function updateQualifying(dt) {
 
   qualiTimeRemainingMs = Math.max(0, qualiTimeRemainingMs - dt * 1000);
 
-  updateCamera(dt);
-  updateSpeedFov(dt);
+  raceCamera.updateCamera(dt);
+  raceCamera.updateSpeedFov(dt);
   hud.updateQualifyingHud(qualiTimeRemainingMs, qualiBestTime);
 
   if (qualiTimeRemainingMs <= 0) finishQualifying();
@@ -1864,7 +1767,7 @@ function update(dt) {
     // Cars sit frozen on the grid until the lights go out.
     applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
     for (const car of aiCars) applyCarToMesh(car, car.x, car.z, car.heading, 0, dt);
-    updateCamera(dt);
+    raceCamera.updateCamera(dt);
     hud.updateHud();
     return;
   }
@@ -1873,8 +1776,8 @@ function update(dt) {
   if (state.pitRequested) startPitStop();
   if (updatePitStop(now)) {
     applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
-    updateCamera(dt);
-    updateSpeedFov(dt);
+    raceCamera.updateCamera(dt);
+    raceCamera.updateSpeedFov(dt);
     hud.updateHud();
     return;
   }
@@ -1957,8 +1860,8 @@ function update(dt) {
     finishRace();
   }
 
-  updateCamera(dt);
-  updateSpeedFov(dt);
+  raceCamera.updateCamera(dt);
+  raceCamera.updateSpeedFov(dt);
   hud.updateHud();
 }
 
