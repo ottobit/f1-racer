@@ -388,3 +388,8 @@ Player physics uses a lightweight combined-grip model rather than independent st
 The chase camera now uses a materially closer base framing (6.4 units, capped at 4.35 on compact landscape) with a lower camera height so the player car remains a dominant readable object. Race completion is gated by validated completed laps: a lap requires reaching the opposite half of the circuit and then crossing start/finish forward; raw accumulated progress alone can no longer trigger the results overlay. Car-to-car contacts use overlap correction plus relative closing velocity along the contact normal instead of multiplying both cars' speed on every overlap, reducing repeated bouncing and sticky side contact.
 
 The Garage renders the same procedural F1 car construction used by the race branch, including the richer modern-F1 visual cues. Five labelled mounting zones make the drag target explicit and only the matching zone highlights during a drag; tap/click remains the mobile fallback.
+
+
+## ChatGPT Work handoff
+
+For a fresh ChatGPT Work session, start with `WORK-HANDOFF.md`. It is a compact operational entry point that links this wiki, the repository procedure and release checklist without duplicating the full architecture here.
