@@ -102,3 +102,16 @@ This repository currently has no automated browser/physics test runner and no Gi
 - [ ] Release steering after a slide: lateral motion should recover progressively rather than snap to zero.
 - [ ] Verify keyboard and touch steering remain controllable at low and high speed.
 - [ ] Verify Garage setup effects still alter the evolved physics after a reload.
+
+
+## Camera / finish / collision / Garage coherence
+
+- [ ] Chase view: player car is substantially larger/closer on desktop and compact landscape without clipping the camera.
+- [ ] Complete fewer than the configured race laps: results overlay must never appear.
+- [ ] A lap only increments after reaching mid-circuit and crossing start/finish forward.
+- [ ] Complete exactly all configured laps: results appear once after the final valid crossing.
+- [ ] Side-by-side rubbing does not repeatedly remove a fixed percentage of both cars' speed.
+- [ ] Nose-to-tail contact separates cars and transfers speed progressively without repeated bouncing.
+- [ ] Garage car silhouette/details match the race car model closely.
+- [ ] Drag each of the five component families: only its matching mounting zone highlights and accepts the drop.
+- [ ] Touch/click mounting still works without drag-and-drop.

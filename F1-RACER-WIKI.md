@@ -381,3 +381,10 @@ Five component families each expose three trade-off variants: front wing, rear w
 ## Evolved driving dynamics
 
 Player physics uses a lightweight combined-grip model rather than independent steering/throttle/brake channels. Lateral demand consumes part of the longitudinal grip budget, so braking and accelerating while cornering are less effective. Simplified longitudinal load transfer sharpens front response under braking and reduces it under power; lateral recovery is progressive and rear stability changes with braking/throttle. This produces controllable understeer/oversteer tendencies, trail-braking consequences and cleaner-exit rewards without a full rigid-body tyre simulation. Garage modifiers remain layered into the base car constants.
+
+
+## Camera, race completion, collisions and Garage coherence
+
+The chase camera now uses a materially closer base framing (6.4 units, capped at 4.35 on compact landscape) with a lower camera height so the player car remains a dominant readable object. Race completion is gated by validated completed laps: a lap requires reaching the opposite half of the circuit and then crossing start/finish forward; raw accumulated progress alone can no longer trigger the results overlay. Car-to-car contacts use overlap correction plus relative closing velocity along the contact normal instead of multiplying both cars' speed on every overlap, reducing repeated bouncing and sticky side contact.
+
+The Garage renders the same procedural F1 car construction used by the race branch, including the richer modern-F1 visual cues. Five labelled mounting zones make the drag target explicit and only the matching zone highlights during a drag; tap/click remains the mobile fallback.

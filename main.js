@@ -233,7 +233,18 @@ function nearestTrackInfo(x, z) {
 // the comment by `state` below for why raw track-progress isn't enough) and
 // returns true the frame a lap just ticked over.
 function advanceProgress(car, rawProgress) {
-  let delta = rawProgress - car.prevRawProgress;
+  const previousRaw = car.prevRawProgress;
+  // A lap only counts after the car has visited the opposite half of the
+  // circuit and then crossed start/finish in the forward direction. This
+  // prevents progress spikes, spins around the line or collision pushes from
+  // producing an early race verdict.
+  if (rawProgress > 0.42 && rawProgress < 0.58) car.lapCheckpointPassed = true;
+  const crossedFinishForward = previousRaw > 0.82 && rawProgress < 0.18;
+  if (crossedFinishForward && car.lapCheckpointPassed) {
+    car.completedLaps = (car.completedLaps || 0) + 1;
+    car.lapCheckpointPassed = false;
+  }
+  let delta = rawProgress - previousRaw;
   if (delta < -0.5) delta += 1; // wrapped forward past 1 -> 0
   else if (delta > 0.5) delta -= 1; // wrapped backward past 0 -> 1
   car.prevRawProgress = rawProgress;
@@ -754,6 +765,7 @@ function buildCar(paintColor) {
 
   const frontWing = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.06, 0.4), accent);
   frontWing.position.set(0, 0.2, 2.35);
+  frontWing.name = "frontWing";
   group.add(frontWing);
   // Endplates: the single detail that reads as "real wing" instead of "flat
   // slab" at a glance, closing off each end of the wing.
@@ -765,6 +777,7 @@ function buildCar(paintColor) {
 
   const rearWing = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.07, 0.45), dark);
   rearWing.position.set(0, 0.95, -1.55);
+  rearWing.name = "rearWing";
   group.add(rearWing);
   for (const side of [1, -1]) {
     const strut = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, 0.06), dark);
@@ -879,6 +892,21 @@ function buildCar(paintColor) {
     group.add(wheel);
     return wheel;
   });
+
+  // Extra modern F1 cues: airbox, mirrors, diffuser and nose pylons. These are
+  // visual only; collision/physics stay deliberately independent.
+  const airbox = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 0.42, 10), paint);
+  airbox.position.set(0, 1.08, -0.42); group.add(airbox);
+  for (const side of [1, -1]) {
+    const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.11, 0.13), paint);
+    mirror.position.set(0.58 * side, 0.86, 0.18); group.add(mirror);
+    const mirrorStem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.3, 6), carbon);
+    mirrorStem.rotation.z = Math.PI / 2; mirrorStem.position.set(0.45 * side, 0.82, 0.18); group.add(mirrorStem);
+    const nosePylon = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.2, 0.38), carbon);
+    nosePylon.position.set(0.25 * side, 0.25, 2.2); group.add(nosePylon);
+    const diffuser = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.65), carbon);
+    diffuser.position.set(0.52 * side, 0.26, -1.42); diffuser.rotation.x = -0.18; group.add(diffuser);
+  }
 
   group.scale.setScalar(CAR_SCALE);
   return { group, wheels, wheelRadius: wheelRadius * CAR_SCALE };
@@ -1084,6 +1112,8 @@ const state = {
   heading: start.heading,
   speed: 0,
   lap: 0,
+  completedLaps: 0,
+  lapCheckpointPassed: false,
   lapStartTime: performance.now(),
   currentLapTime: 0,
   bestLapTime: null,
@@ -1634,22 +1664,35 @@ function applyTrackBoundary(car, dt, info) {
 function resolveCarCollisions(cars) {
   for (let i = 0; i < cars.length; i++) {
     for (let j = i + 1; j < cars.length; j++) {
-      const a = cars[i];
-      const b = cars[j];
-      const dx = b.x - a.x;
-      const dz = b.z - a.z;
+      const a = cars[i], b = cars[j];
+      const dx = b.x - a.x, dz = b.z - a.z;
       const dist = Math.hypot(dx, dz) || 0.0001;
       const minDist = CAR_RADIUS * 2;
-      if (dist < minDist) {
-        const overlap = minDist - dist;
-        const nx = dx / dist;
-        const nz = dz / dist;
-        a.x -= nx * overlap * 0.5;
-        a.z -= nz * overlap * 0.5;
-        b.x += nx * overlap * 0.5;
-        b.z += nz * overlap * 0.5;
-        a.speed *= CAR_BUMP_SPEED_FACTOR;
-        b.speed *= CAR_BUMP_SPEED_FACTOR;
+      if (dist >= minDist) continue;
+
+      const nx = dx / dist, nz = dz / dist;
+      const overlap = minDist - dist;
+      // Positional correction has a tiny cushion so the same pair does not
+      // remain interpenetrating and get "punched" apart again next frame.
+      const correction = overlap * 0.52 + 0.025;
+      a.x -= nx * correction; a.z -= nz * correction;
+      b.x += nx * correction; b.z += nz * correction;
+
+      // Resolve only closing velocity along the contact normal. Cars moving
+      // together no longer both lose 30% speed just because their circles
+      // touched; side-to-side rubbing is mild, nose-to-tail contact transfers
+      // momentum progressively.
+      const avx = Math.sin(a.heading) * a.speed;
+      const avz = Math.cos(a.heading) * a.speed;
+      const bvx = Math.sin(b.heading) * b.speed;
+      const bvz = Math.cos(b.heading) * b.speed;
+      const closing = (avx - bvx) * nx + (avz - bvz) * nz;
+      if (closing > 0) {
+        const impulse = closing * 0.34;
+        a.speed = Math.max(0, a.speed - impulse);
+        b.speed = Math.max(0, b.speed + impulse * 0.72);
+        if ("lateralSpeed" in a) a.lateralSpeed -= impulse * 0.12;
+        if ("lateralSpeed" in b) b.lateralSpeed += impulse * 0.12;
       }
     }
   }
@@ -1859,7 +1902,7 @@ function getNextUnracedCircuitId(champState) {
 }
 
 // Chase camera math, shared by the countdown grid shot and the race loop.
-const CHASE_CAM_BASE_DISTANCE = 9;
+const CHASE_CAM_BASE_DISTANCE = 6.4;
 const CHASE_CAM_BASE_FOV = 58; // matches updateSpeedFov's resting FOV
 // camera.fov is a VERTICAL field of view — on a wide-and-short viewport
 // (a phone in landscape, aspect ratio well past 2:1) that same vertical FOV
@@ -1869,7 +1912,7 @@ const CHASE_CAM_BASE_FOV = 58; // matches updateSpeedFov's resting FOV
 // pulls the camera in for screens wider than this baseline — never pushes
 // it out for taller ones, which already frame the car generously.
 const CHASE_CAM_BASE_ASPECT = 1.7; // roughly 16:9, a typical landscape desktop/tablet
-const CHASE_CAM_LANDSCAPE_MAX_DISTANCE = 5.4;
+const CHASE_CAM_LANDSCAPE_MAX_DISTANCE = 4.35;
 
 function isCompactLandscapeViewport() {
   return window.innerWidth > window.innerHeight && window.innerHeight <= 520;
@@ -1887,7 +1930,7 @@ function updateChaseCamera(dt) {
     Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const aspectScale = Math.min(1, CHASE_CAM_BASE_ASPECT / camera.aspect);
   let camDistance = CHASE_CAM_BASE_DISTANCE * fovScale * aspectScale;
-  let camHeight = 4.5;
+  let camHeight = 3.55;
 
   // On short mobile landscape viewports the perceived car size can collapse
   // as the browser chrome and speed-FOV both change the framing. Use an
@@ -1895,7 +1938,7 @@ function updateChaseCamera(dt) {
   // desktop distance dominate. This affects only the camera, never physics.
   if (isCompactLandscapeViewport()) {
     camDistance = Math.min(camDistance, CHASE_CAM_LANDSCAPE_MAX_DISTANCE);
-    camHeight = 3.25;
+    camHeight = 2.85;
   }
   const desiredX = state.x - Math.sin(state.heading) * camDistance;
   const desiredZ = state.z - Math.cos(state.heading) * camDistance;
@@ -2117,6 +2160,8 @@ function applyGridPositions(order) {
     car.totalProgress = 0;
     car.tyreProgress = 0;
     car.lap = 0;
+    car.completedLaps = 0;
+    car.lapCheckpointPassed = false;
     car.ersCharge = 100;
     car.ersActive = false;
     car.pitState = "none";
@@ -2405,7 +2450,7 @@ function update(dt) {
     ghostCar.group.visible = false;
   }
 
-  if (raceState === "racing" && state.totalProgress >= LAPS_PER_RACE) {
+  if (raceState === "racing" && state.completedLaps >= LAPS_PER_RACE) {
     finishRace();
   }
 

@@ -12,8 +12,15 @@
   <main class="garage-layout">
     <section class="garage-car-panel">
       <div id="garage-canvas" aria-label="Monoposto 3D ruotabile"></div>
-      <p class="garage-hint">Trascina per ruotare la monoposto a 360°</p>
-      <div id="garage-drop" class="garage-drop">Trascina qui un componente per montarlo</div>
+      <p class="garage-hint">Trascina la monoposto per ruotarla a 360°. Trascina invece i componenti sulle zone nominate.</p>
+      <div class="garage-mounts" aria-label="Zone di montaggio">
+        <div class="garage-mount front" data-part="frontWing">Ala anteriore</div>
+        <div class="garage-mount rear" data-part="rearWing">Ala posteriore</div>
+        <div class="garage-mount floor" data-part="floor">Fondo</div>
+        <div class="garage-mount brakes" data-part="brakes">Freni</div>
+        <div class="garage-mount suspension" data-part="suspension">Sospensioni</div>
+      </div>
+      <p id="garage-status" class="garage-status">Scegli un pezzo a destra e trascinalo sulla zona corrispondente. Su touch basta toccarlo.</p>
     </section>
     <aside class="garage-config">
       <div id="garage-stats" class="garage-stats"></div>
