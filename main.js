@@ -5,8 +5,9 @@ import { setupEffects } from "./garage-setup.js";
 
 import { createStudioEnvironment } from "./car-model.js";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js";
+import { setupRaceInput } from "./race-input.js";
 
-import { shapeSteering, smoothSteering, steeringYaw } from "./steering.js";
+import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
 
 const GARAGE_EFFECTS = setupEffects();
@@ -942,26 +943,7 @@ function cautionSpeedMultiplier() {
   return cautionState === "active" ? CAUTION_SPEED_FACTOR : 1;
 }
 
-const input = { forward: false, back: false, left: false, right: false };
-const KEY_MAP = {
-  ArrowUp: "forward",
-  KeyW: "forward",
-  ArrowDown: "back",
-  KeyS: "back",
-  ArrowLeft: "left",
-  KeyA: "left",
-  ArrowRight: "right",
-  KeyD: "right",
-};
-
-window.addEventListener("keydown", (e) => {
-  const action = KEY_MAP[e.code];
-  if (action) input[action] = true;
-});
-window.addEventListener("keyup", (e) => {
-  const action = KEY_MAP[e.code];
-  if (action) input[action] = false;
-});
+const { input, steering, updateSteeringInput } = setupRaceInput();
 
 function setTyreCompound(name) {
   if (!TYRE_COMPOUNDS[name]) return;
@@ -991,51 +973,6 @@ window.addEventListener("keydown", (e) => {
   cameraMode = cameraMode === "chase" ? "cockpit" : "chase";
   playerCar.group.visible = cameraMode !== "cockpit";
 });
-
-// Touch controls (buttons are hidden on non-touch devices via CSS, but the
-// bindings are harmless either way).
-const pedalPointers = new Map();
-function bindHoldButton(id, action) {
-  const el = document.getElementById(id);
-  el.addEventListener("pointerdown", e => {
-    e.preventDefault(); if (pedalPointers.has(action)) return;
-    pedalPointers.set(action, e.pointerId); el.setPointerCapture(e.pointerId);
-    input[action] = true; el.classList.add("is-held");
-  });
-  const release = e => {
-    if (pedalPointers.get(action) !== e.pointerId) return;
-    pedalPointers.delete(action); input[action] = false; el.classList.remove("is-held");
-  };
-  for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) el.addEventListener(type, release);
-}
-bindHoldButton("btn-gas", "forward"); bindHoldButton("btn-brake", "back");
-let touchSteer = 0, filteredSteer = 0, wheelPointer = null, wheelOrigin = 0;
-const wheelEl = document.getElementById("wheel-control");
-wheelEl.addEventListener("pointerdown", e => {
-  e.preventDefault(); if (wheelPointer !== null) return;
-  wheelPointer = e.pointerId; wheelOrigin = e.clientX; touchSteer = 0;
-  wheelEl.setPointerCapture(e.pointerId);
-});
-wheelEl.addEventListener("pointermove", e => {
-  if (e.pointerId !== wheelPointer) return;
-  const travel = Math.max(45, wheelEl.clientWidth * .48);
-  touchSteer = shapeSteering((e.clientX - wheelOrigin) / travel);
-});
-const releaseWheel = e => { if (e.pointerId === wheelPointer) { wheelPointer = null; touchSteer = 0; } };
-for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) wheelEl.addEventListener(type, releaseWheel);
-function clearDrivingInput() {
-  Object.keys(input).forEach(k => input[k] = false);
-  pedalPointers.clear(); wheelPointer = null; touchSteer = filteredSteer = 0;
-  document.querySelectorAll('.touch-btn').forEach(b => b.classList.remove('is-held'));
-}
-addEventListener('blur', clearDrivingInput);
-document.addEventListener('visibilitychange', () => { if(document.hidden) clearDrivingInput(); });
-function updateSteeringInput(dt) {
-  const keyboard = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-  filteredSteer = smoothSteering(filteredSteer, wheelPointer !== null ? touchSteer : keyboard, dt);
-  wheelEl.style.setProperty('--steer-angle', `${filteredSteer * 65}deg`);
-  wheelEl.setAttribute('aria-valuenow', String(Math.round(filteredSteer * 100)));
-}
 
 // --- Gears -------------------------------------------------------------
 //
@@ -1766,7 +1703,7 @@ function integratePlayerMotion(dt) {
   // into a full rigid-body simulator.
   const grip = tireGripFactor(state.totalProgress, state);
   const steerSign = state.speed >= 0 ? 1 : -1;
-  const steerAmount = filteredSteer;
+  const steerAmount = steering.value;
 
   // Braking loads the front axle and sharpens initial turn-in; power shifts
   // load rearward and slightly reduces front authority. At high combined
@@ -1908,7 +1845,7 @@ function finishQualifying() {
     car.group.visible = true;
     applyCarToMesh(car, car.x, car.z, car.heading, 0, 0);
   });
-  applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, 0, filteredSteer);
+  applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, 0, steering.value);
 
   state.speed = 0;
   state.currentLapTime = 0;
@@ -1927,14 +1864,14 @@ function updateQualifying(dt) {
   if (qualiState === "countdown") {
     // Car sits frozen at the line until the lights go out, same as the
     // race's own grid start.
-    applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
+    applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
     updateCamera(dt);
     updateQualifyingHud();
     return;
   }
 
   const info = integratePlayerMotion(dt);
-  applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, filteredSteer);
+  applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
 
   // Multiple flying laps are allowed within the session — only the best
   // one counts, same as a real qualifying hour.
@@ -2081,7 +2018,7 @@ function update(dt) {
 
   if (raceState === "countdown") {
     // Cars sit frozen on the grid until the lights go out.
-    applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
+    applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
     for (const car of aiCars) applyCarToMesh(car, car.x, car.z, car.heading, 0, dt);
     updateCamera(dt);
     updateHud();
@@ -2091,7 +2028,7 @@ function update(dt) {
   const now = performance.now();
   if (state.pitRequested) startPitStop();
   if (updatePitStop(now)) {
-    applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
+    applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
     updateCamera(dt);
     updateSpeedFov(dt);
     updateHud();
@@ -2106,7 +2043,7 @@ function update(dt) {
   for (const car of aiCars) updateAiCar(car, dt, allCars);
   resolveCarCollisions(allCars);
 
-  applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, filteredSteer);
+  applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
   for (const car of aiCars) applyCarToMesh(car, car.x, car.z, car.heading, car.speed, dt);
 
   // Lap timing (current/best lap) uses the same fair progress accumulator
