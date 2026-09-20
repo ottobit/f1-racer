@@ -11,6 +11,7 @@ import { setupRaceCamera } from "./race-camera.js";
 import { setupPlayerPhysics } from "./player-physics.js";
 import { setupRaceAi } from "./race-ai.js";
 import { setupRaceSystems } from "./race-systems.js";
+import { setupRaceProgress } from "./race-progress.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
@@ -244,33 +245,6 @@ function nearestTrackInfo(x, z) {
 // Updates a car's fair, start-offset-independent progress accumulator (see
 // the comment by `state` below for why raw track-progress isn't enough) and
 // returns true the frame a lap just ticked over.
-function advanceProgress(car, rawProgress) {
-  const previousRaw = car.prevRawProgress;
-  // A lap only counts after the car has visited the opposite half of the
-  // circuit and then crossed start/finish in the forward direction. This
-  // prevents progress spikes, spins around the line or collision pushes from
-  // producing an early race verdict.
-  if (rawProgress > 0.42 && rawProgress < 0.58) car.lapCheckpointPassed = true;
-  const crossedFinishForward = previousRaw > 0.82 && rawProgress < 0.18;
-  if (crossedFinishForward && car.lapCheckpointPassed) {
-    car.completedLaps = (car.completedLaps || 0) + 1;
-    car.lapCheckpointPassed = false;
-  }
-  let delta = rawProgress - previousRaw;
-  if (delta < -0.5) delta += 1; // wrapped forward past 1 -> 0
-  else if (delta > 0.5) delta -= 1; // wrapped backward past 0 -> 1
-  car.prevRawProgress = rawProgress;
-  car.totalProgress += delta;
-  car.tyreProgress = Math.max(0, (car.tyreProgress || 0) + delta);
-
-  const newLap = Math.floor(car.totalProgress);
-  if (newLap > car.lap) {
-    car.lap = newLap;
-    return true;
-  }
-  return false;
-}
-
 // --- Scene setup -----------------------------------------------------------
 
 const scene = new THREE.Scene();
@@ -808,6 +782,14 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
 // grid-box markings further down are painted at these same fixed slots
 // regardless of who ends up there, so they don't need this list themselves.
 const ALL_GRID_SLOTS = [{ row: 0, lane: -1 }, ...AI_GRID_SLOTS];
+const { advanceProgress, applyGridPositions, currentRaceOrder } = setupRaceProgress({
+  state,
+  aiCars,
+  allGridSlots: ALL_GRID_SLOTS,
+  gridSlot,
+  nearestTrackInfo,
+  centerlineLength: centerline.length,
+});
 
 // The AI only appears once the grid order is set (see finishQualifying) —
 // during qualifying it's a solo flying lap, no traffic.
@@ -1112,16 +1094,6 @@ function circuitLabel() {
   return isRaining ? `${circuit.name} · 🌧️ Pioggia` : circuit.name;
 }
 
-// Ranks all three cars by race progress (see `advanceProgress`), most
-// distance travelled first. Used for both the live HUD position and the
-// final classification when the race ends.
-function currentRaceOrder() {
-  return [
-    { driverId: "player", totalProgress: state.totalProgress },
-    ...aiCars.map((c) => ({ driverId: c.driverId, totalProgress: c.totalProgress })),
-  ].sort((a, b) => b.totalProgress - a.totalProgress);
-}
-
 const hud = setupRaceHud({
   circuitLabel,
   lapsPerRace: LAPS_PER_RACE,
@@ -1307,35 +1279,6 @@ function synthesizeAiQualiTime() {
   const CORNERING_LOSS_FACTOR = 1.35;
   const variance = 0.94 + Math.random() * 0.12; // +/-6% spread between AI drivers
   return idealLapTimeMs * CORNERING_LOSS_FACTOR * variance;
-}
-
-// Places whichever driver qualified into each of the 10 fixed physical
-// grid slots (pole first), and resets that car's per-lap bookkeeping for
-// the race about to start.
-function applyGridPositions(order) {
-  order.forEach((driverId, i) => {
-    const slot = ALL_GRID_SLOTS[i];
-    const pos = gridSlot(slot.row, slot.lane);
-    const info = nearestTrackInfo(pos.x, pos.z);
-    const car = driverId === "player" ? state : aiCars.find((c) => c.driverId === driverId);
-    car.x = pos.x;
-    car.z = pos.z;
-    car.heading = pos.heading;
-    car.speed = 0;
-    car.lateralSpeed = 0;
-    car.yawRate = 0;
-    car.prevRawProgress = info.idx / centerline.length;
-    car.totalProgress = 0;
-    car.tyreProgress = 0;
-    car.lap = 0;
-    car.completedLaps = 0;
-    car.lapCheckpointPassed = false;
-    car.ersCharge = 100;
-    car.ersActive = false;
-    car.pitState = "none";
-    car.pitServiceEndTime = 0;
-    car.hasPitted = false;
-  });
 }
 
 // Ends the qualifying session: combines the player's best flying lap (or

@@ -1,0 +1,66 @@
+export function setupRaceProgress({
+  state,
+  aiCars,
+  allGridSlots,
+  gridSlot,
+  nearestTrackInfo,
+  centerlineLength,
+}) {
+  function advanceProgress(car, rawProgress) {
+    const previousRaw = car.prevRawProgress;
+    if (rawProgress > 0.42 && rawProgress < 0.58) car.lapCheckpointPassed = true;
+    const crossedFinishForward = previousRaw > 0.82 && rawProgress < 0.18;
+    if (crossedFinishForward && car.lapCheckpointPassed) {
+      car.completedLaps = (car.completedLaps || 0) + 1;
+      car.lapCheckpointPassed = false;
+    }
+    let delta = rawProgress - previousRaw;
+    if (delta < -0.5) delta += 1;
+    else if (delta > 0.5) delta -= 1;
+    car.prevRawProgress = rawProgress;
+    car.totalProgress += delta;
+    car.tyreProgress = Math.max(0, (car.tyreProgress || 0) + delta);
+
+    const newLap = Math.floor(car.totalProgress);
+    if (newLap > car.lap) {
+      car.lap = newLap;
+      return true;
+    }
+    return false;
+  }
+
+  function currentRaceOrder() {
+    return [
+      { driverId: "player", totalProgress: state.totalProgress },
+      ...aiCars.map((car) => ({ driverId: car.driverId, totalProgress: car.totalProgress })),
+    ].sort((a, b) => b.totalProgress - a.totalProgress);
+  }
+
+  function applyGridPositions(order) {
+    order.forEach((driverId, index) => {
+      const slot = allGridSlots[index];
+      const pos = gridSlot(slot.row, slot.lane);
+      const info = nearestTrackInfo(pos.x, pos.z);
+      const car = driverId === "player" ? state : aiCars.find((entry) => entry.driverId === driverId);
+      car.x = pos.x;
+      car.z = pos.z;
+      car.heading = pos.heading;
+      car.speed = 0;
+      car.lateralSpeed = 0;
+      car.yawRate = 0;
+      car.prevRawProgress = info.idx / centerlineLength;
+      car.totalProgress = 0;
+      car.tyreProgress = 0;
+      car.lap = 0;
+      car.completedLaps = 0;
+      car.lapCheckpointPassed = false;
+      car.ersCharge = 100;
+      car.ersActive = false;
+      car.pitState = "none";
+      car.pitServiceEndTime = 0;
+      car.hasPitted = false;
+    });
+  }
+
+  return { advanceProgress, applyGridPositions, currentRaceOrder };
+}
