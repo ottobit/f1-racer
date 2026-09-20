@@ -12,6 +12,7 @@ import { setupPlayerPhysics } from "./player-physics.js";
 import { setupRaceAi } from "./race-ai.js";
 import { setupRaceSystems } from "./race-systems.js";
 import { setupRaceProgress } from "./race-progress.js";
+import { setupRaceCommands } from "./race-commands.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
@@ -931,23 +932,10 @@ function cautionSpeedMultiplier() {
 }
 
 const { input, steering, updateSteeringInput } = setupRaceInput();
-
-function setTyreCompound(name) {
-  if (!TYRE_COMPOUNDS[name]) return;
-  if (raceState === "racing" && state.pitState !== "servicing") return;
-  state.tyreCompound = name;
-}
-
-window.addEventListener("keydown", (e) => {
-  if (e.code === "KeyE" && raceState === "racing" && state.pitState === "none") {
-    state.ersActive = !state.ersActive;
-  }
-  if (e.code === "KeyP" && raceState === "racing") {
-    state.pitRequested = true;
-  }
-  if (e.code === "Digit1") setTyreCompound("soft");
-  if (e.code === "Digit2") setTyreCompound("medium");
-  if (e.code === "Digit3") setTyreCompound("hard");
+setupRaceCommands({
+  state,
+  tyreCompounds: TYRE_COMPOUNDS,
+  getRaceState: () => raceState,
 });
 
 // --- Gears -------------------------------------------------------------
