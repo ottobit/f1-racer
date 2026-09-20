@@ -10,6 +10,7 @@ import { setupRaceHud } from "./race-hud.js";
 import { setupRaceCamera } from "./race-camera.js";
 import { setupPlayerPhysics } from "./player-physics.js";
 import { setupRaceAi } from "./race-ai.js";
+import { setupRaceSystems } from "./race-systems.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
@@ -1201,6 +1202,20 @@ function resolveCarCollisions(cars) {
   }
 }
 
+const raceSystems = setupRaceSystems({
+  state,
+  input,
+  aiMaxSpeed: AI.maxSpeed,
+  getRaceState: () => raceState,
+  isCautionActive: () => cautionState === "active",
+  pitZoneStart: PIT_ZONE_START,
+  pitZoneEnd: PIT_ZONE_END,
+  pitSpeedLimit: PIT_SPEED_LIMIT,
+  pitServiceMs: PIT_SERVICE_MS,
+  ersDrainPerSecond: ERS_DRAIN_PER_SECOND,
+  ersRechargePerSecond: ERS_RECHARGE_PER_SECOND,
+});
+
 const { updateAiCar } = setupRaceAi({
   ai: AI,
   centerline,
@@ -1209,7 +1224,7 @@ const { updateAiCar } = setupRaceAi({
   nearestTrackInfo,
   applyTrackBoundary,
   advanceProgress,
-  updateAiPitStop,
+  updateAiPitStop: raceSystems.updateAiPitStop,
   tireGripFactor,
   drsSpeedMultiplier: DRS_SPEED_MULTIPLIER,
   ersSpeedMultiplier: ERS_SPEED_MULTIPLIER,
@@ -1387,120 +1402,6 @@ function updateQualifying(dt) {
   if (qualiTimeRemainingMs <= 0) finishQualifying();
 }
 
-function isInPitZone(car) {
-  const fraction = car.totalProgress - Math.floor(car.totalProgress);
-  return fraction >= PIT_ZONE_START || fraction <= PIT_ZONE_END;
-}
-
-function updateEnergyRecovery(cars, dt) {
-  for (const car of cars) {
-    if (car === state) {
-      if (state.pitState === "servicing") {
-        state.ersActive = false;
-        continue;
-      }
-      if (state.ersActive && state.ersCharge > 0) {
-        state.ersCharge = Math.max(0, state.ersCharge - ERS_DRAIN_PER_SECOND * dt);
-        if (state.ersCharge <= 0) state.ersActive = false;
-      } else {
-        const recharge = input.back ? ERS_RECHARGE_PER_SECOND * 1.8 : ERS_RECHARGE_PER_SECOND;
-        state.ersCharge = Math.min(100, state.ersCharge + recharge * dt);
-      }
-    } else {
-      if (
-        car.ersCharge > 0 &&
-        car.drsActive &&
-        car.speed > AI.maxSpeed * 0.62 &&
-        cautionState !== "active"
-      ) {
-        car.ersActive = true;
-      } else {
-        car.ersActive = false;
-      }
-      if (car.ersActive) {
-        car.ersCharge = Math.max(0, car.ersCharge - ERS_DRAIN_PER_SECOND * 0.75 * dt);
-        if (car.ersCharge <= 0) car.ersActive = false;
-      } else {
-        car.ersCharge = Math.min(100, car.ersCharge + ERS_RECHARGE_PER_SECOND * dt);
-      }
-    }
-  }
-}
-
-function startPitStop() {
-  if (
-    raceState !== "racing" ||
-    state.pitState !== "none" ||
-    !isInPitZone(state) ||
-    Math.abs(state.speed) > PIT_SPEED_LIMIT
-  ) {
-    state.pitRequested = false;
-    return;
-  }
-  state.pitRequested = false;
-  state.pitState = "servicing";
-  state.pitServiceEndTime = performance.now() + PIT_SERVICE_MS;
-  state.speed = 0;
-  state.lateralSpeed = 0;
-  state.yawRate = 0;
-  state.ersActive = false;
-}
-
-function updatePitStop(now) {
-  if (state.pitState !== "servicing") return false;
-  state.speed = 0;
-  state.lateralSpeed = 0;
-  state.yawRate = 0;
-  if (now < state.pitServiceEndTime) return true;
-
-  state.pitState = "none";
-  state.tyreProgress = 0;
-  state.damage *= 0.25;
-  state.ersCharge = 100;
-  return false;
-}
-
-function updateAiPitStop(car, now) {
-  if (car.pitState === "servicing") {
-    car.speed = 0;
-    car.lateralSpeed = 0;
-    car.yawRate = 0;
-    if (now >= car.pitServiceEndTime) {
-      car.pitState = "none";
-      car.tyreProgress = 0;
-      car.damage *= 0.25;
-      car.ersCharge = 100;
-      car.hasPitted = true;
-    }
-    return true;
-  }
-
-  // One optional stop after lap 1 gives the AI a simple strategy layer while
-  // keeping the three-lap browser race understandable.
-  if (
-    !car.hasPitted &&
-    car.lap >= 1 &&
-    isInPitZone(car) &&
-    Math.abs(car.speed) < PIT_SPEED_LIMIT * 1.25
-  ) {
-    car.pitState = "servicing";
-    car.pitServiceEndTime = now + PIT_SERVICE_MS;
-    car.speed = 0;
-    car.lateralSpeed = 0;
-    car.yawRate = 0;
-    car.ersActive = false;
-    return true;
-  }
-
-  // Start lifting for the pit entry when the car reaches the final part of
-  // the lap, so the service condition above can actually be reached.
-  const fraction = car.totalProgress - Math.floor(car.totalProgress);
-  if (!car.hasPitted && car.lap >= 1 && fraction > 0.9) {
-    car.speed = Math.min(car.speed, PIT_SPEED_LIMIT * 0.75);
-  }
-  return false;
-}
-
 function update(dt) {
   if (sessionPhase === "qualifying") {
     updateQualifying(dt);
@@ -1519,8 +1420,8 @@ function update(dt) {
   }
 
   const now = performance.now();
-  if (state.pitRequested) startPitStop();
-  if (updatePitStop(now)) {
+  if (state.pitRequested) raceSystems.startPitStop();
+  if (raceSystems.updatePitStop(now)) {
     applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
     raceCamera.updateCamera(dt);
     raceCamera.updateSpeedFov(dt);
@@ -1529,7 +1430,7 @@ function update(dt) {
   }
 
   updateDrsEligibility([state, ...aiCars]);
-  updateEnergyRecovery([state, ...aiCars], dt);
+  raceSystems.updateEnergyRecovery([state, ...aiCars], dt);
 
   const info = integratePlayerMotion(dt);
   const allCars = [state, ...aiCars];
