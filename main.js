@@ -56,6 +56,7 @@ const CAR = {
 };
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
+const FRONT_WHEEL_STEER_ANGLE = 0.55;
 
 // AI difficulty: chosen on the circuit menu (menu.js), carried here as a
 // query param, scaling how fast and how hard the rivals accelerate. Turn
@@ -1365,11 +1366,14 @@ function updateQualifyingHud() {
 
 const clock = new THREE.Clock();
 
-function applyToMesh(model, x, z, heading, speed, dt) {
+function applyToMesh(model, x, z, heading, speed, dt, steer = 0) {
   model.group.position.set(x, 0, z);
   model.group.rotation.y = heading;
   const spin = (speed * dt) / model.wheelRadius;
-  for (const wheel of model.wheels) wheel.rotation.x -= spin;
+  model.wheels.forEach((wheel, index) => {
+    wheel.rotation.x -= spin;
+    wheel.rotation.y = index < 2 ? -steer * FRONT_WHEEL_STEER_ANGLE : 0;
+  });
 }
 
 // Keeps a car (player or AI) on the track: grass beyond the asphalt bleeds
@@ -1912,7 +1916,7 @@ function finishQualifying() {
     car.group.visible = true;
     applyToMesh(car, car.x, car.z, car.heading, 0, 0);
   });
-  applyToMesh(playerCar, state.x, state.z, state.heading, 0, 0);
+  applyToMesh(playerCar, state.x, state.z, state.heading, 0, 0, filteredSteer);
 
   state.speed = 0;
   state.currentLapTime = 0;
@@ -1931,14 +1935,14 @@ function updateQualifying(dt) {
   if (qualiState === "countdown") {
     // Car sits frozen at the line until the lights go out, same as the
     // race's own grid start.
-    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt);
+    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
     updateCamera(dt);
     updateQualifyingHud();
     return;
   }
 
   const info = integratePlayerMotion(dt);
-  applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt);
+  applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, filteredSteer);
 
   // Multiple flying laps are allowed within the session — only the best
   // one counts, same as a real qualifying hour.
@@ -2085,7 +2089,7 @@ function update(dt) {
 
   if (raceState === "countdown") {
     // Cars sit frozen on the grid until the lights go out.
-    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt);
+    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
     for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, 0, dt);
     updateCamera(dt);
     updateHud();
@@ -2095,7 +2099,7 @@ function update(dt) {
   const now = performance.now();
   if (state.pitRequested) startPitStop();
   if (updatePitStop(now)) {
-    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt);
+    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
     updateCamera(dt);
     updateSpeedFov(dt);
     updateHud();
@@ -2110,7 +2114,7 @@ function update(dt) {
   for (const car of aiCars) updateAiCar(car, dt, allCars);
   resolveCarCollisions(allCars);
 
-  applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt);
+  applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, filteredSteer);
   for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, car.speed, dt);
 
   // Lap timing (current/best lap) uses the same fair progress accumulator
