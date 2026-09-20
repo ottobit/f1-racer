@@ -783,14 +783,6 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
 // grid-box markings further down are painted at these same fixed slots
 // regardless of who ends up there, so they don't need this list themselves.
 const ALL_GRID_SLOTS = [{ row: 0, lane: -1 }, ...AI_GRID_SLOTS];
-const { advanceProgress, applyGridPositions, currentRaceOrder } = setupRaceProgress({
-  state,
-  aiCars,
-  allGridSlots: ALL_GRID_SLOTS,
-  gridSlot,
-  nearestTrackInfo,
-  centerlineLength: centerline.length,
-});
 
 // The AI only appears once the grid order is set (see finishQualifying) —
 // during qualifying it's a solo flying lap, no traffic.
@@ -882,6 +874,14 @@ const state = {
   trackLimitViolationsThisLap: 0,
   lastLapPenaltyMs: 0,
 };
+const { advanceProgress, applyGridPositions, currentRaceOrder } = setupRaceProgress({
+  state,
+  aiCars,
+  allGridSlots: ALL_GRID_SLOTS,
+  gridSlot,
+  nearestTrackInfo,
+  centerlineLength: centerline.length,
+});
 
 addGridBoxMarking(start, 1);
 aiCars.forEach((car, i) => addGridBoxMarking(car, i + 2));
