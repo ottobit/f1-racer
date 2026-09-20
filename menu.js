@@ -1,5 +1,6 @@
 import { CIRCUITS, LAPS_PER_RACE } from "./circuits.js";
-import { computeStandings, resetChampionship } from "./championship.js";
+import { DRIVERS, computeStandings, resetChampionship } from "./championship.js";
+import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "./driver-selection.js";
 
 function positionLabel(order) {
   const idx = order.indexOf("player");
@@ -35,6 +36,7 @@ function saveDifficulty(v) {
 }
 
 let difficulty = loadDifficulty();
+let selectedDriverId = loadSelectedDriverId();
 
 function renderDifficulty() {
   document.getElementById("difficulty-select").innerHTML = DIFFICULTY_OPTIONS.map(
@@ -60,8 +62,33 @@ document.getElementById("difficulty-select").addEventListener("click", (e) => {
   render();
 });
 
+function renderDriverSelect() {
+  const html = SELECTABLE_DRIVER_IDS.map((driverId) => {
+    const driver = DRIVERS.find((entry) => entry.id === driverId);
+    return `
+      <button
+        type="button"
+        class="difficulty-btn${driverId === selectedDriverId ? " active" : ""}"
+        data-driver-id="${driverId}"
+        role="radio"
+        aria-checked="${driverId === selectedDriverId}"
+      >${driver.name}</button>
+    `;
+  }).join("");
+  document.getElementById("driver-select").innerHTML = html;
+}
+
+document.getElementById("driver-select").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-driver-id]");
+  if (!btn) return;
+  selectedDriverId = btn.dataset.driverId;
+  saveSelectedDriverId(selectedDriverId);
+  render();
+});
+
 function render() {
   renderDifficulty();
+  renderDriverSelect();
   const { standings, allRaced, state } = computeStandings(CIRCUITS);
 
   const bannerEl = document.getElementById("champion-banner");
@@ -70,7 +97,7 @@ function render() {
     bannerEl.hidden = false;
     bannerEl.textContent =
       champion.id === "player"
-        ? "🏆 Hai vinto il campionato del mondo!"
+        ? `🏆 Hai vinto il campionato del mondo con ${displayDriverName("player")}!`
         : `Campionato concluso: vince ${champion.name}. Azzera e riprova.`;
   } else {
     bannerEl.hidden = true;
@@ -81,7 +108,7 @@ function render() {
       (d, i) => `
         <tr>
           <td>${i + 1}</td>
-          <td>${d.name}</td>
+          <td>${displayDriverName(d.id)}</td>
           <td>${d.points}</td>
         </tr>
       `

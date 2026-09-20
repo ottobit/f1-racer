@@ -1,6 +1,7 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js";
-import { DRIVERS, POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
+import { POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
+import { displayDriverName } from "./driver-selection.js";
 import { setupEffects } from "./garage-setup.js";
 
 import { createStudioEnvironment } from "./car-model.js";
@@ -1192,8 +1193,7 @@ const { updateAiCar } = setupRaceAi({
 });
 
 function driverName(driverId) {
-  const driver = DRIVERS.find((d) => d.id === driverId);
-  return driver ? driver.name : driverId;
+  return displayDriverName(driverId);
 }
 
 function finishRace() {
