@@ -9,15 +9,15 @@ const STORAGE_KEY = "f1racer-championship-v1";
 // AI teammate, matching the paired grid in main.js.
 export const DRIVERS = [
   { id: "player", name: "Tu (Fenice)" },
-  { id: "rival-red", name: "Ventura (Fenice)" },
-  { id: "rival-blue", name: "Marino (Nettuno)" },
-  { id: "rival-blue-2", name: "Corsaro (Nettuno)" },
-  { id: "rival-yellow", name: "Solari (Solare)" },
-  { id: "rival-yellow-2", name: "Raggio (Solare)" },
-  { id: "rival-green-1", name: "Bosconi (Smeraldo)" },
-  { id: "rival-green-2", name: "Selvaggi (Smeraldo)" },
-  { id: "rival-white-1", name: "Gelidi (Artica)" },
-  { id: "rival-white-2", name: "Brina (Artica)" },
+  { id: "rival-red", name: "Dani Muscle (Fenice)" },
+  { id: "rival-blue", name: "Vivian Wendy (Nettuno)" },
+  { id: "rival-blue-2", name: "Peppy Bau (Nettuno)" },
+  { id: "rival-yellow", name: "Cookie (Solare)" },
+  { id: "rival-yellow-2", name: "Rocker Pino (Solare)" },
+  { id: "rival-green-1", name: "Alice AaA (Smeraldo)" },
+  { id: "rival-green-2", name: "May (Smeraldo)" },
+  { id: "rival-white-1", name: "Clopy (Artica)" },
+  { id: "rival-white-2", name: "Lola (Artica)" },
 ];
 
 // Real F1 points system (top 10 score) — fits a ten-car grid exactly.
