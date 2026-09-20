@@ -3,7 +3,8 @@ import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js";
 import { DRIVERS, POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
 import { setupEffects } from "./garage-setup.js";
 
-import { buildCar as buildCarModel, createStudioEnvironment } from "./car-model.js";
+import { createStudioEnvironment } from "./car-model.js";
+import { applyCarToMesh, buildRaceCar } from "./race-car-view.js";
 
 import { shapeSteering, smoothSteering, steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
@@ -56,7 +57,6 @@ const CAR = {
 };
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
-const FRONT_WHEEL_STEER_ANGLE = 0.55;
 
 // AI difficulty: chosen on the circuit menu (menu.js), carried here as a
 // query param, scaling how fast and how hard the rivals accelerate. Turn
@@ -660,9 +660,11 @@ function addGridBoxMarking(slot, number) {
 
 // Shared visual model; race physics and collision dimensions remain independent.
 function buildCar(color) {
-  const model = buildCarModel(color, { scale: CAR_SCALE });
-  model.group.traverse(o => { if (o.isMesh) { o.material.envMap = carEnvironment.texture; o.material.envMapIntensity = .65; } });
-  return model;
+  return buildRaceCar(color, {
+    scale: CAR_SCALE,
+    environmentTexture: carEnvironment.texture,
+    envMapIntensity: 0.65,
+  });
 }
 
 // Player car
@@ -1366,18 +1368,6 @@ function updateQualifyingHud() {
 
 const clock = new THREE.Clock();
 
-function applyToMesh(model, x, z, heading, speed, dt, steer = 0) {
-  model.group.position.set(x, 0, z);
-  model.group.rotation.y = heading;
-  const spin = (speed * dt) / model.wheelRadius;
-  for (const wheel of model.wheels) wheel.rotation.x -= spin;
-  if (model.steeringPivots) {
-    model.steeringPivots.forEach((pivot) => {
-      pivot.rotation.y = -steer * FRONT_WHEEL_STEER_ANGLE;
-    });
-  }
-}
-
 // Keeps a car (player or AI) on the track: grass beyond the asphalt bleeds
 // speed off faster (lost grip), and the wall beyond that stops it hard and
 // pushes it back in-bounds, instead of letting it drive through scenery.
@@ -1916,9 +1906,9 @@ function finishQualifying() {
   applyGridPositions(results.map((r) => r.id));
   aiCars.forEach((car) => {
     car.group.visible = true;
-    applyToMesh(car, car.x, car.z, car.heading, 0, 0);
+    applyCarToMesh(car, car.x, car.z, car.heading, 0, 0);
   });
-  applyToMesh(playerCar, state.x, state.z, state.heading, 0, 0, filteredSteer);
+  applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, 0, filteredSteer);
 
   state.speed = 0;
   state.currentLapTime = 0;
@@ -1937,14 +1927,14 @@ function updateQualifying(dt) {
   if (qualiState === "countdown") {
     // Car sits frozen at the line until the lights go out, same as the
     // race's own grid start.
-    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
+    applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
     updateCamera(dt);
     updateQualifyingHud();
     return;
   }
 
   const info = integratePlayerMotion(dt);
-  applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, filteredSteer);
+  applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, filteredSteer);
 
   // Multiple flying laps are allowed within the session — only the best
   // one counts, same as a real qualifying hour.
@@ -2091,8 +2081,8 @@ function update(dt) {
 
   if (raceState === "countdown") {
     // Cars sit frozen on the grid until the lights go out.
-    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
-    for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, 0, dt);
+    applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
+    for (const car of aiCars) applyCarToMesh(car, car.x, car.z, car.heading, 0, dt);
     updateCamera(dt);
     updateHud();
     return;
@@ -2101,7 +2091,7 @@ function update(dt) {
   const now = performance.now();
   if (state.pitRequested) startPitStop();
   if (updatePitStop(now)) {
-    applyToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
+    applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, filteredSteer);
     updateCamera(dt);
     updateSpeedFov(dt);
     updateHud();
@@ -2116,8 +2106,8 @@ function update(dt) {
   for (const car of aiCars) updateAiCar(car, dt, allCars);
   resolveCarCollisions(allCars);
 
-  applyToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, filteredSteer);
-  for (const car of aiCars) applyToMesh(car, car.x, car.z, car.heading, car.speed, dt);
+  applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, filteredSteer);
+  for (const car of aiCars) applyCarToMesh(car, car.x, car.z, car.heading, car.speed, dt);
 
   // Lap timing (current/best lap) uses the same fair progress accumulator
   // that drives race position, so it lines up with the lap count shown.
@@ -2176,7 +2166,7 @@ function update(dt) {
     while (dh > Math.PI) dh -= Math.PI * 2;
     while (dh < -Math.PI) dh += Math.PI * 2;
     const gheading = a.heading + dh * frac;
-    applyToMesh(ghostCar, gx, gz, gheading, 0, dt);
+    applyCarToMesh(ghostCar, gx, gz, gheading, 0, dt);
     ghostCar.group.visible = true;
   } else {
     ghostCar.group.visible = false;

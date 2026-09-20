@@ -1,0 +1,39 @@
+import { buildCar as buildCarModel } from "./car-model.js";
+
+const DEFAULT_FRONT_WHEEL_STEER_ANGLE = 0.55;
+
+export function buildRaceCar(color, { scale, environmentTexture, envMapIntensity = 0.65 } = {}) {
+  const model = buildCarModel(color, { scale });
+  if (environmentTexture) {
+    model.group.traverse((object) => {
+      if (object.isMesh) {
+        object.material.envMap = environmentTexture;
+        object.material.envMapIntensity = envMapIntensity;
+      }
+    });
+  }
+  return model;
+}
+
+export function applyCarToMesh(
+  model,
+  x,
+  z,
+  heading,
+  speed,
+  dt,
+  steer = 0,
+  frontWheelSteerAngle = DEFAULT_FRONT_WHEEL_STEER_ANGLE
+) {
+  model.group.position.set(x, 0, z);
+  model.group.rotation.y = heading;
+
+  const spin = (speed * dt) / model.wheelRadius;
+  for (const wheel of model.wheels) wheel.rotation.x -= spin;
+
+  if (model.steeringPivots) {
+    model.steeringPivots.forEach((pivot) => {
+      pivot.rotation.y = -steer * frontWheelSteerAngle;
+    });
+  }
+}
