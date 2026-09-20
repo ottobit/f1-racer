@@ -5,6 +5,9 @@ import { setupEffects } from "./garage-setup.js";
 
 import { buildCar as buildCarModel, createStudioEnvironment } from "./car-model.js";
 
+import { shapeSteering, smoothSteering, steeringYaw } from "./steering.js";
+import { dressCircuit, surfaceTexture } from "./track-art.js";
+
 const GARAGE_EFFECTS = setupEffects();
 
 /*
@@ -464,6 +467,10 @@ const camera = new THREE.PerspectiveCamera(
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = isRaining ? 1.05 : 1.15;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const carEnvironment = createStudioEnvironment(renderer);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -476,22 +483,28 @@ window.addEventListener("resize", () => {
 });
 
 // Lights
-scene.add(new THREE.HemisphereLight(0x8899bb, 0x0a0a10, isRaining ? 0.7 : 1.1));
+scene.add(new THREE.HemisphereLight(0xd3e1ee, 0x596044, isRaining ? 1.35 : 1.8));
 const sun = new THREE.DirectionalLight(0xffffff, isRaining ? 0.7 : 1.2);
 sun.position.set(80, 120, 40);
-scene.add(sun);
+sun.intensity = isRaining ? 1.4 : 2.6;
+sun.color.set(isRaining ? 0xdbe5f5 : 0xffedcf);
+sun.castShadow = true; sun.shadow.mapSize.set(1024,1024);
+Object.assign(sun.shadow.camera, {left:-32,right:32,top:32,bottom:-32,near:1,far:120});
+sun.shadow.bias = -.0003; sun.shadow.normalBias = .04;
+scene.add(sun, sun.target);
 
 // Ground
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(1400, 1400),
-  new THREE.MeshStandardMaterial({ color: 0x0c3d1a, roughness: 1 })
+  new THREE.MeshStandardMaterial({ color: 0xb7c494, map: surfaceTexture("grass", renderer), roughness: 1 })
 );
 ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
+ground.receiveShadow = true; scene.add(ground);
 
 // Road surface: triangle strip built from left/right edges of the centerline
 function buildRoadMesh() {
   const positions = [];
+  const uvs = [];
   const indices = [];
   const halfWidth = TRACK_WIDTH / 2;
 
@@ -500,6 +513,7 @@ function buildRoadMesh() {
     const n = sideNormal(p);
     positions.push(p.x + n.x * halfWidth, 0.01, p.z + n.z * halfWidth);
     positions.push(p.x - n.x * halfWidth, 0.01, p.z - n.z * halfWidth);
+    uvs.push(0,i / centerline.length * trackCurve.getLength() / 12,1,i / centerline.length * trackCurve.getLength() / 12);
   }
 
   for (let i = 0; i < centerline.length; i++) {
@@ -515,14 +529,16 @@ function buildRoadMesh() {
     "position",
     new THREE.Float32BufferAttribute(positions, 3)
   );
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
 
   const material = new THREE.MeshStandardMaterial({
-    color: 0x2b2e36,
-    roughness: 0.9,
+    color: 0x999b9e, map: surfaceTexture("asphalt", renderer),
+    roughness: isRaining ? .32 : .91, metalness: isRaining ? .25 : .03,
+    envMap: carEnvironment.texture, envMapIntensity: isRaining ? .22 : .04,
   });
-  return new THREE.Mesh(geometry, material);
+  const road = new THREE.Mesh(geometry, material); road.receiveShadow = true; return road;
 }
 scene.add(buildRoadMesh());
 
@@ -534,37 +550,7 @@ scene.add(buildRoadMesh());
 // asphalt edge instead — the actual off-track boundary (grass drag, then
 // the invisible wall) still sits further out, unchanged; this is purely
 // the visual marker real curbs are.
-function buildKerbs() {
-  const group = new THREE.Group();
-  const halfWidth = TRACK_WIDTH / 2; // right at the tarmac edge
-  const redMat = new THREE.MeshStandardMaterial({ color: 0xcc1f1f, roughness: 0.75 });
-  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.75 });
-  const step = 3;
-  const segmentLength = (trackCurve.getLength() / centerline.length) * step * 1.08; // slight overlap so bands read as continuous, not gapped
-
-  for (let i = 0; i < centerline.length; i += step) {
-    const p = centerline[i];
-    const n = sideNormal(p);
-    const heading = headingOf(p);
-    const material = Math.floor(i / step) % 2 === 0 ? redMat : whiteMat;
-
-    for (const side of [1, -1]) {
-      const box = new THREE.Mesh(
-        new THREE.BoxGeometry(0.9, 0.05, segmentLength),
-        material
-      );
-      box.position.set(
-        p.x + n.x * halfWidth * side,
-        0.015,
-        p.z + n.z * halfWidth * side
-      );
-      box.rotation.y = heading;
-      group.add(box);
-    }
-  }
-  return group;
-}
-scene.add(buildKerbs());
+dressCircuit(scene, centerline, TRACK_WIDTH, renderer, isRaining);
 
 // Start/finish line: a group so the flattening rotation (local X) and the
 // heading rotation (group Y) don't get tangled up in Euler order.
@@ -1005,66 +991,47 @@ window.addEventListener("keydown", (e) => {
 
 // Touch controls (buttons are hidden on non-touch devices via CSS, but the
 // bindings are harmless either way).
+const pedalPointers = new Map();
 function bindHoldButton(id, action) {
   const el = document.getElementById(id);
-  if (!el) return;
-  const press = (e) => {
-    e.preventDefault();
-    input[action] = true;
+  el.addEventListener("pointerdown", e => {
+    e.preventDefault(); if (pedalPointers.has(action)) return;
+    pedalPointers.set(action, e.pointerId); el.setPointerCapture(e.pointerId);
+    input[action] = true; el.classList.add("is-held");
+  });
+  const release = e => {
+    if (pedalPointers.get(action) !== e.pointerId) return;
+    pedalPointers.delete(action); input[action] = false; el.classList.remove("is-held");
   };
-  const release = (e) => {
-    e.preventDefault();
-    input[action] = false;
-  };
-  el.addEventListener("pointerdown", press);
-  el.addEventListener("pointerup", release);
-  el.addEventListener("pointerleave", release);
-  el.addEventListener("pointercancel", release);
+  for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) el.addEventListener(type, release);
 }
-bindHoldButton("btn-gas", "forward");
-bindHoldButton("btn-brake", "back");
-
-// The wheel is one continuous drag surface, not two independent buttons:
-// a finger pressed on the left half and dragged to the right half (without
-// lifting) needs to switch from steering left to steering right. Two plain
-// buttons can't do that — a touch is implicitly captured by whichever
-// element it started on, so sliding across never reaches the sibling's own
-// pointerdown. Tracking pointermove on one element with setPointerCapture
-// sidesteps that entirely.
-// Analog, not on/off: how far the drag sits from the wheel's centre sets
-// how hard you're turning (-1 full left .. 1 full right). A binary "which
-// half is the finger on" meant every touch was a full-lock turn, which at
-// speed was enough to run off track from a single light tap.
-let touchSteer = 0;
-
+bindHoldButton("btn-gas", "forward"); bindHoldButton("btn-brake", "back");
+let touchSteer = 0, filteredSteer = 0, wheelPointer = null, wheelOrigin = 0;
 const wheelEl = document.getElementById("wheel-control");
-if (wheelEl) {
-  let activePointerId = null;
-
-  const steerFromEvent = (e) => {
-    const rect = wheelEl.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const raw = (e.clientX - centerX) / (rect.width / 2);
-    touchSteer = Math.max(-1, Math.min(1, raw));
-  };
-
-  wheelEl.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
-    activePointerId = e.pointerId;
-    wheelEl.setPointerCapture(e.pointerId);
-    steerFromEvent(e);
-  });
-  wheelEl.addEventListener("pointermove", (e) => {
-    if (e.pointerId !== activePointerId) return;
-    steerFromEvent(e);
-  });
-  const releaseWheel = (e) => {
-    if (e.pointerId !== activePointerId) return;
-    activePointerId = null;
-    touchSteer = 0;
-  };
-  wheelEl.addEventListener("pointerup", releaseWheel);
-  wheelEl.addEventListener("pointercancel", releaseWheel);
+wheelEl.addEventListener("pointerdown", e => {
+  e.preventDefault(); if (wheelPointer !== null) return;
+  wheelPointer = e.pointerId; wheelOrigin = e.clientX; touchSteer = 0;
+  wheelEl.setPointerCapture(e.pointerId);
+});
+wheelEl.addEventListener("pointermove", e => {
+  if (e.pointerId !== wheelPointer) return;
+  const travel = Math.max(45, wheelEl.clientWidth * .48);
+  touchSteer = shapeSteering((e.clientX - wheelOrigin) / travel);
+});
+const releaseWheel = e => { if (e.pointerId === wheelPointer) { wheelPointer = null; touchSteer = 0; } };
+for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) wheelEl.addEventListener(type, releaseWheel);
+function clearDrivingInput() {
+  Object.keys(input).forEach(k => input[k] = false);
+  pedalPointers.clear(); wheelPointer = null; touchSteer = filteredSteer = 0;
+  document.querySelectorAll('.touch-btn').forEach(b => b.classList.remove('is-held'));
+}
+addEventListener('blur', clearDrivingInput);
+document.addEventListener('visibilitychange', () => { if(document.hidden) clearDrivingInput(); });
+function updateSteeringInput(dt) {
+  const keyboard = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+  filteredSteer = smoothSteering(filteredSteer, wheelPointer !== null ? touchSteer : keyboard, dt);
+  wheelEl.style.setProperty('--steer-angle', `${filteredSteer * 65}deg`);
+  wheelEl.setAttribute('aria-valuenow', String(Math.round(filteredSteer * 100)));
 }
 
 // --- Gears -------------------------------------------------------------
@@ -1801,11 +1768,9 @@ function integratePlayerMotion(dt) {
   // velocity is damped rather than snapped to zero. This gives us controllable
   // slip, understeer and tyre-grip effects without turning the browser game
   // into a full rigid-body simulator.
-  const speedFactor = Math.min(Math.abs(state.speed) / CAR.maxSpeed, 1);
   const grip = tireGripFactor(state.totalProgress, state);
   const steerSign = state.speed >= 0 ? 1 : -1;
-  const keyboardSteer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-  const steerAmount = touchSteer !== 0 ? touchSteer : keyboardSteer;
+  const steerAmount = filteredSteer;
 
   // Braking loads the front axle and sharpens initial turn-in; power shifts
   // load rearward and slightly reduces front authority. At high combined
@@ -1813,19 +1778,14 @@ function integratePlayerMotion(dt) {
   const loadTransferSteer = input.back ? 1.08 : input.forward ? 0.94 : 1;
   const combinedDemand = Math.min(Math.abs(state.lateralSpeed) / Math.max(Math.abs(state.speed) * 0.28, 1), 1);
   const gripSaturation = 1 - combinedDemand * 0.22;
-  const speedSteerLimit = (1 - 0.55 * speedFactor) * loadTransferSteer * gripSaturation;
-  const targetYawRate =
-    -steerAmount *
-    CAR.maxTurnRate *
-    speedSteerLimit *
-    grip *
-    steerSign;
+  const targetYawRate = steeringYaw(steerAmount, state.speed, CAR.maxTurnRate, grip, loadTransferSteer * gripSaturation);
 
   // Steering response is intentionally finite: changing direction creates
   // a short transition instead of an instantaneous heading change.
   const yawResponse = 7.5;
-  state.yawRate += (targetYawRate - state.yawRate) * Math.min(1, yawResponse * dt);
-  if (Math.abs(state.speed) < 0.05 || steerAmount === 0) {
+  state.yawRate += (targetYawRate - state.yawRate) * (1 - Math.exp(-yawResponse * dt));
+  if (Math.abs(state.speed) < 0.05) state.yawRate = 0;
+  if (steerAmount === 0) {
     state.yawRate *= Math.max(0, 1 - dt * 5);
   }
   state.heading += state.yawRate * dt;
@@ -2269,10 +2229,13 @@ function startRaceCountdown() {
 
 function animate() {
   const dt = Math.min(clock.getDelta(), 0.1);
+  updateSteeringInput(dt);
   update(dt);
   updateImpactSparks(dt);
   updateRain(dt);
   cloudGroup.rotation.y += dt * 0.004; // slow drift, always running regardless of session phase
+  sun.position.set(state.x + 30, 55, state.z + 25);
+  sun.target.position.set(state.x, 0, state.z);
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }

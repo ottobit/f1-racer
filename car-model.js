@@ -34,7 +34,7 @@ export function buildCar(color, { scale = 1, detail = false } = {}) {
   }
   shell([[-1.75,.02,.4,.02],[-1.4,.25,.48,.16],[-.9,.43,.52,.26],[0,.43,.52,.25],[.55,.32,.49,.2],[1.2,.23,.43,.14],[1.9,.13,.32,.09],[2.35,.08,.29,.055],[2.43,.005,.29,.01]],paint);
   shell([[-1.65,.01,.53,.01],[-1.25,.13,.63,.17],[-.8,.23,.78,.34],[-.42,.22,.85,.39],[-.27,.05,.79,.2]],paint);
-  box(1.66,.055,2.75,carbon,[0,.16,-.15]);
+  box(1.66,.055,2.75,carbon,[0,.16,-.15]).name = "floorPanel";
   for(const side of [-1,1]){
     shell([[-1.45,.015,.31,.01],[-1.1,.19,.38,.14],[-.5,.31,.44,.22],[.1,.32,.48,.2],[.45,.24,.48,.14],[.48,.20,.48,.1]],paint,side*.55);
     const inlet=mesh(new THREE.SphereGeometry(.2,16,8),black,[side*.55,.5,.475]);inlet.scale.set(1,.5,.15);
@@ -44,7 +44,11 @@ export function buildCar(color, { scale = 1, detail = false } = {}) {
     rod([side*.3,.65,.32],[side*.56,.84,.32],.017);
     for(const z of [1.05,-1.05])for(const y of [.28,.53])for(const dz of [-.32,.32])rod([side*.34,y,z+dz],[side*.88,.38,z]);
     rod([side*.38,.65,.7],[side*.88,.35,1.05],.026,alloy);
-    for(let j=0;j<5;j++)box(.03,.14,.46,carbon,[side*(.18+j*.13),.24,-1.5]).rotation.x=-.18;
+    if (detail) {
+      const coil=[]; for(let i=0;i<=80;i++){const t=i/80;coil.push(new THREE.Vector3(Math.cos(t*Math.PI*12)*.055,t*.3-.15,Math.sin(t*Math.PI*12)*.055));}
+      const spring=mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coil),80,.009,5,false),gold,[side*.48,.47,.83]);spring.name='setupSpring';spring.rotation.z=side*.35;
+    }
+    for(let j=0;j<5;j++){const fin=box(.03,.14,.46,carbon,[side*(.18+j*.13),.24,-1.5]);fin.rotation.x=-.18;fin.name="diffuserFin";}
     if(detail)for(let j=0;j<7;j++)box(.2,.015,.035,carbon,[side*.61,.635,-.45-j*.075]).rotation.z=side*-.2;
   }
   const cockpit=mesh(new THREE.SphereGeometry(.35,20,12),black,[0,.72,.04]);cockpit.scale.set(1,.45,1.5);
@@ -61,6 +65,7 @@ export function buildCar(color, { scale = 1, detail = false } = {}) {
   box(.13,.08,.025,new THREE.MeshStandardMaterial({color:0xff220a,emissive:0xff1600,emissiveIntensity:2}),[0,.3,-1.78]);
   const wheels=[[.94,.4,1.05],[-.94,.4,1.05],[.94,.4,-1.05],[-.94,.4,-1.05]].map(([x,y,z])=>{
     const wheel=new THREE.Group();wheel.position.set(x,y,z);group.add(wheel);
+    if(detail){const caliper=box(.085,.22,.11,new THREE.MeshStandardMaterial({color:0xb69050,metalness:.65,roughness:.35}),[x-Math.sign(x)*.18,y,z+.14]);caliper.name='setupCaliper';}
     const tire=mesh(new THREE.CylinderGeometry(.4,.4,.32,detail?48:20),black,[0,0,0],wheel);tire.rotation.z=Math.PI/2;
     for(const s of [-1,1]){
       const ring=mesh(new THREE.TorusGeometry(.31,.065,8,detail?48:20),black,[s*.145,0,0],wheel);ring.rotation.y=Math.PI/2;

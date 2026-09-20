@@ -37,7 +37,7 @@ export function createShowroom(host) {
   const signMap=new THREE.CanvasTexture(signCanvas);signMap.colorSpace=THREE.SRGBColorSpace;
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(7,1.75),new THREE.MeshBasicMaterial({map:signMap}));sign.position.set(0,3,-7.72);scene.add(sign);
   let azimuth=.72,elevation=.34,distance=10.4,auto=false,pointer=null,lastX=0,lastY=0;
-  function updateCamera(){const d=distance*(camera.aspect<1?1.55:1);camera.position.set(Math.sin(azimuth)*Math.cos(elevation)*d,.6+Math.sin(elevation)*d,Math.cos(azimuth)*Math.cos(elevation)*d);camera.lookAt(0,.65,0);}
+  function updateCamera(){const d=distance*(Math.max(1, .95 / camera.aspect));camera.position.set(Math.sin(azimuth)*Math.cos(elevation)*d,.6+Math.sin(elevation)*d,Math.cos(azimuth)*Math.cos(elevation)*d);camera.lookAt(0,.65,0);}
   const canvas=renderer.domElement;canvas.setAttribute('aria-label','Monoposto 3D: trascina per orbitare, usa i pulsanti per cambiare vista');
   canvas.addEventListener('pointerdown',e=>{if(pointer!==null)return;pointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(pointer);});
   canvas.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;azimuth-=(e.clientX-lastX)*.008;elevation=THREE.MathUtils.clamp(elevation+(e.clientY-lastY)*.004,.1,1.15);lastX=e.clientX;lastY=e.clientY;});
@@ -48,5 +48,11 @@ export function createShowroom(host) {
   const observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();});observer.observe(host);
   let previous=0;
   renderer.setAnimationLoop(time=>{const dt=Math.min((time-previous)/1000,.05);previous=time;if(document.hidden)return;if(auto&&pointer===null&&!reduced.matches)azimuth+=dt*.18;updateCamera();renderer.render(scene,camera);});
-  return {car,renderer};
+  function focusPart(part) {
+    const views={frontWing:[.48,.36,8.8],rearWing:[2.65,.3,8.8],floor:[2.4,.22,9],brakes:[1.25,.28,8.6],suspension:[.6,.62,8.6]};
+    [azimuth,elevation,distance]=views[part];auto=false;
+    document.getElementById('garage-orbit').setAttribute('aria-pressed','false');
+    document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed','false'));
+  }
+  return {car,renderer,focusPart};
 }

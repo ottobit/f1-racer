@@ -7,3 +7,27 @@
 @media(prefers-reduced-motion:reduce){.garage-page *{transition:none!important}}
 /* Reset generic arcade header chrome inside the atelier navigation. */
 .atelier-nav{padding:0;text-align:left;gap:16px}.atelier-nav::after{display:none}
+/* The car stays in view while the setup pane scrolls, including on phones. */
+.garage-page{height:100dvh;overflow:hidden}
+.garage-page .garage-layout{height:calc(100dvh - 76px);min-height:0;align-items:stretch}
+.garage-page .garage-car-panel{min-height:0;height:100%;display:flex;flex-direction:column}
+.garage-page #garage-canvas{height:auto;flex:1;min-height:0}
+.garage-page .garage-config{height:calc(100% - 40px);min-height:0;overflow-y:auto;overscroll-behavior:contain;margin-top:20px;margin-bottom:20px;scrollbar-width:thin;scrollbar-color:#526b7e #111a23}
+.garage-page .atelier-title{top:20px}.garage-page .atelier-title h1{font-size:clamp(26px,3vw,44px)}
+.garage-page .car-caption{top:auto;bottom:155px;font-size:20px}.garage-page .car-caption>span{font-size:24px}
+.garage-page .view-controls{margin:0;flex-shrink:0}.garage-page .finish-controls{margin:15px 0 8px;flex-shrink:0}.garage-page .garage-hint{margin:8px 0 15px;flex-shrink:0}
+.garage-page .garage-mounts{bottom:140px}
+@media(max-width:760px){
+ .garage-page .garage-layout{height:calc(100dvh - 58px);display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:42% minmax(0,1fr);gap:0}
+ .garage-page .garage-car-panel{background:#080d14;border-bottom:1px solid #344554}
+ .garage-page .atelier-title{top:8px;left:14px}.garage-page .atelier-title h1,.garage-page .atelier-title p,.garage-page .car-caption,.garage-page .finish-controls,.garage-page .garage-hint{display:none}
+ .garage-page .view-controls{padding:0 8px 7px;gap:4px}.garage-page .view-controls button{padding:8px;font-size:9px}
+ .garage-page .garage-config{height:100%;margin:0;border:0;border-radius:0;padding:18px 20px 30px;scroll-padding:14px}
+ .garage-page .config-heading p{margin-bottom:16px}.garage-page .config-heading h2{margin:8px 0}.garage-page .garage-stats{margin-bottom:14px;gap:7px}
+ .garage-page .garage-mounts{bottom:46px}.garage-page .garage-mount{padding:7px;font-size:8px}
+}
+@media(max-height:520px) and (min-width:761px){
+ .garage-page .atelier-nav{height:44px}.garage-page .garage-layout{height:calc(100dvh - 44px);grid-template-columns:minmax(0,1fr) 320px}
+ .garage-page .atelier-title h1,.garage-page .atelier-title p,.garage-page .car-caption,.garage-page .finish-controls,.garage-page .garage-hint{display:none}
+ .garage-page .view-controls{padding-bottom:12px}.garage-page .garage-config{margin-top:8px;margin-bottom:8px;height:calc(100% - 16px)}
+}

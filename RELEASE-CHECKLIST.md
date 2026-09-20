@@ -154,3 +154,41 @@ This repository currently has no automated browser/physics test runner and no Gi
 - NOT TESTED: real-device multitouch/cancel gestures, full qualifying-to-result
   and championship regression, wet-race regression, hardware GPU/mobile FPS.
   Software-rendered headless screenshots cannot certify actual device performance.
+
+## Race art / steering / persistent preview regression
+
+- [ ] Upper HUD DOM and original shared stylesheet remain unchanged.
+- [ ] Dry/wet circuits render with textured road, clear margins and no shader errors.
+- [ ] Shadow follows the player; scenery does not conceal the drivable road.
+- [ ] First thumb contact anywhere on the wheel produces no steering jump.
+- [ ] Drag through neutral in both directions with throttle held by a second finger.
+- [ ] Pointer cancel/lost capture, blur and hidden tab release pedals and wheel.
+- [ ] Car cannot pivot while stopped; reverse steering reverses yaw.
+- [ ] Keyboard direction transitions are progressive and high-speed inputs are reduced.
+- [ ] Portrait and landscape garage keep the entire car preview visible while scrolling to suspension.
+- [ ] Selecting all five component families frames the piece and shows the appropriate cue.
+- [ ] Setup persists after reload; the top stage does not scroll away with components.
+- [ ] Full qualifying/race progression, real iOS/Android multitouch and GPU performance.
+
+### Validation — three-task upgrade
+
+PASS: all JS modules parse; diff whitespace check; four Node steering tests
+(dead zone/symmetry, 30/60/120Hz smoothing, release/reversal, stationary/reverse/
+high-speed yaw). Upper HUD markup and original shared race stylesheet match
+master byte-for-byte.
+
+PASS: Chromium 151 with SwiftShader, exact downloaded Three.js r160 served in
+place of the CDN. Portrait 390x844 and landscape 844x390 keep the car stage
+visible while the last setup controls are selected; selected values persist to
+localStorage. A mobile grid-column regression found in the first screenshot
+was fixed and both sizes rechecked.
+
+PASS: dry and wet circuit initialization/rendering, no observed JS/console
+errors. CDP touch events exercised two fingers simultaneously: first wheel
+contact stays neutral, drag steers while gas remains held, touchCancel clears
+both, window blur clears keyboard input. Screenshots inspected. Browser probes
+are injected only by the test server, never shipped in production.
+
+NOT TESTED: physical iPhone/Android gestures and frame rates; full qualifying,
+three-lap race and championship completion. The graphics use software rendering
+in this environment, so no hardware performance claim is made.

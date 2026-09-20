@@ -418,3 +418,30 @@ The Garage renders the same procedural F1 car construction used by the race bran
 ## ChatGPT Work handoff
 
 For a fresh ChatGPT Work session, start with `WORK-HANDOFF.md`. It is a compact operational entry point that links this wiki, the repository procedure and release checklist without duplicating the full architecture here.
+
+## Race art, controls and persistent garage preview
+
+`track-art.js` generates seeded asphalt/grass textures and circuit dressing:
+painted track margins, rubber deposits, runoff, instanced kerbs/guardrails/trees,
+low mountains and pit-straight structures. Candidate scenery locations are kept
+away from adjacent road segments. These remain decorative, not new collision
+objects. The race uses ACES tone mapping and one 1024 shadow map centered around
+the player; track meshes receive car shadows. Wet asphalt has lower roughness.
+The upper HUD markup and existing `style.css` are unchanged; lower control styles
+are isolated in `race-controls.css`.
+
+`steering.js` owns dead-zone shaping, exponential input smoothing and a
+speed-sensitive yaw target. A touch starts at neutral wherever the thumb lands;
+horizontal travel from that contact point requests steering. Only one pointer
+owns the wheel, independently of the pedal pointers. Capture, cancellation,
+lost capture, window blur and backgrounding clear held state. The visual wheel
+rotates with the filtered command; yaw becomes zero at zero speed and reverses
+in reverse gear. `node --test tests/steering.test.mjs` verifies the pure math.
+
+The garage fills the available dynamic viewport. On desktop the configuration
+pane scrolls beside the fixed car stage; portrait mobile uses a stage above a
+separately scrolling setup pane. Selecting a part automatically frames that
+assembly. Front/rear wing geometry, floor width/diffuser height, spring spacing
+and caliper finish preview each setup family. These are representative visual
+cues: mechanical effects still come from `garage-setup.js`. No change to storage
+keys or setup effect values is made.
