@@ -32,5 +32,5 @@
  .garage-page .atelier-title h1,.garage-page .atelier-title p,.garage-page .car-caption,.garage-page .finish-controls,.garage-page .garage-hint{display:none}
  .garage-page .view-controls{padding-bottom:12px}.garage-page .garage-config{margin-top:8px;margin-bottom:8px;height:calc(100% - 16px)}
 }
-#garage-liveries.finish-controls{display:flex}
-@media(max-width:760px){#garage-liveries.finish-controls{padding:0 8px 7px;margin:0;gap:5px}.finish-controls .livery-choice{padding:5px 6px}.finish-controls .livery-choice i{width:18px;height:18px}.finish-controls .livery-choice b{font-size:7px}}
+#garage-liveries.finish-controls{display:flex;justify-content:flex-start;margin:0 0 20px;padding:0 0 18px;border-bottom:1px solid #303b46}
+@media(max-width:760px){#garage-liveries.finish-controls{padding:0 0 15px;margin:0 0 15px;gap:7px}.finish-controls .livery-choice{min-height:44px;padding:7px 9px}.finish-controls .livery-choice i{width:22px;height:22px}.finish-controls .livery-choice b{font-size:7px}}

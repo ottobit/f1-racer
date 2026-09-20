@@ -17,9 +17,9 @@ fill lights, a circular metal platform and an architectural studio backdrop.
 No external model, HDR texture or new package dependency is required.
 
 The atelier supports pointer/touch orbit, four camera presets, optional automatic
-rotation (disabled by reduced-motion preference), and preview-only paint finishes.
-Setup choices still persist under `f1racer-garage-v1`; finish colors do not change
-the race livery. The five named drop targets appear during component dragging;
+rotation (disabled by reduced-motion preference), and five persistent race liveries.
+Setup choices persist under `f1racer-garage-v1`, including the livery applied to
+the player car at race startup. The five named drop targets appear during component dragging;
 click/tap remains the mounting fallback. Complete front/rear wing assemblies
 respond to setup selection. DPR is capped at 1.5 on compact viewports and 2 on
 desktop; shadow maps use 1024/2048 respectively. Hidden tabs skip rendering.
@@ -454,7 +454,9 @@ keys or setup effect values is made.
 `driver-themes.js` centralizes the five team liveries and the cockpit themes for
 the custom friend names. `garage-setup.js` persists the selected livery under the
 existing `f1racer-garage-v1` setup object. `garage.js` renders all five primary /
-secondary color pairs and updates the shared showroom car immediately.
+secondary color pairs and updates the shared showroom car immediately. The livery
+selector sits at the top of the scrollable setup panel so it remains discoverable
+on mobile while the car preview stays fixed.
 
 `main.js` reads the saved garage livery at race startup and applies it only to
 the player car. AI cars continue to use their team liveries from the same shared
