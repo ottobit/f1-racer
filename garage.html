@@ -2,31 +2,26 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Garage — F1 Racer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atelier — F1 Racer</title>
   <link rel="stylesheet" href="../../assets/css/style.css" />
-  <link rel="stylesheet" href="style.css?v=16" />
+  <link rel="stylesheet" href="style.css?v=22" />
+  <link rel="stylesheet" href="garage.css" />
 </head>
 <body class="garage-page">
-  <header class="garage-head"><a href="./">← F1 Racer</a><div><span>SETUP LAB</span><h1>Garage</h1><p>Costruisci il compromesso giusto. Nessun pezzo è migliore ovunque.</p></div></header>
+  <header class="atelier-nav"><a href="./">← TORNA AI CIRCUITI</a><span>OTTOBIT <b> / RACING DIVISION</b></span><span class="live-dot">SETUP LAB</span></header>
   <main class="garage-layout">
-    <section class="garage-car-panel">
-      <div id="garage-canvas" aria-label="Monoposto 3D ruotabile"></div>
-      <p class="garage-hint">Trascina la monoposto per ruotarla a 360°. Trascina invece i componenti sulle zone nominate.</p>
-      <div class="garage-mounts" aria-label="Zone di montaggio">
-        <div class="garage-mount front" data-part="frontWing">Ala anteriore</div>
-        <div class="garage-mount rear" data-part="rearWing">Ala posteriore</div>
-        <div class="garage-mount floor" data-part="floor">Fondo</div>
-        <div class="garage-mount brakes" data-part="brakes">Freni</div>
-        <div class="garage-mount suspension" data-part="suspension">Sospensioni</div>
-      </div>
-      <p id="garage-status" class="garage-status">Scegli un pezzo a destra e trascinalo sulla zona corrispondente. Su touch basta toccarlo.</p>
+    <section class="garage-car-panel" aria-label="Atelier monoposto">
+      <div class="atelier-title"><span class="eyebrow">ENGINEERED TO RACE · 01</span><h1>Ogni dettaglio.<br><em>Un vantaggio.</em></h1><p>La tua monoposto. Il tuo equilibrio.</p></div>
+      <div id="garage-canvas"></div>
+      <div class="car-caption"><span>OB–01</span><p>OPEN WHEEL / FORMULA SERIES</p></div>
+      <div class="view-controls" aria-label="Viste monoposto"><button data-view="hero" aria-pressed="true">Tre quarti</button><button data-view="side" aria-pressed="false">Profilo</button><button data-view="rear" aria-pressed="false">Posteriore</button><button data-view="detail" aria-pressed="false">Dettaglio</button><button id="garage-orbit" aria-pressed="false" aria-label="Rotazione automatica">↻ 360°</button></div>
+      <div class="finish-controls"><span>FINITURA STUDIO</span><button data-paint="#bd1024" style="--paint:#bd1024" aria-label="Rosso corsa" aria-pressed="true"></button><button data-paint="#c6d1db" style="--paint:#c6d1db" aria-label="Argento" aria-pressed="false"></button><button data-paint="#133c55" style="--paint:#133c55" aria-label="Blu petrolio" aria-pressed="false"></button><small>Anteprima</small></div>
+      <p class="garage-hint">Trascina per esplorare · Scegli una vista per avvicinarti</p>
+      <div class="garage-mounts" aria-label="Zone di montaggio"><div class="garage-mount front" data-part="frontWing">Ala anteriore</div><div class="garage-mount rear" data-part="rearWing">Ala posteriore</div><div class="garage-mount floor" data-part="floor">Fondo</div><div class="garage-mount brakes" data-part="brakes">Freni</div><div class="garage-mount suspension" data-part="suspension">Sospensioni</div></div>
     </section>
-    <aside class="garage-config">
-      <div id="garage-stats" class="garage-stats"></div>
-      <div id="garage-parts"></div>
-    </aside>
+    <aside class="garage-config"><div class="config-heading"><span class="eyebrow">PERFORMANCE ENGINEERING</span><h2>Assetto gara<span>01 / 05</span></h2><p>Trova il compromesso. Domina il circuito.</p></div><div id="garage-stats" class="garage-stats"></div><div class="parts-heading">COMPONENTI <span>SELEZIONA O TRASCINA</span></div><div id="garage-parts"></div><p id="garage-status" class="garage-status" role="status" aria-live="polite">Assetto salvato automaticamente. Tocca un componente per montarlo.</p><a class="garage-drive" href="./">SCEGLI IL CIRCUITO <span>↗</span></a></aside>
   </main>
-  <script type="module" src="garage.js"></script>
+  <script type="module" src="garage.js?v=22"></script>
 </body>
 </html>

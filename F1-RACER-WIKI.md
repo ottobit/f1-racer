@@ -1,5 +1,30 @@
 # F1 Racer — Technical Wiki
 
+## Atelier / shared car rendering
+
+`car-model.js` owns the procedural car used by both race and garage. Elliptical
+body sections, multi-element wings, halo, suspension, diffuser and wheel details
+replace the duplicated primitive models. `buildCar(color, {scale, detail})` keeps
++Z forward, four rolling wheel groups and the original scaled 0.4 wheel radius.
+The race uses material-batched static geometry; the garage enables additional
+spokes, cooling slots and a procedural carbon bump texture. Materials belong to
+each car, so ghost transparency does not affect the player or opponents.
+
+`createStudioEnvironment` produces a one-time PMREM from procedural light cards.
+Race cars receive it locally without changing track materials. `showroom.js`
+uses the same environment, ACES tone mapping, a shadowed spotlight, cool/warm
+fill lights, a circular metal platform and an architectural studio backdrop.
+No external model, HDR texture or new package dependency is required.
+
+The atelier supports pointer/touch orbit, four camera presets, optional automatic
+rotation (disabled by reduced-motion preference), and preview-only paint finishes.
+Setup choices still persist under `f1racer-garage-v1`; finish colors do not change
+the race livery. The five named drop targets appear during component dragging;
+click/tap remains the mounting fallback. Complete front/rear wing assemblies
+respond to setup selection. DPR is capped at 1.5 on compact viewports and 2 on
+desktop; shadow maps use 1024/2048 respectively. Hidden tabs skip rendering.
+
+
 > Living technical reference for the current F1 Racer implementation.  
 > Source of truth: the code in `games/f1-racer/`.
 
