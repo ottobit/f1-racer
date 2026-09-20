@@ -3,7 +3,11 @@ import { buildCar as buildCarModel } from "./car-model.js";
 const DEFAULT_FRONT_WHEEL_STEER_ANGLE = 0.55;
 
 export function buildRaceCar(color, { scale, environmentTexture, envMapIntensity = 0.65 } = {}) {
-  const model = buildCarModel(color, { scale });
+  const model = buildCarModel(color, {
+    scale,
+    secondaryColor: typeof color === "object" ? color.secondary : undefined,
+    accentColor: typeof color === "object" ? color.secondary : undefined,
+  });
   if (environmentTexture) {
     model.group.traverse((object) => {
       if (object.isMesh) {

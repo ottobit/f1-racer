@@ -9,16 +9,67 @@ function isCompactLandscapeViewport() {
   return window.innerWidth > window.innerHeight && window.innerHeight <= 520;
 }
 
-export function setupRaceCamera({ camera, state, playerCar, carMaxSpeed }) {
+function buildCockpitView(theme) {
+  const group = new THREE.Group();
+  group.visible = false;
+  const primary = new THREE.MeshStandardMaterial({ color: theme.primary, metalness: 0.45, roughness: 0.28 });
+  const secondary = new THREE.MeshStandardMaterial({ color: theme.secondary, metalness: 0.3, roughness: 0.32 });
+  const carbon = new THREE.MeshStandardMaterial({ color: 0x070b10, metalness: 0.35, roughness: 0.62 });
+  const glow = new THREE.MeshBasicMaterial({ color: theme.glow, transparent: true, opacity: 0.75 });
+  const mesh = (geometry, material, position) => {
+    const object = new THREE.Mesh(geometry, material);
+    object.position.set(...position);
+    group.add(object);
+    return object;
+  };
+  mesh(new THREE.BoxGeometry(0.82, 0.11, 0.2), carbon, [0, 0.72, 0.78]);
+  mesh(new THREE.BoxGeometry(0.48, 0.035, 0.045), glow, [0, 0.8, 0.68]);
+  mesh(new THREE.BoxGeometry(0.09, 0.09, 1.18), primary, [-0.46, 0.64, 0.96]).rotation.z = -0.18;
+  mesh(new THREE.BoxGeometry(0.09, 0.09, 1.18), primary, [0.46, 0.64, 0.96]).rotation.z = 0.18;
+  mesh(new THREE.BoxGeometry(0.62, 0.035, 0.12), secondary, [0, 0.58, 1.12]);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 160;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#060a10";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = `#${theme.primary.toString(16).padStart(6, "0")}`;
+  ctx.fillRect(0, 0, canvas.width, 14);
+  ctx.fillStyle = `#${theme.secondary.toString(16).padStart(6, "0")}`;
+  ctx.fillRect(0, 146, canvas.width, 14);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#f5f8fb";
+  ctx.font = "700 44px sans-serif";
+  ctx.fillText(theme.label.toUpperCase(), 256, 70);
+  ctx.fillStyle = "#9fb4c5";
+  ctx.font = "700 34px monospace";
+  ctx.fillText(theme.motto, 256, 118);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const badge = mesh(
+    new THREE.PlaneGeometry(0.62, 0.2),
+    new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }),
+    [0, 0.88, 0.9]
+  );
+  badge.rotation.x = -0.1;
+  return group;
+}
+
+export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, cockpitTheme }) {
   let cameraMode = "chase";
+  const cockpitView = cockpitTheme ? buildCockpitView(cockpitTheme) : null;
+  if (cockpitView) scene.add(cockpitView);
 
   window.addEventListener("keydown", (event) => {
     if (event.code !== "KeyC") return;
     cameraMode = cameraMode === "chase" ? "cockpit" : "chase";
     playerCar.group.visible = cameraMode !== "cockpit";
+    if (cockpitView) cockpitView.visible = cameraMode === "cockpit";
   });
 
   function updateChaseCamera(dt) {
+    if (cockpitView) cockpitView.visible = false;
     const fovScale =
       Math.tan(THREE.MathUtils.degToRad(CHASE_CAM_BASE_FOV / 2)) /
       Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
@@ -54,6 +105,11 @@ export function setupRaceCamera({ camera, state, playerCar, carMaxSpeed }) {
   }
 
   function updateCockpitCamera() {
+    if (cockpitView) {
+      cockpitView.visible = true;
+      cockpitView.position.set(state.x, 0, state.z);
+      cockpitView.rotation.y = state.heading;
+    }
     const eyeHeight = 1.0;
     const forwardOffset = 0.3;
     camera.position.set(

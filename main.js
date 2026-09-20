@@ -1,8 +1,9 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js";
 import { POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
-import { displayDriverName } from "./driver-selection.js";
-import { setupEffects } from "./garage-setup.js";
+import { displayDriverName, loadSelectedDriverId } from "./driver-selection.js";
+import { cockpitThemeForDriver, liveryById, liveryIdForDriver } from "./driver-themes.js";
+import { loadGarageSetup, selectedGarageLivery, setupEffects } from "./garage-setup.js";
 
 import { createStudioEnvironment } from "./car-model.js";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js";
@@ -18,7 +19,10 @@ import { setupRaceCommands } from "./race-commands.js";
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
 
-const GARAGE_EFFECTS = setupEffects();
+const GARAGE_SETUP = loadGarageSetup();
+const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
+const PLAYER_LIVERY = selectedGarageLivery(GARAGE_SETUP);
+const PLAYER_COCKPIT_THEME = cockpitThemeForDriver(loadSelectedDriverId());
 
 /*
  * F1 Racer — championship mode: a fixed-lap race against two AI rivals on
@@ -650,7 +654,7 @@ function buildCar(color) {
 }
 
 // Player car
-const playerCar = buildCar(0xe10600);
+const playerCar = buildCar(PLAYER_LIVERY);
 // Make the player's car easier to read in chase view without changing the
 // shared car geometry, wheel metadata, physics or collision dimensions.
 playerCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
@@ -664,15 +668,15 @@ scene.add(playerCar.group);
 // startRaceCountdown() for the 3-2-1. Grid order itself comes from
 // qualifying (see finishQualifying()), not this fixed identity order.
 const AI_DRIVERS = [
-  { id: "rival-red", color: 0xe10600 }, // player's teammate
-  { id: "rival-blue", color: 0x1c5fd6 },
-  { id: "rival-blue-2", color: 0x1c5fd6 },
-  { id: "rival-yellow", color: 0xe6c229 },
-  { id: "rival-yellow-2", color: 0xe6c229 },
-  { id: "rival-green-1", color: 0x1f9d4a },
-  { id: "rival-green-2", color: 0x1f9d4a },
-  { id: "rival-white-1", color: 0xf5f5f5 },
-  { id: "rival-white-2", color: 0xf5f5f5 },
+  { id: "rival-red", livery: liveryById(liveryIdForDriver("rival-red")) }, // player's teammate
+  { id: "rival-blue", livery: liveryById(liveryIdForDriver("rival-blue")) },
+  { id: "rival-blue-2", livery: liveryById(liveryIdForDriver("rival-blue-2")) },
+  { id: "rival-yellow", livery: liveryById(liveryIdForDriver("rival-yellow")) },
+  { id: "rival-yellow-2", livery: liveryById(liveryIdForDriver("rival-yellow-2")) },
+  { id: "rival-green-1", livery: liveryById(liveryIdForDriver("rival-green-1")) },
+  { id: "rival-green-2", livery: liveryById(liveryIdForDriver("rival-green-2")) },
+  { id: "rival-white-1", livery: liveryById(liveryIdForDriver("rival-white-1")) },
+  { id: "rival-white-2", livery: liveryById(liveryIdForDriver("rival-white-2")) },
 ];
 
 // --- DRS ---------------------------------------------------------------
@@ -750,7 +754,7 @@ const AI_GRID_SLOTS = [
   { row: 9, lane: 1 }, // P10
 ];
 const aiCars = AI_DRIVERS.map((driver, i) => {
-  const model = buildCar(driver.color);
+  const model = buildCar(driver.livery);
   scene.add(model.group);
   const slot = AI_GRID_SLOTS[i];
   const pos = gridSlot(slot.row, slot.lane);
@@ -758,7 +762,7 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
   return {
     ...model,
     driverId: driver.id,
-    color: driver.color,
+    color: driver.livery.primary,
     x: pos.x,
     z: pos.z,
     heading: pos.heading,
@@ -1236,10 +1240,12 @@ function getNextUnracedCircuitId(champState) {
 }
 
 const raceCamera = setupRaceCamera({
+  scene,
   camera,
   state,
   playerCar,
   carMaxSpeed: CAR.maxSpeed,
+  cockpitTheme: PLAYER_COCKPIT_THEME,
 });
 const { integratePlayerMotion } = setupPlayerPhysics({
   car: CAR,

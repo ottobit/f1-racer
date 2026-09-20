@@ -1,7 +1,7 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { buildCar, createStudioEnvironment } from './car-model.js';
+import { applyCarLivery, buildCar, createStudioEnvironment } from './car-model.js';
 
-export function createShowroom(host) {
+export function createShowroom(host, { livery } = {}) {
   const compact=matchMedia('(max-width: 760px)').matches;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
@@ -13,7 +13,7 @@ export function createShowroom(host) {
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x080d14);scene.fog=new THREE.FogExp2(0x080d14,.035);
   const camera=new THREE.PerspectiveCamera(36,1,.1,80);
   const env=createStudioEnvironment(renderer);scene.environment=env.texture;
-  const car=buildCar(0xbd1024,{detail:true,scale:1.15}).group;car.position.y=.13;scene.add(car);
+  const car=buildCar(livery || 0xbd1024,{detail:true,scale:1.15}).group;car.position.y=.13;scene.add(car);
   scene.add(new THREE.HemisphereLight(0xbfd6ff,0x10151d,1.4));
   const key=new THREE.SpotLight(0xe8f2ff,110,25,.65,.65,1.5);key.position.set(2,7,4);key.castShadow=true;key.shadow.mapSize.set(compact?1024:2048,compact?1024:2048);key.shadow.bias=-.0003;key.shadow.normalBias=.025;scene.add(key);
   const rim=new THREE.PointLight(0x679dff,28,14,2);rim.position.set(-4,3,-3);scene.add(rim);
@@ -44,7 +44,6 @@ export function createShowroom(host) {
   const release=e=>{if(e.pointerId===pointer)pointer=null;};canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
   document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{const views={hero:[.72,.34,10.4],side:[Math.PI/2,.18,10.4],rear:[2.65,.28,10.4],detail:[.35,.65,6.3]};[azimuth,elevation,distance]=views[b.dataset.view];document.querySelectorAll('[data-view]').forEach(v=>v.setAttribute('aria-pressed',String(v===b)));}));
   document.getElementById('garage-orbit').addEventListener('click',e=>{auto=!auto;e.currentTarget.setAttribute('aria-pressed',String(auto));});
-  document.querySelectorAll('[data-paint]').forEach(b=>b.addEventListener('click',()=>{car.traverse(o=>{if(o.isMesh&&o.material.isMeshPhysicalMaterial&&o.material.clearcoat===1)o.material.color.set(b.dataset.paint);});document.querySelectorAll('[data-paint]').forEach(v=>v.setAttribute('aria-pressed',String(v===b)));}));
   const observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();});observer.observe(host);
   let previous=0;
   renderer.setAnimationLoop(time=>{const dt=Math.min((time-previous)/1000,.05);previous=time;if(document.hidden)return;if(auto&&pointer===null&&!reduced.matches)azimuth+=dt*.18;updateCamera();renderer.render(scene,camera);});
@@ -54,5 +53,8 @@ export function createShowroom(host) {
     document.getElementById('garage-orbit').setAttribute('aria-pressed','false');
     document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed','false'));
   }
-  return {car,renderer,focusPart};
+  function setLivery(nextLivery) {
+    applyCarLivery(car, nextLivery);
+  }
+  return {car,renderer,focusPart,setLivery};
 }

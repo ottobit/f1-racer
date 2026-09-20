@@ -448,3 +448,16 @@ assembly. Front/rear wing geometry, floor width/diffuser height, spring spacing
 and caliper finish preview each setup family. These are representative visual
 cues: mechanical effects still come from `garage-setup.js`. No change to storage
 keys or setup effect values is made.
+
+## Driver themes and real liveries
+
+`driver-themes.js` centralizes the five team liveries and the cockpit themes for
+the custom friend names. `garage-setup.js` persists the selected livery under the
+existing `f1racer-garage-v1` setup object. `garage.js` renders all five primary /
+secondary color pairs and updates the shared showroom car immediately.
+
+`main.js` reads the saved garage livery at race startup and applies it only to
+the player car. AI cars continue to use their team liveries from the same shared
+theme data. `race-camera.js` adds a small cockpit-view overlay with themed rails,
+dash glow and name/motto badge for the selected driver; the top HUD remains
+unchanged.

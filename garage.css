@@ -5,6 +5,7 @@
 @media(max-width:1000px){.garage-layout{grid-template-columns:minmax(0,1fr) 320px;padding:0 2%}.garage-config{margin-left:0;padding:18px}.atelier-title h1{font-size:36px}}
 @media(max-width:760px){.atelier-nav{height:58px;font-size:8px}.atelier-nav b,.live-dot{display:none}.garage-layout{display:flex;flex-direction:column;padding:0}.garage-car-panel{min-height:0}.atelier-title{top:24px;left:22px}.atelier-title h1{font-size:36px;margin:12px 0}.atelier-title p{font-size:10px}.eyebrow{font-size:8px}#garage-canvas{height:590px}.car-caption{top:480px;left:22px}.car-caption>span{font-size:25px}.car-caption p{font-size:7px}.view-controls{margin:-15px 10px 0;gap:3px}.view-controls button{padding:11px 9px;font-size:9px}.garage-config{margin:22px 14px;padding:24px}.garage-hint{margin-bottom:0}.garage-mounts{bottom:120px}.garage-part button{min-height:44px}.finish-controls button{width:26px;height:26px}}
 @media(prefers-reduced-motion:reduce){.garage-page *{transition:none!important}}
+.finish-controls{gap:8px;flex-wrap:wrap}.finish-controls .livery-choice{width:auto;height:auto;border-radius:3px;border:1px solid #47515a;outline:0;background:#121b25;color:#a9b8c7;padding:6px 8px;display:flex;align-items:center;gap:6px}.finish-controls .livery-choice i{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--primary) 0 48%,var(--secondary) 52% 100%);box-shadow:inset 0 0 0 2px #081019}.finish-controls .livery-choice b{font-size:8px;letter-spacing:.09em;font-weight:700}.finish-controls .livery-choice[aria-pressed=true]{border-color:#d9e6ee;color:#f5fbff;background:#243544;outline:0}
 /* Reset generic arcade header chrome inside the atelier navigation. */
 .atelier-nav{padding:0;text-align:left;gap:16px}.atelier-nav::after{display:none}
 /* The car stays in view while the setup pane scrolls, including on phones. */
@@ -31,3 +32,5 @@
  .garage-page .atelier-title h1,.garage-page .atelier-title p,.garage-page .car-caption,.garage-page .finish-controls,.garage-page .garage-hint{display:none}
  .garage-page .view-controls{padding-bottom:12px}.garage-page .garage-config{margin-top:8px;margin-bottom:8px;height:calc(100% - 16px)}
 }
+#garage-liveries.finish-controls{display:flex}
+@media(max-width:760px){#garage-liveries.finish-controls{padding:0 8px 7px;margin:0;gap:5px}.finish-controls .livery-choice{padding:5px 6px}.finish-controls .livery-choice i{width:18px;height:18px}.finish-controls .livery-choice b{font-size:7px}}

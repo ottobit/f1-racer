@@ -1,15 +1,36 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
+function materialWithRole(material, role) {
+  material.userData.carPaintRole = role;
+  return material;
+}
+
+export function applyCarLivery(group, livery) {
+  const visited = new Set();
+  group.traverse((object) => {
+    if (!object.isMesh || !object.material || visited.has(object.material)) return;
+    visited.add(object.material);
+    const role = object.material.userData.carPaintRole;
+    if (role === "primary") object.material.color.set(livery.primary);
+    if (role === "secondary") object.material.color.set(livery.secondary);
+    if (role === "accent") object.material.color.set(livery.accent ?? livery.secondary);
+    if (role === "helmet") object.material.color.set(livery.secondary);
+  });
+}
+
 // Shared visual model. +Z is forward; wheel order/radius remain compatible
 // with the race simulation. Geometry never participates in collisions.
-export function buildCar(color, { scale = 1, detail = false } = {}) {
+export function buildCar(color, { scale = 1, detail = false, secondaryColor = 0xe9eeec, accentColor = 0xd7b264 } = {}) {
+  const livery = typeof color === "object"
+    ? { primary: color.primary, secondary: color.secondary ?? secondaryColor, accent: color.accent ?? color.secondary ?? accentColor }
+    : { primary: color, secondary: secondaryColor, accent: accentColor };
   const group = new THREE.Group();
-  const paint = new THREE.MeshPhysicalMaterial({ color, metalness: .48, roughness: .24, clearcoat: 1, clearcoatRoughness: .12 });
+  const paint = materialWithRole(new THREE.MeshPhysicalMaterial({ color: livery.primary, metalness: .48, roughness: .24, clearcoat: 1, clearcoatRoughness: .12 }), "primary");
   const carbon = new THREE.MeshStandardMaterial({color: 0x111820, metalness: .45, roughness: .4});
   const black = new THREE.MeshStandardMaterial({color: 0x06090e, roughness: .82});
   const alloy = new THREE.MeshStandardMaterial({color: 0x8896a5, metalness: .92, roughness: .26});
-  const stripe = new THREE.MeshStandardMaterial({color: 0xe9eeec, metalness: .3, roughness: .3});
-  const gold = new THREE.MeshStandardMaterial({color: 0xd7b264, metalness: .7, roughness: .32});
+  const stripe = materialWithRole(new THREE.MeshStandardMaterial({color: livery.secondary, metalness: .3, roughness: .3}), "secondary");
+  const gold = materialWithRole(new THREE.MeshStandardMaterial({color: livery.accent, metalness: .7, roughness: .32}), "accent");
   if (detail) {
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
     const ctx = canvas.getContext('2d');
