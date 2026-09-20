@@ -1370,10 +1370,12 @@ function applyToMesh(model, x, z, heading, speed, dt, steer = 0) {
   model.group.position.set(x, 0, z);
   model.group.rotation.y = heading;
   const spin = (speed * dt) / model.wheelRadius;
-  model.wheels.forEach((wheel, index) => {
-    wheel.rotation.x -= spin;
-    wheel.rotation.y = index < 2 ? -steer * FRONT_WHEEL_STEER_ANGLE : 0;
-  });
+  for (const wheel of model.wheels) wheel.rotation.x -= spin;
+  if (model.steeringPivots) {
+    model.steeringPivots.forEach((pivot) => {
+      pivot.rotation.y = -steer * FRONT_WHEEL_STEER_ANGLE;
+    });
+  }
 }
 
 // Keeps a car (player or AI) on the track: grass beyond the asphalt bleeds

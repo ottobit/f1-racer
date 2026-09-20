@@ -63,8 +63,11 @@ export function buildCar(color, { scale = 1, detail = false } = {}) {
   for(const s of [-1,1]){rod([s*.3,.4,-1.4],[s*.3,.96,-1.62],.035);rod([s*.13,.35,2.05],[s*.25,.2,2.2],.025);}
   const exhaust=mesh(new THREE.CylinderGeometry(.085,.1,.25,12,1,true),alloy,[0,.51,-1.76]);exhaust.rotation.x=Math.PI/2;
   box(.13,.08,.025,new THREE.MeshStandardMaterial({color:0xff220a,emissive:0xff1600,emissiveIntensity:2}),[0,.3,-1.78]);
-  const wheels=[[.94,.4,1.05],[-.94,.4,1.05],[.94,.4,-1.05],[-.94,.4,-1.05]].map(([x,y,z])=>{
-    const wheel=new THREE.Group();wheel.position.set(x,y,z);group.add(wheel);
+  const steeringPivots=[];
+  const wheels=[[.94,.4,1.05],[-.94,.4,1.05],[.94,.4,-1.05],[-.94,.4,-1.05]].map(([x,y,z],index)=>{
+    const pivot=new THREE.Group();pivot.position.set(x,y,z);group.add(pivot);
+    const wheel=new THREE.Group();pivot.add(wheel);
+    if(index<2)steeringPivots.push(pivot);
     if(detail){const caliper=box(.085,.22,.11,new THREE.MeshStandardMaterial({color:0xb69050,metalness:.65,roughness:.35}),[x-Math.sign(x)*.18,y,z+.14]);caliper.name='setupCaliper';}
     const tire=mesh(new THREE.CylinderGeometry(.4,.4,.32,detail?48:20),black,[0,0,0],wheel);tire.rotation.z=Math.PI/2;
     for(const s of [-1,1]){
@@ -108,7 +111,7 @@ export function buildCar(color, { scale = 1, detail = false } = {}) {
     batch(group.getObjectByName('frontWing')); batch(group.getObjectByName('rearWing'));
   }
   group.scale.setScalar(scale);
-  return {group,wheels,wheelRadius:.4*scale};
+  return {group,wheels,steeringPivots,wheelRadius:.4*scale};
 }
 
 // A PMREM-filtered studio environment makes physical paint reflect actual
