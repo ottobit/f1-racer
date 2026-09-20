@@ -27,6 +27,9 @@ desktop; shadow maps use 1024/2048 respectively. Hidden tabs skip rendering.
 
 > Living technical reference for the current F1 Racer implementation.  
 > Source of truth: the code in `games/f1-racer/`.
+>
+> Broader project memory lives in `llm-wiki/wiki/f1-racer/`, following the
+> repository's LLM Wiki workflow.
 
 ## 1. Project map
 
