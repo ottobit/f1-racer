@@ -297,14 +297,10 @@ HUD currently exposes:
 
 The main gear/speed instrument cluster (shift LEDs, DRS/ERS, speed bar, gear and speed readout) is positioned at the **top center** of the viewport, keeping it in the forward sight line and away from the bottom-corner touch controls.
 
-Qualifying has a separate centered translucent banner with the explicit
-`QUALIFICHE` label, remaining time and “miglior tempo in griglia” purpose. It
-remains visible on touch layouts and disappears when the race session begins;
-the existing upper HUD itself is unchanged.
-
-The center instrument cluster is wider and keeps its transparent treatment. In
-addition to the speed bar and digital readout, it includes a 0–300 km/h
-semicircular speedometer whose needle uses the same live speed ratio.
+Qualifying keeps only its countdown in the upper HUD. The phase banner and
+label are intentionally omitted to preserve the forward view on landscape
+phones. The compact center instrument cluster uses the original speed bar and
+digital readout without an analog dial.
 
 Input:
 - Arrow keys / WASD;
@@ -562,9 +558,11 @@ inherit a team-color marker, fade with distance, disappear outside the frustum
 or beyond 72 units, and never intercept input. The player car intentionally has
 no label so chase and cockpit views remain clean.
 
-During qualifying, landscape layouts show a compact timing tower on the right.
+During qualifying, landscape layouts show a compact timing list on the left.
 It lists all ten drivers, highlights the player and uses the same single set of
 synthetic rival lap times later consumed by the starting-grid calculation.
-Portrait layouts omit the tower to preserve the driving area.
+It has no enclosing panel and portrait layouts omit it to preserve driving area.
 After the start, the same tower becomes the live race order and changes when
 cars overtake, while preserving the player's highlighted row.
+The top-right qualifying summary shows the player's provisional grid position
+beside the lap time, rather than labeling a merely personal best as “Migliore”.

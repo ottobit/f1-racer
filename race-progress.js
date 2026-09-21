@@ -38,8 +38,8 @@ export function setupRaceProgress({
 
   function currentRaceOrder() {
     return [
-      { driverId: "player", totalProgress: state.totalProgress },
-      ...aiCars.map((car) => ({ driverId: car.driverId, totalProgress: car.totalProgress })),
+      { driverId: "player", totalProgress: state.totalProgress, gridPosition: state.gridPosition },
+      ...aiCars.map((car) => ({ driverId: car.driverId, totalProgress: car.totalProgress, gridPosition: car.gridPosition })),
     ].map((entry) => {
       const car = entry.driverId === "player"
         ? state
@@ -49,7 +49,7 @@ export function setupRaceProgress({
       if (a.finishPosition && b.finishPosition) return a.finishPosition - b.finishPosition;
       if (a.finishPosition) return -1;
       if (b.finishPosition) return 1;
-      return b.totalProgress - a.totalProgress;
+      return b.totalProgress - a.totalProgress || a.gridPosition - b.gridPosition;
     });
   }
 
@@ -72,6 +72,7 @@ export function setupRaceProgress({
       car.lap = 0;
       car.completedLaps = 0;
       car.finishPosition = null;
+      car.gridPosition = index + 1;
       car.lapCheckpointPassed = false;
       car.ersCharge = 100;
       car.ersActive = false;

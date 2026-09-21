@@ -9,7 +9,7 @@ import { loadGarageSetup, selectedGarageLivery, setupEffects } from "./garage-se
 import { createStudioEnvironment } from "./car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
 import { setupRaceInput } from "./race-input.js";
-import { setupRaceHud } from "./race-hud.js?v=32";
+import { setupRaceHud } from "./race-hud.js?v=33";
 import { setupRaceCamera } from "./race-camera.js?v=26";
 import { setupPlayerPhysics } from "./player-physics.js";
 import { setupRaceAi } from "./race-ai.js?v=27";
@@ -753,6 +753,7 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
   return {
     ...model,
     driverId: driver.id,
+    gridPosition: i + 2,
     color: driver.livery.primary,
     x: pos.x,
     z: pos.z,
@@ -844,6 +845,7 @@ const state = {
   x: start.x,
   z: start.z,
   heading: start.heading,
+  gridPosition: 1,
   speed: 0,
   lap: 0,
   completedLaps: 0,
