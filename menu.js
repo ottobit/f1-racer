@@ -1,4 +1,4 @@
-import { CIRCUITS, LAPS_PER_RACE } from "./circuits.js?v=29";
+import { CIRCUITS, LAPS_PER_RACE } from "./circuits.js?v=34";
 import { computeStandings, resetChampionship } from "./championship.js";
 import { DRIVER_ROSTER } from "./driver-roster.js";
 import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "./driver-selection.js";
@@ -49,6 +49,7 @@ const CIRCUIT_PERSONALITY = {
   altomare: { type: "Alta velocità", note: "Rettifili lunghi e grandi appoggi", level: "Veloce" },
   montenero: { type: "Cittadino", note: "Stretto, nervoso, senza respiro", level: "Difficile" },
   colleverde: { type: "Flow", note: "Sequenze ampie tra le colline", level: "Medio" },
+  marzamemi: { type: "Costiero", note: "Villette, oleandri e due cappi sul mare", level: "Tecnico" },
 };
 
 function circuitMap(points) {

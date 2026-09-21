@@ -78,6 +78,23 @@ export const CIRCUITS = [
       [-108, -53], [-46, -77], [2, -70], [57, -82], [125, -52],
     ],
   },
+  {
+    id: "marzamemi",
+    name: "Circuito di Marzamemi",
+    width: 9,
+    theme: "marzamemi",
+    recommendedSetup: { frontWing:"high", rearWing:"balanced", floor:"high", brakes:"aggressive", suspension:"soft", reason:"Carico anteriore e sospensioni morbide per i due cappi stretti e l'asfalto urbano sconnesso." },
+    // The supplied route is an elongated coastal dogbone. The real streets
+    // share a central corridor; the race adaptation separates the two legs
+    // enough for a closed spline, walls and ten cars while preserving both
+    // end loops and the long Viale degli Oleandri character.
+    points: [
+      [-145, -20], [-70, -20], [10, -20], [90, -20], [145, -18],
+      [180, -5], [190, 20], [175, 40], [145, 45], [110, 30], [80, 18],
+      [10, 18], [-70, 18], [-140, 22], [-180, 38], [-200, 20],
+      [-198, -10], [-178, -35],
+    ],
+  },
 ];
 
 export function getCircuit(id) {

@@ -7,7 +7,7 @@ import {
   setupEffects,
 } from "./garage-setup.js?v=27";
 import { createShowroom } from "./showroom.js?v=28";
-import { getCircuit } from "./circuits.js?v=29";
+import { getCircuit } from "./circuits.js?v=34";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
 const requestedCircuit = new URLSearchParams(location.search).get("circuit");

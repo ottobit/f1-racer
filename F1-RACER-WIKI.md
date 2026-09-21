@@ -183,6 +183,11 @@ The track is also used for:
 - minimap;
 - camera context.
 
+`marzamemi` is the sixth circuit and the first adapted from a supplied real
+route. Its separated dogbone spline preserves the long parallel street legs
+and both end loops while leaving enough clearance for a closed racing surface.
+It uses a narrow nine-unit urban road and its own Garage recommendation.
+
 ## 7. Race progress and lap counting
 
 Race position is based on `totalProgress`, a monotonic travelled-distance accumulator.
@@ -449,6 +454,10 @@ low mountains and pit-straight structures. Candidate scenery locations are kept
 away from adjacent road segments. These remain decorative, not new collision
 objects. The race uses ACES tone mapping and one 1024 shadow map centered around
 the player; track meshes receive car shadows. Wet asphalt has lower roughness.
+Marzamemi selects a dedicated mobile-conscious branch instead: sandy shoulders,
+sea and beach planes, low stucco villas, walls, gates, utility poles and wires,
+palms, oleanders and bougainvillea. Repeated objects remain instanced, and the
+urban course deliberately omits generic racing kerbs, guardrails and mountains.
 The upper HUD markup and existing `style.css` are unchanged; lower control styles
 are isolated in `race-controls.css`.
 

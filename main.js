@@ -481,9 +481,10 @@ sun.shadow.bias = -.0003; sun.shadow.normalBias = .04;
 scene.add(sun, sun.target);
 
 // Ground
+const isMarzamemi = circuit.theme === "marzamemi";
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(1400, 1400),
-  new THREE.MeshStandardMaterial({ color: 0xb7c494, map: surfaceTexture("grass", renderer), roughness: 1 })
+  new THREE.MeshStandardMaterial({ color: isMarzamemi ? 0xbfb48b : 0xb7c494, map: surfaceTexture(isMarzamemi ? "sand" : "grass", renderer), roughness: 1 })
 );
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true; scene.add(ground);
@@ -537,7 +538,7 @@ scene.add(buildRoadMesh());
 // asphalt edge instead — the actual off-track boundary (grass drag, then
 // the invisible wall) still sits further out, unchanged; this is purely
 // the visual marker real curbs are.
-dressCircuit(scene, centerline, TRACK_WIDTH, renderer, isRaining);
+dressCircuit(scene, centerline, TRACK_WIDTH, renderer, isRaining, circuit.theme);
 
 // Start/finish line: a group so the flattening rotation (local X) and the
 // heading rotation (group Y) don't get tangled up in Euler order.
