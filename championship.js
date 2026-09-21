@@ -4,21 +4,10 @@
 
 const STORAGE_KEY = "f1racer-championship-v1";
 
-// Five fictional scuderie (one per grid colour, own livery, not a real F1
-// team) with two drivers each — the player rides for Fenice alongside an
-// AI teammate, matching the paired grid in main.js.
-export const DRIVERS = [
-  { id: "player", name: "Tu (Fenice)" },
-  { id: "rival-red", name: "Dani Muscle (Fenice)" },
-  { id: "rival-blue", name: "Vivian Wendy (Nettuno)" },
-  { id: "rival-blue-2", name: "Peppy Bau (Nettuno)" },
-  { id: "rival-yellow", name: "Cookie (Solare)" },
-  { id: "rival-yellow-2", name: "Rocker Pino (Solare)" },
-  { id: "rival-green-1", name: "Alice AaA (Smeraldo)" },
-  { id: "rival-green-2", name: "May (Smeraldo)" },
-  { id: "rival-white-1", name: "Clopy (Artica)" },
-  { id: "rival-white-2", name: "Lola (Artica)" },
-];
+import { DRIVER_ROSTER } from "./driver-roster.js";
+import { loadSelectedDriverId } from "./driver-selection.js";
+
+export const DRIVERS = DRIVER_ROSTER;
 
 // Real F1 points system (top 10 score) — fits a ten-car grid exactly.
 export const POINTS_BY_POSITION = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
@@ -59,12 +48,19 @@ export function resetChampionship() {
 
 export function computeStandings(circuits) {
   const state = loadState();
+  const selectedDriverId = loadSelectedDriverId();
   const totals = Object.fromEntries(DRIVERS.map((d) => [d.id, 0]));
 
   for (const circuit of circuits) {
     const order = state.raceResults[circuit.id];
     if (!order) continue;
-    order.forEach((driverId, idx) => {
+    const seen = new Set();
+    order.forEach((resultId, idx) => {
+      const driverId = resultId === "player" ? selectedDriverId : resultId;
+      // Legacy races may contain both `player` and the formerly duplicated AI
+      // identity. Count that person once until the next result replaces it.
+      if (seen.has(driverId)) return;
+      seen.add(driverId);
       totals[driverId] = (totals[driverId] || 0) + (POINTS_BY_POSITION[idx] || 0);
     });
   }

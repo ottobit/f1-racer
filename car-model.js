@@ -20,7 +20,7 @@ export function applyCarLivery(group, livery) {
 
 // Shared visual model. +Z is forward; wheel order/radius remain compatible
 // with the race simulation. Geometry never participates in collisions.
-export function buildCar(color, { scale = 1, detail = false, secondaryColor = 0xe9eeec, accentColor = 0xd7b264 } = {}) {
+export function buildCar(color, { scale = 1, detail = false, showDriver = true, secondaryColor = 0xe9eeec, accentColor = 0xd7b264 } = {}) {
   const livery = typeof color === "object"
     ? { primary: color.primary, secondary: color.secondary ?? secondaryColor, accent: color.accent ?? color.secondary ?? accentColor }
     : { primary: color, secondary: secondaryColor, accent: accentColor };
@@ -72,9 +72,32 @@ export function buildCar(color, { scale = 1, detail = false, secondaryColor = 0x
     for(let j=0;j<5;j++){const fin=box(.03,.14,.46,carbon,[side*(.18+j*.13),.24,-1.5]);fin.rotation.x=-.18;fin.name="diffuserFin";}
     if(detail)for(let j=0;j<7;j++)box(.2,.015,.035,carbon,[side*.61,.635,-.45-j*.075]).rotation.z=side*-.2;
   }
-  const cockpit=mesh(new THREE.SphereGeometry(.35,20,12),black,[0,.72,.04]);cockpit.scale.set(1,.45,1.5);
-  const helmet=mesh(new THREE.SphereGeometry(.19,20,12),stripe,[0,.88,.04]);helmet.scale.y=.9;
-  const visor=mesh(new THREE.SphereGeometry(.195,20,10,0,Math.PI*2,.95,.65),new THREE.MeshPhysicalMaterial({color:0x263e52,metalness:1,roughness:.1}),[0,.88,.04]);
+  const cockpit=mesh(new THREE.SphereGeometry(.36,20,12),black,[0,.64,.04]);cockpit.name="cockpitTub";cockpit.scale.set(1,.28,1.55);
+  if(detail){
+  const cockpitInterior=new THREE.Group();cockpitInterior.name="cockpitInterior";group.add(cockpitInterior);
+  const seatMaterial=new THREE.MeshStandardMaterial({color:0x171c24,roughness:.92});
+  const beltMaterial=new THREE.MeshStandardMaterial({color:0xd8212b,roughness:.55});
+  const screenMaterial=new THREE.MeshStandardMaterial({color:0x071014,emissive:0x42d9ff,emissiveIntensity:1.6,roughness:.2});
+  const seat=mesh(new THREE.SphereGeometry(.29,20,12),seatMaterial,[0,.67,-.08],cockpitInterior);seat.name="cockpitSeat";seat.scale.set(.7,.75,1.12);
+  const headrest=mesh(new THREE.BoxGeometry(.28,.24,.1),seatMaterial,[0,.82,-.34],cockpitInterior);headrest.rotation.x=-.22;
+  for(const side of [-1,1]){
+    const bolster=mesh(new THREE.BoxGeometry(.09,.19,.48),carbon,[side*.255,.72,-.03],cockpitInterior);bolster.rotation.z=side*-.12;
+    rod([side*.16,.84,-.24],[side*.04,.68,.02],.018,beltMaterial,cockpitInterior);
+  }
+  const buckle=mesh(new THREE.BoxGeometry(.1,.045,.09),gold,[0,.67,.03],cockpitInterior);
+  const dash=mesh(new THREE.BoxGeometry(.48,.12,.12),carbon,[0,.76,.38],cockpitInterior);dash.rotation.x=-.08;
+  const display=mesh(new THREE.BoxGeometry(.25,.075,.018),screenMaterial,[0,.775,.448],cockpitInterior);display.name="cockpitDisplay";
+  const steeringWheel=new THREE.Group();steeringWheel.name="cockpitSteeringWheel";steeringWheel.position.set(0,.79,.29);steeringWheel.rotation.x=-.18;cockpitInterior.add(steeringWheel);
+  const wheelRim=mesh(new THREE.TorusGeometry(.135,.024,8,24),carbon,[0,0,0],steeringWheel);wheelRim.scale.y=.72;
+  box(.16,.075,.035,carbon,[0,0,0],steeringWheel);
+  for(const side of [-1,1]) box(.065,.12,.045,carbon,[side*.12,0,0],steeringWheel);
+  for(const x of [-.055,0,.055]) mesh(new THREE.SphereGeometry(.012,6,4),x===0?gold:stripe,[x,.012,.026],steeringWheel);
+  const cockpitRim=mesh(new THREE.TorusGeometry(.36,.025,8,32),carbon,[0,.76,.02]);cockpitRim.name="cockpitRim";cockpitRim.rotation.x=Math.PI/2;cockpitRim.scale.y=1.45;
+  }
+  if(showDriver){
+    const helmet=mesh(new THREE.SphereGeometry(.19,20,12),stripe,[0,.88,.04]);helmet.name="driverHelmet";helmet.scale.y=.9;
+    const visor=mesh(new THREE.SphereGeometry(.195,20,10,0,Math.PI*2,.95,.65),new THREE.MeshPhysicalMaterial({color:0x263e52,metalness:1,roughness:.1}),[0,.88,.04]);visor.name="driverVisor";
+  }
   const haloCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(-.36,.95,-.27),new THREE.Vector3(-.4,1.07,.17),new THREE.Vector3(0,1.07,.57),new THREE.Vector3(.4,1.07,.17),new THREE.Vector3(.36,.95,-.27)]);
   mesh(new THREE.TubeGeometry(haloCurve,detail?40:20,.038,8,false),carbon);
   rod([0,.62,.56],[0,1.07,.57],.032);

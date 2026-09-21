@@ -13,7 +13,7 @@ export function liveryById(id) {
 }
 
 export function liveryIdForDriver(driverId) {
-  if (driverId === "rival-red" || driverId === "player") return "fenice";
+  if (driverId === "rival-red" || driverId === "rival-red-2" || driverId === "player") return "fenice";
   if (driverId === "rival-blue" || driverId === "rival-blue-2") return "nettuno";
   if (driverId === "rival-yellow" || driverId === "rival-yellow-2") return "solare";
   if (driverId === "rival-green-1" || driverId === "rival-green-2") return "smeraldo";
@@ -28,6 +28,13 @@ export const DRIVER_COCKPIT_THEMES = {
     primary: 0xff2a16,
     secondary: 0xf5c84b,
     glow: 0xff7a2f,
+  },
+  "rival-red-2": {
+    label: "Eddy Nitro",
+    motto: "IGNITE",
+    primary: 0xd9162b,
+    secondary: 0xffc857,
+    glow: 0xff5c35,
   },
   "rival-blue": {
     label: "Vivian Wendy",

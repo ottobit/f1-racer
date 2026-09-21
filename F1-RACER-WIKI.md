@@ -4,7 +4,7 @@
 
 `car-model.js` owns the procedural car used by both race and garage. Elliptical
 body sections, multi-element wings, halo, suspension, diffuser and wheel details
-replace the duplicated primitive models. `buildCar(color, {scale, detail})` keeps
+replace the duplicated primitive models. `buildCar(color, {scale, detail, showDriver})` keeps
 +Z forward, four rolling wheel groups and the original scaled 0.4 wheel radius.
 The race uses material-batched static geometry; the garage enables additional
 spokes, cooling slots and a procedural carbon bump texture. Materials belong to
@@ -486,8 +486,8 @@ championship standings come afterward as reference information. This keeps the
 Garage discoverable before users commit to a circuit, especially on mobile.
 
 The mobile session setup uses two explicit steps. Difficulty is a three-column
-segmented control with a short explanation per level; the nine drivers use a
-numbered 3×3 grid with 54 px touch targets, switching to two columns below
+segmented control with a short explanation per level; the ten drivers use a
+numbered three-column grid with 54 px touch targets, switching to two columns below
 365 px. Active choices combine border, inset marker and background rather than
 depending on color alone.
 
@@ -499,3 +499,16 @@ avoids presenting two competing start buttons.
 The swipe handler ignores mouse pointers and any pointer that begins on the
 CTA. Desktop navigation therefore remains a standard link click, while touch
 and pen can still swipe from the rest of the circuit card.
+
+## Unique grid and exposed Garage cockpit
+
+`driver-roster.js` defines ten identities: the nine supplied friend names plus
+Eddy Nitro. The selected identity becomes the player; `main.js` filters it out
+before building the other nine cars, eliminating duplicate names while keeping
+a full ten-car grid. Championship scoring normalizes the runtime `player` slot
+back to the selected identity and ignores duplicate legacy entries.
+
+The detailed showroom calls `buildCar(..., { showDriver: false })`. With the
+helmet and visor absent, the model exposes a carbon cockpit rim, seat, headrest,
+side bolsters, red harness, buckle, dashboard display and steering wheel. The
+Garage view formerly called `Dettaglio` is now the closer `Abitacolo` preset.

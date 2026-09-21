@@ -1,5 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { applyCarLivery, buildCar, createStudioEnvironment } from './car-model.js';
+import { applyCarLivery, buildCar, createStudioEnvironment } from './car-model.js?v=24';
 
 export function createShowroom(host, { livery } = {}) {
   const compact=matchMedia('(max-width: 760px)').matches;
@@ -13,7 +13,7 @@ export function createShowroom(host, { livery } = {}) {
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x080d14);scene.fog=new THREE.FogExp2(0x080d14,.035);
   const camera=new THREE.PerspectiveCamera(36,1,.1,80);
   const env=createStudioEnvironment(renderer);scene.environment=env.texture;
-  const car=buildCar(livery || 0xbd1024,{detail:true,scale:1.15}).group;car.position.y=.13;scene.add(car);
+  const car=buildCar(livery || 0xbd1024,{detail:true,showDriver:false,scale:1.15}).group;car.position.y=.13;scene.add(car);
   scene.add(new THREE.HemisphereLight(0xbfd6ff,0x10151d,1.4));
   const key=new THREE.SpotLight(0xe8f2ff,110,25,.65,.65,1.5);key.position.set(2,7,4);key.castShadow=true;key.shadow.mapSize.set(compact?1024:2048,compact?1024:2048);key.shadow.bias=-.0003;key.shadow.normalBias=.025;scene.add(key);
   const rim=new THREE.PointLight(0x679dff,28,14,2);rim.position.set(-4,3,-3);scene.add(rim);
@@ -42,7 +42,7 @@ export function createShowroom(host, { livery } = {}) {
   canvas.addEventListener('pointerdown',e=>{if(pointer!==null)return;pointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(pointer);});
   canvas.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;azimuth-=(e.clientX-lastX)*.008;elevation=THREE.MathUtils.clamp(elevation+(e.clientY-lastY)*.004,.1,1.15);lastX=e.clientX;lastY=e.clientY;});
   const release=e=>{if(e.pointerId===pointer)pointer=null;};canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
-  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{const views={hero:[.72,.34,10.4],side:[Math.PI/2,.18,10.4],rear:[2.65,.28,10.4],detail:[.35,.65,6.3]};[azimuth,elevation,distance]=views[b.dataset.view];document.querySelectorAll('[data-view]').forEach(v=>v.setAttribute('aria-pressed',String(v===b)));}));
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{const views={hero:[.72,.34,10.4],side:[Math.PI/2,.18,10.4],rear:[2.65,.28,10.4],cockpit:[.2,.72,4.8]};[azimuth,elevation,distance]=views[b.dataset.view];document.querySelectorAll('[data-view]').forEach(v=>v.setAttribute('aria-pressed',String(v===b)));}));
   document.getElementById('garage-orbit').addEventListener('click',e=>{auto=!auto;e.currentTarget.setAttribute('aria-pressed',String(auto));});
   const observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();});observer.observe(host);
   let previous=0;

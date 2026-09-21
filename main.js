@@ -2,7 +2,8 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js";
 import { POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
 import { displayDriverName, loadSelectedDriverId } from "./driver-selection.js";
-import { cockpitThemeForDriver, liveryById, liveryIdForDriver } from "./driver-themes.js";
+import { DRIVER_ROSTER } from "./driver-roster.js";
+import { cockpitThemeForDriver, liveryById } from "./driver-themes.js";
 import { loadGarageSetup, selectedGarageLivery, setupEffects } from "./garage-setup.js";
 
 import { createStudioEnvironment } from "./car-model.js";
@@ -23,7 +24,8 @@ import { dressCircuit, surfaceTexture } from "./track-art.js";
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
 const PLAYER_LIVERY = selectedGarageLivery(GARAGE_SETUP);
-const PLAYER_COCKPIT_THEME = cockpitThemeForDriver(loadSelectedDriverId());
+const SELECTED_DRIVER_ID = loadSelectedDriverId();
+const PLAYER_COCKPIT_THEME = cockpitThemeForDriver(SELECTED_DRIVER_ID);
 
 /*
  * F1 Racer — championship mode: a fixed-lap race against two AI rivals on
@@ -665,17 +667,9 @@ scene.add(playerCar.group);
 // scattered partway around the track already at speed — see
 // startRaceCountdown() for the 3-2-1. Grid order itself comes from
 // qualifying (see finishQualifying()), not this fixed identity order.
-const AI_DRIVERS = [
-  { id: "rival-red", livery: liveryById(liveryIdForDriver("rival-red")) }, // player's teammate
-  { id: "rival-blue", livery: liveryById(liveryIdForDriver("rival-blue")) },
-  { id: "rival-blue-2", livery: liveryById(liveryIdForDriver("rival-blue-2")) },
-  { id: "rival-yellow", livery: liveryById(liveryIdForDriver("rival-yellow")) },
-  { id: "rival-yellow-2", livery: liveryById(liveryIdForDriver("rival-yellow-2")) },
-  { id: "rival-green-1", livery: liveryById(liveryIdForDriver("rival-green-1")) },
-  { id: "rival-green-2", livery: liveryById(liveryIdForDriver("rival-green-2")) },
-  { id: "rival-white-1", livery: liveryById(liveryIdForDriver("rival-white-1")) },
-  { id: "rival-white-2", livery: liveryById(liveryIdForDriver("rival-white-2")) },
-];
+const AI_DRIVERS = DRIVER_ROSTER
+  .filter((driver) => driver.id !== SELECTED_DRIVER_ID)
+  .map((driver) => ({ id: driver.id, livery: liveryById(driver.team) }));
 
 // --- DRS ---------------------------------------------------------------
 //

@@ -1,7 +1,7 @@
-import { DRIVERS } from "./championship.js";
+import { DRIVER_ROSTER, driverById } from "./driver-roster.js";
 
 const SELECTED_DRIVER_KEY = "f1racer-selected-driver-v1";
-export const SELECTABLE_DRIVER_IDS = DRIVERS.filter((driver) => driver.id !== "player").map((driver) => driver.id);
+export const SELECTABLE_DRIVER_IDS = DRIVER_ROSTER.map((driver) => driver.id);
 
 export function loadSelectedDriverId() {
   try {
@@ -22,12 +22,10 @@ export function saveSelectedDriverId(driverId) {
 }
 
 export function selectedPlayerName() {
-  const selected = DRIVERS.find((driver) => driver.id === loadSelectedDriverId());
-  return selected ? selected.name : "Dani Muscle (Fenice)";
+  return driverById(loadSelectedDriverId()).name;
 }
 
 export function displayDriverName(driverId) {
   if (driverId === "player") return selectedPlayerName();
-  const driver = DRIVERS.find((entry) => entry.id === driverId);
-  return driver ? driver.name : driverId;
+  return driverById(driverId).name;
 }

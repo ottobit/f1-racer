@@ -1,5 +1,6 @@
 import { CIRCUITS, LAPS_PER_RACE } from "./circuits.js";
-import { DRIVERS, computeStandings, resetChampionship } from "./championship.js";
+import { computeStandings, resetChampionship } from "./championship.js";
+import { DRIVER_ROSTER } from "./driver-roster.js";
 import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "./driver-selection.js";
 
 function positionLabel(order) {
@@ -103,7 +104,7 @@ document.getElementById("difficulty-select").addEventListener("click", (e) => {
 
 function renderDriverSelect() {
   const html = SELECTABLE_DRIVER_IDS.map((driverId, index) => {
-    const driver = DRIVERS.find((entry) => entry.id === driverId);
+    const driver = DRIVER_ROSTER.find((entry) => entry.id === driverId);
     return `
       <button
         type="button"
@@ -141,7 +142,7 @@ function render() {
     const champion = standings[0];
     bannerEl.hidden = false;
     bannerEl.textContent =
-      champion.id === "player"
+      champion.id === selectedDriverId
         ? `🏆 Hai vinto il campionato del mondo con ${displayDriverName("player")}!`
         : `Campionato concluso: vince ${champion.name}. Azzera e riprova.`;
   } else {
