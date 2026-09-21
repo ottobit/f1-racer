@@ -13,7 +13,7 @@
   <meta property="og:image" content="https://ottobit.github.io/portfolio-arcade/assets/images/og-f1-racer.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="stylesheet" href="../../assets/css/style.css" />
-  <link rel="stylesheet" href="style.css?v=17" />
+  <link rel="stylesheet" href="style.css?v=18" />
 </head>
 <body>
   <header class="f1-home-hero">
@@ -25,21 +25,30 @@
     </div>
   </header>
 
+  <nav class="home-command-center" aria-label="Azioni principali">
+    <a class="home-command home-command--garage" href="garage.html">
+      <span class="home-command-index">01 / PIT LANE</span>
+      <span class="home-command-copy"><strong>Entra nel garage</strong><small>Livrea, aerodinamica, freni e sospensioni</small></span>
+      <span class="home-command-arrow" aria-hidden="true">→</span>
+    </a>
+    <a class="home-command home-command--race" href="#circuit-carousel">
+      <span class="home-command-index">PROSSIMA SESSIONE</span>
+      <span class="home-command-copy"><strong>Scegli la gara</strong><small>Vai direttamente al carosello dei circuiti</small></span>
+      <span class="home-command-arrow" aria-hidden="true">↓</span>
+    </a>
+  </nav>
+
   <div id="champion-banner" hidden></div>
 
-  <section class="f1-home-section"><div class="f1-home-section-head"><span>01</span><div><h2>Difficoltà</h2><p>Scegli il ritmo degli avversari.</p></div></div><div id="difficulty-select" class="difficulty-select" role="radiogroup" aria-label="Difficoltà avversari"></div></section>
-  <section class="f1-home-section"><div class="f1-home-section-head"><span>02</span><div><h2>Pilota</h2><p>Scegli chi impersonare in gara.</p></div></div><div id="driver-select" class="difficulty-select" role="radiogroup" aria-label="Pilota"></div></section>
+  <section class="f1-home-section race-setup-panel">
+    <div class="f1-home-section-head"><span>02</span><div><h2>Prepara la sessione</h2><p>Due scelte, poi si corre.</p></div></div>
+    <div class="race-setup-grid">
+      <div class="setup-choice"><div class="setup-choice-head"><strong>Difficoltà</strong><span>Ritmo IA</span></div><div id="difficulty-select" class="difficulty-select" role="radiogroup" aria-label="Difficoltà avversari"></div></div>
+      <div class="setup-choice"><div class="setup-choice-head"><strong>Pilota</strong><span>Identità in gara</span></div><div id="driver-select" class="difficulty-select" role="radiogroup" aria-label="Pilota"></div></div>
+    </div>
+  </section>
 
-  <section class="f1-home-section"><div class="f1-home-section-head"><span>03</span><div><h2>Classifica</h2><p>Il campionato, gara dopo gara.</p></div></div><div class="menu-standings">
-    <table>
-      <thead>
-        <tr><th>Pos.</th><th>Pilota</th><th>Punti</th></tr>
-      </thead>
-      <tbody id="standings-body"></tbody>
-    </table>
-  </div></section>
-
-  <main class="f1-home-section circuit-stage"><div class="f1-home-section-head"><span>04</span><div><h2>Prossima gara</h2><p>Scorri le mappe, scegli il circuito e scendi in pista.</p></div></div>
+  <main class="f1-home-section circuit-stage"><div class="f1-home-section-head"><span>03</span><div><h2>Prossima gara</h2><p>Scorri le mappe, scegli il circuito e scendi in pista.</p></div></div>
     <div id="circuit-carousel" class="circuit-carousel" tabindex="0" aria-roledescription="carosello" aria-label="Selezione circuito">
       <button id="circuit-prev" class="circuit-arrow circuit-arrow--prev" type="button" aria-label="Circuito precedente">‹</button>
       <div class="circuit-viewport"><div id="circuit-list" class="circuit-track"></div></div>
@@ -49,16 +58,18 @@
     <p id="circuit-live" class="sr-only" aria-live="polite"></p>
   </main>
 
-  <div class="garage-entry"><a href="garage.html"><strong>Garage</strong><span>Configura aerodinamica, freni e sospensioni →</span></a></div>
-
-  <div class="menu-actions">
+  <section class="f1-home-section championship-panel"><div class="f1-home-section-head"><span>04</span><div><h2>Campionato</h2><p>La classifica dopo ogni bandiera a scacchi.</p></div></div><div class="menu-standings">
+    <table>
+      <thead><tr><th>Pos.</th><th>Pilota</th><th>Punti</th></tr></thead>
+      <tbody id="standings-body"></tbody>
+    </table>
     <button id="reset-btn" class="reset-btn" type="button">Azzera campionato</button>
-  </div>
+  </div></section>
 
   <footer>
     <a href="../../">← arcade</a>
   </footer>
 
-  <script type="module" src="menu.js?v=17"></script>
+  <script type="module" src="menu.js?v=18"></script>
 </body>
 </html>

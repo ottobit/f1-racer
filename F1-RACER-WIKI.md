@@ -478,3 +478,9 @@ slide and yaw, and receive the same capped damage from hard relative impacts.
 Sparks and player camera shake expose meaningful contact while a short cooldown
 prevents continuous damage from one lingering overlap. AI lateral/yaw recovery
 is integrated in `race-ai.js`; the existing HUD already reveals player damage.
+
+The home follows an action-first order. A prominent Garage command and a direct
+race shortcut sit immediately below the hero; difficulty and driver are grouped
+as one session setup. Circuit selection remains the main interactive stage, and
+championship standings come afterward as reference information. This keeps the
+Garage discoverable before users commit to a circuit, especially on mobile.
