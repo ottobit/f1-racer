@@ -150,13 +150,19 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   for(const x of [-.055,0,.055]) mesh(new THREE.SphereGeometry(.012,6,4),x===0?gold:stripe,[x,.012,.026],steeringWheel);
   const cockpitRim=mesh(new THREE.TorusGeometry(.36,.025,8,32),carbon,[0,.76,.02]);cockpitRim.name="cockpitRim";cockpitRim.rotation.x=Math.PI/2;cockpitRim.scale.y=1.45;
   }
+  let driverSteeringWheel=null;
   if(showDriver){
     const torso=mesh(new THREE.SphereGeometry(.22,16,10),suit,[0,.72,-.05]);torso.name="driverTorso";torso.scale.set(.92,.7,.72);
     const shoulders=mesh(new THREE.SphereGeometry(.2,14,8),suit,[0,.77,-.02]);shoulders.name="driverShoulders";shoulders.scale.set(1.35,.42,.62);
     const neck=mesh(new THREE.CylinderGeometry(.075,.085,.1,10),black,[0,.81,.015]);
+    driverSteeringWheel=new THREE.Group();driverSteeringWheel.name="driverSteeringWheel";driverSteeringWheel.position.set(0,.79,.29);driverSteeringWheel.rotation.x=-.18;group.add(driverSteeringWheel);
+    const driverWheelRim=mesh(new THREE.TorusGeometry(.135,.024,8,20),carbon,[0,0,0],driverSteeringWheel);driverWheelRim.scale.y=.72;
+    box(.16,.065,.035,carbon,[0,0,0],driverSteeringWheel);
+    for(const side of [-1,1])box(.058,.115,.042,carbon,[side*.115,0,0],driverSteeringWheel);
+    mesh(new THREE.BoxGeometry(.055,.024,.012),stripe,[0,.105,.025],driverSteeringWheel);
     for(const side of [-1,1]){
-      rod([side*.17,.78,-.02],[side*.115,.79,.27],.043,suit);
-      const glove=mesh(new THREE.SphereGeometry(.052,10,7),black,[side*.115,.79,.27]);glove.name="driverGlove";
+      rod([side*.17,.78,-.02],[side*.115,.79,.29],.043,suit);
+      const glove=mesh(new THREE.SphereGeometry(.052,10,7),black,[side*.115,0,.025],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.78,1.18,.72);
     }
     const helmet=mesh(new THREE.SphereGeometry(.19,20,12),stripe,[0,.88,.04]);helmet.name="driverHelmet";helmet.scale.y=.9;
     const visor=mesh(new THREE.SphereGeometry(.195,20,10,0,Math.PI*2,.95,.65),new THREE.MeshPhysicalMaterial({color:0x263e52,metalness:1,roughness:.1}),[0,.88,.04]);visor.name="driverVisor";
@@ -220,7 +226,7 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     batch(group.getObjectByName('frontWing')); batch(group.getObjectByName('rearWing'));
   }
   group.scale.setScalar(scale);
-  return {group,wheels,steeringPivots,wheelRadius:.4*scale};
+  return {group,wheels,steeringPivots,driverSteeringWheel,wheelRadius:.4*scale};
 }
 
 // A PMREM-filtered studio environment makes physical paint reflect actual

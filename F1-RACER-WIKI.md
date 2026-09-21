@@ -347,6 +347,8 @@ Touch controls are implemented in `main.js` and styled in `style.css`.
 On the race page, browser zoom/gesture handling is explicitly suppressed for gameplay surfaces on touch devices. CSS `touch-action: none` is combined with iOS Safari gesture-event and rapid-double-tap guards, while normal link interaction remains available.
 
 The steering wheel uses pointer capture and an analog horizontal position rather than two binary left/right buttons.
+Its touch surface is 184 px in ordinary mobile layouts, 164 px in compact
+landscape and 168 px on very narrow screens, while the upper HUD is unchanged.
 
 This is important to preserve when refactoring input.
 
@@ -532,6 +534,9 @@ Garage view formerly called `Dettaglio` is now the closer `Abitacolo` preset.
 When `showDriver` is enabled, `car-model.js` builds a seated procedural driver:
 torso, shoulders and arms use a matte material tagged with the primary livery
 role, while gloves stay dark and the helmet keeps the secondary team color.
+Race cars also expose a compact steering-wheel group. Both gloves are children
+of that group at the grips, and `race-car-view.js` rotates the wheel and hands
+from the same analog steering value that drives the front-wheel pivots.
 These static pieces remain compatible with race-car geometry batching.
 
 `race-nameplates.js` projects a point above each visible AI car through the

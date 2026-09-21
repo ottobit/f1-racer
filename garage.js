@@ -6,7 +6,7 @@ import {
   selectedGarageLivery,
   setupEffects,
 } from "./garage-setup.js?v=27";
-import { createShowroom } from "./showroom.js?v=27";
+import { createShowroom } from "./showroom.js?v=28";
 
 let setup = loadGarageSetup();
 const { car, focusPart, setLivery } = createShowroom(document.getElementById("garage-canvas"), {

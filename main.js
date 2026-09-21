@@ -6,8 +6,8 @@ import { DRIVER_ROSTER } from "./driver-roster.js";
 import { cockpitThemeForDriver, liveryById } from "./driver-themes.js?v=27";
 import { loadGarageSetup, selectedGarageLivery, setupEffects } from "./garage-setup.js?v=27";
 
-import { createStudioEnvironment } from "./car-model.js?v=27";
-import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=27";
+import { createStudioEnvironment } from "./car-model.js?v=28";
+import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
 import { setupRaceInput } from "./race-input.js";
 import { setupRaceHud } from "./race-hud.js";
 import { setupRaceCamera } from "./race-camera.js?v=26";

@@ -1,4 +1,4 @@
-import { buildCar as buildCarModel } from "./car-model.js?v=27";
+import { buildCar as buildCarModel } from "./car-model.js?v=28";
 
 const DEFAULT_FRONT_WHEEL_STEER_ANGLE = 0.55;
 
@@ -39,5 +39,8 @@ export function applyCarToMesh(
     model.steeringPivots.forEach((pivot) => {
       pivot.rotation.y = -steer * frontWheelSteerAngle;
     });
+  }
+  if (model.driverSteeringWheel) {
+    model.driverSteeringWheel.rotation.z = -steer * 0.55;
   }
 }

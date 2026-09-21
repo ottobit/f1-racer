@@ -1,7 +1,7 @@
 /* Only the lower driving controls. The upper HUD is deliberately untouched. */
 html.touch #touch-controls{padding:0 max(16px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom));pointer-events:none;gap:18px}
 #touch-controls .touch-group{pointer-events:auto;align-items:flex-end;gap:12px}
-#wheel-control{width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,#17222ac9 0%,#0a111b90 59%,transparent 61%);filter:drop-shadow(0 5px 12px #0008);outline:none}
+#wheel-control{width:184px;height:184px;border-radius:50%;background:radial-gradient(circle,#17222ac9 0%,#0a111b90 59%,transparent 61%);filter:drop-shadow(0 5px 12px #0008);outline:none}
 #wheel-control svg{transform:rotate(var(--steer-angle,0deg));transform-origin:50% 50%;will-change:transform}
 #wheel-control:after{content:'STERZO';position:absolute;bottom:0;left:0;right:0;text-align:center;font:600 8px system-ui;letter-spacing:.2em;color:#adc0cf;pointer-events:none}
 #wheel-control:focus-visible{outline:2px solid #a6d5f0;outline-offset:3px}
@@ -13,7 +13,7 @@ html.touch #touch-controls{padding:0 max(16px,env(safe-area-inset-right)) max(18
 #btn-gas.is-held{background:linear-gradient(150deg,#37796a,#163b33);border-color:#9dffe2}
 #btn-brake.is-held{background:linear-gradient(150deg,#7b3937,#3b191e);border-color:#ffa79c}
 /* Landscape remains deliberately thumb-sized: these are controls, not icons.
-   The wheel keeps a 136px drag surface and each pedal stays at least 68px
+   The wheel keeps a 164px drag surface and each pedal stays at least 68px
    wide, comfortably above the usual 44px minimum touch target. */
-@media(max-height:520px){#wheel-control{width:136px;height:136px}.touch-btn{height:88px;width:68px}#btn-gas{height:116px;width:76px}.touch-btn::before{height:24px}html.touch #touch-controls{padding-bottom:max(8px,env(safe-area-inset-bottom))}}
-@media(max-width:380px){#wheel-control{width:140px;height:140px}.touch-btn{width:64px}#btn-gas{width:70px}#touch-controls .touch-group{gap:8px}}
+@media(max-height:520px){#wheel-control{width:164px;height:164px}.touch-btn{height:88px;width:68px}#btn-gas{height:116px;width:76px}.touch-btn::before{height:24px}html.touch #touch-controls{padding-bottom:max(8px,env(safe-area-inset-bottom))}}
+@media(max-width:380px){#wheel-control{width:168px;height:168px}.touch-btn{width:64px}#btn-gas{width:70px}#touch-controls .touch-group{gap:8px}}
