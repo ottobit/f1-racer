@@ -7,6 +7,13 @@ import {
   setupEffects,
 } from "./garage-setup.js?v=27";
 import { createShowroom } from "./showroom.js?v=28";
+import { getCircuit } from "./circuits.js?v=29";
+
+const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
+const requestedCircuit = new URLSearchParams(location.search).get("circuit");
+let storedCircuit = null;
+try { storedCircuit = localStorage.getItem(SELECTED_CIRCUIT_KEY); } catch (e) {}
+const targetCircuit = getCircuit(requestedCircuit || storedCircuit);
 
 let setup = loadGarageSetup();
 const { car, focusPart, setLivery } = createShowroom(document.getElementById("garage-canvas"), {
@@ -49,6 +56,10 @@ function renderUI() {
     .map(([k, v]) => `<div><span>${labels[k]}</span><div><i style="width:${Math.max(10, Math.min(90, v + (effects[k] || 0) * 7))}%"></i></div></div>`)
     .join("");
   document.getElementById("garage-liveries").innerHTML = `<span>LIVREA GARA</span>${GARAGE_LIVERIES.map((livery) => `<button class="livery-choice ${setup.livery === livery.id ? "active" : ""}" data-livery="${livery.id}" aria-pressed="${setup.livery === livery.id}" aria-label="${livery.label}"><i style="--primary:${hex(livery.primary)};--secondary:${hex(livery.secondary)}"></i><b>${livery.label}</b></button>`).join("")}`;
+  const recommendation = targetCircuit.recommendedSetup;
+  const setupKeys = Object.keys(GARAGE_PARTS);
+  const changes = setupKeys.filter((part) => setup[part] !== recommendation[part]);
+  document.getElementById("garage-recommendation").innerHTML = `<div><span>CONSIGLIATO · ${targetCircuit.name}</span><p>${recommendation.reason}</p></div><ul>${setupKeys.map((part) => `<li class="${setup[part] === recommendation[part] ? "is-matched" : "is-change"}"><b>${GARAGE_PARTS[part].label}</b><span>${GARAGE_PARTS[part].variants[setup[part]].label} → ${GARAGE_PARTS[part].variants[recommendation[part]].label}</span></li>`).join("")}</ul><button type="button" data-apply-recommendation ${changes.length ? "" : "disabled"}>${changes.length ? `APPLICA ${changes.length} MODIFICHE` : "ASSETTO GIÀ APPLICATO"}</button>`;
   document.getElementById("garage-parts").innerHTML = Object.entries(GARAGE_PARTS)
     .map(([part, data]) => `<section class="garage-part"><h2>${data.label}</h2><div>${Object.entries(data.variants).map(([id, v]) => `<button draggable="true" data-part="${part}" data-id="${id}" aria-pressed="${setup[part] === id}" class="${setup[part] === id ? "active" : ""}">${v.label}</button>`).join("")}</div></section>`)
     .join("");
@@ -98,6 +109,14 @@ document.getElementById("garage-parts").addEventListener("click", (e) => {
 document.getElementById("garage-liveries").addEventListener("click", (e) => {
   const b = e.target.closest("[data-livery]");
   if (b) chooseLivery(b.dataset.livery);
+});
+
+document.getElementById("garage-recommendation").addEventListener("click", (e) => {
+  if (!e.target.closest("[data-apply-recommendation]")) return;
+  Object.keys(GARAGE_PARTS).forEach((part) => { setup[part] = targetCircuit.recommendedSetup[part]; });
+  saveGarageSetup(setup);
+  renderUI();
+  document.getElementById("garage-status").textContent = `Assetto consigliato per ${targetCircuit.name} applicato.`;
 });
 
 document.querySelectorAll(".garage-mount").forEach((zone) => {

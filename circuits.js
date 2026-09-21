@@ -12,6 +12,7 @@ export const CIRCUITS = [
     id: "vallechiara",
     name: "Autodromo di Vallechiara",
     width: 14,
+    recommendedSetup: { frontWing:"balanced", rearWing:"balanced", floor:"high", brakes:"aggressive", suspension:"balanced", reason:"Carico dal fondo per le curve veloci, senza sacrificare il rettilineo." },
     points: [
       [-100, 65], [30, 80], [100, 40], [90, -30], [40, -80], [-50, -95],
       [-120, -50], [-135, 10],
@@ -21,6 +22,7 @@ export const CIRCUITS = [
     id: "portoscuro",
     name: "Circuito di Portoscuro",
     width: 12,
+    recommendedSetup: { frontWing:"high", rearWing:"high", floor:"high", brakes:"stable", suspension:"soft", reason:"Massima aderenza e risposta progressiva sul bagnato." },
     // The one circuit that's always wet — a fixed trait of this track (like
     // Spa's weather reputation in real F1), not a random per-race dice roll.
     weather: "pioggia",
@@ -33,6 +35,7 @@ export const CIRCUITS = [
     id: "altomare",
     name: "Circuito di Altomare",
     width: 16,
+    recommendedSetup: { frontWing:"low", rearWing:"low", floor:"low", brakes:"aggressive", suspension:"stiff", reason:"Bassa resistenza per i lunghi rettifili e piattaforma rigida negli appoggi." },
     points: [
       [-160, 90], [40, 120], [150, 60], [170, -40], [80, -120],
       [-60, -140], [-170, -70], [-190, 20],
@@ -50,6 +53,7 @@ export const CIRCUITS = [
     // — see the validation script referenced above for the actual numbers
     // (minimum curvature radius, wall-margin safety, grid slots on track).
     width: 11,
+    recommendedSetup: { frontWing:"high", rearWing:"high", floor:"high", brakes:"aggressive", suspension:"soft", reason:"Carico e trazione per il tracciato stretto, nervoso e ricco di ripartenze." },
     points: [
       [130, 0], [95, 55], [35, 61], [0, 55], [-38, 65], [-87, 50],
       [-120, 0], [-87, -50], [-33, -56], [0, -50], [38, -65], [95, -55],
@@ -68,6 +72,7 @@ export const CIRCUITS = [
     // itself — checked offline (min curvature radius comfortably above the
     // wall margin, no grid slot off track) before being added here.
     width: 13,
+    recommendedSetup: { frontWing:"balanced", rearWing:"low", floor:"high", brakes:"aggressive", suspension:"stiff", reason:"Fondo efficiente e retrotreno scarico per conservare velocità nelle sequenze ampie." },
     points: [
       [148, 26], [84, 78], [20, 77], [-30, 90], [-101, 82], [-144, 16],
       [-108, -53], [-46, -77], [2, -70], [57, -82], [125, -52],

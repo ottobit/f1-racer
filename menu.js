@@ -1,7 +1,9 @@
-import { CIRCUITS, LAPS_PER_RACE } from "./circuits.js";
+import { CIRCUITS, LAPS_PER_RACE } from "./circuits.js?v=29";
 import { computeStandings, resetChampionship } from "./championship.js";
 import { DRIVER_ROSTER } from "./driver-roster.js";
 import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "./driver-selection.js";
+
+const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
 
 function positionLabel(order) {
   const idx = order.indexOf("player");
@@ -65,6 +67,9 @@ function circuitMap(points) {
 function selectCircuit(index, announce = true) {
   selectedCircuitIndex = (index + CIRCUITS.length) % CIRCUITS.length;
   const selectedCircuit = CIRCUITS[selectedCircuitIndex];
+  try { localStorage.setItem(SELECTED_CIRCUIT_KEY, selectedCircuit.id); } catch (e) {}
+  const garageLink = document.querySelector(".home-command--garage");
+  if (garageLink) garageLink.href = `garage.html?circuit=${selectedCircuit.id}`;
   const track = document.getElementById("circuit-list");
   track.style.transform = `translateX(-${selectedCircuitIndex * 100}%)`;
   track.querySelectorAll(".circuit-slide").forEach((slide, i) => {

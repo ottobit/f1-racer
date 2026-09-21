@@ -411,6 +411,11 @@ Added `RELEASE-CHECKLIST.md` with source-level gates and desktop/mobile browser 
 
 Five component families each expose three trade-off variants: front wing, rear wing, floor/diffuser, brakes and suspension. The setup produces modifiers for speed, downforce, braking, stability, traction and runoff behaviour. `main.js` reads these modifiers at race startup, so Garage choices alter actual race physics rather than only UI stats. Front/rear wing choices also alter the Garage car geometry for immediate visual feedback.
 
+Each circuit carries a data-driven recommended setup and a short rationale.
+The selected carousel circuit is persisted and passed into the Garage, which
+compares all five current components with the recommendation. Applying the
+preset is explicit and preserves the chosen livery; manual tuning remains free.
+
 
 ## Evolved driving dynamics
 
