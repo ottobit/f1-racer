@@ -491,7 +491,7 @@ numbered 3×3 grid with 54 px touch targets, switching to two columns below
 365 px. Active choices combine border, inset marker and background rather than
 depending on color alone.
 
-Race launch does not depend solely on tapping a slide inside the swipe viewport.
-`#circuit-start` is a separate, always-visible link below the carousel; every
-selection or difficulty change updates its race URL and circuit label. This
-avoids iOS pointer capture consuming the tap intended to enter a race.
+The circuit slide itself is not a link. Its only navigation target is the
+thumb-sized `Scendi in pista` CTA, which carries the selected circuit and
+difficulty in its URL. This prevents accidental race launches during swipe and
+avoids presenting two competing start buttons.

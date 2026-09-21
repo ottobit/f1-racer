@@ -74,9 +74,6 @@ function selectCircuit(index, announce = true) {
   document.querySelectorAll("[data-circuit-index]").forEach((dot) => {
     dot.setAttribute("aria-current", dot.dataset.circuitIndex === String(selectedCircuitIndex) ? "true" : "false");
   });
-  const start = document.getElementById("circuit-start");
-  start.href = `race.html?circuit=${selectedCircuit.id}&difficulty=${difficulty}`;
-  start.querySelector("strong").textContent = `Avvia ${selectedCircuit.name}`;
   if (announce) document.getElementById("circuit-live").textContent = `${selectedCircuit.name}, ${selectedCircuitIndex + 1} di ${CIRCUITS.length}`;
 }
 
@@ -169,16 +166,16 @@ function render() {
     const personality = CIRCUIT_PERSONALITY[circuit.id];
     return `
       <article class="circuit-slide" aria-label="${circuit.name}" aria-roledescription="slide">
-        <a class="circuit-card" href="race.html?circuit=${circuit.id}&difficulty=${difficulty}">
+        <div class="circuit-card">
           <div class="circuit-map">${circuitMap(circuit.points)}<span>${String(index + 1).padStart(2, "0")}</span></div>
           <div class="circuit-copy">
             <div class="circuit-meta"><span>${personality.type}</span><span>${personality.level}</span></div>
             <h2>${circuit.name}</h2>
             <p>${personality.note}</p>
             <div class="circuit-facts"><span><b>${LAPS_PER_RACE}</b> giri</span><span><b>9</b> rivali</span><span>${circuit.weather === "pioggia" ? "🌧️ Bagnato" : "☀️ Asciutto"}</span></div>
-            <div class="circuit-launch"><span class="circuit-status">${status}</span><strong>SCENDI IN PISTA →</strong></div>
+            <div class="circuit-launch"><span class="circuit-status">${status}</span><a class="circuit-race-link" href="race.html?circuit=${circuit.id}&difficulty=${difficulty}">SCENDI IN PISTA →</a></div>
           </div>
-        </a>
+        </div>
       </article>
     `;
   }).join("");
