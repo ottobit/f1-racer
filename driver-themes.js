@@ -1,9 +1,9 @@
 export const TEAM_LIVERIES = [
-  { id: "fenice", label: "Fenice", primary: 0xe10600, secondary: 0xf4d35e },
-  { id: "nettuno", label: "Nettuno", primary: 0x1c5fd6, secondary: 0x6ee7f9 },
-  { id: "solare", label: "Solare", primary: 0xe6c229, secondary: 0x111820 },
-  { id: "smeraldo", label: "Smeraldo", primary: 0x1f9d4a, secondary: 0xc9f7d5 },
-  { id: "artica", label: "Artica", primary: 0xf5f5f5, secondary: 0x7aa7c7 },
+  { id: "fenice", label: "Fenice", primary: 0xe10600, secondary: 0xf4d35e, sponsors: { main: "IGNIX", partner: "TORQ LABS" } },
+  { id: "nettuno", label: "Nettuno", primary: 0x1c5fd6, secondary: 0x6ee7f9, sponsors: { main: "PELAGOS", partner: "AZUR SYSTEMS" } },
+  { id: "solare", label: "Solare", primary: 0xe6c229, secondary: 0x111820, sponsors: { main: "LUMENZA", partner: "ORBITA ENERGY" } },
+  { id: "smeraldo", label: "Smeraldo", primary: 0x1f9d4a, secondary: 0xc9f7d5, sponsors: { main: "VIREON", partner: "CANOPY TECH" } },
+  { id: "artica", label: "Artica", primary: 0xf5f5f5, secondary: 0x7aa7c7, sponsors: { main: "NIVALIS", partner: "BOREAL DATA" } },
 ];
 
 const LIVERY_BY_ID = Object.fromEntries(TEAM_LIVERIES.map((livery) => [livery.id, livery]));

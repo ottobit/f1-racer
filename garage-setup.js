@@ -1,4 +1,4 @@
-import { TEAM_LIVERIES, liveryById } from "./driver-themes.js";
+import { TEAM_LIVERIES, liveryById } from "./driver-themes.js?v=27";
 
 export const GARAGE_KEY = "f1racer-garage-v1";
 export const DEFAULT_SETUP = { frontWing:"balanced", rearWing:"balanced", floor:"balanced", brakes:"balanced", suspension:"balanced", livery:"fenice" };

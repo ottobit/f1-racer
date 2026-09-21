@@ -5,6 +5,54 @@ function materialWithRole(material, role) {
   return material;
 }
 
+const sponsorTextureCache = new Map();
+
+function sponsorTexture(livery, placement) {
+  const sponsors = livery.sponsors || { main: "OTTOBIT", partner: "RACING" };
+  const key = `${livery.id || livery.primary}:${placement}:${sponsors.main}:${sponsors.partner}`;
+  if (sponsorTextureCache.has(key)) return sponsorTextureCache.get(key);
+
+  const vertical = placement === "nose";
+  const canvas = document.createElement("canvas");
+  canvas.width = vertical ? 256 : 768;
+  canvas.height = vertical ? 512 : 256;
+  const ctx = canvas.getContext("2d");
+  const accent = `#${(livery.secondary ?? 0xffffff).toString(16).padStart(6, "0")}`;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "rgba(5, 10, 16, 0.76)";
+  ctx.fillRect(8, 8, canvas.width - 16, canvas.height - 16);
+  ctx.fillStyle = accent;
+  if (vertical) ctx.fillRect(8, 8, canvas.width - 16, 18);
+  else ctx.fillRect(8, 8, 18, canvas.height - 16);
+  ctx.fillStyle = "#f7fbff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `900 ${vertical ? 48 : placement === "rear" ? 100 : 112}px sans-serif`;
+  ctx.fillText(sponsors.main, canvas.width / 2, vertical ? 220 : 112, canvas.width - 64);
+  if (placement !== "rear") {
+    ctx.fillStyle = "#b9c8d5";
+    ctx.font = `700 ${vertical ? 22 : 34}px monospace`;
+    ctx.fillText(sponsors.partner, canvas.width / 2, vertical ? 292 : 188, canvas.width - 72);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  sponsorTextureCache.set(key, texture);
+  return texture;
+}
+
+function sponsorMaterial(livery, placement) {
+  const material = new THREE.MeshBasicMaterial({
+    map: sponsorTexture(livery, placement),
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+  });
+  material.userData.carSponsorPlacement = placement;
+  return material;
+}
+
 export function applyCarLivery(group, livery) {
   const visited = new Set();
   group.traverse((object) => {
@@ -15,6 +63,11 @@ export function applyCarLivery(group, livery) {
     if (role === "secondary") object.material.color.set(livery.secondary);
     if (role === "accent") object.material.color.set(livery.accent ?? livery.secondary);
     if (role === "helmet") object.material.color.set(livery.secondary);
+    const sponsorPlacement = object.material.userData.carSponsorPlacement;
+    if (sponsorPlacement) {
+      object.material.map = sponsorTexture(livery, sponsorPlacement);
+      object.material.needsUpdate = true;
+    }
   });
 }
 
@@ -22,8 +75,8 @@ export function applyCarLivery(group, livery) {
 // with the race simulation. Geometry never participates in collisions.
 export function buildCar(color, { scale = 1, detail = false, showDriver = true, secondaryColor = 0xe9eeec, accentColor = 0xd7b264 } = {}) {
   const livery = typeof color === "object"
-    ? { primary: color.primary, secondary: color.secondary ?? secondaryColor, accent: color.accent ?? color.secondary ?? accentColor }
-    : { primary: color, secondary: secondaryColor, accent: accentColor };
+    ? { ...color, primary: color.primary, secondary: color.secondary ?? secondaryColor, accent: color.accent ?? color.secondary ?? accentColor }
+    : { primary: color, secondary: secondaryColor, accent: accentColor, sponsors: { main: "OTTOBIT", partner: "RACING" } };
   const group = new THREE.Group();
   const paint = materialWithRole(new THREE.MeshPhysicalMaterial({ color: livery.primary, metalness: .48, roughness: .24, clearcoat: 1, clearcoatRoughness: .12 }), "primary");
   const carbon = new THREE.MeshStandardMaterial({color: 0x111820, metalness: .45, roughness: .4});
@@ -32,6 +85,7 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   const stripe = materialWithRole(new THREE.MeshStandardMaterial({color: livery.secondary, metalness: .3, roughness: .3}), "secondary");
   const gold = materialWithRole(new THREE.MeshStandardMaterial({color: livery.accent, metalness: .7, roughness: .32}), "accent");
   const suit = materialWithRole(new THREE.MeshStandardMaterial({color: livery.primary, metalness: .08, roughness: .72}), "primary");
+  const sideSponsorMaterial = sponsorMaterial(livery, "side");
   if (detail) {
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
     const ctx = canvas.getContext('2d');
@@ -62,6 +116,7 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     const inlet=mesh(new THREE.SphereGeometry(.2,16,8),black,[side*.55,.5,.475]);inlet.scale.set(1,.5,.15);
     box(.035,.1,2.5,carbon,[side*.84,.22,-.15]);
     box(.028,.022,1.15,stripe,[side*.85,.29,-.38]);
+    const sideSponsor=mesh(new THREE.PlaneGeometry(.82,.25),sideSponsorMaterial,[side*.878,.55,-.28]);sideSponsor.name="teamSponsorSide";sideSponsor.rotation.y=side*Math.PI/2;sideSponsor.renderOrder=2;sideSponsor.castShadow=false;sideSponsor.receiveShadow=false;
     const mirror=mesh(new THREE.SphereGeometry(.12,12,8),paint,[side*.58,.86,.32]);mirror.scale.set(1.4,.5,.65);
     rod([side*.3,.65,.32],[side*.56,.84,.32],.017);
     for(const z of [1.05,-1.05])for(const y of [.28,.53])for(const dz of [-.32,.32])rod([side*.34,y,z+dz],[side*.88,.38,z]);
@@ -110,8 +165,10 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   mesh(new THREE.TubeGeometry(haloCurve,detail?40:20,.038,8,false),carbon);
   rod([0,.62,.56],[0,1.07,.57],.032);
   const intake=mesh(new THREE.SphereGeometry(.145,16,12),black,[0,1.12,-.33]);intake.scale.set(.8,.7,.5);
+  const noseSponsor=mesh(new THREE.PlaneGeometry(.22,.56),sponsorMaterial(livery,"nose"),[0,.565,1.28]);noseSponsor.name="teamSponsorNose";noseSponsor.rotation.x=-Math.PI/2;noseSponsor.renderOrder=2;noseSponsor.castShadow=false;noseSponsor.receiveShadow=false;
   function wing(name,z,y,width){const wing=new THREE.Group();wing.name=name;wing.position.set(0,y,z);group.add(wing);for(let i=0;i<3;i++){const blade=box(width-i*.08,.035,.16,i===2?paint:carbon,[0,i*.06,-i*.13],wing);blade.rotation.x=-.12;}for(const s of [-1,1]){box(.035,.28,.5,paint,[s*width/2,.07,-.1],wing);box(.03,.024,.46,stripe,[s*(width/2+.02),.19,-.1],wing);}return wing;}
   wing('frontWing',2.22,.21,1.94);wing('rearWing',-1.62,.95,1.72);
+  const rearSponsor=mesh(new THREE.PlaneGeometry(1.08,.11),sponsorMaterial(livery,"rear"),[0,1.075,-1.965]);rearSponsor.name="teamSponsorRear";rearSponsor.renderOrder=2;rearSponsor.castShadow=false;rearSponsor.receiveShadow=false;
   for(const s of [-1,1]){rod([s*.3,.4,-1.4],[s*.3,.96,-1.62],.035);rod([s*.13,.35,2.05],[s*.25,.2,2.2],.025);}
   const exhaust=mesh(new THREE.CylinderGeometry(.085,.1,.25,12,1,true),alloy,[0,.51,-1.76]);exhaust.rotation.x=Math.PI/2;
   box(.13,.08,.025,new THREE.MeshStandardMaterial({color:0xff220a,emissive:0xff1600,emissiveIntensity:2}),[0,.3,-1.78]);

@@ -3,18 +3,18 @@ import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js";
 import { POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
 import { displayDriverName, loadSelectedDriverId } from "./driver-selection.js";
 import { DRIVER_ROSTER } from "./driver-roster.js";
-import { cockpitThemeForDriver, liveryById } from "./driver-themes.js";
-import { loadGarageSetup, selectedGarageLivery, setupEffects } from "./garage-setup.js";
+import { cockpitThemeForDriver, liveryById } from "./driver-themes.js?v=27";
+import { loadGarageSetup, selectedGarageLivery, setupEffects } from "./garage-setup.js?v=27";
 
-import { createStudioEnvironment } from "./car-model.js";
-import { applyCarToMesh, buildRaceCar } from "./race-car-view.js";
+import { createStudioEnvironment } from "./car-model.js?v=27";
+import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=27";
 import { setupRaceInput } from "./race-input.js";
 import { setupRaceHud } from "./race-hud.js";
 import { setupRaceCamera } from "./race-camera.js?v=26";
 import { setupPlayerPhysics } from "./player-physics.js";
-import { setupRaceAi } from "./race-ai.js";
-import { setupRaceSystems } from "./race-systems.js";
-import { setupRaceProgress } from "./race-progress.js";
+import { setupRaceAi } from "./race-ai.js?v=27";
+import { setupRaceSystems } from "./race-systems.js?v=27";
+import { setupRaceProgress } from "./race-progress.js?v=27";
 import { setupRaceCommands } from "./race-commands.js";
 import { setupCarCollisions } from "./race-collisions.js";
 import { setupRaceNameplates } from "./race-nameplates.js";
@@ -44,6 +44,7 @@ const circuitId = new URLSearchParams(location.search).get("circuit");
 const circuit = getCircuit(circuitId);
 
 const TRACK_WIDTH = circuit.width;
+const START_FINISH_OFFSET = 5;
 const CONTROL_POINTS = circuit.points.map(([x, z]) => new THREE.Vector3(x, 0, z));
 
 // Light dynamic weather: a fixed per-circuit trait (see circuits.js), not
@@ -97,12 +98,10 @@ const AI = {
   brakeDecel: 68,
 };
 
-// Tire wear: grip degrades gradually over the race distance, for both the
-// player and the AI, cutting into cornering rate — real tires lose grip
-// long before they lose straight-line pace, so only turn rate is affected,
-// never top speed or acceleration. No pit stops in this game, so wear is
-// simply a function of total race distance covered (reaches full wear
-// exactly at the finish, same curve for everyone).
+// Tire wear degrades grip gradually over the race distance for both player
+// and AI, cutting into cornering rate rather than straight-line pace. The
+// player can request service in the pit zone; AI cars stay out until a real
+// pit lane can replace their old invisible stop on the racing surface.
 const TIRE_WEAR_MAX_TURN_PENALTY = 0.22; // steering authority lost at full wear
 
 // Lightweight race compounds. The race remains browser-friendly, but tyre
@@ -550,12 +549,11 @@ dressCircuit(scene, centerline, TRACK_WIDTH, renderer, isRaining);
   // boxes in half instead of sitting ahead of them like a real line does.
   // Shifted forward past the box's own front edge (half its length, +3)
   // plus a clear gap so the line reads as its own separate marking.
-  const LINE_OFFSET = 5;
   const lineGroup = new THREE.Group();
   lineGroup.position.set(
-    p.x + Math.sin(heading) * LINE_OFFSET,
+    p.x + Math.sin(heading) * START_FINISH_OFFSET,
     0.02,
-    p.z + Math.cos(heading) * LINE_OFFSET
+    p.z + Math.cos(heading) * START_FINISH_OFFSET
   );
   lineGroup.rotation.y = heading;
 
@@ -773,7 +771,6 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     ersActive: false,
     pitState: "none",
     pitServiceEndTime: 0,
-    hasPitted: false,
     lastImpactEffectTime: 0,
     lastCollisionTime: 0,
   };
@@ -883,6 +880,8 @@ const { advanceProgress, applyGridPositions, currentRaceOrder } = setupRaceProgr
   gridSlot,
   nearestTrackInfo,
   centerlineLength: centerline.length,
+  finishProgress: START_FINISH_OFFSET / TRACK_LENGTH,
+  lapsPerRace: LAPS_PER_RACE,
 });
 
 addGridBoxMarking(start, 1);
@@ -1161,7 +1160,6 @@ const { updateAiCar } = setupRaceAi({
   nearestTrackInfo,
   applyTrackBoundary,
   advanceProgress,
-  updateAiPitStop: raceSystems.updateAiPitStop,
   tireGripFactor,
   drsSpeedMultiplier: DRS_SPEED_MULTIPLIER,
   ersSpeedMultiplier: ERS_SPEED_MULTIPLIER,

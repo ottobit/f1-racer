@@ -84,42 +84,5 @@ export function setupRaceSystems({
     return false;
   }
 
-  function updateAiPitStop(car, now) {
-    if (car.pitState === "servicing") {
-      car.speed = 0;
-      car.lateralSpeed = 0;
-      car.yawRate = 0;
-      if (now >= car.pitServiceEndTime) {
-        car.pitState = "none";
-        car.tyreProgress = 0;
-        car.damage *= 0.25;
-        car.ersCharge = 100;
-        car.hasPitted = true;
-      }
-      return true;
-    }
-
-    if (
-      !car.hasPitted &&
-      car.lap >= 1 &&
-      isInPitZone(car) &&
-      Math.abs(car.speed) < pitSpeedLimit * 1.25
-    ) {
-      car.pitState = "servicing";
-      car.pitServiceEndTime = now + pitServiceMs;
-      car.speed = 0;
-      car.lateralSpeed = 0;
-      car.yawRate = 0;
-      car.ersActive = false;
-      return true;
-    }
-
-    const fraction = car.totalProgress - Math.floor(car.totalProgress);
-    if (!car.hasPitted && car.lap >= 1 && fraction > 0.9) {
-      car.speed = Math.min(car.speed, pitSpeedLimit * 0.75);
-    }
-    return false;
-  }
-
-  return { startPitStop, updateAiPitStop, updateEnergyRecovery, updatePitStop };
+  return { startPitStop, updateEnergyRecovery, updatePitStop };
 }

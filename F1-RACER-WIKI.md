@@ -132,6 +132,7 @@ The player car is still generated directly in Three.js rather than loaded from a
 - engine-cover/shark-fin profile;
 - rear exhaust/crash-structure detail;
 - driver helmet;
+- team sponsor decals on the sidepods, nose and rear wing;
 - simplified floor/floor-edge aero;
 - wheel hub detail.
 
@@ -393,7 +394,7 @@ Expose the richer driving model through a better racing interface.
 Implemented corner preview, dynamic lookahead, pre-corner speed control, racing-line offsets and basic attack/defence behaviour.
 
 ### Issue #44 — Race systems
-Implemented lightweight tyre compounds and degradation, manual ERS with recharge/deployment, player pit service, simple AI pit strategy, and stronger wet-grip effects. DRS remains integrated with the new ERS layer.
+Implemented lightweight tyre compounds and degradation, manual ERS with recharge/deployment, player pit service and stronger wet-grip effects. Automatic AI stops are disabled until a visible pit lane exists; stopping every rival on the racing surface after lap one was confusing and unrealistic. DRS remains integrated with the new ERS layer.
 
 ### Issue #45 — Presentation
 Implemented lightweight rain particles, impact sparks, camera-impact shake and retained the synthesized engine audio as the core audio layer. Further asset-level art/audio can be added later without changing the simulation model.
@@ -416,7 +417,7 @@ Player physics uses a lightweight combined-grip model rather than independent st
 
 ## Camera, race completion, collisions and Garage coherence
 
-The chase camera now uses a materially closer base framing (6.4 units, capped at 4.35 on compact landscape) with a lower camera height so the player car remains a dominant readable object. Race completion is gated by validated completed laps: a lap requires reaching the opposite half of the circuit and then crossing start/finish forward; raw accumulated progress alone can no longer trigger the results overlay. Car-to-car contacts use overlap correction plus relative closing velocity along the contact normal instead of multiplying both cars' speed on every overlap, reducing repeated bouncing and sticky side contact.
+The chase camera uses a materially close base framing (6.4 units, capped at 5.2 on compact landscape) while remaining inside the track corridor. Race completion is gated by validated completed laps: a lap requires reaching the opposite half of the circuit and then crossing the painted start/finish line forward; raw accumulated progress alone can no longer trigger the results overlay. Each car's finishing position is locked at that crossing, so cars that have already finished cannot distort the result by continuing to accumulate distance. Car-to-car contacts use overlap correction plus relative closing velocity along the contact normal instead of multiplying both cars' speed on every overlap, reducing repeated bouncing and sticky side contact.
 
 The Garage renders the same procedural F1 car construction used by the race branch, including the richer modern-F1 visual cues. Five labelled mounting zones make the drag target explicit and only the matching zone highlights during a drag; tap/click remains the mobile fallback.
 
@@ -470,6 +471,12 @@ the player car. AI cars continue to use their team liveries from the same shared
 theme data. `race-camera.js` adds a small cockpit-view overlay with themed rails,
 dash glow and name/motto badge for the selected driver; the top HUD remains
 unchanged.
+
+Each team livery also carries a fictional sponsor pair in `driver-themes.js`:
+IGNIX / TORQ LABS, PELAGOS / AZUR SYSTEMS, LUMENZA / ORBITA ENERGY, VIREON /
+CANOPY TECH and NIVALIS / BOREAL DATA. `car-model.js` turns those values into
+small cached canvas decals for both teammates and updates them with the Garage
+livery. Placement stays limited to the sidepods, nose and rear wing.
 
 ## Circuit carousel and bilateral contact
 

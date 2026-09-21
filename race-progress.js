@@ -5,14 +5,26 @@ export function setupRaceProgress({
   gridSlot,
   nearestTrackInfo,
   centerlineLength,
+  finishProgress,
+  lapsPerRace,
 }) {
+  let nextFinishPosition = 1;
+
   function advanceProgress(car, rawProgress) {
     const previousRaw = car.prevRawProgress;
     if (rawProgress > 0.42 && rawProgress < 0.58) car.lapCheckpointPassed = true;
-    const crossedFinishForward = previousRaw > 0.82 && rawProgress < 0.18;
+    const previousToFinish = (previousRaw - finishProgress + 1) % 1;
+    const currentToFinish = (rawProgress - finishProgress + 1) % 1;
+    const crossedFinishForward = previousToFinish > 0.82 && currentToFinish < 0.18;
+    let completedLap = false;
     if (crossedFinishForward && car.lapCheckpointPassed) {
       car.completedLaps = (car.completedLaps || 0) + 1;
+      car.lap = car.completedLaps;
       car.lapCheckpointPassed = false;
+      completedLap = true;
+      if (car.completedLaps >= lapsPerRace && !car.finishPosition) {
+        car.finishPosition = nextFinishPosition++;
+      }
     }
     let delta = rawProgress - previousRaw;
     if (delta < -0.5) delta += 1;
@@ -21,22 +33,28 @@ export function setupRaceProgress({
     car.totalProgress += delta;
     car.tyreProgress = Math.max(0, (car.tyreProgress || 0) + delta);
 
-    const newLap = Math.floor(car.totalProgress);
-    if (newLap > car.lap) {
-      car.lap = newLap;
-      return true;
-    }
-    return false;
+    return completedLap;
   }
 
   function currentRaceOrder() {
     return [
       { driverId: "player", totalProgress: state.totalProgress },
       ...aiCars.map((car) => ({ driverId: car.driverId, totalProgress: car.totalProgress })),
-    ].sort((a, b) => b.totalProgress - a.totalProgress);
+    ].map((entry) => {
+      const car = entry.driverId === "player"
+        ? state
+        : aiCars.find((candidate) => candidate.driverId === entry.driverId);
+      return { ...entry, finishPosition: car.finishPosition || null };
+    }).sort((a, b) => {
+      if (a.finishPosition && b.finishPosition) return a.finishPosition - b.finishPosition;
+      if (a.finishPosition) return -1;
+      if (b.finishPosition) return 1;
+      return b.totalProgress - a.totalProgress;
+    });
   }
 
   function applyGridPositions(order) {
+    nextFinishPosition = 1;
     order.forEach((driverId, index) => {
       const slot = allGridSlots[index];
       const pos = gridSlot(slot.row, slot.lane);
@@ -53,12 +71,12 @@ export function setupRaceProgress({
       car.tyreProgress = 0;
       car.lap = 0;
       car.completedLaps = 0;
+      car.finishPosition = null;
       car.lapCheckpointPassed = false;
       car.ersCharge = 100;
       car.ersActive = false;
       car.pitState = "none";
       car.pitServiceEndTime = 0;
-      car.hasPitted = false;
     });
   }
 

@@ -15,7 +15,6 @@ export function setupRaceAi({
   nearestTrackInfo,
   applyTrackBoundary,
   advanceProgress,
-  updateAiPitStop,
   tireGripFactor,
   drsSpeedMultiplier,
   ersSpeedMultiplier,
@@ -45,9 +44,6 @@ export function setupRaceAi({
   }
 
   function updateAiCar(car, dt, allCars) {
-    const now = performance.now();
-    if (updateAiPitStop(car, now)) return;
-
     const info = nearestTrackInfo(car.x, car.z);
     const profile = aiCornerProfile(info.idx);
     const speedRatio = Math.min(Math.abs(car.speed) / ai.maxSpeed, 1);
