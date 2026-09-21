@@ -197,7 +197,18 @@ document.getElementById("circuit-carousel").addEventListener("keydown", (e) => {
 let swipeStartX = null;
 let suppressCircuitClick = false;
 const viewport = document.querySelector(".circuit-viewport");
-viewport.addEventListener("pointerdown", (e) => { swipeStartX = e.clientX; suppressCircuitClick = false; viewport.setPointerCapture(e.pointerId); });
+viewport.addEventListener("pointerdown", (e) => {
+  // Desktop uses the visible arrows, so mouse clicks must never enter the
+  // swipe-capture path. Likewise the explicit race CTA always owns its tap.
+  if (e.pointerType === "mouse" || e.target.closest(".circuit-race-link")) {
+    swipeStartX = null;
+    suppressCircuitClick = false;
+    return;
+  }
+  swipeStartX = e.clientX;
+  suppressCircuitClick = false;
+  viewport.setPointerCapture(e.pointerId);
+});
 viewport.addEventListener("pointerup", (e) => {
   if (swipeStartX === null) return;
   const delta = e.clientX - swipeStartX;

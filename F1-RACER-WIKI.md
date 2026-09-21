@@ -495,3 +495,7 @@ The circuit slide itself is not a link. Its only navigation target is the
 thumb-sized `Scendi in pista` CTA, which carries the selected circuit and
 difficulty in its URL. This prevents accidental race launches during swipe and
 avoids presenting two competing start buttons.
+
+The swipe handler ignores mouse pointers and any pointer that begins on the
+CTA. Desktop navigation therefore remains a standard link click, while touch
+and pen can still swipe from the rest of the circuit card.
