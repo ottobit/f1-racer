@@ -309,6 +309,10 @@ digital readout without an analog dial.
 
 Input:
 - Optional phone motion steering: activate from the lower controls, hold the
+  phone steady for 500 ms to average neutral. Screen-plane roll compensates
+  pitch; nearly horizontal screens prompt lifting the phone. SX/DX feedback
+  shows actual smoothed steering, and mode changes preserve pedal holds.
+  Then hold the
   comfortable neutral position, then use Centra to recalibrate. Three sensitivity
   choices share the existing steering dead zone/smoothing. Touching the wheel
   immediately restores touch steering. No sensor listener runs before consent;

@@ -3,6 +3,9 @@
 #motion-controls button,#motion-controls select{min-height:44px;padding:5px 8px;border:1px solid #a8c6d866;border-radius:6px;background:#102331c9;color:#eef8ff;font:600 11px system-ui;touch-action:manipulation}
 #motion-controls [hidden]{display:none}
 #motion-status{width:100%;text-align:center;color:#e2f3ff;font:10px/1.25 system-ui;text-shadow:0 1px 3px #000;pointer-events:none}
+#motion-indicator{position:relative;display:flex;justify-content:space-between;align-items:center;width:100%;height:18px;color:#d3e7f4;font:700 9px system-ui;text-shadow:0 1px 3px #000;pointer-events:none;background:linear-gradient(#b9d5df80,#b9d5df80) center/80% 1px no-repeat}
+#motion-indicator:after{content:'';position:absolute;left:50%;height:10px;width:1px;background:#d9ebf5}
+#motion-marker{position:absolute;left:50%;width:7px;height:7px;border-radius:50%;background:#70e1c5;transform:translateX(-50%);z-index:1;box-shadow:0 0 3px #000}
 @media(orientation:portrait){#motion-controls{width:240px;bottom:205px}}
 html.touch #touch-controls{padding:0 max(16px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom));pointer-events:none;gap:18px}
 #touch-controls .touch-group{pointer-events:auto;align-items:flex-end;gap:12px}

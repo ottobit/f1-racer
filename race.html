@@ -19,7 +19,7 @@
   <meta name="twitter:image" content="https://ottobit.github.io/portfolio-arcade/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="../../assets/css/style.css" />
   <link rel="stylesheet" href="style.css?v=33" />
-  <link rel="stylesheet" href="race-controls.css?v=36" />
+  <link rel="stylesheet" href="race-controls.css?v=37" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -136,6 +136,9 @@
         <option value="38">Dolce</option><option value="26" selected>Normale</option><option value="17">Rapido</option>
       </select>
       <span id="motion-status" role="status" aria-live="polite"></span>
+      <div id="motion-indicator" role="meter" aria-label="Sterzo: sinistra, centro, destra" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" hidden>
+        <span>SX</span><i id="motion-marker"></i><span>DX</span>
+      </div>
     </div>
     <div id="wheel-control" class="touch-group touch-group--steer" role="slider" tabindex="0" aria-label="Sterzo: trascina a sinistra o destra, oppure usa le frecce" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
       <svg viewBox="0 0 140 140" aria-hidden="true">
@@ -169,6 +172,6 @@
     </div>
   </div>
 
-  <script type="module" src="main.js?v=36"></script>
+  <script type="module" src="main.js?v=37"></script>
 </body>
 </html>

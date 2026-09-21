@@ -27,6 +27,15 @@ export function setupRaceInput({
   const calibrateButton = document.getElementById("motion-calibrate");
   const sensitivityEl = document.getElementById("motion-sensitivity");
   const motionStatus = document.getElementById("motion-status");
+  const motionIndicator = document.getElementById("motion-indicator");
+  const motionMarker = document.getElementById("motion-marker");
+  const wrapDegrees = (value) => ((value + 180) % 360 + 360) % 360 - 180;
+  let calibrationStart = null, calibrationAnchor = 0, calibrationSum = 0, calibrationCount = 0;
+  function resetCalibration() {
+    motionNeutral = null;
+    calibrationStart = null;
+    motionValue = steering.value = 0;
+  }
   let motionActive = false, motionPending = false, motionRequest = 0;
   let motionNeutral = null, motionValue = 0, lastMotionAt = 0;
   let motionTimeout;
@@ -36,15 +45,17 @@ export function setupRaceInput({
   function stopMotion(message = "Sterzo touch") {
     motionRequest++;
     motionActive = motionPending = false;
-    motionNeutral = null;
-    motionValue = 0;
+    lastMotionAt = 0;
+    resetCalibration();
     clearTimeout(motionTimeout);
     window.removeEventListener("deviceorientation", onOrientation);
     motionButton.textContent = "Attiva movimento";
     motionButton.setAttribute("aria-pressed", "false");
     calibrateButton.hidden = sensitivityEl.hidden = true;
+    motionIndicator.hidden = true;
     motionStatus.textContent = message;
-    clearDrivingInput();
+    // Switching steering mode must not release an independently held pedal.
+    touchSteer = 0;
   }
 
   function onOrientation(event) {
@@ -54,25 +65,47 @@ export function setupRaceInput({
       stopMotion("Telefono ruotato: riattiva e calibra");
       return;
     }
-    // Project gravity onto the screen's horizontal axis. Unlike raw beta,
-    // this stays continuous at Euler wrap boundaries and handles both
-    // landscape orientations as well as portrait.
+    // Use the angle of gravity in the screen plane, not asin(horizontal):
+    // the latter attenuates steering when the phone is held at a shallow pitch.
     const radians = Math.PI / 180;
     const b = event.beta * radians, g = event.gamma * radians, a = angle * radians;
     const horizontal = Math.sin(g) * Math.cos(b) * Math.cos(a) + Math.sin(b) * Math.sin(a);
-    const tilt = Math.asin(Math.max(-1, Math.min(1, horizontal))) / radians;
+    const vertical = Math.sin(b) * Math.cos(a) - Math.sin(g) * Math.cos(b) * Math.sin(a);
     lastMotionAt = performance.now();
+    clearTimeout(motionTimeout);
+    motionIndicator.hidden = false;
+    if (Math.hypot(horizontal, vertical) < 0.3) {
+      // Roll is undefined when the screen lies flat: never amplify noise.
+      resetCalibration();
+      motionStatus.textContent = "Solleva un po’ lo schermo verso di te";
+      return;
+    }
+    const tilt = Math.atan2(horizontal, vertical) / radians;
     if (motionNeutral === null) {
-      motionNeutral = tilt;
+      motionValue = 0;
+      const now = performance.now();
+      if (calibrationStart === null || Math.abs(wrapDegrees(tilt - calibrationAnchor)) > 3) {
+        calibrationStart = now;
+        calibrationAnchor = tilt;
+        calibrationSum = 0;
+        calibrationCount = 0;
+      }
+      calibrationSum += wrapDegrees(tilt - calibrationAnchor);
+      calibrationCount++;
+      motionStatus.textContent = "Tieni fermo per mezzo secondo…";
+      if (now - calibrationStart < 500 || calibrationCount < 5) return;
+      motionNeutral = wrapDegrees(calibrationAnchor + calibrationSum / calibrationCount);
       motionActive = true;
       motionPending = false;
       clearTimeout(motionTimeout);
       motionButton.textContent = "Torna al touch";
       motionButton.setAttribute("aria-pressed", "true");
       calibrateButton.hidden = sensitivityEl.hidden = false;
-      motionStatus.textContent = "Movimento attivo";
+      motionStatus.textContent = "Ruota come un volante · Centra per ricalibrare";
     }
-    motionValue = shapeSteering((tilt - motionNeutral) / Number(sensitivityEl.value));
+    const delta = wrapDegrees(tilt - motionNeutral);
+    const magnitude = Math.max(0, Math.abs(delta) - 1.5);
+    motionValue = Math.sign(delta) * Math.min(1, magnitude / (Number(sensitivityEl.value) - 1.5));
   }
 
   motionButton.addEventListener("click", async () => {
@@ -92,7 +125,9 @@ export function setupRaceInput({
         if (permission !== "granted") { stopMotion("Permesso negato: sterzo touch"); return; }
       }
       if (request !== motionRequest) return;
-      clearDrivingInput();
+      resetCalibration();
+      wheelPointer = null;
+      touchSteer = 0;
       motionScreenAngle = screenAngle();
       window.addEventListener("deviceorientation", onOrientation);
       motionTimeout = setTimeout(() => stopMotion("Nessun dato dai sensori: sterzo touch"), 5000);
@@ -101,8 +136,7 @@ export function setupRaceInput({
     }
   });
   calibrateButton.addEventListener("click", () => {
-    motionNeutral = null;
-    motionValue = steering.value = 0;
+    resetCalibration();
     motionStatus.textContent = "Mantieni la posizione: calibrazione…";
   });
   window.screen.orientation?.addEventListener("change", () => {
@@ -182,7 +216,7 @@ export function setupRaceInput({
 
   function suspendInput() {
     if (motionActive || motionPending) stopMotion("Movimento sospeso: riattiva quando sei pronto");
-    else clearDrivingInput();
+    clearDrivingInput();
   }
   addEventListener("blur", () => {
     // A native permission dialog may blur the page while awaiting consent.
@@ -194,7 +228,7 @@ export function setupRaceInput({
   });
 
   function updateSteeringInput(dt) {
-    if (motionActive && performance.now() - lastMotionAt > 2000) stopMotion("Sensori interrotti: sterzo touch");
+    if ((motionActive || motionPending) && lastMotionAt && performance.now() - lastMotionAt > 2000) stopMotion("Sensori interrotti: sterzo touch");
     const keyboard = (input.right ? 1 : 0) - (input.left ? 1 : 0);
     steering.value = smoothSteering(
       steering.value,
@@ -203,6 +237,10 @@ export function setupRaceInput({
     );
     wheelEl.style.setProperty("--steer-angle", `${steering.value * 65}deg`);
     wheelEl.setAttribute("aria-valuenow", String(Math.round(steering.value * 100)));
+    if (!motionIndicator.hidden) {
+      motionMarker.style.left = `${50 + steering.value * 45}%`;
+      motionIndicator.setAttribute("aria-valuenow", String(Math.round(steering.value * 100)));
+    }
   }
 
   return { input, steering, clearDrivingInput, updateSteeringInput };
