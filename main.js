@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js?v=35";
+import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js?v=38";
 import { POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
 import { displayDriverName, loadSelectedDriverId } from "./driver-selection.js";
 import { DRIVER_ROSTER } from "./driver-roster.js";
@@ -20,7 +20,7 @@ import { setupCarCollisions } from "./race-collisions.js";
 import { setupRaceNameplates } from "./race-nameplates.js";
 
 import { steeringYaw } from "./steering.js";
-import { dressCircuit, surfaceTexture } from "./track-art.js?v=35";
+import { dressCircuit, surfaceTexture } from "./track-art.js?v=38";
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);

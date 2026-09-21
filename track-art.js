@@ -36,17 +36,59 @@ export function dressCircuit(scene,points,width,renderer,wet,theme){
   const temp=new THREE.Object3D();
   function instances(geo,mat,transforms){const mesh=new THREE.InstancedMesh(geo,mat,transforms.length);transforms.forEach((t,i)=>{temp.position.set(...t.p);temp.rotation.set(0,t.r||0,0);temp.scale.set(...(t.s||[1,1,1]));temp.updateMatrix();mesh.setMatrixAt(i,temp.matrix);});mesh.receiveShadow=true;mesh.computeBoundingSphere();scene.add(mesh);return mesh;}
   if(coastal){
-    // Same low red/white racing kerbs as the other circuits, with the
-    // coastal scenery retained. Arc-length samples keep blocks continuous.
-    const redKerbs=[],whiteKerbs=[];
-    let perimeter=0;
-    for(let i=0;i<N;i++)perimeter+=Math.hypot(points[i].x-points[(i+1)%N].x,points[i].z-points[(i+1)%N].z);
-    for(let i=0;i<N;i++){
-      const p=points[i],n=normal(p);
-      for(const side of [-1,1]) (Math.floor(i/3)%2?whiteKerbs:redKerbs).push({p:[p.x+n.x*half*side,.045,p.z+n.z*half*side],r:Math.atan2(p.tx,p.tz)});
+    // Independent tangent-aligned boxes leave wedges at corners. Sweep one
+    // welded ribbon per side through the SAME cross-sections as the road.
+    // Paint alternation belongs in UVs, not disconnected geometry.
+    const paintCanvas=document.createElement('canvas');
+    paintCanvas.width=32;paintCanvas.height=64;
+    const paintCtx=paintCanvas.getContext('2d');
+    paintCtx.fillStyle='#c64037';paintCtx.fillRect(0,0,32,32);
+    paintCtx.fillStyle='#ebe7d9';paintCtx.fillRect(0,32,32,32);
+    const kerbTexture=new THREE.CanvasTexture(paintCanvas);
+    kerbTexture.colorSpace=THREE.SRGBColorSpace;
+    kerbTexture.wrapT=THREE.RepeatWrapping;
+    kerbTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+    const kerbMaterial=new THREE.MeshStandardMaterial({map:kerbTexture,roughness:.88});
+    // Slightly overlap asphalt at the inner toe; taper into the shoulder.
+    const profile=[[-.25,.024],[0,.065],[.35,.075],[.70,.016]];
+    const stride=profile.length;
+    for(const side of [-1,1]){
+      const vertices=[],uvs=[],indices=[],edgeDistances=[0];
+      for(let i=0;i<N;i++){
+        const p=points[i],q=points[(i+1)%N],n=normal(p),m=normal(q);
+        edgeDistances.push(edgeDistances[i]+Math.hypot(
+          q.x+m.x*half*side-p.x-n.x*half*side,
+          q.z+m.z*half*side-p.z-n.z*half*side));
+      }
+      // An integer repeat count closes the paint seamlessly at the line.
+      const repeats=Math.max(1,Math.round(edgeDistances[N]/6));
+      for(let i=0;i<=N;i++){
+        const p=points[i%N],n=normal(p);
+        for(const [offset,height] of profile){
+          const d=(half+offset)*side;
+          vertices.push(p.x+n.x*d,height,p.z+n.z*d);
+          uvs.push((offset+.25)/.95,edgeDistances[i]/edgeDistances[N]*repeats);
+        }
+      }
+      for(let i=0;i<N;i++)for(let j=0;j<stride-1;j++){
+        const a=i*stride+j,b=a+1,c=a+stride,d=c+1;
+        if(side>0)indices.push(a,c,b,b,c,d);
+        else indices.push(a,b,c,b,d,c);
+      }
+      const geometry=new THREE.BufferGeometry();
+      geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+      geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+      geometry.setIndex(indices);geometry.computeVertexNormals();
+      // UV seam duplicates the first section: share its averaged lighting.
+      const normals=geometry.attributes.normal;
+      for(let j=0;j<stride;j++){
+        const k=N*stride+j;
+        const n=new THREE.Vector3(normals.getX(j)+normals.getX(k),normals.getY(j)+normals.getY(k),normals.getZ(j)+normals.getZ(k)).normalize();
+        normals.setXYZ(j,n.x,n.y,n.z);normals.setXYZ(k,n.x,n.y,n.z);
+      }
+      const kerb=new THREE.Mesh(geometry,kerbMaterial);
+      kerb.name=`marzamemi-kerb-${side}`;kerb.receiveShadow=true;scene.add(kerb);
     }
-    instances(new THREE.BoxGeometry(.85,.09,perimeter/N*1.04),material(0xc64037),redKerbs);
-    instances(new THREE.BoxGeometry(.85,.09,perimeter/N*1.04),white,whiteKerbs);
     // Viale degli Oleandri / Fondo Morte: a deliberately low-draw-call
     // reconstruction from the supplied route and street video. Repeated
     // villas, walls, palms and flowering hedges are instanced for phones.

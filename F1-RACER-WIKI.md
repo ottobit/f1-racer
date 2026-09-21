@@ -469,6 +469,10 @@ Marzamemi selects a dedicated mobile-conscious branch instead: sandy shoulders,
 sea and beach planes, low stucco villas, walls, gates, utility poles and wires,
 palms, oleanders and bougainvillea. Repeated objects remain instanced, and the
 urban course uses red/white racing kerbs, without generic guardrails or mountains.
+Marzamemi kerbs are two continuous indexed ribbons sharing the road's sampled
+cross-sections, with a low tapered profile. Red/white paint uses edge-distance
+UVs and an integer repeat count; independent tangent boxes must not return,
+because they leave wedges and overlaps in the tight corners.
 Its map-traced angular layout uses local corner supports and tension 0.18;
 the narrow shared central corridor is separated for racing clearance.
 The upper HUD markup and existing `style.css` are unchanged; lower control styles
