@@ -63,6 +63,7 @@ function circuitMap(points) {
 
 function selectCircuit(index, announce = true) {
   selectedCircuitIndex = (index + CIRCUITS.length) % CIRCUITS.length;
+  const selectedCircuit = CIRCUITS[selectedCircuitIndex];
   const track = document.getElementById("circuit-list");
   track.style.transform = `translateX(-${selectedCircuitIndex * 100}%)`;
   track.querySelectorAll(".circuit-slide").forEach((slide, i) => {
@@ -73,7 +74,10 @@ function selectCircuit(index, announce = true) {
   document.querySelectorAll("[data-circuit-index]").forEach((dot) => {
     dot.setAttribute("aria-current", dot.dataset.circuitIndex === String(selectedCircuitIndex) ? "true" : "false");
   });
-  if (announce) document.getElementById("circuit-live").textContent = `${CIRCUITS[selectedCircuitIndex].name}, ${selectedCircuitIndex + 1} di ${CIRCUITS.length}`;
+  const start = document.getElementById("circuit-start");
+  start.href = `race.html?circuit=${selectedCircuit.id}&difficulty=${difficulty}`;
+  start.querySelector("strong").textContent = `Avvia ${selectedCircuit.name}`;
+  if (announce) document.getElementById("circuit-live").textContent = `${selectedCircuit.name}, ${selectedCircuitIndex + 1} di ${CIRCUITS.length}`;
 }
 
 function renderDifficulty() {
