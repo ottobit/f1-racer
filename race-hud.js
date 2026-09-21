@@ -15,11 +15,13 @@ export function setupRaceHud({
   tireGripFactor,
   gearInfo,
   currentRaceOrder,
+  nameOf,
   updateEngineSound,
   playShiftClick,
   minimapCanvasSize,
   minimapTrackPoints,
   minimapPoint,
+  qualifyingRivals,
 }) {
   const circuitNameEl = document.getElementById("circuit-name");
   const positionEl = document.getElementById("position");
@@ -28,6 +30,7 @@ export function setupRaceHud({
   const bestEl = document.getElementById("best");
   const cautionBannerEl = document.getElementById("caution-banner");
   const sessionBannerEl = document.getElementById("session-banner");
+  const qualifyingTimingEl = document.getElementById("qualifying-timing");
   const damageRowEl = document.getElementById("damage-row");
   const damageEl = document.getElementById("damage");
   const tireWearEl = document.getElementById("tire-wear");
@@ -48,6 +51,8 @@ export function setupRaceHud({
   const kmhPerUnit = 3.6;
   const gaugeMaxKmh = 300;
   let lastGearLabel = null;
+  let lastQualifyingTowerTime;
+  let lastRaceTowerSignature = "";
   let gearFlashTimeout = null;
   let penaltyNoticeTimeout = null;
 
@@ -58,6 +63,44 @@ export function setupRaceHud({
     circuitNameEl.textContent = circuitLabel();
     hintEl.textContent = raceHintText;
     sessionBannerEl.hidden = true;
+    lastRaceTowerSignature = "";
+    updateRaceTiming(currentRaceOrder());
+  }
+
+  function updateQualifyingTiming(qualiBestTime) {
+    if (lastQualifyingTowerTime === qualiBestTime) return;
+    lastQualifyingTowerTime = qualiBestTime;
+    const classification = [
+      { id: "player", name: "TU", time: qualiBestTime ?? Infinity },
+      ...qualifyingRivals,
+    ].sort((a, b) => a.time - b.time);
+
+    qualifyingTimingEl.innerHTML = `
+      <div class="qualifying-timing__title">TEMPI QUALIFICHE</div>
+      <ol>${classification.map((entry, index) => `
+        <li class="${entry.id === "player" ? "is-player" : ""}">
+          <span class="qualifying-timing__position">${index + 1}</span>
+          <span class="qualifying-timing__name">${entry.name}</span>
+          <strong>${Number.isFinite(entry.time) ? formatTime(entry.time) : "--:--.--"}</strong>
+        </li>`).join("")}</ol>`;
+    qualifyingTimingEl.hidden = false;
+  }
+
+  function updateRaceTiming(order) {
+    const signature = order
+      .map((entry) => `${entry.driverId}:${Math.floor(entry.totalProgress)}`)
+      .join("|");
+    if (signature === lastRaceTowerSignature) return;
+    lastRaceTowerSignature = signature;
+    qualifyingTimingEl.innerHTML = `
+      <div class="qualifying-timing__title">CLASSIFICA GARA</div>
+      <ol>${order.map((entry, index) => `
+        <li class="${entry.driverId === "player" ? "is-player" : ""}">
+          <span class="qualifying-timing__position">${index + 1}</span>
+          <span class="qualifying-timing__name">${entry.driverId === "player" ? "TU" : nameOf(entry.driverId)}</span>
+          <strong>G${Math.min(Math.floor(entry.totalProgress) + 1, lapsPerRace)}</strong>
+        </li>`).join("")}</ol>`;
+    qualifyingTimingEl.hidden = false;
   }
 
   function setCautionVisible(isVisible) {
@@ -161,6 +204,7 @@ export function setupRaceHud({
   function updateHud() {
     const order = currentRaceOrder();
     const position = order.findIndex((entry) => entry.driverId === "player") + 1;
+    updateRaceTiming(order);
     positionEl.textContent = `P${position}`;
     lapEl.textContent = `Giro ${Math.min(state.lap + 1, lapsPerRace)}/${lapsPerRace}`;
     timeEl.textContent = formatTime(state.currentLapTime);
@@ -180,6 +224,7 @@ export function setupRaceHud({
     bestEl.textContent = qualiBestTime !== null
       ? `Migliore ${formatTime(qualiBestTime)}`
       : "Migliore --:--.--";
+    updateQualifyingTiming(qualiBestTime);
     updateSpeedoHud();
   }
 

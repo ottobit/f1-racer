@@ -449,6 +449,25 @@ html.race #app canvas {
 #session-banner[hidden]{display:none}
 @media(max-width:620px){#session-banner{top:4.4rem;max-width:72vw;padding:7px 10px;font-size:8px;white-space:normal;text-align:center}}
 
+.qualifying-timing{display:none}
+.qualifying-timing[hidden]{display:none}
+@media(orientation:landscape){
+  .qualifying-timing{display:block;position:fixed;z-index:115;top:50%;right:max(16px,env(safe-area-inset-right,0px));transform:translateY(-50%);width:190px;padding:8px;border:1px solid #d8efff40;border-radius:8px;background:#07111cc4;backdrop-filter:blur(10px);box-shadow:0 10px 28px #0007;color:#eef8ff;pointer-events:none;font:700 10px/1.2 system-ui}
+  .qualifying-timing__title{padding:2px 5px 7px;color:#9fb8c9;font-size:9px;letter-spacing:.13em}
+  .qualifying-timing ol{display:grid;gap:2px;margin:0;padding:0;list-style:none}
+  .qualifying-timing li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:5px;min-height:21px;padding:0 5px;border-radius:4px;background:#ffffff08}
+  .qualifying-timing li.is-player{background:#70e1c52b;box-shadow:inset 2px 0 #70e1c5;color:#fff}
+  .qualifying-timing__position{color:#8ca3b3;text-align:center}
+  .qualifying-timing__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qualifying-timing strong{font:700 9px/1 ui-monospace,SFMono-Regular,Consolas,monospace}
+}
+@media(orientation:landscape) and (max-height:520px){
+  html.touch .qualifying-timing{right:max(8.5rem,env(safe-area-inset-right,0px));width:150px;padding:5px}
+  .qualifying-timing__title{padding-bottom:4px;font-size:8px}
+  .qualifying-timing li{grid-template-columns:14px minmax(0,1fr) auto;gap:3px;min-height:17px;padding:0 3px;font-size:8px}
+  .qualifying-timing strong{font-size:8px}
+}
+
 /* Touch controls: shown only when JS (see index.html) detects real touch
    support and adds .touch to <html>. Detecting it in JS instead of relying
    purely on the (hover: none)/(pointer: coarse) media query, because that

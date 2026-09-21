@@ -561,3 +561,10 @@ active Three.js camera and positions a small DOM label in screen space. Labels
 inherit a team-color marker, fade with distance, disappear outside the frustum
 or beyond 72 units, and never intercept input. The player car intentionally has
 no label so chase and cockpit views remain clean.
+
+During qualifying, landscape layouts show a compact timing tower on the right.
+It lists all ten drivers, highlights the player and uses the same single set of
+synthetic rival lap times later consumed by the starting-grid calculation.
+Portrait layouts omit the tower to preserve the driving area.
+After the start, the same tower becomes the live race order and changes when
+cars overtake, while preserving the player's highlighted row.

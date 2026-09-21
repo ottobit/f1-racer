@@ -9,7 +9,7 @@ import { loadGarageSetup, selectedGarageLivery, setupEffects } from "./garage-se
 import { createStudioEnvironment } from "./car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
 import { setupRaceInput } from "./race-input.js";
-import { setupRaceHud } from "./race-hud.js?v=30";
+import { setupRaceHud } from "./race-hud.js?v=32";
 import { setupRaceCamera } from "./race-camera.js?v=26";
 import { setupPlayerPhysics } from "./player-physics.js";
 import { setupRaceAi } from "./race-ai.js?v=27";
@@ -1083,6 +1083,13 @@ function circuitLabel() {
   return isRaining ? `${circuit.name} · 🌧️ Pioggia` : circuit.name;
 }
 
+// Generated once: the tower and the real grid consume the same result set.
+const AI_QUALIFYING_RESULTS = AI_DRIVERS.map((driver) => ({
+  id: driver.id,
+  name: displayDriverName(driver.id),
+  time: synthesizeAiQualiTime(),
+})).sort((a, b) => a.time - b.time);
+
 const hud = setupRaceHud({
   circuitLabel,
   lapsPerRace: LAPS_PER_RACE,
@@ -1093,11 +1100,13 @@ const hud = setupRaceHud({
   tireGripFactor,
   gearInfo,
   currentRaceOrder,
+  nameOf: displayDriverName,
   updateEngineSound,
   playShiftClick,
   minimapCanvasSize: MINIMAP_CANVAS_SIZE,
   minimapTrackPoints,
   minimapPoint,
+  qualifyingRivals: AI_QUALIFYING_RESULTS,
 });
 
 // --- Main loop -------------------------------------------------------------
@@ -1261,7 +1270,7 @@ function synthesizeAiQualiTime() {
 function finishQualifying() {
   const results = [
     { id: "player", time: qualiBestTime === null ? Infinity : qualiBestTime },
-    ...AI_DRIVERS.map((driver) => ({ id: driver.id, time: synthesizeAiQualiTime() })),
+    ...AI_QUALIFYING_RESULTS.map(({ id, time }) => ({ id, time })),
   ];
   results.sort((a, b) => a.time - b.time);
   applyGridPositions(results.map((r) => r.id));
