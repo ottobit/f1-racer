@@ -1,4 +1,9 @@
 /* Only the lower driving controls. The upper HUD is deliberately untouched. */
+#motion-controls{position:absolute;bottom:max(8px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:4px;width:min(280px,calc(100vw - 360px));pointer-events:auto}
+#motion-controls button,#motion-controls select{min-height:44px;padding:5px 8px;border:1px solid #a8c6d866;border-radius:6px;background:#102331c9;color:#eef8ff;font:600 11px system-ui;touch-action:manipulation}
+#motion-controls [hidden]{display:none}
+#motion-status{width:100%;text-align:center;color:#e2f3ff;font:10px/1.25 system-ui;text-shadow:0 1px 3px #000;pointer-events:none}
+@media(orientation:portrait){#motion-controls{width:240px;bottom:205px}}
 html.touch #touch-controls{padding:0 max(16px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom));pointer-events:none;gap:18px}
 #touch-controls .touch-group{pointer-events:auto;align-items:flex-end;gap:12px}
 #wheel-control{width:184px;height:184px;border-radius:50%;background:radial-gradient(circle,#17222ac9 0%,#0a111b90 59%,transparent 61%);filter:drop-shadow(0 5px 12px #0008);outline:none}

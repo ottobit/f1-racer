@@ -308,6 +308,13 @@ phones. The compact center instrument cluster uses the original speed bar and
 digital readout without an analog dial.
 
 Input:
+- Optional phone motion steering: activate from the lower controls, hold the
+  comfortable neutral position, then use Centra to recalibrate. Three sensitivity
+  choices share the existing steering dead zone/smoothing. Touching the wheel
+  immediately restores touch steering. No sensor listener runs before consent;
+  missing/stale data, screen rotation or backgrounding restores touch controls.
+  Verify direction and feel on physical iOS/Android devices before claiming
+  device compatibility; structural checks cannot establish sensor behavior.
 - Arrow keys / WASD;
 - touch gas/brake;
 - analog touch steering wheel;

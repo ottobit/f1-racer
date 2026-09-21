@@ -19,7 +19,7 @@
   <meta name="twitter:image" content="https://ottobit.github.io/portfolio-arcade/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="../../assets/css/style.css" />
   <link rel="stylesheet" href="style.css?v=33" />
-  <link rel="stylesheet" href="race-controls.css?v=28" />
+  <link rel="stylesheet" href="race-controls.css?v=36" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -129,6 +129,14 @@
   <div id="countdown-overlay" hidden></div>
 
   <div id="touch-controls">
+    <div id="motion-controls" aria-label="Sterzo a movimento">
+      <button id="motion-toggle" type="button" aria-pressed="false">Attiva movimento</button>
+      <button id="motion-calibrate" type="button" hidden>Centra</button>
+      <select id="motion-sensitivity" aria-label="Sensibilità sterzo a movimento" hidden>
+        <option value="38">Dolce</option><option value="26" selected>Normale</option><option value="17">Rapido</option>
+      </select>
+      <span id="motion-status" role="status" aria-live="polite"></span>
+    </div>
     <div id="wheel-control" class="touch-group touch-group--steer" role="slider" tabindex="0" aria-label="Sterzo: trascina a sinistra o destra, oppure usa le frecce" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
       <svg viewBox="0 0 140 140" aria-hidden="true">
         <defs><linearGradient id="wheel-metal" x2=".5" y2="1"><stop stop-color="#586775"/><stop offset="1" stop-color="#15202b"/></linearGradient></defs>
@@ -161,6 +169,6 @@
     </div>
   </div>
 
-  <script type="module" src="main.js?v=35"></script>
+  <script type="module" src="main.js?v=36"></script>
 </body>
 </html>

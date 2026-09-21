@@ -8,7 +8,7 @@ import { loadGarageSetup, selectedGarageLivery, setupEffects } from "./garage-se
 
 import { createStudioEnvironment } from "./car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
-import { setupRaceInput } from "./race-input.js";
+import { setupRaceInput } from "./race-input.js?v=36";
 import { setupRaceHud } from "./race-hud.js?v=33";
 import { setupRaceCamera } from "./race-camera.js?v=26";
 import { setupPlayerPhysics } from "./player-physics.js";

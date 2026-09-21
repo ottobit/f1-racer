@@ -23,8 +23,94 @@ export function setupRaceInput({
   let wheelPointer = null;
   let wheelOrigin = 0;
   const wheelEl = document.getElementById(wheelId);
+  const motionButton = document.getElementById("motion-toggle");
+  const calibrateButton = document.getElementById("motion-calibrate");
+  const sensitivityEl = document.getElementById("motion-sensitivity");
+  const motionStatus = document.getElementById("motion-status");
+  let motionActive = false, motionPending = false, motionRequest = 0;
+  let motionNeutral = null, motionValue = 0, lastMotionAt = 0;
+  let motionTimeout;
+  const screenAngle = () => window.screen.orientation?.angle ?? window.orientation ?? 0;
+  let motionScreenAngle = screenAngle();
+
+  function stopMotion(message = "Sterzo touch") {
+    motionRequest++;
+    motionActive = motionPending = false;
+    motionNeutral = null;
+    motionValue = 0;
+    clearTimeout(motionTimeout);
+    window.removeEventListener("deviceorientation", onOrientation);
+    motionButton.textContent = "Attiva movimento";
+    motionButton.setAttribute("aria-pressed", "false");
+    calibrateButton.hidden = sensitivityEl.hidden = true;
+    motionStatus.textContent = message;
+    clearDrivingInput();
+  }
+
+  function onOrientation(event) {
+    if (document.hidden || !Number.isFinite(event.beta) || !Number.isFinite(event.gamma)) return;
+    const angle = screenAngle();
+    if (angle !== motionScreenAngle) {
+      stopMotion("Telefono ruotato: riattiva e calibra");
+      return;
+    }
+    // Project gravity onto the screen's horizontal axis. Unlike raw beta,
+    // this stays continuous at Euler wrap boundaries and handles both
+    // landscape orientations as well as portrait.
+    const radians = Math.PI / 180;
+    const b = event.beta * radians, g = event.gamma * radians, a = angle * radians;
+    const horizontal = Math.sin(g) * Math.cos(b) * Math.cos(a) + Math.sin(b) * Math.sin(a);
+    const tilt = Math.asin(Math.max(-1, Math.min(1, horizontal))) / radians;
+    lastMotionAt = performance.now();
+    if (motionNeutral === null) {
+      motionNeutral = tilt;
+      motionActive = true;
+      motionPending = false;
+      clearTimeout(motionTimeout);
+      motionButton.textContent = "Torna al touch";
+      motionButton.setAttribute("aria-pressed", "true");
+      calibrateButton.hidden = sensitivityEl.hidden = false;
+      motionStatus.textContent = "Movimento attivo";
+    }
+    motionValue = shapeSteering((tilt - motionNeutral) / Number(sensitivityEl.value));
+  }
+
+  motionButton.addEventListener("click", async () => {
+    if (motionActive || motionPending) { stopMotion(); return; }
+    if (!window.isSecureContext || !window.DeviceOrientationEvent) {
+      stopMotion("Sensori non disponibili: usa il touch"); return;
+    }
+    const request = ++motionRequest;
+    motionPending = true;
+    motionButton.textContent = "Annulla movimento";
+    motionStatus.textContent = "Tieni il telefono nella posizione di guida";
+    try {
+      // iOS requires this call directly inside a user gesture.
+      if (typeof DeviceOrientationEvent.requestPermission === "function") {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        if (request !== motionRequest) return;
+        if (permission !== "granted") { stopMotion("Permesso negato: sterzo touch"); return; }
+      }
+      if (request !== motionRequest) return;
+      clearDrivingInput();
+      motionScreenAngle = screenAngle();
+      window.addEventListener("deviceorientation", onOrientation);
+      motionTimeout = setTimeout(() => stopMotion("Nessun dato dai sensori: sterzo touch"), 5000);
+    } catch {
+      if (request === motionRequest) stopMotion("Sensori non disponibili: sterzo touch");
+    }
+  });
+  calibrateButton.addEventListener("click", () => {
+    motionNeutral = null;
+    motionValue = steering.value = 0;
+    motionStatus.textContent = "Mantieni la posizione: calibrazione…";
+  });
+  window.screen.orientation?.addEventListener("change", () => {
+    if (motionActive || motionPending) stopMotion("Telefono ruotato: riattiva e calibra");
+  });
 
   window.addEventListener("keydown", (event) => {
+    if (event.target.closest?.("select,input,textarea,button")) return;
     const action = KEY_MAP[event.code];
     if (action) input[action] = true;
   });
@@ -59,6 +145,7 @@ export function setupRaceInput({
 
   wheelEl.addEventListener("pointerdown", (event) => {
     event.preventDefault();
+    if (motionActive || motionPending) stopMotion();
     if (wheelPointer !== null) return;
     wheelPointer = event.pointerId;
     wheelOrigin = event.clientX;
@@ -93,16 +180,25 @@ export function setupRaceInput({
     });
   }
 
-  addEventListener("blur", clearDrivingInput);
+  function suspendInput() {
+    if (motionActive || motionPending) stopMotion("Movimento sospeso: riattiva quando sei pronto");
+    else clearDrivingInput();
+  }
+  addEventListener("blur", () => {
+    // A native permission dialog may blur the page while awaiting consent.
+    if (motionPending) clearDrivingInput();
+    else suspendInput();
+  });
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) clearDrivingInput();
+    if (document.hidden) suspendInput();
   });
 
   function updateSteeringInput(dt) {
+    if (motionActive && performance.now() - lastMotionAt > 2000) stopMotion("Sensori interrotti: sterzo touch");
     const keyboard = (input.right ? 1 : 0) - (input.left ? 1 : 0);
     steering.value = smoothSteering(
       steering.value,
-      wheelPointer !== null ? touchSteer : keyboard,
+      wheelPointer !== null ? touchSteer : keyboard || (motionActive ? motionValue : 0),
       dt
     );
     wheelEl.style.setProperty("--steer-angle", `${steering.value * 65}deg`);
