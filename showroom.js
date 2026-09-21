@@ -1,6 +1,15 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { applyCarLivery, buildCar, createStudioEnvironment } from './car-model.js?v=24';
 
+const SHOWROOM_VIEWS={
+  hero:[.72,.34,10.4],
+  side:[Math.PI/2,.18,10.4],
+  // Keep the camera inside the back wall at z=-8. The old 10.4-unit orbit
+  // placed it behind the wall, so the solid backdrop hid the entire car.
+  rear:[Math.PI,.3,6.8],
+  cockpit:[.2,.72,4.8],
+};
+
 export function createShowroom(host, { livery } = {}) {
   const compact=matchMedia('(max-width: 760px)').matches;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
@@ -42,13 +51,13 @@ export function createShowroom(host, { livery } = {}) {
   canvas.addEventListener('pointerdown',e=>{if(pointer!==null)return;pointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(pointer);});
   canvas.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;azimuth-=(e.clientX-lastX)*.008;elevation=THREE.MathUtils.clamp(elevation+(e.clientY-lastY)*.004,.1,1.15);lastX=e.clientX;lastY=e.clientY;});
   const release=e=>{if(e.pointerId===pointer)pointer=null;};canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
-  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{const views={hero:[.72,.34,10.4],side:[Math.PI/2,.18,10.4],rear:[2.65,.28,10.4],cockpit:[.2,.72,4.8]};[azimuth,elevation,distance]=views[b.dataset.view];document.querySelectorAll('[data-view]').forEach(v=>v.setAttribute('aria-pressed',String(v===b)));}));
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{[azimuth,elevation,distance]=SHOWROOM_VIEWS[b.dataset.view];document.querySelectorAll('[data-view]').forEach(v=>v.setAttribute('aria-pressed',String(v===b)));}));
   document.getElementById('garage-orbit').addEventListener('click',e=>{auto=!auto;e.currentTarget.setAttribute('aria-pressed',String(auto));});
   const observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();});observer.observe(host);
   let previous=0;
   renderer.setAnimationLoop(time=>{const dt=Math.min((time-previous)/1000,.05);previous=time;if(document.hidden)return;if(auto&&pointer===null&&!reduced.matches)azimuth+=dt*.18;updateCamera();renderer.render(scene,camera);});
   function focusPart(part) {
-    const views={frontWing:[.48,.36,8.8],rearWing:[2.65,.3,8.8],floor:[2.4,.22,9],brakes:[1.25,.28,8.6],suspension:[.6,.62,8.6]};
+    const views={frontWing:[.48,.36,8.8],rearWing:[Math.PI,.34,6.65],floor:[2.4,.22,7.4],brakes:[1.25,.28,8.6],suspension:[.6,.62,8.6]};
     [azimuth,elevation,distance]=views[part];auto=false;
     document.getElementById('garage-orbit').setAttribute('aria-pressed','false');
     document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed','false'));

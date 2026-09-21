@@ -3,7 +3,8 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 const CHASE_CAM_BASE_DISTANCE = 6.4;
 const CHASE_CAM_BASE_FOV = 58;
 const CHASE_CAM_BASE_ASPECT = 1.7;
-const CHASE_CAM_LANDSCAPE_MAX_DISTANCE = 4.35;
+const CHASE_CAM_LANDSCAPE_MAX_DISTANCE = 5.2;
+const CHASE_CAM_TRACK_MARGIN = 2.5;
 
 function isCompactLandscapeViewport() {
   return window.innerWidth > window.innerHeight && window.innerHeight <= 520;
@@ -56,8 +57,10 @@ function buildCockpitView(theme) {
   return group;
 }
 
-export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, cockpitTheme }) {
+export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, cockpitTheme, nearestTrackInfo, trackWidth }) {
   let cameraMode = "chase";
+  let chaseCameraReady = false;
+  const desiredPosition = new THREE.Vector3();
   const cockpitView = cockpitTheme ? buildCockpitView(cockpitTheme) : null;
   if (cockpitView) scene.add(cockpitView);
 
@@ -79,15 +82,27 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
 
     if (isCompactLandscapeViewport()) {
       camDistance = Math.min(camDistance, CHASE_CAM_LANDSCAPE_MAX_DISTANCE);
-      camHeight = 2.85;
+      camHeight = 3.15;
     }
 
-    const desiredX = state.x - Math.sin(state.heading) * camDistance;
-    const desiredZ = state.z - Math.cos(state.heading) * camDistance;
-    camera.position.lerp(
-      new THREE.Vector3(desiredX, camHeight, desiredZ),
-      1 - Math.pow(0.001, dt)
-    );
+    let desiredX = state.x - Math.sin(state.heading) * camDistance;
+    let desiredZ = state.z - Math.cos(state.heading) * camDistance;
+    if (nearestTrackInfo && trackWidth) {
+      const track = nearestTrackInfo(desiredX, desiredZ);
+      const safeOffset = trackWidth / 2 + CHASE_CAM_TRACK_MARGIN;
+      if (track.dist > safeOffset) {
+        const scale = safeOffset / track.dist;
+        desiredX = track.x + (desiredX - track.x) * scale;
+        desiredZ = track.z + (desiredZ - track.z) * scale;
+      }
+    }
+    desiredPosition.set(desiredX, camHeight, desiredZ);
+    if (!chaseCameraReady) {
+      camera.position.copy(desiredPosition);
+      chaseCameraReady = true;
+    } else {
+      camera.position.lerp(desiredPosition, 1 - Math.pow(0.001, dt));
+    }
     const lookTarget = new THREE.Vector3(
       state.x + Math.sin(state.heading) * 4,
       1,
@@ -105,6 +120,7 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
   }
 
   function updateCockpitCamera() {
+    chaseCameraReady = false;
     if (cockpitView) {
       cockpitView.visible = true;
       cockpitView.position.set(state.x, 0, state.z);

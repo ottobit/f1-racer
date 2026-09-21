@@ -308,6 +308,9 @@ Two modes currently exist:
 
 ### Chase
 Third-person camera follows behind the player, with speed-dependent FOV.
+Its desired position is constrained to the track-and-runoff corridor so tight
+corners cannot place the camera behind scenery. Compact-landscape framing keeps
+enough distance and height to show the rear of the player car.
 
 ### Cockpit
 First-person camera is attached directly to the car.
@@ -457,6 +460,10 @@ existing `f1racer-garage-v1` setup object. `garage.js` renders all five primary 
 secondary color pairs and updates the shared showroom car immediately. The livery
 selector sits at the top of the scrollable setup panel so it remains discoverable
 on mobile while the car preview stays fixed.
+
+The `Posteriore` and rear-wing presets remain inside the modeled studio back
+wall. A preset must not orbit beyond z=-8, where the opaque backdrop would sit
+between the camera and the car.
 
 `main.js` reads the saved garage livery at race startup and applies it only to
 the player car. AI cars continue to use their team liveries from the same shared

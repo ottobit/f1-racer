@@ -10,7 +10,7 @@ import { createStudioEnvironment } from "./car-model.js";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js";
 import { setupRaceInput } from "./race-input.js";
 import { setupRaceHud } from "./race-hud.js";
-import { setupRaceCamera } from "./race-camera.js";
+import { setupRaceCamera } from "./race-camera.js?v=26";
 import { setupPlayerPhysics } from "./player-physics.js";
 import { setupRaceAi } from "./race-ai.js";
 import { setupRaceSystems } from "./race-systems.js";
@@ -1218,6 +1218,8 @@ const raceCamera = setupRaceCamera({
   playerCar,
   carMaxSpeed: CAR.maxSpeed,
   cockpitTheme: PLAYER_COCKPIT_THEME,
+  nearestTrackInfo,
+  trackWidth: TRACK_WIDTH,
 });
 const raceNameplates = setupRaceNameplates({
   camera,
