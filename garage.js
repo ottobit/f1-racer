@@ -53,7 +53,7 @@ function renderUI() {
   const effects = setupEffects(setup);
   const base = { speed: 50, downforce: 50, braking: 50, stability: 50, traction: 50 };
   document.getElementById("garage-stats").innerHTML = Object.entries(base)
-    .map(([k, v]) => `<div><span>${labels[k]}</span><div><i style="width:${Math.max(10, Math.min(90, v + (effects[k] || 0) * 7))}%"></i></div></div>`)
+    .map(([k, v]) => { const value = Math.max(10, Math.min(90, v + (effects[k] || 0) * 7)); return `<div><span>${labels[k]}</span><div><i style="width:${value}%"></i></div><b>${value}</b></div>`; })
     .join("");
   document.getElementById("garage-liveries").innerHTML = `<span>LIVREA GARA</span>${GARAGE_LIVERIES.map((livery) => `<button class="livery-choice ${setup.livery === livery.id ? "active" : ""}" data-livery="${livery.id}" aria-pressed="${setup.livery === livery.id}" aria-label="${livery.label}"><i style="--primary:${hex(livery.primary)};--secondary:${hex(livery.secondary)}"></i><b>${livery.label}</b></button>`).join("")}`;
   const recommendation = targetCircuit.recommendedSetup;

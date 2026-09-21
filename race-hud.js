@@ -27,11 +27,13 @@ export function setupRaceHud({
   const timeEl = document.getElementById("time");
   const bestEl = document.getElementById("best");
   const cautionBannerEl = document.getElementById("caution-banner");
+  const sessionBannerEl = document.getElementById("session-banner");
   const damageRowEl = document.getElementById("damage-row");
   const damageEl = document.getElementById("damage");
   const tireWearEl = document.getElementById("tire-wear");
   const speedValueEl = document.getElementById("speed-value");
   const speedFillEl = document.getElementById("speed-fill");
+  const speedNeedleEl = document.getElementById("speedometer-needle");
   const gearValueEl = document.getElementById("gear-value");
   const drsIndicatorEl = document.getElementById("drs-indicator");
   const ersIndicatorEl = document.getElementById("ers-indicator");
@@ -55,6 +57,7 @@ export function setupRaceHud({
   function setRaceLabel() {
     circuitNameEl.textContent = circuitLabel();
     hintEl.textContent = raceHintText;
+    sessionBannerEl.hidden = true;
   }
 
   function setCautionVisible(isVisible) {
@@ -109,6 +112,7 @@ export function setupRaceHud({
 
     const gaugeRatio = Math.min(speedKmh / gaugeMaxKmh, 1);
     speedFillEl.style.width = `${gaugeRatio * 100}%`;
+    speedNeedleEl.style.transform = `rotate(${-110 + gaugeRatio * 220}deg)`;
 
     drsIndicatorEl.classList.toggle("drs-active", state.drsActive);
     const gripPercent = Math.round(tireGripFactor(state.totalProgress, state) * 100);
@@ -169,6 +173,8 @@ export function setupRaceHud({
   function updateQualifyingHud(qualiTimeRemainingMs, qualiBestTime) {
     positionEl.textContent = "Q";
     const remainingSeconds = Math.max(0, Math.ceil(qualiTimeRemainingMs / 1000));
+    sessionBannerEl.hidden = false;
+    sessionBannerEl.textContent = `QUALIFICHE · ${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")} · MIGLIOR TEMPO IN GRIGLIA`;
     lapEl.textContent = `${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")}`;
     timeEl.textContent = formatTime(state.currentLapTime);
     bestEl.textContent = qualiBestTime !== null

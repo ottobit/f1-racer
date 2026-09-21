@@ -297,6 +297,15 @@ HUD currently exposes:
 
 The main gear/speed instrument cluster (shift LEDs, DRS/ERS, speed bar, gear and speed readout) is positioned at the **top center** of the viewport, keeping it in the forward sight line and away from the bottom-corner touch controls.
 
+Qualifying has a separate centered translucent banner with the explicit
+`QUALIFICHE` label, remaining time and “miglior tempo in griglia” purpose. It
+remains visible on touch layouts and disappears when the race session begins;
+the existing upper HUD itself is unchanged.
+
+The center instrument cluster is wider and keeps its transparent treatment. In
+addition to the speed bar and digital readout, it includes a 0–300 km/h
+semicircular speedometer whose needle uses the same live speed ratio.
+
 Input:
 - Arrow keys / WASD;
 - touch gas/brake;
@@ -415,6 +424,9 @@ Each circuit carries a data-driven recommended setup and a short rationale.
 The selected carousel circuit is persisted and passed into the Garage, which
 compares all five current components with the recommendation. Applying the
 preset is explicit and preserves the chosen livery; manual tuning remains free.
+The five live setup parameters are rendered as a compact translucent overlay on
+the car stage, with label, bar and numeric value, rather than consuming vertical
+space in the scrolling component panel.
 
 
 ## Evolved driving dynamics
