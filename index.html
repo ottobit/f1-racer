@@ -13,7 +13,7 @@
   <meta property="og:image" content="https://ottobit.github.io/portfolio-arcade/assets/images/og-f1-racer.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="stylesheet" href="../../assets/css/style.css" />
-  <link rel="stylesheet" href="style.css?v=16" />
+  <link rel="stylesheet" href="style.css?v=17" />
 </head>
 <body>
   <header class="f1-home-hero">
@@ -39,8 +39,14 @@
     </table>
   </div></section>
 
-  <main class="f1-home-section"><div class="f1-home-section-head"><span>03</span><div><h2>Prossima gara</h2><p>Scegli il circuito e scendi in pista.</p></div></div>
-    <div id="circuit-list" class="grid"></div>
+  <main class="f1-home-section circuit-stage"><div class="f1-home-section-head"><span>04</span><div><h2>Prossima gara</h2><p>Scorri le mappe, scegli il circuito e scendi in pista.</p></div></div>
+    <div id="circuit-carousel" class="circuit-carousel" tabindex="0" aria-roledescription="carosello" aria-label="Selezione circuito">
+      <button id="circuit-prev" class="circuit-arrow circuit-arrow--prev" type="button" aria-label="Circuito precedente">‹</button>
+      <div class="circuit-viewport"><div id="circuit-list" class="circuit-track"></div></div>
+      <button id="circuit-next" class="circuit-arrow circuit-arrow--next" type="button" aria-label="Circuito successivo">›</button>
+    </div>
+    <div id="circuit-dots" class="circuit-dots" aria-label="Vai al circuito"></div>
+    <p id="circuit-live" class="sr-only" aria-live="polite"></p>
   </main>
 
   <div class="garage-entry"><a href="garage.html"><strong>Garage</strong><span>Configura aerodinamica, freni e sospensioni →</span></a></div>
@@ -53,6 +59,6 @@
     <a href="../../">← arcade</a>
   </footer>
 
-  <script type="module" src="menu.js"></script>
+  <script type="module" src="menu.js?v=17"></script>
 </body>
 </html>

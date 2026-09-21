@@ -463,3 +463,18 @@ the player car. AI cars continue to use their team liveries from the same shared
 theme data. `race-camera.js` adds a small cockpit-view overlay with themed rails,
 dash glow and name/motto badge for the selected driver; the top HUD remains
 unchanged.
+
+## Circuit carousel and bilateral contact
+
+The home circuit grid is now a single map-led carousel. `menu.js` normalizes
+each circuit's control points into an inline SVG map and keeps swipe, arrow,
+keyboard and dot navigation on one selected index. The active slide combines
+track character, weather, race status and a large launch action; mobile arrows
+and dots keep 44–48 px touch targets.
+
+`race-collisions.js` owns car-to-car overlap correction and equal-mass impulse
+transfer. Both player and AI cars can lose forward speed, gain a damped lateral
+slide and yaw, and receive the same capped damage from hard relative impacts.
+Sparks and player camera shake expose meaningful contact while a short cooldown
+prevents continuous damage from one lingering overlap. AI lateral/yaw recovery
+is integrated in `race-ai.js`; the existing HUD already reveals player damage.

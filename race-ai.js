@@ -140,8 +140,14 @@ export function setupRaceAi({
     if (err > 0.02) car.heading += rate * dt;
     if (err < -0.02) car.heading -= rate * dt;
 
-    car.x += Math.sin(car.heading) * car.speed * dt;
-    car.z += Math.cos(car.heading) * car.speed * dt;
+    // Collision impulses briefly disturb AI cars too. Steering recovers the
+    // racing line progressively instead of making rivals immovable rails.
+    car.heading += (car.yawRate || 0) * dt;
+    car.yawRate = (car.yawRate || 0) * Math.max(0, 1 - dt * 3.2);
+    car.lateralSpeed = (car.lateralSpeed || 0) * Math.max(0, 1 - dt * 2.7);
+
+    car.x += (Math.sin(car.heading) * car.speed + Math.cos(car.heading) * car.lateralSpeed) * dt;
+    car.z += (Math.cos(car.heading) * car.speed - Math.sin(car.heading) * car.lateralSpeed) * dt;
     const afterInfo = applyTrackBoundary(car, dt);
     advanceProgress(car, afterInfo.idx / centerline.length);
   }

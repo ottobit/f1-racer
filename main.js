@@ -15,6 +15,7 @@ import { setupRaceAi } from "./race-ai.js";
 import { setupRaceSystems } from "./race-systems.js";
 import { setupRaceProgress } from "./race-progress.js";
 import { setupRaceCommands } from "./race-commands.js";
+import { setupCarCollisions } from "./race-collisions.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
@@ -148,7 +149,6 @@ const WALL_LIMIT = TRACK_WIDTH / 2 + 4; // legacy distance used for runoff drag 
 const GRASS_MAX_DECEL = 240 * (1 - GARAGE_EFFECTS.runoff * 0.035); // units/s^2 of extra drag in the runoff
 const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
 const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
-const CAR_BUMP_SPEED_FACTOR = 0.7; // speed kept by both cars on contact
 
 // Safety car: a real multi-car pile-up (several distinct cars hitting a
 // wall in a short window — not just routine jostling, which happens
@@ -162,13 +162,11 @@ const CAUTION_DURATION_MS = 12000;
 const CAUTION_COOLDOWN_MS = 10000; // minimum gap before another can trigger
 const CAUTION_SPEED_FACTOR = 0.45;
 
-// Collision damage: a hard wall impact costs some top speed for the rest
-// of the race (front wing / suspension knock) — same rule for the player
-// and every AI car. A gentle graze under the threshold leaves no mark, and
-// total damage is capped well short of crippling, so a couple of offs hurt
-// your pace without ending the race.
-const DAMAGE_MIN_IMPACT_SPEED = 20; // wall hits below this speed leave no mark
-const DAMAGE_PER_IMPACT_SPEED = 0.0015; // max-speed fraction lost per unit of speed above the threshold
+// Collision damage follows relative impact speed and applies equally to the
+// player and every AI car. A gentle rub leaves no mark; a hard contact costs
+// both cars pace without making either one undriveable.
+const DAMAGE_MIN_IMPACT_SPEED = 7;
+const DAMAGE_PER_IMPACT_SPEED = 0.003;
 const DAMAGE_MAX_SPEED_PENALTY = 0.25; // hard cap: never lose more than this
 
 // Track limits (player only — AI already steers within bounds): running
@@ -771,6 +769,8 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     totalProgress: 0,
     lap: 0,
     damage: 0,
+    lateralSpeed: 0,
+    yawRate: 0,
     drsActive: false,
     tyreCompound: "medium",
     tyreProgress: 0,
@@ -780,6 +780,7 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     pitServiceEndTime: 0,
     hasPitted: false,
     lastImpactEffectTime: 0,
+    lastCollisionTime: 0,
   };
 });
 
@@ -870,6 +871,7 @@ const state = {
   pitServiceEndTime: 0,
   pitRequested: false,
   lastImpactEffectTime: 0,
+  lastCollisionTime: 0,
   cameraShake: 0,
   // Physics extension: lateral velocity and yaw-rate make the car carry
   // momentum through corners instead of moving only along its heading.
@@ -1128,44 +1130,19 @@ function applyTrackBoundary(car, dt, info) {
   return info;
 }
 
-// Cheap circle-vs-circle bump: push overlapping cars apart and dock both
-// some speed, so contact costs you something instead of cars overlapping.
-function resolveCarCollisions(cars) {
-  for (let i = 0; i < cars.length; i++) {
-    for (let j = i + 1; j < cars.length; j++) {
-      const a = cars[i], b = cars[j];
-      const dx = b.x - a.x, dz = b.z - a.z;
-      const dist = Math.hypot(dx, dz) || 0.0001;
-      const minDist = CAR_RADIUS * 2;
-      if (dist >= minDist) continue;
-
-      const nx = dx / dist, nz = dz / dist;
-      const overlap = minDist - dist;
-      // Positional correction has a tiny cushion so the same pair does not
-      // remain interpenetrating and get "punched" apart again next frame.
-      const correction = overlap * 0.52 + 0.025;
-      a.x -= nx * correction; a.z -= nz * correction;
-      b.x += nx * correction; b.z += nz * correction;
-
-      // Resolve only closing velocity along the contact normal. Cars moving
-      // together no longer both lose 30% speed just because their circles
-      // touched; side-to-side rubbing is mild, nose-to-tail contact transfers
-      // momentum progressively.
-      const avx = Math.sin(a.heading) * a.speed;
-      const avz = Math.cos(a.heading) * a.speed;
-      const bvx = Math.sin(b.heading) * b.speed;
-      const bvz = Math.cos(b.heading) * b.speed;
-      const closing = (avx - bvx) * nx + (avz - bvz) * nz;
-      if (closing > 0) {
-        const impulse = closing * 0.34;
-        a.speed = Math.max(0, a.speed - impulse);
-        b.speed = Math.max(0, b.speed + impulse * 0.72);
-        if ("lateralSpeed" in a) a.lateralSpeed -= impulse * 0.12;
-        if ("lateralSpeed" in b) b.lateralSpeed += impulse * 0.12;
-      }
+const carCollisions = setupCarCollisions({
+  radius: CAR_RADIUS,
+  damageThreshold: DAMAGE_MIN_IMPACT_SPEED,
+  damagePerSpeed: DAMAGE_PER_IMPACT_SPEED,
+  maxDamage: DAMAGE_MAX_SPEED_PENALTY,
+  onImpact({ a, b, x, z, closingSpeed }) {
+    if (closingSpeed < 5) return;
+    spawnImpactSparks(x, z);
+    if (a === state || b === state) {
+      state.cameraShake = Math.max(state.cameraShake, Math.min(closingSpeed / 38, 1));
     }
-  }
-}
+  },
+});
 
 const raceSystems = setupRaceSystems({
   state,
@@ -1372,7 +1349,7 @@ function update(dt) {
   const info = integratePlayerMotion(dt);
   const allCars = [state, ...aiCars];
   for (const car of aiCars) updateAiCar(car, dt, allCars);
-  resolveCarCollisions(allCars);
+  carCollisions.resolve(allCars, now);
 
   applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
   for (const car of aiCars) applyCarToMesh(car, car.x, car.z, car.heading, car.speed, dt);

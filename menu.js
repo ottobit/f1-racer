@@ -37,6 +37,44 @@ function saveDifficulty(v) {
 
 let difficulty = loadDifficulty();
 let selectedDriverId = loadSelectedDriverId();
+let selectedCircuitIndex = 0;
+let circuitSelectionInitialized = false;
+
+const CIRCUIT_PERSONALITY = {
+  vallechiara: { type: "Completo", note: "Curve veloci e frenate nette", level: "Medio" },
+  portoscuro: { type: "Bagnato", note: "Precisione e aderenza ridotta", level: "Tecnico" },
+  altomare: { type: "Alta velocità", note: "Rettifili lunghi e grandi appoggi", level: "Veloce" },
+  montenero: { type: "Cittadino", note: "Stretto, nervoso, senza respiro", level: "Difficile" },
+  colleverde: { type: "Flow", note: "Sequenze ampie tra le colline", level: "Medio" },
+};
+
+function circuitMap(points) {
+  const xs = points.map(([x]) => x);
+  const zs = points.map(([, z]) => z);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minZ = Math.min(...zs), maxZ = Math.max(...zs);
+  const width = Math.max(1, maxX - minX), height = Math.max(1, maxZ - minZ);
+  const scale = Math.min(78 / width, 58 / height);
+  const offsetX = (100 - width * scale) / 2;
+  const offsetY = (76 - height * scale) / 2;
+  const path = points.map(([x, z]) => `${(offsetX + (x - minX) * scale).toFixed(1)},${(offsetY + (z - minZ) * scale).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 100 76" role="img" aria-label="Mappa del circuito"><polyline points="${path} ${path.split(" ")[0]}" /></svg>`;
+}
+
+function selectCircuit(index, announce = true) {
+  selectedCircuitIndex = (index + CIRCUITS.length) % CIRCUITS.length;
+  const track = document.getElementById("circuit-list");
+  track.style.transform = `translateX(-${selectedCircuitIndex * 100}%)`;
+  track.querySelectorAll(".circuit-slide").forEach((slide, i) => {
+    const active = i === selectedCircuitIndex;
+    slide.setAttribute("aria-hidden", String(!active));
+    slide.querySelector("a").tabIndex = active ? 0 : -1;
+  });
+  document.querySelectorAll("[data-circuit-index]").forEach((dot) => {
+    dot.setAttribute("aria-current", dot.dataset.circuitIndex === String(selectedCircuitIndex) ? "true" : "false");
+  });
+  if (announce) document.getElementById("circuit-live").textContent = `${CIRCUITS[selectedCircuitIndex].name}, ${selectedCircuitIndex + 1} di ${CIRCUITS.length}`;
+}
 
 function renderDifficulty() {
   document.getElementById("difficulty-select").innerHTML = DIFFICULTY_OPTIONS.map(
@@ -91,6 +129,12 @@ function render() {
   renderDriverSelect();
   const { standings, allRaced, state } = computeStandings(CIRCUITS);
 
+  if (!circuitSelectionInitialized) {
+    const nextRace = CIRCUITS.findIndex((circuit) => !state.raceResults[circuit.id]);
+    selectedCircuitIndex = nextRace >= 0 ? nextRace : 0;
+    circuitSelectionInitialized = true;
+  }
+
   const bannerEl = document.getElementById("champion-banner");
   if (allRaced) {
     const champion = standings[0];
@@ -115,21 +159,59 @@ function render() {
     )
     .join("");
 
-  document.getElementById("circuit-list").innerHTML = CIRCUITS.map((circuit) => {
+  document.getElementById("circuit-list").innerHTML = CIRCUITS.map((circuit, index) => {
     const order = state.raceResults[circuit.id];
     const status = order ? positionLabel(order) : "Da correre";
+    const personality = CIRCUIT_PERSONALITY[circuit.id];
     return `
-      <a class="card-link" href="race.html?circuit=${circuit.id}&difficulty=${difficulty}">
-        <article class="card">
-          <span class="card-icon" aria-hidden="true">🏁</span>
-          <h2>${circuit.name}</h2>
-          <p>${LAPS_PER_RACE} giri contro 9 rivali${circuit.weather === "pioggia" ? " · 🌧️ sempre bagnato" : ""}</p>
-          <span class="circuit-status">${status}</span>
-        </article>
-      </a>
+      <article class="circuit-slide" aria-label="${circuit.name}" aria-roledescription="slide">
+        <a class="circuit-card" href="race.html?circuit=${circuit.id}&difficulty=${difficulty}">
+          <div class="circuit-map">${circuitMap(circuit.points)}<span>${String(index + 1).padStart(2, "0")}</span></div>
+          <div class="circuit-copy">
+            <div class="circuit-meta"><span>${personality.type}</span><span>${personality.level}</span></div>
+            <h2>${circuit.name}</h2>
+            <p>${personality.note}</p>
+            <div class="circuit-facts"><span><b>${LAPS_PER_RACE}</b> giri</span><span><b>9</b> rivali</span><span>${circuit.weather === "pioggia" ? "🌧️ Bagnato" : "☀️ Asciutto"}</span></div>
+            <div class="circuit-launch"><span class="circuit-status">${status}</span><strong>SCENDI IN PISTA →</strong></div>
+          </div>
+        </a>
+      </article>
     `;
   }).join("");
+  document.getElementById("circuit-dots").innerHTML = CIRCUITS.map((circuit, index) => `<button type="button" data-circuit-index="${index}" aria-label="Mostra ${circuit.name}"></button>`).join("");
+  selectCircuit(selectedCircuitIndex, false);
 }
+
+document.getElementById("circuit-prev").addEventListener("click", () => selectCircuit(selectedCircuitIndex - 1));
+document.getElementById("circuit-next").addEventListener("click", () => selectCircuit(selectedCircuitIndex + 1));
+document.getElementById("circuit-dots").addEventListener("click", (e) => {
+  const dot = e.target.closest("[data-circuit-index]");
+  if (dot) selectCircuit(Number(dot.dataset.circuitIndex));
+});
+document.getElementById("circuit-carousel").addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") { e.preventDefault(); selectCircuit(selectedCircuitIndex - 1); }
+  if (e.key === "ArrowRight") { e.preventDefault(); selectCircuit(selectedCircuitIndex + 1); }
+});
+
+let swipeStartX = null;
+let suppressCircuitClick = false;
+const viewport = document.querySelector(".circuit-viewport");
+viewport.addEventListener("pointerdown", (e) => { swipeStartX = e.clientX; suppressCircuitClick = false; viewport.setPointerCapture(e.pointerId); });
+viewport.addEventListener("pointerup", (e) => {
+  if (swipeStartX === null) return;
+  const delta = e.clientX - swipeStartX;
+  swipeStartX = null;
+  if (Math.abs(delta) > 42) {
+    suppressCircuitClick = true;
+    selectCircuit(selectedCircuitIndex + (delta < 0 ? 1 : -1));
+  }
+});
+viewport.addEventListener("pointercancel", () => { swipeStartX = null; });
+viewport.addEventListener("click", (e) => {
+  if (!suppressCircuitClick) return;
+  e.preventDefault();
+  suppressCircuitClick = false;
+}, true);
 
 document.getElementById("reset-btn").addEventListener("click", () => {
   if (confirm("Azzerare punti e risultati del campionato?")) {
