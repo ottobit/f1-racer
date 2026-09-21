@@ -12,9 +12,9 @@ function positionLabel(order) {
 // via a query param on the circuit link, and remembered here across visits.
 const DIFFICULTY_KEY = "f1racer-difficulty";
 const DIFFICULTY_OPTIONS = [
-  { id: "facile", label: "Facile" },
-  { id: "normale", label: "Normale" },
-  { id: "difficile", label: "Difficile" },
+  { id: "facile", label: "Facile", note: "Più respiro" },
+  { id: "normale", label: "Normale", note: "Bilanciata" },
+  { id: "difficile", label: "Difficile", note: "Senza sconti" },
 ];
 
 function loadDifficulty() {
@@ -81,11 +81,11 @@ function renderDifficulty() {
     (opt) => `
       <button
         type="button"
-        class="difficulty-btn${opt.id === difficulty ? " active" : ""}"
+        class="difficulty-btn difficulty-option${opt.id === difficulty ? " active" : ""}"
         data-difficulty="${opt.id}"
         role="radio"
         aria-checked="${opt.id === difficulty}"
-      >${opt.label}</button>
+      ><strong>${opt.label}</strong><small>${opt.note}</small></button>
     `
   ).join("");
 }
@@ -101,16 +101,16 @@ document.getElementById("difficulty-select").addEventListener("click", (e) => {
 });
 
 function renderDriverSelect() {
-  const html = SELECTABLE_DRIVER_IDS.map((driverId) => {
+  const html = SELECTABLE_DRIVER_IDS.map((driverId, index) => {
     const driver = DRIVERS.find((entry) => entry.id === driverId);
     return `
       <button
         type="button"
-        class="difficulty-btn${driverId === selectedDriverId ? " active" : ""}"
+        class="difficulty-btn driver-option${driverId === selectedDriverId ? " active" : ""}"
         data-driver-id="${driverId}"
         role="radio"
         aria-checked="${driverId === selectedDriverId}"
-      >${driver.name}</button>
+      ><span>${String(index + 1).padStart(2, "0")}</span><strong>${driver.name}</strong></button>
     `;
   }).join("");
   document.getElementById("driver-select").innerHTML = html;

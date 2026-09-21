@@ -484,3 +484,9 @@ race shortcut sit immediately below the hero; difficulty and driver are grouped
 as one session setup. Circuit selection remains the main interactive stage, and
 championship standings come afterward as reference information. This keeps the
 Garage discoverable before users commit to a circuit, especially on mobile.
+
+The mobile session setup uses two explicit steps. Difficulty is a three-column
+segmented control with a short explanation per level; the nine drivers use a
+numbered 3×3 grid with 54 px touch targets, switching to two columns below
+365 px. Active choices combine border, inset marker and background rather than
+depending on color alone.
