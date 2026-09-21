@@ -17,6 +17,7 @@ import { setupRaceSystems } from "./race-systems.js";
 import { setupRaceProgress } from "./race-progress.js";
 import { setupRaceCommands } from "./race-commands.js";
 import { setupCarCollisions } from "./race-collisions.js";
+import { setupRaceNameplates } from "./race-nameplates.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js";
@@ -1218,6 +1219,12 @@ const raceCamera = setupRaceCamera({
   carMaxSpeed: CAR.maxSpeed,
   cockpitTheme: PLAYER_COCKPIT_THEME,
 });
+const raceNameplates = setupRaceNameplates({
+  camera,
+  mount: document.getElementById("driver-nameplates"),
+  cars: aiCars,
+  nameOf: displayDriverName,
+});
 const { integratePlayerMotion } = setupPlayerPhysics({
   car: CAR,
   state,
@@ -1466,6 +1473,7 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.1);
   updateSteeringInput(dt);
   update(dt);
+  raceNameplates.update();
   updateImpactSparks(dt);
   updateRain(dt);
   cloudGroup.rotation.y += dt * 0.004; // slow drift, always running regardless of session phase

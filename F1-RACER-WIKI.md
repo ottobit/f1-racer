@@ -512,3 +512,16 @@ The detailed showroom calls `buildCar(..., { showDriver: false })`. With the
 helmet and visor absent, the model exposes a carbon cockpit rim, seat, headrest,
 side bolsters, red harness, buckle, dashboard display and steering wheel. The
 Garage view formerly called `Dettaglio` is now the closer `Abitacolo` preset.
+
+## Visible race drivers and nameplates
+
+When `showDriver` is enabled, `car-model.js` builds a seated procedural driver:
+torso, shoulders and arms use a matte material tagged with the primary livery
+role, while gloves stay dark and the helmet keeps the secondary team color.
+These static pieces remain compatible with race-car geometry batching.
+
+`race-nameplates.js` projects a point above each visible AI car through the
+active Three.js camera and positions a small DOM label in screen space. Labels
+inherit a team-color marker, fade with distance, disappear outside the frustum
+or beyond 72 units, and never intercept input. The player car intentionally has
+no label so chase and cockpit views remain clean.

@@ -31,6 +31,7 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   const alloy = new THREE.MeshStandardMaterial({color: 0x8896a5, metalness: .92, roughness: .26});
   const stripe = materialWithRole(new THREE.MeshStandardMaterial({color: livery.secondary, metalness: .3, roughness: .3}), "secondary");
   const gold = materialWithRole(new THREE.MeshStandardMaterial({color: livery.accent, metalness: .7, roughness: .32}), "accent");
+  const suit = materialWithRole(new THREE.MeshStandardMaterial({color: livery.primary, metalness: .08, roughness: .72}), "primary");
   if (detail) {
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
     const ctx = canvas.getContext('2d');
@@ -95,6 +96,13 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   const cockpitRim=mesh(new THREE.TorusGeometry(.36,.025,8,32),carbon,[0,.76,.02]);cockpitRim.name="cockpitRim";cockpitRim.rotation.x=Math.PI/2;cockpitRim.scale.y=1.45;
   }
   if(showDriver){
+    const torso=mesh(new THREE.SphereGeometry(.22,16,10),suit,[0,.72,-.05]);torso.name="driverTorso";torso.scale.set(.92,.7,.72);
+    const shoulders=mesh(new THREE.SphereGeometry(.2,14,8),suit,[0,.77,-.02]);shoulders.name="driverShoulders";shoulders.scale.set(1.35,.42,.62);
+    const neck=mesh(new THREE.CylinderGeometry(.075,.085,.1,10),black,[0,.81,.015]);
+    for(const side of [-1,1]){
+      rod([side*.17,.78,-.02],[side*.115,.79,.27],.043,suit);
+      const glove=mesh(new THREE.SphereGeometry(.052,10,7),black,[side*.115,.79,.27]);glove.name="driverGlove";
+    }
     const helmet=mesh(new THREE.SphereGeometry(.19,20,12),stripe,[0,.88,.04]);helmet.name="driverHelmet";helmet.scale.y=.9;
     const visor=mesh(new THREE.SphereGeometry(.195,20,10,0,Math.PI*2,.95,.65),new THREE.MeshPhysicalMaterial({color:0x263e52,metalness:1,roughness:.1}),[0,.88,.04]);visor.name="driverVisor";
   }

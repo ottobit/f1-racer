@@ -15,6 +15,11 @@ canvas {
   display: block;
 }
 
+#driver-nameplates{position:fixed;inset:0;pointer-events:none;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.driver-nameplate{position:absolute;left:0;top:0;transform-origin:center bottom;padding:3px 7px 4px;border-radius:4px;background:rgba(5,8,12,.72);color:#f4f7fa;font-size:10px;font-weight:700;line-height:1;letter-spacing:.025em;white-space:nowrap;text-shadow:0 1px 2px #000;box-shadow:inset 3px 0 var(--driver-color),0 2px 8px rgba(0,0,0,.4);will-change:transform,opacity}
+.driver-nameplate[hidden]{display:none}
+@media(max-width:760px){.driver-nameplate{padding:3px 6px;font-size:9px}}
+
 /* The race viewport is an interaction surface, not a document: prevent
    Safari/iOS from turning repeated taps or pinch gestures on the WebGL
    canvas into page zoom. Keep this scoped to #app so HUD links/results
