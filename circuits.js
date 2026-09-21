@@ -83,17 +83,25 @@ export const CIRCUITS = [
     name: "Circuito di Marzamemi",
     width: 9,
     theme: "marzamemi",
+    curveTension: 0.18,
     recommendedSetup: { frontWing:"high", rearWing:"balanced", floor:"high", brakes:"aggressive", suspension:"soft", reason:"Carico anteriore e sospensioni morbide per i due cappi stretti e l'asfalto urbano sconnesso." },
     // The supplied route is an elongated coastal dogbone. The real streets
     // share a central corridor; the race adaptation separates the two legs
     // enough for a closed spline, walls and ten cars while preserving both
     // end loops and the long Viale degli Oleandri character.
     points: [
-      [-145, -20], [-70, -20], [10, -20], [90, -20], [145, -18],
-      [180, -5], [190, 20], [175, 40], [145, 45], [110, 30], [80, 18],
-      [10, 18], [-70, 18], [-140, 22], [-180, 38], [-200, 20],
-      [-198, -10], [-178, -35],
-    ],
+      // Map-image coordinates: long diagonal, angular coastal loop, then
+      // the shorter rectangular inland loop. Keep corner approach points
+      // close so interpolation rounds only the apex, not the whole block.
+      [110, 679], [220, 628], [380, 554], [500, 494],
+      [552, 468], [568, 464], [577, 474], [582, 497],
+      [588, 541], [587, 557], [569, 559], [554, 554],
+      [526, 536], [509, 532], [454, 533], [430, 540],
+      [391, 573], [365, 589], [260, 637], [243, 645],
+      [239, 656], [244, 686], [243, 699], [229, 707],
+      [145, 749], [96, 768], [82, 774], [77, 758],
+      [61, 733], [55, 717], [57, 706], [73, 698],
+    ].map(([x, z]) => [(x - 320) * 1.4, (z - 620) * 1.4]),
   },
 ];
 

@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js";
+import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js?v=35";
 import { POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
 import { displayDriverName, loadSelectedDriverId } from "./driver-selection.js";
 import { DRIVER_ROSTER } from "./driver-roster.js";
@@ -20,7 +20,7 @@ import { setupCarCollisions } from "./race-collisions.js";
 import { setupRaceNameplates } from "./race-nameplates.js";
 
 import { steeringYaw } from "./steering.js";
-import { dressCircuit, surfaceTexture } from "./track-art.js";
+import { dressCircuit, surfaceTexture } from "./track-art.js?v=35";
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
@@ -55,7 +55,7 @@ const isRaining = circuit.weather === "pioggia";
 const RAIN_TURN_RATE_MULTIPLIER = 0.82;
 const RAIN_MAX_SPEED_MULTIPLIER = 0.93;
 
-const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom", 0.5);
+const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom", circuit.curveTension ?? 0.5);
 
 // Top speed is tuned to a realistic F1 figure (maxSpeed is treated as m/s
 // for the km/h readout below, so 84 -> ~302 km/h on a straight) rather than

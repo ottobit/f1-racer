@@ -36,6 +36,17 @@ export function dressCircuit(scene,points,width,renderer,wet,theme){
   const temp=new THREE.Object3D();
   function instances(geo,mat,transforms){const mesh=new THREE.InstancedMesh(geo,mat,transforms.length);transforms.forEach((t,i)=>{temp.position.set(...t.p);temp.rotation.set(0,t.r||0,0);temp.scale.set(...(t.s||[1,1,1]));temp.updateMatrix();mesh.setMatrixAt(i,temp.matrix);});mesh.receiveShadow=true;mesh.computeBoundingSphere();scene.add(mesh);return mesh;}
   if(coastal){
+    // Same low red/white racing kerbs as the other circuits, with the
+    // coastal scenery retained. Arc-length samples keep blocks continuous.
+    const redKerbs=[],whiteKerbs=[];
+    let perimeter=0;
+    for(let i=0;i<N;i++)perimeter+=Math.hypot(points[i].x-points[(i+1)%N].x,points[i].z-points[(i+1)%N].z);
+    for(let i=0;i<N;i++){
+      const p=points[i],n=normal(p);
+      for(const side of [-1,1]) (Math.floor(i/3)%2?whiteKerbs:redKerbs).push({p:[p.x+n.x*half*side,.045,p.z+n.z*half*side],r:Math.atan2(p.tx,p.tz)});
+    }
+    instances(new THREE.BoxGeometry(.85,.09,perimeter/N*1.04),material(0xc64037),redKerbs);
+    instances(new THREE.BoxGeometry(.85,.09,perimeter/N*1.04),white,whiteKerbs);
     // Viale degli Oleandri / Fondo Morte: a deliberately low-draw-call
     // reconstruction from the supplied route and street video. Repeated
     // villas, walls, palms and flowering hedges are instanced for phones.
@@ -43,8 +54,8 @@ export function dressCircuit(scene,points,width,renderer,wet,theme){
     const roof=material(0xd9a56f,.85),stone=material(0xa89d86,1),iron=material(0x3d4b4c,.55);
     const palmGreen=material(0x355f42,.9),flower=material(0xc83f83,.9),oleander=material(0x53784c,.95);
     const sea=new THREE.Mesh(new THREE.PlaneGeometry(620,190),new THREE.MeshStandardMaterial({color:0x45afd0,roughness:.3,metalness:.08}));
-    sea.rotation.x=-Math.PI/2;sea.position.set(40,-.012,145);sea.receiveShadow=true;scene.add(sea);
-    const beach=new THREE.Mesh(new THREE.PlaneGeometry(620,32),sand);beach.rotation.x=-Math.PI/2;beach.position.set(40,.002,57);scene.add(beach);
+    sea.rotation.x=-Math.PI/2;sea.rotation.z=Math.PI/2;sea.position.set(500,.001,0);sea.receiveShadow=true;scene.add(sea);
+    const beach=new THREE.Mesh(new THREE.PlaneGeometry(32,620),sand);beach.rotation.x=-Math.PI/2;beach.position.set(396,.002,0);scene.add(beach);
 
     const walls=[],gates=[],homes=[],warmHomes=[],roofs=[],windows=[],trunks=[],crowns=[],flowers=[],shrubs=[],poles=[];
     const wirePositions=[],occupied=[];

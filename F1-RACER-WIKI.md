@@ -457,7 +457,9 @@ the player; track meshes receive car shadows. Wet asphalt has lower roughness.
 Marzamemi selects a dedicated mobile-conscious branch instead: sandy shoulders,
 sea and beach planes, low stucco villas, walls, gates, utility poles and wires,
 palms, oleanders and bougainvillea. Repeated objects remain instanced, and the
-urban course deliberately omits generic racing kerbs, guardrails and mountains.
+urban course uses red/white racing kerbs, without generic guardrails or mountains.
+Its map-traced angular layout uses local corner supports and tension 0.18;
+the narrow shared central corridor is separated for racing clearance.
 The upper HUD markup and existing `style.css` are unchanged; lower control styles
 are isolated in `race-controls.css`.
 
