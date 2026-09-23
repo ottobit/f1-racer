@@ -7,13 +7,16 @@
 
 ## Technical Follow-Ups
 
-- [#3](https://github.com/ottobit/f1-racer/issues/3) (ex-portfolio-arcade#143):
-  reduce the remaining responsibilities in `main.js` where extraction
-  lowers real complexity. Cuts so far: gear mapping and engine/shift-click
-  audio to `race-audio.js`; sky clouds, rain and impact sparks to
-  `race-weather.js` (main.js -140 lines). `main.js` still owns scene/
-  track-mesh construction, ghost-lap persistence and the qualifying/race
-  state machines — further extraction stays open.
+- [#3](https://github.com/ottobit/f1-racer/issues/3) (ex-portfolio-arcade#143),
+  closed: two incremental cuts landed — gear mapping and engine/shift-click
+  audio to `race-audio.js` (#14); sky clouds, rain and impact sparks to
+  `race-weather.js` (#16). `main.js` still owns scene/track-mesh
+  construction, ghost-lap persistence and the qualifying/race state
+  machines. No issue currently tracks extracting those — #3 had no fixed
+  acceptance criteria and was closed once these two cuts felt like enough
+  for now, not because the rest was ruled out. Open a new, scoped issue if
+  `main.js` starts costing real time again; the general direction is the
+  next bullet below, not this closed one.
 - [#4](https://github.com/ottobit/f1-racer/issues/4) (ex-portfolio-arcade#144):
   resolved — see [tooling.md](tooling.md) for the documented patch/diff
   publishing workflow and its contents-API fallback.
