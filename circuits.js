@@ -1,9 +1,9 @@
 // Circuit definitions shared between the menu and the race page. Control
-// points are hand-placed and validated offline (min curvature radius and
-// minimum non-adjacent centerline separation, both comfortably above the
-// track's own wall margin) before being added here — see the project's
-// dev notes if you add a new one, tight corners can make the road ribbon
-// or the wall-bounce collision behave oddly.
+// points are hand-placed and should be checked before being added here —
+// run `node tools/validate-circuits.mjs <id>` (see #6), which verifies
+// closure, winding, segment length, min curvature radius and minimum
+// non-adjacent centerline separation against this same data. Tight corners
+// can make the road ribbon or the wall-bounce collision behave oddly.
 
 export const LAPS_PER_RACE = 3;
 

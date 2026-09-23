@@ -1,0 +1,12 @@
+{
+  "name": "f1-racer-tooling",
+  "private": true,
+  "type": "module",
+  "description": "Dev-only tooling for the F1 Racer static site. The game itself ships with zero build step and loads three.js from a CDN (see index.html/race.html/garage.html); this package.json exists only so Node-side scripts under tools/ can import the exact same three.js version for circuit geometry checks. Nothing here is bundled or shipped.",
+  "scripts": {
+    "validate:circuits": "node tools/validate-circuits.mjs"
+  },
+  "devDependencies": {
+    "three": "0.160.0"
+  }
+}
