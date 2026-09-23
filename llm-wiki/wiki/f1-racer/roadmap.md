@@ -17,6 +17,14 @@
 - [#4](https://github.com/ottobit/f1-racer/issues/4) (ex-portfolio-arcade#144):
   resolved — see [tooling.md](tooling.md) for the documented patch/diff
   publishing workflow and its contents-API fallback.
+- [#6](https://github.com/ottobit/f1-racer/issues/6) (ex-portfolio-arcade#173):
+  `tools/validate-circuits.mjs` now checks closure/winding/segment length/
+  curvature/non-adjacent separation for every circuit and can write a
+  top-down diagnostic SVG. All six existing circuits pass (Marzamemi's
+  shared corridor as a documented warning, not an error). Practical
+  dependency for [#5](https://github.com/ottobit/f1-racer/issues/5)
+  (ex-portfolio-arcade#152, four new circuits): run the validator against
+  new control points before adding them to `circuits.js`.
 - Continue keeping `main.js` as orchestration and move reusable logic into
   focused modules only when it reduces real complexity.
 - Keep setup effects centralized in `garage-setup.js`.

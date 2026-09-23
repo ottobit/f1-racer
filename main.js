@@ -24,6 +24,12 @@ import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=38";
 import { gearInfo, setupRaceAudio } from "./race-audio.js";
 import { setupRaceWeather } from "./race-weather.js";
+import {
+  sampleCenterline,
+  headingOf,
+  sideNormal,
+  nearestTrackInfo as nearestPointOnCenterline,
+} from "./track-geometry.js";
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
@@ -184,14 +190,12 @@ const TRACK_LIMIT_WARNING_THRESHOLD = 3; // excursions allowed before it costs t
 const TRACK_LIMIT_PENALTY_MS = 1000;
 
 // --- Track centerline sampling -------------------------------------------
+// Sampling itself, plus headingOf/sideNormal/nearestTrackInfo below, live in
+// track-geometry.js so the same rules that build this centerline can also
+// run outside the browser (see tools/validate-circuits.mjs, #6).
 
 const CENTERLINE_SAMPLES = 360;
-const centerline = [];
-for (let i = 0; i < CENTERLINE_SAMPLES; i++) {
-  const p = trackCurve.getPointAt(i / CENTERLINE_SAMPLES);
-  const tan = trackCurve.getTangentAt(i / CENTERLINE_SAMPLES);
-  centerline.push({ x: p.x, z: p.z, tx: tan.x, tz: tan.z });
-}
+const centerline = sampleCenterline(trackCurve, CENTERLINE_SAMPLES);
 
 // --- Minimap geometry ------------------------------------------------------
 // The track never moves, so the world-to-minimap mapping (scale + offset
@@ -222,33 +226,11 @@ function minimapPoint(x, z) {
 }
 const minimapTrackPoints = centerline.map((p) => minimapPoint(p.x, p.z));
 
-function headingOf(p) {
-  return Math.atan2(p.tx, p.tz);
-}
-
-// Unit vector perpendicular to the direction of travel at a track point.
-function sideNormal(p) {
-  return { x: p.tz, z: -p.tx };
-}
-
-// Nearest centerline sample to (x, z): its index (for progress/lookahead),
-// its own coordinates, and the straight-line distance to it (used as a
-// stand-in for lateral offset from the track for the boundary collision).
+// Thin closure over this file's own `centerline` around the imported pure
+// query, so every existing 2-arg call site (main.js and every setupXxx()
+// this gets passed into) is unaffected by the move.
 function nearestTrackInfo(x, z) {
-  let bestIdx = 0;
-  let bestDistSq = Infinity;
-  for (let i = 0; i < centerline.length; i++) {
-    const p = centerline[i];
-    const dx = p.x - x;
-    const dz = p.z - z;
-    const distSq = dx * dx + dz * dz;
-    if (distSq < bestDistSq) {
-      bestDistSq = distSq;
-      bestIdx = i;
-    }
-  }
-  const p = centerline[bestIdx];
-  return { idx: bestIdx, x: p.x, z: p.z, dist: Math.sqrt(bestDistSq) };
+  return nearestPointOnCenterline(centerline, x, z);
 }
 
 // Updates a car's fair, start-offset-independent progress accumulator (see

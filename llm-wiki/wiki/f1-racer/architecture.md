@@ -30,6 +30,9 @@ The current race runtime is coordinated by `main.js`, with focused helpers:
   gated by a `getRaceState` getter rather than a shared module variable.
 - `race-weather.js`: sky cloud billboards, rain particle field and impact
   spark FX, gated by a `getPlayerState` getter for the same reason.
+- `track-geometry.js`: pure centerline sampling/query rules, framework-
+  agnostic (takes a curve object rather than importing three.js), shared
+  between `main.js` and `tools/validate-circuits.mjs` (#6).
 
 ## Shared Car Model
 
