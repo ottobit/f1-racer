@@ -26,6 +26,21 @@ The current race runtime is coordinated by `main.js`, with focused helpers:
 - `race-nameplates.js`: screen-space labels projected from visible AI cars.
 - `race-car-view.js`: visual race car mounting and updates.
 - `race-commands.js`: command bindings and race UI actions.
+- `agent-api.js` (#8/#9): `window._ENVIRONMENT_` (`getState`/`step`/`release`)
+  for an external agent to drive the player car without simulating touch or
+  keyboard events. Opt-in only via `?agent=1` in `main.js` — never imported
+  in a normal session. `step()` drives the same `input.forward`/`input.back`
+  booleans and `setExternalSteer()` (a `race-input.js` addition) the human
+  player uses, neutralizes them when the step's duration elapses, and
+  rejects a second concurrent `step()`. `race-input.js`'s real DOM handlers
+  call an `onHumanInput` callback synchronously on any real touch/key/wheel
+  input, which hands control back immediately even mid-step. `getState()`
+  returns a compact, freshly-built snapshot (mutating it cannot affect
+  internal state): session phase, speed, lap/position/progress, lateral
+  offset and heading error from the ideal line, next-corner heuristic
+  (direction/distance/curvature over a lookahead window shared with the AI's
+  own centerline sampling), up to 5 nearby cars, damage/tyres/DRS, and the
+  final result once the race is over.
 - `race-audio.js`: gear mapping, synthesized engine/shift-click Web Audio and
   an ambient AI "grid chorus", gated by a `getEngineActive` getter (true in
   both racing and an in-progress qualifying lap, not race-only) rather than
