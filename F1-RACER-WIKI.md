@@ -186,6 +186,20 @@ route. Its separated dogbone spline preserves the long parallel street legs
 and both end loops while leaving enough clearance for a closed racing surface.
 It uses a narrow nine-unit urban road and its own Garage recommendation.
 
+`pianalago`, `serramonte` and `baiadoro` (#5) bring the roster to nine. Unlike
+the first six's hand-placed points, all three were generated procedurally
+(star-convex placement with a per-circuit angular radius profile — a smooth
+low-amplitude one for Pianalago's sweeps, higher-frequency corners for
+Serramonte's hairpins, one dominant long-straight harmonic for Baiadoro) and
+accepted only once `tools/validate-circuits.mjs` (#6) reported zero errors
+and warnings — see each entry's comment in `circuits.js` for the exact
+command. Every circuit in the roster now has a distinct integer width, 9
+through 17. Serramonte is now the tightest/narrowest circuit overall
+(Montenero's comment was updated to stop claiming that superlative); Pianalago
+is the most purely flowing (no corner tighter than the wall margin by a wide
+margin anywhere on the lap); Baiadoro is the widest, pairing a long straight
+with a tighter technical final complex rather than uniform sweeps.
+
 ### Shared geometry rules and offline validation
 
 `track-geometry.js` owns the pure, framework-agnostic rules used to turn a

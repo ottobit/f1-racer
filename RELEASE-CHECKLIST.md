@@ -204,3 +204,11 @@ in this environment, so no hardware performance claim is made.
 - [ ] Loading the race with no `?gfx` param picks a profile automatically (visible via `?diag=1`'s `gfx:` label) and that choice persists across circuits/sessions until changed.
 - [ ] Home-screen session setup panel is unchanged (still exactly difficulty + driver, no new control).
 - [ ] **Real-device measurement — not yet done from this dev environment (no real mobile hardware or GPU rendering here).** Left for the user: FPS/frame time with `?diag=1` on a real smartphone and a real desktop, race scene with all ten cars plus rain, and the Garage, before/after any further graphics-profile tuning.
+
+## New circuits regression (#5: pianalago, serramonte, baiadoro)
+
+- [ ] `node tools/validate-circuits.mjs` reports 0 errors for all nine circuits (Marzamemi's documented warning is expected).
+- [ ] All three new circuits appear in the home carousel with a correctly shaped map, and are reachable by swipe/arrow/keyboard/dot navigation.
+- [ ] Drive at least one qualifying + race session on each of the three: grid placement, walls/runoff, AI lines and lap/finish detection all behave normally (no car stuck off-track, no wall clipped through).
+- [ ] Each circuit's Garage-recommended setup shows correctly and differs meaningfully from the others' (frontWing/rearWing/floor/brakes/suspension combo, not just the reason text).
+- [ ] Championship standings correctly include results from the three new circuits alongside the existing six.

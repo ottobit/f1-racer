@@ -44,10 +44,12 @@ export const CIRCUITS = [
   {
     id: "montenero",
     name: "Circuito di Montenero",
-    // The tightest, narrowest circuit of the four — a technical street
-    // layout rather than a flowing high-speed one, for genuine variety
-    // rather than a fourth copy of the same shape at a different size.
-    // Control points are star-convex around the origin (each one further
+    // A technical street layout rather than a flowing high-speed one, for
+    // genuine variety rather than another copy of the same shape at a
+    // different size. (Serramonte later took over as the single tightest/
+    // narrowest circuit in the roster — this is still the tightest *street*
+    // layout, not a mountain pass.) Control points are star-convex around
+    // the origin (each one further
     // out or in than its neighbours, listed in angle order), which is what
     // guarantees the closed spline below can't loop back and cross itself
     // — see the validation script referenced above for the actual numbers
@@ -102,6 +104,56 @@ export const CIRCUITS = [
       [145, 749], [110, 760], [96, 760], [85, 752], [76, 741],
       [61, 733], [55, 717], [57, 706], [73, 698],
     ].map(([x, z]) => [(x - 320) * 1.4, (z - 620) * 1.4]),
+  },
+  {
+    id: "pianalago",
+    name: "Circuito di Pianalago",
+    // The purest high-speed circuit in the roster: a lakeside plain with
+    // wide, sweeping corners and no tight hairpin anywhere (its minimum
+    // curvature radius clears every other circuit's, existing or new).
+    // Star-convex control points, generated procedurally and validated with
+    // `node tools/validate-circuits.mjs pianalago` (#6) rather than
+    // hand-placed — 0 errors/warnings at these coordinates.
+    width: 15,
+    recommendedSetup: { frontWing:"low", rearWing:"low", floor:"balanced", brakes:"stable", suspension:"soft", reason:"Curve ampie e mai strette: bassa resistenza e un assetto comodo battono il carico puro." },
+    points: [
+      [175, -4], [138, 112], [30, 147], [-76, 135], [-147, 52],
+      [-113, -45], [-54, -95], [24, -117], [109, -89],
+    ],
+  },
+  {
+    id: "serramonte",
+    name: "Circuito di Serramonte",
+    // A tight mountain-pass circuit — the narrowest and technically
+    // tightest layout in the roster (lower minimum curvature radius than
+    // Montenero's street circuit, see that entry's note). Frequent direction
+    // changes reward a rigid platform over Montenero's traction-focused
+    // softness. Star-convex control points, generated procedurally and
+    // validated with `node tools/validate-circuits.mjs serramonte` (#6) —
+    // 0 errors/warnings at these coordinates.
+    width: 10,
+    recommendedSetup: { frontWing:"high", rearWing:"high", floor:"high", brakes:"aggressive", suspension:"stiff", reason:"Tornanti ravvicinati e cambi di direzione continui: serve una piattaforma rigida, non morbida." },
+    points: [
+      [124, -2], [86, 54], [45, 84], [2, 100], [-42, 67], [-73, 39],
+      [-81, 3], [-112, -67], [-59, -106], [-2, -75], [36, -57], [70, -40],
+    ],
+  },
+  {
+    id: "baiadoro",
+    name: "Circuito di Baiadoro",
+    // A modern, mixed-character seaside layout: one long straight leads
+    // into a tighter technical complex, rather than uniform sweeps
+    // throughout (that's Colleverde's job at a similar width). The widest
+    // circuit in the roster, matching its long-straight DRS-zone identity.
+    // Star-convex control points, generated procedurally and validated with
+    // `node tools/validate-circuits.mjs baiadoro` (#6) — 0 errors/warnings
+    // at these coordinates.
+    width: 17,
+    recommendedSetup: { frontWing:"balanced", rearWing:"low", floor:"balanced", brakes:"aggressive", suspension:"balanced", reason:"Retrotreno scarico per il lungo rettilineo, freni aggressivi per il complesso tecnico finale." },
+    points: [
+      [138, -1], [123, 85], [49, 168], [-49, 147], [-119, 91], [-137, -2],
+      [-68, -51], [-24, -67], [17, -48], [68, -51],
+    ],
   },
 ];
 
