@@ -209,6 +209,7 @@ in this environment, so no hardware performance claim is made.
 
 - [ ] `node tools/validate-circuits.mjs` reports 0 errors for all nine circuits (Marzamemi's documented warning is expected).
 - [ ] All three new circuits appear in the home carousel with a correctly shaped map, and are reachable by swipe/arrow/keyboard/dot navigation.
+- [x] Open the browser console and click through every carousel slide (all nine, not just the new three): zero errors. Any circuit id missing from `menu.js`'s `CIRCUIT_PERSONALITY` table degrades to `DEFAULT_PERSONALITY` for that slide instead of throwing and blanking the whole carousel (#24) — checked with a real headless-browser pass, not just a code read.
 - [ ] Drive at least one qualifying + race session on each of the three: grid placement, walls/runoff, AI lines and lap/finish detection all behave normally (no car stuck off-track, no wall clipped through).
 - [ ] Each circuit's Garage-recommended setup shows correctly and differs meaningfully from the others' (frontWing/rearWing/floor/brakes/suspension combo, not just the reason text).
 - [ ] Championship standings correctly include results from the three new circuits alongside the existing six.

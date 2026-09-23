@@ -50,7 +50,14 @@ const CIRCUIT_PERSONALITY = {
   montenero: { type: "Cittadino", note: "Stretto, nervoso, senza respiro", level: "Difficile" },
   colleverde: { type: "Flow", note: "Sequenze ampie tra le colline", level: "Medio" },
   marzamemi: { type: "Costiero", note: "Villette, oleandri e due cappi sul mare", level: "Tecnico" },
+  pianalago: { type: "Lacustre", note: "Curve ampie, nessuna staccata violenta", level: "Facile" },
+  serramonte: { type: "Montano", note: "Tornanti stretti, cambi di direzione continui", level: "Difficile" },
+  baiadoro: { type: "Moderno", note: "Rettilineo lungo, complesso tecnico finale", level: "Tecnico" },
 };
+// Fallback for a circuit missing from the table above — degrades that one
+// slide instead of throwing and blanking the whole carousel for every
+// circuit (see #24: a single missing entry broke rendering entirely).
+const DEFAULT_PERSONALITY = { type: "Circuito", note: "", level: "" };
 
 function circuitMap(points) {
   const xs = points.map(([x]) => x);
@@ -170,7 +177,7 @@ function render() {
   document.getElementById("circuit-list").innerHTML = CIRCUITS.map((circuit, index) => {
     const order = state.raceResults[circuit.id];
     const status = order ? positionLabel(order) : "Da correre";
-    const personality = CIRCUIT_PERSONALITY[circuit.id];
+    const personality = CIRCUIT_PERSONALITY[circuit.id] || DEFAULT_PERSONALITY;
     return `
       <article class="circuit-slide" aria-label="${circuit.name}" aria-roledescription="slide">
         <div class="circuit-card">
