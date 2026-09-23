@@ -80,6 +80,8 @@ This repository currently has no automated browser/physics test runner and no Gi
 
 - [ ] Drive across a kerb and beyond the asphalt: the car must slow progressively but remain movable; no invisible hard stop at the old track-width wall limit.
 - [ ] Verify engine note rises through each gear, drops on shifts, and remains free of obvious clipping/distortion on desktop and mobile.
+- [ ] Verify the player's own engine is audible while actually driving a qualifying lap, not just during the race (#10).
+- [ ] Verify a hint of the other cars' engines is audible at the race standing start (grid bunched together) and thins out as the pack spreads around the lap (#10).
 - [ ] Verify the F1 Racer home shows the new hero, difficulty, standings and circuit sections, and that difficulty/circuit/championship interactions still work.
 
 

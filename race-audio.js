@@ -38,9 +38,12 @@ export function gearInfo(speedRatio) {
 // before any user gesture, so the AudioContext is only created lazily on
 // the first key/touch input.
 //
-// Currently drives only the player's own engine (see issue #10 for adding
-// audible AI/grid-start engines on top of this).
-export function setupRaceAudio({ getRaceState }) {
+// `getEngineActive` reports whether the player is actively driving right
+// now — true while racing, but also while actually driving a qualifying
+// lap, not just during the race phase (see #10: the qualifying session has
+// its own state machine, so a race-only check left the engine silent for
+// the entire qualifying session even though the player was driving).
+export function setupRaceAudio({ getEngineActive }) {
   let audioCtx = null;
   let engineGain = null;
   let engineFilter = null;
@@ -100,9 +103,10 @@ export function setupRaceAudio({ getRaceState }) {
   // speedRatio (0..1 of top speed) drives volume, which should keep rising
   // with real speed; rpmRatio (0..1, resets each gear — see gearInfo()) drives
   // pitch and filter brightness, which should climb through a gear and drop
-  // at the next shift, the way an engine actually sounds. Silent during the
-  // grid countdown (race state isn't "racing" yet) so the note only kicks in
-  // once the lights go out.
+  // at the next shift, the way an engine actually sounds. Silent whenever
+  // getEngineActive() is false — the race grid countdown, or qualifying
+  // before the lights go out — so the note only kicks in once the player is
+  // actually free to drive.
   function updateEngineSound(speedRatio, rpmRatio) {
     if (!audioCtx) return;
     const now = audioCtx.currentTime;
@@ -112,7 +116,7 @@ export function setupRaceAudio({ getRaceState }) {
     engineOsc3.frequency.setTargetAtTime(baseFreq * 3.02, now, 0.025);
     engineFilter.frequency.setTargetAtTime(650 + rpmRatio * 4200 + speedRatio * 900, now, 0.035);
     engineHighpass.frequency.setTargetAtTime(65 + speedRatio * 70, now, 0.08);
-    const targetGain = getRaceState() === "racing" ? 0.045 + speedRatio * 0.11 : 0;
+    const targetGain = getEngineActive() ? 0.045 + speedRatio * 0.11 : 0;
     engineGain.gain.setTargetAtTime(targetGain, now, 0.08);
   }
 
@@ -134,5 +138,73 @@ export function setupRaceAudio({ getRaceState }) {
     osc.stop(now + 0.08);
   }
 
-  return { initEngineSound, updateEngineSound, playShiftClick };
+  // Ambient "grid chorus": a hint of the other cars' engines, cheap enough
+  // for mobile because it's two oscillators total, not up to nine separate
+  // chains (#10). Loudest at a standing start, when the whole grid is
+  // bunched close together and everyone picks up speed at once; naturally
+  // thins out as the pack spreads around the lap. Pitched low (base ~36 Hz,
+  // even lower than the player's own ~45-70 Hz voice) and detuned between
+  // its two oscillators so it reads as a distant crowd of engines rather
+  // than a second copy of the player's own note.
+  const CHORUS_RADIUS = 40; // units; farther cars don't contribute
+  const CHORUS_MAX_VOICES = 6; // caps how many nearby cars count at once
+  let chorusGain = null;
+  let chorusFilter = null;
+  let chorusOsc1 = null;
+  let chorusOsc2 = null;
+
+  function ensureChorus() {
+    if (!audioCtx || chorusGain) return;
+    chorusGain = audioCtx.createGain();
+    chorusGain.gain.value = 0;
+    chorusFilter = audioCtx.createBiquadFilter();
+    chorusFilter.type = "lowpass";
+    chorusFilter.frequency.value = 220;
+    chorusOsc1 = audioCtx.createOscillator();
+    chorusOsc1.type = "sawtooth";
+    chorusOsc1.frequency.value = 36;
+    chorusOsc2 = audioCtx.createOscillator();
+    chorusOsc2.type = "sawtooth";
+    chorusOsc2.frequency.value = 36 * 1.014;
+    chorusOsc1.connect(chorusFilter);
+    chorusOsc2.connect(chorusFilter);
+    chorusFilter.connect(chorusGain).connect(audioCtx.destination);
+    chorusOsc1.start();
+    chorusOsc2.start();
+  }
+
+  // `nearbyCars` is the full AI car list; this filters by distance itself
+  // rather than requiring the caller to pre-filter, since it already needs
+  // to count them for the volume level regardless.
+  function updateAmbientChorus(nearbyCars, playerState) {
+    if (!audioCtx) return;
+    ensureChorus();
+    if (!chorusGain) return;
+    const now = audioCtx.currentTime;
+    if (!getEngineActive()) {
+      chorusGain.gain.setTargetAtTime(0, now, 0.08);
+      return;
+    }
+    let count = 0;
+    let speedSum = 0;
+    const radiusSq = CHORUS_RADIUS * CHORUS_RADIUS;
+    for (const car of nearbyCars) {
+      const dx = car.x - playerState.x;
+      const dz = car.z - playerState.z;
+      if (dx * dx + dz * dz > radiusSq) continue;
+      count++;
+      speedSum += Math.abs(car.speed || 0);
+      if (count >= CHORUS_MAX_VOICES) break;
+    }
+    const level = count / CHORUS_MAX_VOICES;
+    const avgSpeed = count > 0 ? speedSum / count : 0;
+    const rpmish = Math.min(avgSpeed / 60, 1);
+    const baseFreq = 36 + rpmish * 40;
+    chorusOsc1.frequency.setTargetAtTime(baseFreq, now, 0.15);
+    chorusOsc2.frequency.setTargetAtTime(baseFreq * 1.014, now, 0.15);
+    chorusFilter.frequency.setTargetAtTime(220 + rpmish * 500, now, 0.2);
+    chorusGain.gain.setTargetAtTime(level * 0.05, now, 0.2);
+  }
+
+  return { initEngineSound, updateEngineSound, playShiftClick, updateAmbientChorus };
 }

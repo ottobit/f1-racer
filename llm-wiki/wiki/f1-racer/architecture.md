@@ -26,8 +26,10 @@ The current race runtime is coordinated by `main.js`, with focused helpers:
 - `race-nameplates.js`: screen-space labels projected from visible AI cars.
 - `race-car-view.js`: visual race car mounting and updates.
 - `race-commands.js`: command bindings and race UI actions.
-- `race-audio.js`: gear mapping and synthesized engine/shift-click Web Audio,
-  gated by a `getRaceState` getter rather than a shared module variable.
+- `race-audio.js`: gear mapping, synthesized engine/shift-click Web Audio and
+  an ambient AI "grid chorus", gated by a `getEngineActive` getter (true in
+  both racing and an in-progress qualifying lap, not race-only) rather than
+  a shared module variable (#10).
 - `race-weather.js`: sky cloud billboards, rain particle field and impact
   spark FX, gated by a `getPlayerState` getter for the same reason.
 - `track-geometry.js`: pure centerline sampling/query rules, framework-

@@ -364,11 +364,21 @@ The player's visual car is hidden in cockpit mode.
 ## 15. Audio
 
 `race-audio.js` owns gear mapping and the synthesized engine/shift sound
-(`setupRaceAudio`), wired from `main.js` through a `getRaceState` getter
-rather than a shared module variable. `race-hud.js` calls the returned
-`updateEngineSound`/`playShiftClick` each frame; `main.js` only owns lazy
+(`setupRaceAudio`), wired from `main.js` through a `getEngineActive` getter
+rather than a shared module variable — true while racing or while actually
+driving a qualifying lap, not just during the race phase, so the player's
+engine is audible in both sessions (#10; previously silent for all of
+qualifying). `race-hud.js` calls the returned `updateEngineSound`/
+`playShiftClick`/`updateAmbientChorus` each frame; `main.js` only owns lazy
 initialization on first input. The engine sound is synthesized with Web
 Audio rather than external audio assets.
+
+A second, cheap "grid chorus" voice (two detuned low oscillators, not a
+per-car chain) hints at the other cars' engines: `updateAmbientChorus`
+scales its volume by how many AI cars are within a fixed radius of the
+player (capped at 6 counted voices) and their average speed, so it swells
+at a bunched-up standing start and thins out as the pack spreads around the
+lap (#10).
 
 It uses:
 - three layered oscillators/harmonics;

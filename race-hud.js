@@ -18,6 +18,7 @@ export function setupRaceHud({
   nameOf,
   updateEngineSound,
   playShiftClick,
+  updateAmbientChorus,
   minimapCanvasSize,
   minimapTrackPoints,
   minimapPoint,
@@ -196,6 +197,7 @@ export function setupRaceHud({
     shiftLedEls.forEach((led, index) => led.classList.toggle("is-lit", index < litCount));
 
     updateEngineSound(Math.abs(state.speed) / carMaxSpeed, rpmRatio);
+    updateAmbientChorus(aiCars, state);
     drawMinimap();
   }
 
