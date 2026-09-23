@@ -393,3 +393,59 @@ measurement, reinforcing why #2 stays open for the user's own hardware pass.
 
 Does not close #2. Real-device measurement remains the actual acceptance bar
 and remains entirely out of this environment's reach.
+
+## 2026-09-23 — Multiplayer Stage 1: rooms and driver reservation (#36, part of #1)
+
+User wants to move on #1 (multiplayer). #1 itself demands staged delivery
+(rooms, then race sync, then voice — separate PRs, protocol/infra decided
+before each). Used plan mode first: audited the repo (confirmed zero
+backend/server/CI existed anywhere, and that `architecture.md`/
+`RELEASE-CHECKLIST.md` enforced "no backend" as a real constraint, not
+just an absence), had a Plan agent design a concrete Stage 1 (rooms +
+driver reservation only) reusing existing patterns (`driver-roster.js` as
+the reservation source of truth, `driver-selection.js`'s separate
+`"player"` pseudo-id, `menu.js`'s driver-grid UI shape, `agent-api.js`'s
+transport-agnostic precedent), then used `AskUserQuestion` on the two real
+open decisions: scope (user chose plan-only first, then said go) and
+hosting (user chose Render, having used it before with a self-ping trick
+against the free tier's sleep — flagged, not overridden, that a 24/7
+self-pinged service uses most of Render's free monthly instance-hour
+allowance on its own, so it may need the paid tier).
+
+Built: `server/rooms.mjs` (pure in-memory room/participant state machine —
+no sockets, no database, resets on restart, a stated Stage 1 limit not an
+oversight) and `server/room-server.mjs` (thin `ws`-based WebSocket
+transport around it) — this project's first-ever backend, kept as a
+separate opt-in process the shipped static site never imports. Client
+side: `room-client.js` (protocol client, its own
+`f1racer-room-session-v1` localStorage key, deliberately never touching
+solo-play's `f1racer-selected-driver-v1`), `room.html`/`room.js` (lobby
+UI), and a new secondary (not a third co-equal card, to respect
+`decisions.md`'s existing Garage/circuit-selection hierarchy) entry point
+on `index.html`.
+
+Verified, not just read back: 20 direct unit checks against `rooms.mjs`'s
+pure functions (atomic reservation with exactly one winner, grace-period
+retention/expiry/reconnect, host handoff to the longest-connected
+remaining participant, room cleanup, no secret/timer-handle leaks in
+`toPublicRoom()`), then a real `ws` server process plus a real WebSocket
+Node client exercising the full protocol end to end including a real
+1500ms grace-period expiry, then two real headless-browser contexts
+(Playwright) against that same real server driving the actual `room.html`
+UI — room creation/join, a live cross-client driver-reservation broadcast,
+a clean rejection of an already-taken driver, non-host `start_race`
+hidden, host `start_race` reaching both clients as the Stage 1
+confirmation, and session resume after a page reload. Confirmed via grep
+that no solo-play file (`menu.js`, `main.js`, `race.html`, `garage.js`,
+`championship.js`) references any of the new room modules — purely
+additive.
+
+Explicitly not attempted: race-state sync, voice/WebRTC/SFU (separate
+future issues with their own infra decisions), or any live public
+deployment — this sandbox cannot host the room server reachably from a
+real separate device/network, so `wss://`/TLS behaviour and cross-device
+reachability are unverified and flagged as such in
+`RELEASE-CHECKLIST.md`. `RELEASE-CHECKLIST.md`'s former blanket "no
+backend/server dependency" line is reworded to scope that guarantee to
+solo/local play specifically, since Stage 1 intentionally introduces one
+for multiplayer.

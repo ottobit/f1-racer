@@ -113,6 +113,29 @@ The detailed showroom car is built with `showDriver: false`. Its exposed
 cockpit interior includes a seat, headrest, harness, bolsters, dashboard,
 display and steering wheel; the lightweight race cars still include a driver.
 
+## Multiplayer Stage 1 (rooms)
+
+`server/rooms.mjs` (pure state machine, no sockets) and `server/room-server.mjs`
+(thin `ws`-based WebSocket transport around it) are this project's first
+backend, ever (#36, part of #1) — a new, separate opt-in Node process
+(`npm run start:room-server`), not something the shipped static site loads.
+State is in-memory only, resets on restart; deliberate for Stage 1's casual
+rooms, not a database stand-in. Reservable driver ids are exactly
+`driver-roster.js`'s ten `rival-*` entries; `driver-selection.js`'s
+client-only `"player"` id is never valid here — solo and room identity
+never touch each other's `localStorage` key.
+
+`room-client.js` (browser) and `room.html`/`room.js` (lobby UI) are the only
+client-side additions; race/garage/qualifying are entirely untouched and
+still work with the room server unreachable or absent. See
+`F1-RACER-WIKI.md`'s "Multiplayer Stage 1" section for the message protocol,
+grace/reconnect/host-handoff rules, and what was and wasn't verified without
+a live public deployment.
+
+Stage 2 (race-state sync) and voice are separate future issues with their
+own protocol/infra decisions — not designed here; `startRace()` deliberately
+stops at a shared confirmation (`room.startedAt`), not a synced race.
+
 ## Championship and Drivers
 
 `championship.js` owns championship state and scoring. `driver-selection.js`
@@ -137,7 +160,10 @@ street video; the geometry remains procedural and static-site friendly.
 
 ## Constraints
 
-- Keep the game static-site friendly.
+- Keep the game static-site friendly. **Update (#36):** the shipped race/
+  garage/menu pages themselves still have zero build step and no server
+  dependency; the multiplayer room server is a genuinely new, separate,
+  opt-in backend, not an exception to this constraint for the game itself.
 - Avoid adding a build system unless a future feature clearly requires it.
 - Keep structural checks cheap by default.
 - Do not alter the top HUD panel without a specific user request.

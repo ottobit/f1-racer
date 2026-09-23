@@ -792,3 +792,84 @@ and matches this contract, `getState()` snapshots are JSON-serializable and
 isolated from mutation, out-of-range `step()` input is clamped rather than
 throwing, a concurrent `step()` is rejected, and a step neutralizes its
 inputs once its duration elapses.
+
+## Multiplayer Stage 1: rooms and driver reservation (`server/`, `room-client.js`, `room.html`)
+
+The first of #1's staged deliveries (#36) — rooms and driver reservation
+only. No race-state sync, no voice: those are separate future issues, each
+with their own protocol/infrastructure decisions per #1's own plan. This is
+the **first backend this project has ever had**; everything else in this
+codebase is still a zero-build static site, and race/garage/qualifying stay
+entirely local-only regardless of whether the room server is reachable.
+
+`server/rooms.mjs` is a pure room/participant state machine — plain JS
+`Map`s in memory, no sockets, no database, no framework. State resets on
+process restart; that's a deliberate Stage 1 limitation (casual, short-lived
+rooms among friends), not an oversight to fix later without saying so.
+Every function takes a `store` plus plain data and returns plain data, so
+it's directly unit-testable (`createStore`, `createRoom`, `joinRoom`,
+`reconnectParticipant`, `reserveDriver`/`releaseDriver`, `setReady`,
+`startRace`, `leaveRoom`, `markDisconnected`, `toPublicRoom`). Reservable
+driver ids are exactly `driver-roster.js`'s ten `rival-*` entries — the
+client-only `"player"` pseudo-id `driver-selection.js` uses for solo play is
+never a valid room driverId; solo and room identity are deliberately
+independent, neither reads nor writes the other's `localStorage` key.
+
+`server/room-server.mjs` is a thin WebSocket transport (`ws` package) around
+`rooms.mjs`: parses JSON envelopes (`{type, reqId, ...}`), calls straight
+into the pure state machine, sends a direct `reqId`-correlated response or
+`error{code,message}`, and broadcasts a full `room_state` snapshot to every
+socket bound to that room on any change. Message types: `create_room`,
+`join_room`, `reconnect` (needs the saved `{roomCode, participantId,
+reconnectToken}`), `reserve_driver`/`release_driver`, `set_ready`,
+`start_race` (**host-only**; sets `room.startedAt` for a shared confirmation
+— Stage 1 stops there, deliberately, no car/position sync yet), `leave_room`
+(immediate slot release), `ping`/`pong` (heartbeat). A closed socket doesn't
+release its slot immediately: `markDisconnected` starts a grace timer
+(`ROOM_GRACE_MS`, default 30s) during which the participant's `driverId` is
+retained; a `reconnect` within that window cancels the timer and reclaims
+the slot, while an expiry deletes the participant outright (freeing their
+driver) and, if they were host, promotes the longest-connected remaining
+participant so a room is never stuck without start authority. An emptied
+room is deleted and its 4-character code freed for reuse. Run locally with
+`npm run start:room-server` (`PORT`, `ROOM_GRACE_MS` env vars optional) —
+opt-in, separate Node process, never imported by `race.html`/`garage.html`/
+`index.html`.
+
+`room-client.js` is the browser-side protocol client — plain WebSocket,
+`reqId`-correlated promises, a `roomCode/participantId/reconnectToken`
+session persisted under its own `f1racer-room-session-v1` localStorage key
+(never touching `f1racer-selected-driver-v1` or championship state), and a
+`tryResume()` that silently no-ops if nothing was saved, so a first-time
+visitor never opens a socket before choosing to create or join. The server
+URL comes from `?roomServer=` (default `ws://localhost:8787` — a
+placeholder until Stage 1 is actually deployed somewhere reachable),
+mirroring the existing `?agent=1`/`?diag=1`/`?gfx=` query-param convention.
+
+`room.html`/`room.js` is the lobby page: nickname, create/join, a live
+participant list (name, reserved driver, ready state, host crown, a
+"riconnessione…" tag during another participant's grace period), a driver
+grid modeled on `menu.js`'s `renderDriverSelect()` (taken slots disabled and
+labeled, a livery colour dot per driver via `driver-themes.js`'s
+`liveryById`), a ready toggle, and a host-only "Avvia" button that shows the
+Stage 1 confirmation banner once clicked. `index.html` links to it via a
+new secondary, full-width entry below the two primary Garage/Gara
+command cards — deliberately not a third co-equal card, since
+`decisions.md` already establishes those two as the dominant pair.
+
+Verified with a real WebSocket server and real headless-browser clients
+(Playwright, two separate browser contexts against the actual
+`room-server.mjs` process): room creation/join, live broadcast of a driver
+reservation to the other participant, a taken driver rejected with a clear
+error, non-host `start_race` hidden/rejected, host `start_race` reaching
+both clients as the Stage 1 confirmation, and session resume after a page
+reload. `rooms.mjs`'s pure functions are additionally covered by direct
+unit checks (atomic reservation, grace-period retention/expiry/reconnect,
+host handoff, room cleanup, `toPublicRoom` never leaking a `reconnectToken`
+or a live timer handle).
+
+**What Stage 1 cannot verify, and isn't trying to**: this sandbox has no way
+to host the room server publicly, so nothing here proves reachability across
+two genuinely separate devices/networks or `wss://`/TLS behaviour in
+production — see `roadmap.md` for the hosting decision (Render, chosen by
+the user) that stays open until Stage 1 actually goes live.
