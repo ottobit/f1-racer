@@ -50,17 +50,23 @@ never trigger double-tap zoom, and the carousel viewport allows `pinch-zoom`
 alongside `pan-y` so a zoomed page can always be pinched back out (#32: with
 `pan-y` alone the carousel, ~70% of a phone screen, trapped users zoomed in).
 
-The home prioritizes actions over reference data. Garage and circuit selection
-are the two primary commands directly below the hero, with Garage visually
-dominant. Difficulty and driver live in one session-setup panel, and standings
-follow the circuit carousel instead of interrupting the path into a race.
+The home prioritizes actions over reference data. Difficulty and driver live
+in one session-setup panel, and standings follow the circuit carousel instead
+of interrupting the path into a race.
 
-The multiplayer room lobby (#36) needs *some* discoverable entry point —
-unlike `?agent=1`/`?diag=1`, real friends can't be expected to know a URL
-param — but does not get a third co-equal `home-command` card: that would
-dilute the Garage/circuit-selection pair this section already establishes as
-dominant. It's a slim, full-width, visually secondary link below the two
-primary cards instead.
+**#40 superseded this section's original pairing.** Garage and solo circuit
+selection were the two dominant commands until #40: the user's explicit call
+was that multiplayer (playing with other real people) is the more important
+thing to grow, and deserves the same visual weight as Garage, not a secondary
+banner (#36's original placement). Garage and **multiplayer** (`room.html`)
+are now the two `home-command` cards. The user then asked to drop the solo-
+play shortcut entirely rather than demote it to a secondary link — there is
+no dedicated "jump to circuit selection" entry point left above the fold;
+solo play is still fully reachable by scrolling to its own numbered section
+further down the page, just not called out separately at the top. If this
+gets revisited, don't silently restore either the pairing or the shortcut —
+re-confirm with the user first, since these were deliberate product priority
+calls, not layout preferences.
 
 **#38 correction:** the two `home-command` cards and the numbered `f1-home-
 section`s (Prepara la sessione / Prossima gara / Campionato) are two

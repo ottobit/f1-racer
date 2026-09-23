@@ -449,3 +449,27 @@ reachability are unverified and flagged as such in
 backend/server dependency" line is reworded to scope that guarantee to
 solo/local play specifically, since Stage 1 intentionally introduces one
 for multiplayer.
+
+## 2026-09-23 -- Home command hierarchy: multiplayer replaces solo shortcut (#40)
+
+After #38's numbering fix, the user asked to reorganize the home further: promote
+the multiplayer entry (#36) from a secondary banner to one of the two dominant
+home-command cards, explicitly swapping it with the existing "Scegli la gara"
+solo-circuit-selection shortcut. Confirmed via AskUserQuestion after an initial
+ambiguity ("Prossima gara" vs "Scegli la gara" -- the user meant the latter).
+Rationale given directly by the user: the goal is to get more people playing
+together, so multiplayer deserves Garage-level visual priority, not a secondary
+link.
+
+Implementation: nav card 2 (`home-command--race`, renamed `home-command--multiplayer`)
+now links to `room.html` ("Gioca con altri"). The former "Scegli la gara" link
+moved to the slim secondary-banner position multiplayer used to occupy, renamed
+generically from `home-multiplayer-entry`/`-kicker`/`-body` to `home-secondary-entry`/
+`-kicker`/`-body` in style.css since that slot is no longer multiplayer-specific.
+`decisions.md`'s "Home and Circuit Selection" section rewritten accordingly --
+flagged explicitly as a deliberate product priority reversal, not a style tweak,
+so a future session does not silently revert it.
+
+Verified with real Playwright screenshots (desktop 1440px, mobile 390px) before
+committing. No JS files touched; confirmed via grep that no script depends on the
+renamed CSS classes or the old kicker text (GRIGLIA/Modalita alternativa).
