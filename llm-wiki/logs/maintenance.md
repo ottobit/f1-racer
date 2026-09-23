@@ -213,3 +213,38 @@ Lesson for future circuit-roster changes: grep for the circuit id being
 added across the *whole* repo, not just the files already known to read
 `CIRCUITS` — a per-id lookup table like this one won't show up in a search
 for `CIRCUITS.length` or similar genericity checks.
+
+## 2026-09-23 — Sharpen the three #5 circuits with real hairpins (#26)
+
+User feedback on #5's three new circuits: "troppo semplici... tutti tondi...
+qualche tornante" — the star-convex harmonic shapes were smooth waves with no
+corner anywhere near the wall-margin threshold, unlike Marzamemi's real tight
+corners. Quantified this first (max per-step heading delta and min curvature
+radius on the sampled centerline) before changing anything: all three were
+close to the flattest existing circuits despite differing widths/intents.
+
+Reworked each with a hairpin-insertion pass: one base star-convex point
+replaced by a tight approach/apex/exit triple of closely-angle-spaced points
+(`spreadDeg` apart, apex pulled in to `depthFactor` of its original radius) —
+the same technique Marzamemi's real-street corners already relied on, applied
+here on top of the procedural base shape instead of by hand. Tuned
+`spreadDeg`/`depthFactor` per circuit against the real `validateCircuit()`
+tool (#6), iterating past two failure modes: first configs too aggressive
+(curvature radius below the wall margin, validator errors), then configs that
+passed but with near-zero safety buffer (e.g. minR just 0.9% above the
+margin) — explicitly rejected those as inconsistent with this project's
+"comfortably above the margin" design philosophy and re-searched requiring a
+real buffer, landing on: Pianalago two corners (minR 13.25 vs. margin 11.5,
++15%), Serramonte three hairpins (minR 10.6 vs. margin 9.0, +18%), Baiadoro
+one deep hairpin (minR 14.6 vs. margin 12.5, +17%). All three set
+`curveTension: 0.5` explicitly (previously implicit default) since that's
+the value the final search was validated against.
+
+`node tools/validate-circuits.mjs` reports 0 errors/warnings on all nine
+circuits (Marzamemi's documented corridor floor unchanged). Updated
+`menu.js`'s `CIRCUIT_PERSONALITY` notes for the three (Pianalago's "nessuna
+staccata violenta" was no longer accurate; bumped its difficulty label from
+Facile to Medio) and `circuits.js`'s per-circuit comments. Exploratory point
+search was done via disposable `*.tmp.mjs` scripts (not gitignored, just
+untracked) deleted manually before this commit — never part of the shipped
+diff.

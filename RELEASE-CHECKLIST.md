@@ -213,3 +213,9 @@ in this environment, so no hardware performance claim is made.
 - [ ] Drive at least one qualifying + race session on each of the three: grid placement, walls/runoff, AI lines and lap/finish detection all behave normally (no car stuck off-track, no wall clipped through).
 - [ ] Each circuit's Garage-recommended setup shows correctly and differs meaningfully from the others' (frontWing/rearWing/floor/brakes/suspension combo, not just the reason text).
 - [ ] Championship standings correctly include results from the three new circuits alongside the existing six.
+
+### Sharpened geometry regression (#26: real corners/hairpins added)
+
+- [ ] `node tools/validate-circuits.mjs` still reports 0 errors for pianalago/serramonte/baiadoro after the hairpin-insertion rework (points and `curveTension: 0.5` changed for all three).
+- [x] Local curvature-radius margin above each circuit's wall margin re-checked numerically (not just "validator passes"): pianalago +15%, serramonte +18%, baiadoro +17% — verified deliberately non-borderline before accepting.
+- [ ] Drive each of the three at the new sharper corners specifically: AI cars take the hairpins without clipping the wall or getting stuck, kerb/runoff still renders correctly at the tighter apex, no visible geometry glitch (self-crossing road ribbon, minimap spike) at the inserted approach/apex/exit points.

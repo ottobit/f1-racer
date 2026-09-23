@@ -108,51 +108,61 @@ export const CIRCUITS = [
   {
     id: "pianalago",
     name: "Circuito di Pianalago",
-    // The purest high-speed circuit in the roster: a lakeside plain with
-    // wide, sweeping corners and no tight hairpin anywhere (its minimum
-    // curvature radius clears every other circuit's, existing or new).
-    // Star-convex control points, generated procedurally and validated with
-    // `node tools/validate-circuits.mjs pianalago` (#6) rather than
-    // hand-placed — 0 errors/warnings at these coordinates.
+    // A lakeside layout: still the most flowing of the three newest
+    // circuits, but no longer a pure oval — two real corners (apex points
+    // tightened well past their neighbours) break up the sweeps. Star-convex
+    // control points, generated procedurally with a hairpin-insertion pass
+    // (tight approach/apex/exit triple at each corner, same technique as
+    // Marzamemi's real corners) and validated with
+    // `node tools/validate-circuits.mjs pianalago` (#6) — 0 errors/warnings,
+    // minimum curvature radius comfortably (~15%) above the wall margin.
     width: 15,
+    curveTension: 0.5,
     recommendedSetup: { frontWing:"low", rearWing:"low", floor:"balanced", brakes:"stable", suspension:"soft", reason:"Curve ampie e mai strette: bassa resistenza e un assetto comodo battono il carico puro." },
     points: [
-      [175, -4], [138, 112], [30, 147], [-76, 135], [-147, 52],
-      [-113, -45], [-54, -95], [24, -117], [109, -89],
+      [170, -3], [131, 107], [98, 112], [17, 85], [-48, 141], [-76, 135],
+      [-143, 51], [-126, -49], [-97, -57], [-32, -57], [1, -112], [24, -122],
+      [116, -95],
     ],
   },
   {
     id: "serramonte",
     name: "Circuito di Serramonte",
     // A tight mountain-pass circuit — the narrowest and technically
-    // tightest layout in the roster (lower minimum curvature radius than
-    // Montenero's street circuit, see that entry's note). Frequent direction
-    // changes reward a rigid platform over Montenero's traction-focused
-    // softness. Star-convex control points, generated procedurally and
-    // validated with `node tools/validate-circuits.mjs serramonte` (#6) —
-    // 0 errors/warnings at these coordinates.
+    // tightest layout in the roster, now with three genuine hairpins (not
+    // just tight sweeps) carved in via the same corner-insertion technique
+    // as Marzamemi. Frequent direction changes reward a rigid platform over
+    // Montenero's traction-focused softness. Star-convex control points,
+    // generated procedurally and validated with
+    // `node tools/validate-circuits.mjs serramonte` (#6) — 0 errors/
+    // warnings, minimum curvature radius comfortably (~18%) above the wall
+    // margin.
     width: 10,
+    curveTension: 0.5,
     recommendedSetup: { frontWing:"high", rearWing:"high", floor:"high", brakes:"aggressive", suspension:"stiff", reason:"Tornanti ravvicinati e cambi di direzione continui: serve una piattaforma rigida, non morbida." },
     points: [
-      [124, -2], [86, 54], [45, 84], [2, 100], [-42, 67], [-73, 39],
-      [-81, 3], [-112, -67], [-59, -106], [-2, -75], [36, -57], [70, -40],
+      [146, -2], [144, 24], [93, 82], [42, 140], [22, 137], [-61, 108],
+      [-81, 99], [-103, 35], [-124, -29], [-144, -56], [-78, -128],
+      [-44, -113], [19, -101], [82, -89], [98, -80],
     ],
   },
   {
     id: "baiadoro",
     name: "Circuito di Baiadoro",
     // A modern, mixed-character seaside layout: one long straight leads
-    // into a tighter technical complex, rather than uniform sweeps
-    // throughout (that's Colleverde's job at a similar width). The widest
-    // circuit in the roster, matching its long-straight DRS-zone identity.
-    // Star-convex control points, generated procedurally and validated with
-    // `node tools/validate-circuits.mjs baiadoro` (#6) — 0 errors/warnings
-    // at these coordinates.
+    // into a tighter technical complex — now a real single hairpin, not
+    // just a gentler sweep, carved in via the same corner-insertion
+    // technique as Marzamemi. The widest circuit in the roster, matching its
+    // long-straight DRS-zone identity. Star-convex control points, generated
+    // procedurally and validated with `node tools/validate-circuits.mjs
+    // baiadoro` (#6) — 0 errors/warnings, minimum curvature radius
+    // comfortably (~17%) above the wall margin.
     width: 17,
+    curveTension: 0.5,
     recommendedSetup: { frontWing:"balanced", rearWing:"low", floor:"balanced", brakes:"aggressive", suspension:"balanced", reason:"Retrotreno scarico per il lungo rettilineo, freni aggressivi per il complesso tecnico finale." },
     points: [
-      [138, -1], [123, 85], [49, 168], [-49, 147], [-119, 91], [-137, -2],
-      [-68, -51], [-24, -67], [17, -48], [68, -51],
+      [128, 0], [125, 101], [27, 177], [-87, 149], [-137, 53], [-103, -39],
+      [-65, -42], [-32, -58], [-2, -78], [11, -76], [74, -60],
     ],
   },
 ];

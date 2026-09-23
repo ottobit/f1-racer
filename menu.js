@@ -50,9 +50,9 @@ const CIRCUIT_PERSONALITY = {
   montenero: { type: "Cittadino", note: "Stretto, nervoso, senza respiro", level: "Difficile" },
   colleverde: { type: "Flow", note: "Sequenze ampie tra le colline", level: "Medio" },
   marzamemi: { type: "Costiero", note: "Villette, oleandri e due cappi sul mare", level: "Tecnico" },
-  pianalago: { type: "Lacustre", note: "Curve ampie, nessuna staccata violenta", level: "Facile" },
-  serramonte: { type: "Montano", note: "Tornanti stretti, cambi di direzione continui", level: "Difficile" },
-  baiadoro: { type: "Moderno", note: "Rettilineo lungo, complesso tecnico finale", level: "Tecnico" },
+  pianalago: { type: "Lacustre", note: "Ampio ma con due curve vere da rispettare", level: "Medio" },
+  serramonte: { type: "Montano", note: "Tre tornanti stretti, cambi di direzione continui", level: "Difficile" },
+  baiadoro: { type: "Moderno", note: "Rettilineo lungo in un tornante tecnico", level: "Tecnico" },
 };
 // Fallback for a circuit missing from the table above — degrades that one
 // slide instead of throwing and blanking the whole carousel for every
