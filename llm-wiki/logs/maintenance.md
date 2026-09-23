@@ -248,3 +248,36 @@ Facile to Medio) and `circuits.js`'s per-circuit comments. Exploratory point
 search was done via disposable `*.tmp.mjs` scripts (not gitignored, just
 untracked) deleted manually before this commit — never part of the shipped
 diff.
+
+## 2026-09-23 — Welded kerbs and swept guardrails everywhere (#28)
+
+User: kerbs "sono veramente attaccati, sembra che stai giocando a fare i
+collage". Root cause: eight of nine circuits still drew kerbs and guardrails
+as independent tangent-aligned boxes (~7.5 units each, every 3rd sample) —
+the exact pattern `F1-RACER-WIKI.md` already said must not return after
+Marzamemi's rework, but the fix had only ever been applied to Marzamemi.
+Headless screenshots confirmed X-crossings at hairpin apexes and wedge gaps
+outside; #26's tighter hairpins made it more visible. Extracted Marzamemi's
+welded ribbon into `weldedKerb()` for all circuits and replaced rail boxes
+with `sweptRails()` (continuous runs, rail kept only where its own stretch
+of track is nearest — also removes rails that crossed each other).
+
+Three further defects surfaced while verifying, all fixed here:
+1. `ribbon()` in `track-art.js` had reversed winding, so runoff bands and
+   painted lines were back-face culled on every circuit since they were
+   written — confirmed numerically (normal y sign −1 vs road +1).
+2. Inner offset edges fold into bow-ties wherever the spline bends tighter
+   than the offset — including the *road* itself at Marzamemi/#26 apexes
+   (dark shards). Added `offsetEdge()` to `track-geometry.js` (miter-cut of
+   each swallowtail loop); flipped-triangle count across all strips and
+   circuits went 258 → 0. Road/kerb/runoff also mesh from a 4x denser
+   render-only `visualCenterline`; gameplay keeps 360 samples.
+3. The 1400-unit ground was two triangles; at low camera angles its depth
+   interpolation swallowed the road entirely (reproduced on `master` too,
+   Montenero). Subdivided 56x56 plus a small polygon offset.
+
+Not fixed, recorded as **Open** in roadmap/F1-RACER-WIKI: the validator's
+smoothed curvature stencil hides near-cusp apexes (true radius ~1 on
+Serramonte/Baiadoro), so #26's recorded margins overstate how round those
+hairpins are. Bumped `main.js`/`track-art.js`/`track-geometry.js` cache
+versions so a stale cached `track-geometry.js` can't break the new import.

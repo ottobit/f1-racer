@@ -1,4 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { offsetEdge } from './track-geometry.js?v=39';
 
 function random(seed=17){return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
 export function surfaceTexture(kind,renderer){
@@ -16,79 +17,139 @@ export function surfaceTexture(kind,renderer){
   texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());return texture;
 }
 
-export function dressCircuit(scene,points,width,renderer,wet,theme){
-  const half=width/2, N=points.length;
+const normal=p=>({x:p.tz,z:-p.tx});
+
+function kerbPaintMaterial(renderer){
+  const c=document.createElement('canvas');c.width=32;c.height=64;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#c64037';ctx.fillRect(0,0,32,32);
+  ctx.fillStyle='#ebe7d9';ctx.fillRect(0,32,32,32);
+  const texture=new THREE.CanvasTexture(c);
+  texture.colorSpace=THREE.SRGBColorSpace;texture.wrapT=THREE.RepeatWrapping;
+  texture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  return new THREE.MeshStandardMaterial({map:texture,roughness:.88});
+}
+
+// Independent tangent-aligned boxes leave wedges and X-crossings at corners.
+// Sweep one welded ribbon per side through the SAME cross-sections as the
+// road; paint alternation lives in UVs, not in disconnected geometry.
+// profile: [lateral offset from the asphalt edge, height] pairs, inner first.
+function weldedKerb(scene,points,half,side,profile,stripePair,mat,name){
+  const N=points.length,stride=profile.length;
+  const u0=profile[0][0],uSpan=profile[stride-1][0]-u0;
+  const vertices=[],uvs=[],indices=[],edgeDistances=[0];
+  for(let i=0;i<N;i++){
+    const p=points[i],q=points[(i+1)%N],n=normal(p),m=normal(q);
+    edgeDistances.push(edgeDistances[i]+Math.hypot(
+      q.x+m.x*half*side-p.x-n.x*half*side,
+      q.z+m.z*half*side-p.z-n.z*half*side));
+  }
+  // An integer repeat count closes the paint seamlessly at the line.
+  const repeats=Math.max(1,Math.round(edgeDistances[N]/stripePair));
+  const edges=profile.map(([offset])=>offsetEdge(points,(half+offset)*side));
+  for(let i=0;i<=N;i++){
+    profile.forEach(([offset,height],j)=>{
+      const e=edges[j][i%N];
+      vertices.push(e.x,height,e.z);
+      uvs.push((offset-u0)/uSpan,edgeDistances[i]/edgeDistances[N]*repeats);
+    });
+  }
+  for(let i=0;i<N;i++)for(let j=0;j<stride-1;j++){
+    const a=i*stride+j,b=a+1,c=a+stride,d=c+1;
+    if(side>0)indices.push(a,c,b,b,c,d);
+    else indices.push(a,b,c,b,d,c);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geometry.setIndex(indices);geometry.computeVertexNormals();
+  // UV seam duplicates the first section: share its averaged lighting.
+  const normals=geometry.attributes.normal;
+  for(let j=0;j<stride;j++){
+    const k=N*stride+j;
+    const n=new THREE.Vector3(normals.getX(j)+normals.getX(k),normals.getY(j)+normals.getY(k),normals.getZ(j)+normals.getZ(k)).normalize();
+    normals.setXYZ(j,n.x,n.y,n.z);normals.setXYZ(k,n.x,n.y,n.z);
+  }
+  const kerb=new THREE.Mesh(geometry,mat);
+  kerb.name=name;kerb.receiveShadow=true;scene.add(kerb);
+}
+
+// Guardrail swept as continuous rectangular-section runs, one per stretch of
+// consecutive samples where `railClear` accepts the rail position. Emitting
+// each face quad with its own vertices keeps the corners crisp instead of
+// letting smoothed normals round the rail into a tube.
+function sweptRails(points,offset,railClear,mat){
+  const N=points.length,P=[],NR=[],I=[];
+  const y0=.33,y1=1.03,w=.125;
+  const at=(i,side,d,y)=>{const p=points[i],n=normal(p);return [p.x+n.x*d*side,y,p.z+n.z*d*side];};
+  function quad(a,b,c,d,na,nb){
+    const base=P.length/3;P.push(...a,...b,...c,...d);NR.push(...na,...na,...nb,...nb);
+    const ux=b[0]-a[0],uy=b[1]-a[1],uz=b[2]-a[2],vx=c[0]-a[0],vy=c[1]-a[1],vz=c[2]-a[2];
+    const gx=uy*vz-uz*vy,gy=uz*vx-ux*vz,gz=ux*vy-uy*vx;
+    const wantX=na[0]+nb[0],wantY=na[1]+nb[1],wantZ=na[2]+nb[2];
+    if(gx*wantX+gy*wantY+gz*wantZ>=0)I.push(base,base+1,base+2,base+1,base+3,base+2);
+    else I.push(base,base+2,base+1,base+1,base+2,base+3);
+  }
+  for(const side of [-1,1]){
+    const clear=points.map(p=>railClear(p,side));
+    const runs=[],first=clear.indexOf(false);
+    // Stubs shorter than a few samples read as debris, not a barrier.
+    if(first<0)runs.push([...Array(N+1).keys()].map(i=>i%N));
+    else{let run=[];for(let k=1;k<=N;k++){const i=(first+k)%N;if(clear[i])run.push(i);else{if(run.length>=6)runs.push(run);run=[];}}}
+    for(const run of runs){
+      for(let k=0;k<run.length-1;k++){
+        const i=run[k],j=run[k+1],ni=normal(points[i]),nj=normal(points[j]);
+        const inI=[-ni.x*side,0,-ni.z*side],inJ=[-nj.x*side,0,-nj.z*side];
+        const outI=[ni.x*side,0,ni.z*side],outJ=[nj.x*side,0,nj.z*side],up=[0,1,0];
+        quad(at(i,side,offset-w,y0),at(i,side,offset-w,y1),at(j,side,offset-w,y0),at(j,side,offset-w,y1),inI,inJ);
+        quad(at(i,side,offset-w,y1),at(i,side,offset+w,y1),at(j,side,offset-w,y1),at(j,side,offset+w,y1),up,up);
+        quad(at(i,side,offset+w,y1),at(i,side,offset+w,y0),at(j,side,offset+w,y1),at(j,side,offset+w,y0),outI,outJ);
+      }
+      if(run[0]===run[run.length-1])continue;
+      for(const [i,sign] of [[run[0],-1],[run[run.length-1],1]]){
+        const p=points[i],cap=[p.tx*sign,0,p.tz*sign];
+        quad(at(i,side,offset-w,y0),at(i,side,offset-w,y1),at(i,side,offset+w,y0),at(i,side,offset+w,y1),cap,cap);
+      }
+    }
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(P,3));
+  geometry.setAttribute('normal',new THREE.Float32BufferAttribute(NR,3));
+  geometry.setIndex(I);geometry.computeBoundingSphere();
+  const mesh=new THREE.Mesh(geometry,mat);mesh.name='guardrail';mesh.receiveShadow=true;return mesh;
+}
+
+// `points` places scenery (its spacing is tuned per sample); `detail` is a
+// denser sampling of the same curve for the road-hugging strips, so tight
+// hairpins render smooth instead of faceted.
+export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points){
+  const half=width/2, N=points.length, D=detail.length;
   const coastal=theme==='marzamemi';
-  const normal=p=>({x:p.tz,z:-p.tx});
   const material=(color,roughness=.8)=>new THREE.MeshStandardMaterial({color,roughness});
+  const kerbMaterial=kerbPaintMaterial(renderer);
   function ribbon(offset,band,y,mat){
     const vertices=[],indices=[];
-    for(let i=0;i<=N;i++){const p=points[i%N],n=normal(p);for(const edge of [-.5,.5]){const d=offset+band*edge;vertices.push(p.x+n.x*d,y,p.z+n.z*d);}}
-    for(let i=0;i<N;i++){const a=i*2;indices.push(a,a+1,a+2,a+1,a+3,a+2);}
+    const lo=offsetEdge(detail,offset-band/2),hi=offsetEdge(detail,offset+band/2);
+    for(let i=0;i<=D;i++)for(const e of [lo[i%D],hi[i%D]])vertices.push(e.x,y,e.z);
+    // Edges are emitted in increasing offset along the normal, the opposite
+    // order to the road's, so this winding is what makes the strip face up
+    // instead of being back-face culled.
+    for(let i=0;i<D;i++){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3);}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();
     const mesh=new THREE.Mesh(g,mat);mesh.receiveShadow=true;scene.add(mesh);
   }
   const white=material(0xebe7d9),runoff=material(wet?0x315452:coastal?0xb9aa82:0x467f72);
   for(const side of [-1,1]){
     ribbon(side*(half+(coastal?1.1:1.65)),coastal?2.1:2.8,.006,runoff);
-    if(!coastal){ribbon(side*(half-.18),.14,.025,white);ribbon(side*(half+3.02),.13,.014,white);}
+    // Track-limit line sits just inboard of the kerb toe, where it's visible.
+    if(!coastal){ribbon(side*(half-.42),.14,.025,white);ribbon(side*(half+3.02),.13,.014,white);}
   }
   const temp=new THREE.Object3D();
   function instances(geo,mat,transforms){const mesh=new THREE.InstancedMesh(geo,mat,transforms.length);transforms.forEach((t,i)=>{temp.position.set(...t.p);temp.rotation.set(0,t.r||0,0);temp.scale.set(...(t.s||[1,1,1]));temp.updateMatrix();mesh.setMatrixAt(i,temp.matrix);});mesh.receiveShadow=true;mesh.computeBoundingSphere();scene.add(mesh);return mesh;}
   if(coastal){
-    // Independent tangent-aligned boxes leave wedges at corners. Sweep one
-    // welded ribbon per side through the SAME cross-sections as the road.
-    // Paint alternation belongs in UVs, not disconnected geometry.
-    const paintCanvas=document.createElement('canvas');
-    paintCanvas.width=32;paintCanvas.height=64;
-    const paintCtx=paintCanvas.getContext('2d');
-    paintCtx.fillStyle='#c64037';paintCtx.fillRect(0,0,32,32);
-    paintCtx.fillStyle='#ebe7d9';paintCtx.fillRect(0,32,32,32);
-    const kerbTexture=new THREE.CanvasTexture(paintCanvas);
-    kerbTexture.colorSpace=THREE.SRGBColorSpace;
-    kerbTexture.wrapT=THREE.RepeatWrapping;
-    kerbTexture.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-    const kerbMaterial=new THREE.MeshStandardMaterial({map:kerbTexture,roughness:.88});
     // Slightly overlap asphalt at the inner toe; taper into the shoulder.
     const profile=[[-.25,.024],[0,.065],[.35,.075],[.70,.016]];
-    const stride=profile.length;
-    for(const side of [-1,1]){
-      const vertices=[],uvs=[],indices=[],edgeDistances=[0];
-      for(let i=0;i<N;i++){
-        const p=points[i],q=points[(i+1)%N],n=normal(p),m=normal(q);
-        edgeDistances.push(edgeDistances[i]+Math.hypot(
-          q.x+m.x*half*side-p.x-n.x*half*side,
-          q.z+m.z*half*side-p.z-n.z*half*side));
-      }
-      // An integer repeat count closes the paint seamlessly at the line.
-      const repeats=Math.max(1,Math.round(edgeDistances[N]/6));
-      for(let i=0;i<=N;i++){
-        const p=points[i%N],n=normal(p);
-        for(const [offset,height] of profile){
-          const d=(half+offset)*side;
-          vertices.push(p.x+n.x*d,height,p.z+n.z*d);
-          uvs.push((offset+.25)/.95,edgeDistances[i]/edgeDistances[N]*repeats);
-        }
-      }
-      for(let i=0;i<N;i++)for(let j=0;j<stride-1;j++){
-        const a=i*stride+j,b=a+1,c=a+stride,d=c+1;
-        if(side>0)indices.push(a,c,b,b,c,d);
-        else indices.push(a,b,c,b,d,c);
-      }
-      const geometry=new THREE.BufferGeometry();
-      geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
-      geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
-      geometry.setIndex(indices);geometry.computeVertexNormals();
-      // UV seam duplicates the first section: share its averaged lighting.
-      const normals=geometry.attributes.normal;
-      for(let j=0;j<stride;j++){
-        const k=N*stride+j;
-        const n=new THREE.Vector3(normals.getX(j)+normals.getX(k),normals.getY(j)+normals.getY(k),normals.getZ(j)+normals.getZ(k)).normalize();
-        normals.setXYZ(j,n.x,n.y,n.z);normals.setXYZ(k,n.x,n.y,n.z);
-      }
-      const kerb=new THREE.Mesh(geometry,kerbMaterial);
-      kerb.name=`marzamemi-kerb-${side}`;kerb.receiveShadow=true;scene.add(kerb);
-    }
+    for(const side of [-1,1])weldedKerb(scene,detail,half,side,profile,6,kerbMaterial,`marzamemi-kerb-${side}`);
     // Viale degli Oleandri / Fondo Morte: a deliberately low-draw-call
     // reconstruction from the supplied route and street video. Repeated
     // villas, walls, palms and flowering hedges are instanced for phones.
@@ -152,21 +213,23 @@ export function dressCircuit(scene,points,width,renderer,wet,theme){
     const sign=new THREE.Mesh(new THREE.BoxGeometry(width+3,.85,.25),new THREE.MeshBasicMaterial({map:signTexture}));sign.position.set(0,4.7,5);gantry.add(sign);
     return;
   }
-  const reds=[],whites=[],rails=[],posts=[];
-  let length=0;for(let i=0;i<N;i++){const a=points[i],b=points[(i+1)%N];length+=Math.hypot(a.x-b.x,a.z-b.z);}
-  const step=3, segment=length/N*step*1.025;
-  for(let i=0;i<N;i+=step){const p=points[i],n=normal(p),r=Math.atan2(p.tx,p.tz);
-    for(const side of [-1,1]){
-      (Math.floor(i/step)%2?whites:reds).push({p:[p.x+n.x*half*side,.045,p.z+n.z*half*side],r});
-      // Keep scenery outside the playable runoff and away from other bends.
-      const distance=half+8.5,x=p.x+n.x*distance*side,z=p.z+n.z*distance*side;
-      const safe=points.every(q=>Math.hypot(q.x-x,q.z-z)>half+5);
-      if(safe){rails.push({p:[x,.68,z],r});if(i%12===0)posts.push({p:[x,1.1,z],r});}
-    }
+  // Wider than Marzamemi's street kerb, with shorter stripes like a
+  // permanent circuit's; the toe still overlaps the asphalt edge.
+  const kerbProfile=[[-.3,.024],[0,.07],[.55,.08],[.95,.016]];
+  for(const side of [-1,1])weldedKerb(scene,detail,half,side,kerbProfile,4,kerbMaterial,`kerb-${side}`);
+  // A rail is kept only where its own stretch of track is the closest one:
+  // anywhere nearer to another leg it would sit inside that leg's runoff
+  // and cross that leg's own rail. This also drops the inside of bends
+  // tighter than the rail offset, where the swept section would fold.
+  const railOffset=half+8.5;
+  const railClear=(p,side)=>{const n=normal(p),x=p.x+n.x*railOffset*side,z=p.z+n.z*railOffset*side;return points.every(q=>Math.hypot(q.x-x,q.z-z)>railOffset-.6);};
+  scene.add(sweptRails(detail,railOffset,railClear,material(0xb4bfc0,.48)));
+  const posts=[];
+  for(let i=0;i<N;i+=12)for(const side of [-1,1]){
+    if(!railClear(points[i],side))continue;
+    const p=points[i],n=normal(p);
+    posts.push({p:[p.x+n.x*railOffset*side,1.1,p.z+n.z*railOffset*side],r:Math.atan2(p.tx,p.tz)});
   }
-  instances(new THREE.BoxGeometry(.85,.09,segment),material(0xc64037),reds);
-  instances(new THREE.BoxGeometry(.85,.09,segment),white,whites);
-  instances(new THREE.BoxGeometry(.25,.7,segment),material(0xb4bfc0,.48),rails);
   instances(new THREE.BoxGeometry(.12,2.2,.12),material(0x65747d,.5),posts);
   // Forest clusters and low mountains give a horizon without per-tree draws.
   const rand=random(82),trunks=[],crowns=[];

@@ -21,7 +21,7 @@ import { setupRaceNameplates } from "./race-nameplates.js";
 import { setupAgentApi } from "./agent-api.js";
 
 import { steeringYaw } from "./steering.js";
-import { dressCircuit, surfaceTexture } from "./track-art.js?v=38";
+import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
 import { gearInfo, setupRaceAudio } from "./race-audio.js";
 import { setupRaceWeather } from "./race-weather.js";
 import { loadGraphicsProfile } from "./graphics-profiles.js";
@@ -30,8 +30,9 @@ import {
   sampleCenterline,
   headingOf,
   sideNormal,
+  offsetEdge,
   nearestTrackInfo as nearestPointOnCenterline,
-} from "./track-geometry.js";
+} from "./track-geometry.js?v=39";
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
@@ -202,6 +203,10 @@ const TRACK_LIMIT_PENALTY_MS = 1000;
 
 const CENTERLINE_SAMPLES = 360;
 const centerline = sampleCenterline(trackCurve, CENTERLINE_SAMPLES);
+// Render-only: the road and its kerbs/runoff/rails are meshed from a denser
+// sampling of the same curve so tight hairpins don't show as polygons.
+// Gameplay (progress, AI, collisions) keeps the 360-sample centerline.
+const visualCenterline = sampleCenterline(trackCurve, CENTERLINE_SAMPLES * 4);
 
 // --- Minimap geometry ------------------------------------------------------
 // The track never moves, so the world-to-minimap mapping (scale + offset
@@ -341,9 +346,12 @@ scene.add(sun, sun.target);
 
 // Ground
 const isMarzamemi = circuit.theme === "marzamemi";
+// Subdivided and depth-offset so the road/runoff strips lying millimetres
+// above it always win: as two giant triangles its interpolated depth near
+// the camera was coarse enough to swallow the asphalt at low view angles.
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(1400, 1400),
-  new THREE.MeshStandardMaterial({ color: isMarzamemi ? 0xbfb48b : 0xb7c494, map: surfaceTexture(isMarzamemi ? "sand" : "grass", renderer), roughness: 1 })
+  new THREE.PlaneGeometry(1400, 1400, 56, 56),
+  new THREE.MeshStandardMaterial({ color: isMarzamemi ? 0xbfb48b : 0xb7c494, map: surfaceTexture(isMarzamemi ? "sand" : "grass", renderer), roughness: 1, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 })
 );
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true; scene.add(ground);
@@ -355,15 +363,16 @@ function buildRoadMesh() {
   const indices = [];
   const halfWidth = TRACK_WIDTH / 2;
 
-  for (let i = 0; i <= centerline.length; i++) {
-    const p = centerline[i % centerline.length];
-    const n = sideNormal(p);
-    positions.push(p.x + n.x * halfWidth, 0.01, p.z + n.z * halfWidth);
-    positions.push(p.x - n.x * halfWidth, 0.01, p.z - n.z * halfWidth);
-    uvs.push(0,i / centerline.length * trackCurve.getLength() / 12,1,i / centerline.length * trackCurve.getLength() / 12);
+  const samples = visualCenterline.length;
+  const left = offsetEdge(visualCenterline, halfWidth);
+  const right = offsetEdge(visualCenterline, -halfWidth);
+  for (let i = 0; i <= samples; i++) {
+    const a = left[i % samples], b = right[i % samples];
+    positions.push(a.x, 0.01, a.z, b.x, 0.01, b.z);
+    uvs.push(0,i / samples * trackCurve.getLength() / 12,1,i / samples * trackCurve.getLength() / 12);
   }
 
-  for (let i = 0; i < centerline.length; i++) {
+  for (let i = 0; i < samples; i++) {
     const a = i * 2;
     const b = i * 2 + 1;
     const c = i * 2 + 2;
@@ -397,7 +406,7 @@ scene.add(buildRoadMesh());
 // asphalt edge instead — the actual off-track boundary (grass drag, then
 // the invisible wall) still sits further out, unchanged; this is purely
 // the visual marker real curbs are.
-dressCircuit(scene, centerline, TRACK_WIDTH, renderer, isRaining, circuit.theme);
+dressCircuit(scene, centerline, TRACK_WIDTH, renderer, isRaining, circuit.theme, visualCenterline);
 
 // Start/finish line: a group so the flattening rotation (local X) and the
 // heading rotation (group Y) don't get tangled up in Euler order.

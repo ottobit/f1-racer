@@ -34,7 +34,12 @@ The current race runtime is coordinated by `main.js`, with focused helpers:
   spark FX, gated by a `getPlayerState` getter for the same reason.
 - `track-geometry.js`: pure centerline sampling/query rules, framework-
   agnostic (takes a curve object rather than importing three.js), shared
-  between `main.js` and `tools/validate-circuits.mjs` (#6).
+  between `main.js` and `tools/validate-circuits.mjs` (#6). Also
+  `offsetEdge()` (#28): miter-cut offset edges used by the road mesh and by
+  `track-art.js`'s kerbs/runoff/lines, so tight apexes never fold.
+- `track-art.js`: circuit dressing. `dressCircuit(..., detail)` places
+  scenery on the coarse gameplay centerline but meshes road-hugging strips
+  from the denser render-only `visualCenterline` (#28).
 - `graphics-profiles.js`: automatic, persisted, device-signal-based
   rendering-cost profile (DPR/shadows/particle counts only — never physics
   or race visibility). No new UI (#2).

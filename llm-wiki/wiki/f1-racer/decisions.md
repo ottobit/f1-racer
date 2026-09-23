@@ -141,3 +141,8 @@ corner supports and per-circuit spline tension (0.18 for Marzamemi).
 Marzamemi's kerbs use continuous ribbons aligned with the actual road edge,
 not disconnected boxes. Paint stripes follow distance along each edge and
 close seamlessly; geometry and texture are created once at scene setup.
+Since #28 this applies to every circuit, and to guardrails too: the user
+described the old per-segment boxes as "sembra che stai giocando a fare i
+collage". Road-hugging strips are built from `offsetEdge()` (miter-cut at
+tight apexes) on a denser render-only sampling; gameplay keeps the
+360-sample centerline.
