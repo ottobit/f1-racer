@@ -8,7 +8,7 @@ import { loadGarageSetup, selectedGarageLivery, setupEffects } from "./garage-se
 
 import { createStudioEnvironment } from "./car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
-import { setupRaceInput } from "./race-input.js?v=37";
+import { setupRaceInput } from "./race-input.js?v=38";
 import { setupRaceHud } from "./race-hud.js?v=33";
 import { setupRaceCamera } from "./race-camera.js?v=26";
 import { setupPlayerPhysics } from "./player-physics.js";
@@ -18,6 +18,7 @@ import { setupRaceProgress } from "./race-progress.js?v=27";
 import { setupRaceCommands } from "./race-commands.js";
 import { setupCarCollisions } from "./race-collisions.js";
 import { setupRaceNameplates } from "./race-nameplates.js";
+import { setupAgentApi } from "./agent-api.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=38";
@@ -935,7 +936,12 @@ function cautionSpeedMultiplier() {
   return cautionState === "active" ? CAUTION_SPEED_FACTOR : 1;
 }
 
-const { input, steering, updateSteeringInput } = setupRaceInput();
+// Populated below, only when the Agent API (#176) is active, so a real
+// human session never pays for the indirection.
+const humanInputListeners = [];
+const { input, steering, updateSteeringInput, setExternalSteer } = setupRaceInput({
+  onHumanInput: () => humanInputListeners.forEach((fn) => fn()),
+});
 setupRaceCommands({
   state,
   tyreCompounds: TYRE_COMPOUNDS,
@@ -1493,6 +1499,28 @@ function animate() {
   sun.target.position.set(state.x, 0, state.z);
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
+}
+
+// Agent API (#176): opt-in only, via ?agent=1, so normal play is untouched.
+if (new URLSearchParams(location.search).get("agent") === "1") {
+  const agentApi = setupAgentApi({
+    state,
+    aiCars,
+    input,
+    setExternalSteer,
+    centerline,
+    headingOf,
+    sideNormal,
+    nearestTrackInfo,
+    currentRaceOrder,
+    trackLength: TRACK_LENGTH,
+    grassLimit: GRASS_LIMIT,
+    lapsPerRace: LAPS_PER_RACE,
+    getSessionPhase: () => sessionPhase,
+    getRaceState: () => raceState,
+    getQualiState: () => qualiState,
+  });
+  humanInputListeners.push(agentApi.onHumanInput);
 }
 
 startQualifyingCountdown();

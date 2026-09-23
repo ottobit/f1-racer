@@ -15,10 +15,19 @@ export function setupRaceInput({
   wheelId = "wheel-control",
   gasId = "btn-gas",
   brakeId = "btn-brake",
+  onHumanInput = () => {},
 } = {}) {
   const input = { forward: false, back: false, left: false, right: false };
   const steering = { value: 0 };
   const pedalPointers = new Map();
+  // Set by the Agent API (see agent-api.js) to drive steering.value directly
+  // for the duration of a step, bypassing the human wheel/keyboard/motion
+  // smoothing below. null means "no agent override", the default and only
+  // state a human-played session ever sees.
+  let externalSteer = null;
+  function setExternalSteer(value) {
+    externalSteer = value;
+  }
   let touchSteer = 0;
   let wheelPointer = null;
   let wheelOrigin = 0;
@@ -109,6 +118,7 @@ export function setupRaceInput({
   }
 
   motionButton.addEventListener("click", async () => {
+    onHumanInput();
     if (motionActive || motionPending) { stopMotion(); return; }
     if (!window.isSecureContext || !window.DeviceOrientationEvent) {
       stopMotion("Sensori non disponibili: usa il touch"); return;
@@ -146,7 +156,10 @@ export function setupRaceInput({
   window.addEventListener("keydown", (event) => {
     if (event.target.closest?.("select,input,textarea,button")) return;
     const action = KEY_MAP[event.code];
-    if (action) input[action] = true;
+    if (action) {
+      input[action] = true;
+      onHumanInput();
+    }
   });
   window.addEventListener("keyup", (event) => {
     const action = KEY_MAP[event.code];
@@ -162,6 +175,7 @@ export function setupRaceInput({
       el.setPointerCapture(event.pointerId);
       input[action] = true;
       el.classList.add("is-held");
+      onHumanInput();
     });
     const release = (event) => {
       if (pedalPointers.get(action) !== event.pointerId) return;
@@ -185,6 +199,7 @@ export function setupRaceInput({
     wheelOrigin = event.clientX;
     touchSteer = 0;
     wheelEl.setPointerCapture(event.pointerId);
+    onHumanInput();
   });
   wheelEl.addEventListener("pointermove", (event) => {
     if (event.pointerId !== wheelPointer) return;
@@ -208,6 +223,7 @@ export function setupRaceInput({
     pedalPointers.clear();
     wheelPointer = null;
     touchSteer = 0;
+    externalSteer = null;
     steering.value = 0;
     document.querySelectorAll(".touch-btn").forEach((button) => {
       button.classList.remove("is-held");
@@ -228,13 +244,19 @@ export function setupRaceInput({
   });
 
   function updateSteeringInput(dt) {
-    if ((motionActive || motionPending) && lastMotionAt && performance.now() - lastMotionAt > 2000) stopMotion("Sensori interrotti: sterzo touch");
-    const keyboard = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-    steering.value = smoothSteering(
-      steering.value,
-      wheelPointer !== null ? touchSteer : keyboard || (motionActive ? motionValue : 0),
-      dt
-    );
+    if (externalSteer !== null) {
+      // Agent-driven step in progress: skip human smoothing/sourcing
+      // entirely so the agent's value isn't fought back toward 0.
+      steering.value = externalSteer;
+    } else {
+      if ((motionActive || motionPending) && lastMotionAt && performance.now() - lastMotionAt > 2000) stopMotion("Sensori interrotti: sterzo touch");
+      const keyboard = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      steering.value = smoothSteering(
+        steering.value,
+        wheelPointer !== null ? touchSteer : keyboard || (motionActive ? motionValue : 0),
+        dt
+      );
+    }
     wheelEl.style.setProperty("--steer-angle", `${steering.value * 65}deg`);
     wheelEl.setAttribute("aria-valuenow", String(Math.round(steering.value * 100)));
     if (!motionIndicator.hidden) {
@@ -243,5 +265,5 @@ export function setupRaceInput({
     }
   }
 
-  return { input, steering, clearDrivingInput, updateSteeringInput };
+  return { input, steering, clearDrivingInput, updateSteeringInput, setExternalSteer };
 }
