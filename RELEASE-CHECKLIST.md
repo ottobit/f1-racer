@@ -219,3 +219,13 @@ in this environment, so no hardware performance claim is made.
 - [ ] `node tools/validate-circuits.mjs` still reports 0 errors for pianalago/serramonte/baiadoro after the hairpin-insertion rework (points and `curveTension: 0.5` changed for all three).
 - [x] Local curvature-radius margin above each circuit's wall margin re-checked numerically (not just "validator passes"): pianalago +15%, serramonte +18%, baiadoro +17% — verified deliberately non-borderline before accepting.
 - [ ] Drive each of the three at the new sharper corners specifically: AI cars take the hairpins without clipping the wall or getting stuck, kerb/runoff still renders correctly at the tighter apex, no visible geometry glitch (self-crossing road ribbon, minimap spike) at the inserted approach/apex/exit points.
+
+## Track dressing regression (#28: welded kerbs, swept guardrails)
+
+- [x] Kerbs are continuous on every circuit — no gaps, wedges or X-crossings at hairpin apexes (headless before/after screenshots of Serramonte's tightest corner, top and low views).
+- [x] No flipped/folded triangles in any road-hugging strip (road, each kerb band, runoff, painted lines) on all nine circuits — counted numerically on the 1440-sample render centerline with `offsetEdge`.
+- [x] Real `race.html` loads with zero console errors on Serramonte, Marzamemi, Portoscuro (wet) and Vallechiara in headless Chromium.
+- [ ] On a real device: runoff band and white track-limit lines visible along the whole lap, with no flicker/shimmer against the grass at distance; road never disappears under the grass at low camera angles.
+- [ ] Guardrails: continuous where present, none crossing each other where two legs run close; posts sit on the rail.
+- [ ] Marzamemi: kerb look unchanged apart from the sand runoff shoulder, which is now actually visible.
+- [ ] Load time on a phone not noticeably worse (denser road/kerb meshes plus fold resolution run once at scene setup).

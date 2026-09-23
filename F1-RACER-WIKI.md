@@ -214,8 +214,9 @@ gets one deep hairpin at the end of its long straight.
 
 `track-geometry.js` owns the pure, framework-agnostic rules used to turn a
 circuit's raw control points into the runtime's centerline: sampling the
-closed curve, deriving heading/side-normal at a sample, and finding the
-nearest sample to a point. It takes an already-built curve object rather
+closed curve, deriving heading/side-normal at a sample, finding the
+nearest sample to a point, and building fold-free offset edges for the
+road-hugging meshes (`offsetEdge`). It takes an already-built curve object rather
 than importing three.js itself, so the exact same rules run both in
 `main.js` (fed the browser's CDN three.js build) and in
 `tools/validate-circuits.mjs` (fed the pinned npm `three` build — see
@@ -233,6 +234,17 @@ coastal corridor is the current example) — still flagged as a warning, not
 silently skipped, so a further regression is still caught. `--svg` writes a
 top-down diagnostic preview per circuit to `tools/out/` (gitignored,
 dev-only, not referenced by the shipped game).
+
+Known gap (found in #28, **Open**): the curvature check measures a 3-point
+circumradius over a 5-sample window of the 360-sample centerline, which
+smooths away near-cusps. Measured on a dense sampling, the spline's true
+minimum radius is ~1 unit at some apexes of Marzamemi (by design, tension
+0.18) and of the #26 hairpin-insertion corners on Serramonte and Baiadoro
+(Pianalago ~5) — so the "+15–18% above wall margin" figures recorded for #26
+describe the smoothed stencil, not the actual apex, which is closer to a V
+than a rounded hairpin. Rendering is now immune (`offsetEdge`); whether to
+round those apexes and make the validator check true curvature is a separate
+decision.
 
 ## 7. Race progress and lap counting
 
@@ -521,8 +533,8 @@ For a fresh ChatGPT Work session, start with `WORK-HANDOFF.md`. It is a compact 
 ## Race art, controls and persistent garage preview
 
 `track-art.js` generates seeded asphalt/grass textures and circuit dressing:
-painted track margins, rubber deposits, runoff, instanced kerbs/guardrails/trees,
-low mountains and pit-straight structures. Candidate scenery locations are kept
+painted track margins, rubber deposits, runoff, welded kerbs, swept guardrails,
+instanced posts/trees, low mountains and pit-straight structures. Candidate scenery locations are kept
 away from adjacent road segments. These remain decorative, not new collision
 objects. The race uses ACES tone mapping and one 1024 shadow map centered around
 the player; track meshes receive car shadows. Wet asphalt has lower roughness.
@@ -530,10 +542,28 @@ Marzamemi selects a dedicated mobile-conscious branch instead: sandy shoulders,
 sea and beach planes, low stucco villas, walls, gates, utility poles and wires,
 palms, oleanders and bougainvillea. Repeated objects remain instanced, and the
 urban course uses red/white racing kerbs, without generic guardrails or mountains.
-Marzamemi kerbs are two continuous indexed ribbons sharing the road's sampled
-cross-sections, with a low tapered profile. Red/white paint uses edge-distance
-UVs and an integer repeat count; independent tangent boxes must not return,
-because they leave wedges and overlaps in the tight corners.
+Kerbs on every circuit (#28; originally Marzamemi only) are two continuous
+indexed ribbons per circuit (`weldedKerb`) sharing the road's sampled
+cross-sections, with a low tapered profile — Marzamemi keeps its narrower
+street profile, the other eight a wider one with shorter stripes. Red/white
+paint uses edge-distance UVs and an integer repeat count; independent tangent
+boxes must not return, because they leave wedges and X-shaped overlaps in the
+tight corners. Guardrails likewise are one swept rectangular section per
+continuous run (`sweptRails`), kept only where the rail's own stretch of track
+is the closest one — which also removes rails that used to cross each other
+where two legs run close.
+
+The road, kerbs, runoff and painted lines are meshed from `visualCenterline`
+(`main.js`: the same curve sampled 4x denser than the 360-sample gameplay
+`centerline`) so tight hairpins render smooth, and every edge comes from
+`offsetEdge()` (`track-geometry.js`), which cuts the self-intersecting loop an
+inner offset forms wherever the curve bends tighter than the offset (miter
+join) — without it those apexes folded into dark bow-tie shards. Scenery
+placement still steps through the coarse centerline, so object spacing is
+unchanged. `ribbon()` strips were back-face culled until #28 (reversed
+winding), so runoff and painted lines only became visible then; the ground
+plane is now subdivided and depth-offset so those millimetre-thin strips and
+the road always win over it at low camera angles.
 Its map-traced angular layout uses local corner supports and tension 0.18;
 the narrow shared central corridor is separated for racing clearance.
 The upper HUD markup and existing `style.css` are unchanged; lower control styles

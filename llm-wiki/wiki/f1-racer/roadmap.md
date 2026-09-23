@@ -51,6 +51,14 @@
   hairpin-insertion pass (same technique as Marzamemi's real corners) so
   each gains genuine tight corners while keeping a real (~15-18%) safety
   margin above the wall-margin curvature threshold, not a borderline pass.
+  **Correction found in #28:** that margin is on the validator's smoothed
+  5-sample stencil; the true spline apex is near-cusp (~1 unit radius on
+  Serramonte/Baiadoro). Open, no issue yet: round those apexes and teach the
+  validator true curvature, or accept V-shaped apexes as the design.
+- [#28](https://github.com/ottobit/f1-racer/issues/28): welded kerbs and
+  swept guardrails on every circuit, fold-free road edges, and the
+  previously invisible runoff/painted lines (culled `ribbon()` winding) now
+  render.
 - Continue keeping `main.js` as orchestration and move reusable logic into
   focused modules only when it reduces real complexity.
 - Keep setup effects centralized in `garage-setup.js`.
