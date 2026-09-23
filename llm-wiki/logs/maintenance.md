@@ -67,3 +67,20 @@ API) was invisible unless a session also opened the wiki. Added a short
 linking `tooling.md`, and noted explicitly that the rule is scoped to this
 repository — a durable cross-project version would need an account-level
 Claude preference, which this repo cannot set.
+
+## 2026-09-23 — Extract race-weather.js from main.js (#3)
+
+Second incremental cut of #3, same pattern as `race-audio.js`: sky cloud
+billboards, the rain particle field and impact spark FX moved out of
+`main.js` into `race-weather.js` (`setupRaceWeather`). Confirmed via grep
+these were entirely self-contained — no other file references
+`cloudGroup`/`rainPoints`/`impactSparks`/`spawnImpactSparks`/`updateRain`/
+`updateImpactSparks`, only `main.js` itself (the collision-impact callback
+and `animate()`). The one coupling, `updateRain`'s read of the player's
+`state.x`/`state.z`, is inverted into an injected `getPlayerState()`
+getter — `state` isn't declared yet at the point in `main.js` where this
+module is wired up, same TDZ-safe pattern `getRaceState` already uses.
+`main.js` drops another ~140 lines. Updated `F1-RACER-WIKI.md` and
+`architecture.md`/`roadmap.md` accordingly; still owns scene/track-mesh
+construction, ghost-lap persistence and the qualifying/race state machines
+per roadmap.md.
