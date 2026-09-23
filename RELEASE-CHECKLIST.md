@@ -213,7 +213,8 @@ in this environment, so no hardware performance claim is made.
 - [ ] `?gfx=low`, `?gfx=medium`, `?gfx=high` each visibly change render sharpness/shadow presence without changing car handling, track width, wall/runoff behaviour or AI pace.
 - [ ] Loading the race with no `?gfx` param picks a profile automatically (visible via `?diag=1`'s `gfx:` label) and that choice persists across circuits/sessions until changed.
 - [ ] Home-screen session setup panel is unchanged (still exactly difficulty + driver, no new control).
-- [ ] **Real-device measurement — not yet done from this dev environment (no real mobile hardware or GPU rendering here).** Left for the user: FPS/frame time with `?diag=1` on a real smartphone and a real desktop, race scene with all ten cars plus rain, and the Garage, before/after any further graphics-profile tuning.
+- [x] Garage now applies the same `?gfx=` profile to its own renderer (DPR cap, shadow map) and the same `?diag=1` overlay — verified in headless Chromium at low/medium/high (distinct canvas backing sizes at a high device pixel ratio) and diag on/off, zero console errors.
+- [ ] **Real-device measurement — not yet done from this dev environment (no real mobile hardware or GPU rendering here).** Left for the user: FPS/frame time with `?diag=1` on a real smartphone and a real desktop, race scene with all ten cars plus rain, and the Garage (now that it has the same overlay), before/after any further graphics-profile tuning.
 
 ## New circuits regression (#5: pianalago, serramonte, baiadoro)
 

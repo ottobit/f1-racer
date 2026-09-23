@@ -5,9 +5,11 @@ import {
   saveGarageSetup,
   setupEffects,
 } from "./garage-setup.js?v=28";
-import { createShowroom } from "./showroom.js?v=29";
+import { createShowroom } from "./showroom.js?v=30";
 import { getCircuit } from "./circuits.js?v=38";
 import { loadSelectedDriverId } from "./driver-selection.js";
+import { loadGraphicsProfile } from "./graphics-profiles.js";
+import { setupDiagnosticsOverlay } from "./race-diagnostics.js";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
 const requestedCircuit = new URLSearchParams(location.search).get("circuit");
@@ -16,9 +18,18 @@ try { storedCircuit = localStorage.getItem(SELECTED_CIRCUIT_KEY); } catch (e) {}
 const targetCircuit = getCircuit(requestedCircuit || storedCircuit);
 
 let setup = loadGarageSetup();
-const { car, focusPart } = createShowroom(document.getElementById("garage-canvas"), {
+// Same device-signal profile the race applies to its renderer (#2): a phone
+// set to "basso" there gets the same DPR/shadow treatment here, instead of
+// the showroom always paying full cost regardless of device.
+const graphicsProfile = loadGraphicsProfile();
+const { car, renderer, focusPart } = createShowroom(document.getElementById("garage-canvas"), {
   livery: playerLivery(loadSelectedDriverId()),
+  graphicsProfile,
+  onFrame: (dt) => diagnostics.update(dt),
 });
+// Same opt-in overlay the race uses (?diag=1, #2) — off and DOM-free by
+// default, so a normal Garage visit is unaffected.
+const diagnostics = setupDiagnosticsOverlay({ renderer, graphicsProfileId: graphicsProfile.id });
 
 function applyVisual() {
   car.traverse((o) => {
