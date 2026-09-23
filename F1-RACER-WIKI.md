@@ -62,7 +62,6 @@ Main responsibilities currently living there:
 - Ghost-lap recording/playback.
 - HUD updates and minimap.
 - Camera modes.
-- Engine audio synthesis.
 - Main animation loop.
 
 ### Main loop
@@ -340,7 +339,12 @@ The player's visual car is hidden in cockpit mode.
 
 ## 15. Audio
 
-The engine sound is synthesized with Web Audio rather than external audio assets.
+`race-audio.js` owns gear mapping and the synthesized engine/shift sound
+(`setupRaceAudio`), wired from `main.js` through a `getRaceState` getter
+rather than a shared module variable. `race-hud.js` calls the returned
+`updateEngineSound`/`playShiftClick` each frame; `main.js` only owns lazy
+initialization on first input. The engine sound is synthesized with Web
+Audio rather than external audio assets.
 
 It uses:
 - three layered oscillators/harmonics;
