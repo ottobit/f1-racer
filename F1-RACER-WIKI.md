@@ -195,10 +195,20 @@ accepted only once `tools/validate-circuits.mjs` (#6) reported zero errors
 and warnings — see each entry's comment in `circuits.js` for the exact
 command. Every circuit in the roster now has a distinct integer width, 9
 through 17. Serramonte is now the tightest/narrowest circuit overall
-(Montenero's comment was updated to stop claiming that superlative); Pianalago
-is the most purely flowing (no corner tighter than the wall margin by a wide
-margin anywhere on the lap); Baiadoro is the widest, pairing a long straight
-with a tighter technical final complex rather than uniform sweeps.
+(Montenero's comment was updated to stop claiming that superlative); Baiadoro
+is the widest, pairing a long straight with a tighter technical final complex
+rather than uniform sweeps.
+
+All three were reworked again for #26: the initial star-convex shapes were
+too round (smooth wave harmonics only, no corner near the wall-margin
+threshold), so each now also gets a hairpin-insertion pass — a base point
+replaced by a tight approach/apex/exit triple of closely-angle-spaced
+points, the same technique Marzamemi's real-street corners already used —
+tuned per circuit (`spreadDeg`/`depthFactor`) and re-validated until the
+minimum curvature radius sits comfortably (~15-18%, not borderline) above
+the wall margin. Pianalago keeps two corners tightened this way (still the
+most flowing of the three); Serramonte gets three real hairpins; Baiadoro
+gets one deep hairpin at the end of its long straight.
 
 ### Shared geometry rules and offline validation
 

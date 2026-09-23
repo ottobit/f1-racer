@@ -46,6 +46,11 @@
   hand-placed, all passing with zero issues. Every circuit in the roster
   now has a distinct width, 9 through 17. See `F1-RACER-WIKI.md`'s track
   system section for each one's identity.
+- [#26](https://github.com/ottobit/f1-racer/issues/26): resolved. The three
+  #5 circuits' first geometry was too smooth/round; reworked with a
+  hairpin-insertion pass (same technique as Marzamemi's real corners) so
+  each gains genuine tight corners while keeping a real (~15-18%) safety
+  margin above the wall-margin curvature threshold, not a borderline pass.
 - Continue keeping `main.js` as orchestration and move reusable logic into
   focused modules only when it reduces real complexity.
 - Keep setup effects centralized in `garage-setup.js`.
