@@ -55,6 +55,9 @@
   5-sample stencil; the true spline apex is near-cusp (~1 unit radius on
   Serramonte/Baiadoro). Open, no issue yet: round those apexes and teach the
   validator true curvature, or accept V-shaped apexes as the design.
+- [#30](https://github.com/ottobit/f1-racer/issues/30): Garage restyled for
+  phones (portrait single scroll, landscape two columns), livery picker
+  removed in favour of the selected driver's team colours.
 - [#28](https://github.com/ottobit/f1-racer/issues/28): welded kerbs and
   swept guardrails on every circuit, fold-free road edges, and the
   previously invisible runoff/painted lines (culled `ribbon()` winding) now

@@ -1,13 +1,13 @@
 import {
-  GARAGE_LIVERIES,
   GARAGE_PARTS,
   loadGarageSetup,
+  playerLivery,
   saveGarageSetup,
-  selectedGarageLivery,
   setupEffects,
-} from "./garage-setup.js?v=27";
-import { createShowroom } from "./showroom.js?v=28";
+} from "./garage-setup.js?v=28";
+import { createShowroom } from "./showroom.js?v=29";
 import { getCircuit } from "./circuits.js?v=38";
+import { loadSelectedDriverId } from "./driver-selection.js";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
 const requestedCircuit = new URLSearchParams(location.search).get("circuit");
@@ -16,8 +16,8 @@ try { storedCircuit = localStorage.getItem(SELECTED_CIRCUIT_KEY); } catch (e) {}
 const targetCircuit = getCircuit(requestedCircuit || storedCircuit);
 
 let setup = loadGarageSetup();
-const { car, focusPart, setLivery } = createShowroom(document.getElementById("garage-canvas"), {
-  livery: selectedGarageLivery(setup),
+const { car, focusPart } = createShowroom(document.getElementById("garage-canvas"), {
+  livery: playerLivery(loadSelectedDriverId()),
 });
 
 function applyVisual() {
@@ -34,7 +34,6 @@ function applyVisual() {
     rw.position.y = setup.rearWing === "high" ? 1.08 : setup.rearWing === "low" ? 0.86 : 0.95;
     rw.rotation.x = setup.rearWing === "high" ? -0.18 : setup.rearWing === "low" ? 0.08 : 0;
   }
-  setLivery(selectedGarageLivery(setup));
 }
 
 const labels = {
@@ -45,17 +44,14 @@ const labels = {
   traction: "Trazione",
 };
 
-function hex(color) {
-  return `#${color.toString(16).padStart(6, "0")}`;
-}
-
 function renderUI() {
   const effects = setupEffects(setup);
   const base = { speed: 50, downforce: 50, braking: 50, stability: 50, traction: 50 };
-  document.getElementById("garage-stats").innerHTML = Object.entries(base)
+  const stats = Object.entries(base)
     .map(([k, v]) => { const value = Math.max(10, Math.min(90, v + (effects[k] || 0) * 7)); return `<div><span>${labels[k]}</span><div><i style="width:${value}%"></i></div><b>${value}</b></div>`; })
     .join("");
-  document.getElementById("garage-liveries").innerHTML = `<span>LIVREA GARA</span>${GARAGE_LIVERIES.map((livery) => `<button class="livery-choice ${setup.livery === livery.id ? "active" : ""}" data-livery="${livery.id}" aria-pressed="${setup.livery === livery.id}" aria-label="${livery.label}"><i style="--primary:${hex(livery.primary)};--secondary:${hex(livery.secondary)}"></i><b>${livery.label}</b></button>`).join("")}`;
+  // Overlaid on the car on wide screens, inside the setup pane on phones.
+  document.querySelectorAll("[data-garage-stats]").forEach((el) => { el.innerHTML = stats; });
   const recommendation = targetCircuit.recommendedSetup;
   const setupKeys = Object.keys(GARAGE_PARTS);
   const changes = setupKeys.filter((part) => setup[part] !== recommendation[part]);
@@ -78,15 +74,7 @@ function mount(part, id) {
     z.classList.add("just-mounted");
     setTimeout(() => z.classList.remove("just-mounted"), 650);
   }
-  document.getElementById("garage-status").textContent = `${GARAGE_PARTS[part].label}: ${GARAGE_PARTS[part].variants[id].label} montato.`;
-}
-
-function chooseLivery(id) {
-  if (!GARAGE_LIVERIES.some((livery) => livery.id === id)) return;
-  setup.livery = id;
-  saveGarageSetup(setup);
-  renderUI();
-  document.getElementById("garage-status").textContent = `Livrea ${selectedGarageLivery(setup).label} salvata per la prossima gara.`;
+  document.getElementById("garage-status").textContent = `Assetto salvato · ${GARAGE_PARTS[part].label}: ${GARAGE_PARTS[part].variants[id].label}.`;
 }
 
 document.getElementById("garage-parts").addEventListener("dragstart", (e) => {
@@ -104,11 +92,6 @@ document.getElementById("garage-parts").addEventListener("dragend", () => {
 document.getElementById("garage-parts").addEventListener("click", (e) => {
   const b = e.target.closest("[data-part]");
   if (b) mount(b.dataset.part, b.dataset.id);
-});
-
-document.getElementById("garage-liveries").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-livery]");
-  if (b) chooseLivery(b.dataset.livery);
 });
 
 document.getElementById("garage-recommendation").addEventListener("click", (e) => {

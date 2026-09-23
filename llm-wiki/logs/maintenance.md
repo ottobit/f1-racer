@@ -281,3 +281,32 @@ smoothed curvature stencil hides near-cusp apexes (true radius ~1 on
 Serramonte/Baiadoro), so #26's recorded margins overstate how round those
 hairpins are. Bumped `main.js`/`track-art.js`/`track-geometry.js` cache
 versions so a stale cached `track-geometry.js` can't break the new import.
+
+## 2026-09-23 — Garage mobile restyle, driver-based livery (#30)
+
+User: remove the "Livrea …" picker and make the Garage nice on phones, in
+landscape too. Measured first (headless, 5 viewports): portrait phones had a
+nested scroll box (setup pane 456px tall holding 1129px of content) under a
+fixed car, with the stats overlay covering half the car; 740×360 landscape
+fell into the stacked layout with a 175px scroll box. Decision on the livery
+("entrambe"): it follows the selected driver's team, the same source the AI
+grid uses, with Fenice as `liveryById`'s existing fallback —
+`playerLivery(driverId)` in `garage-setup.js`, used by `garage.js` and
+`main.js`. `loadGarageSetup()` now whitelists known part/variant pairs, so old
+saves' `livery` (and any corrupt value) is dropped instead of carried along.
+
+Layout: stats render into two containers (overlay on wide screens, card in the
+pane on phones); portrait phones get one page scroll with a sticky car and a
+sticky CTA; landscape phones (≤520px tall, any width) get two columns. Replaced
+the three overlapping mobile/landscape blocks in `garage.css` with three
+explicit ones. Variant labels translated to Italian.
+
+Found while verifying: `showroom.js` calls `renderer.setSize(w, h, false)` and
+nothing sized the canvas in CSS, so on any DPR > 1 screen the canvas rendered
+at device-pixel size and the Garage showed only a zoomed top-left corner of
+the scene — on every phone, since the Garage existed. Fixed with a
+`#garage-canvas canvas` 100%/100% rule.
+
+Also caught before commit: a TDZ ordering bug in `main.js` (`PLAYER_LIVERY`
+computed one line before `SELECTED_DRIVER_ID` was declared) that would have
+crashed every race start.

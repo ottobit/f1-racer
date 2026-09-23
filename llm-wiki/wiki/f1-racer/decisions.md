@@ -66,17 +66,17 @@ effects have a short cooldown to avoid repeated damage while cars separate.
 The car preview must stay visible while the player scrolls through selectable
 parts. Choosing a part should immediately show a meaningful preview on the car.
 
-Garage livery selection is real state, not a temporary preview. The five team
-color pairs are persisted in `f1racer-garage-v1` and applied to the player car
-at race startup.
+There is no Garage livery picker (#30, user request): the player's car wears
+the chosen driver's team colours, like the AI teammate, with Fenice as the
+fallback. The Garage is for setup, identity comes from the driver choice.
 
-The selector belongs at the top of the scrollable setup panel. On mobile this
-keeps the control discoverable and gives every option a thumb-sized target
-without taking space away from the fixed car preview.
-
-Live setup parameters belong on the car preview as a compact translucent
-overlay. The scrolling panel is reserved for recommendations and component
-choices; each overlaid parameter includes its label, bar and numeric value.
+On wide screens live setup parameters sit on the car preview as a compact
+translucent overlay. On phones (portrait, and landscape up to 520px tall) they
+move into the setup pane as a card, because the overlay covered most of the car.
+Portrait phones use a single page scroll with the car pinned on top and the
+"Scegli il circuito" CTA pinned at the bottom — no nested scroll box. Landscape
+phones use two columns (car left, scrolling pane right). Variant labels are
+Italian (Scarica/Bilanciata/Carica, Basso/Alto carico).
 
 The Garage showroom has no driver model. Removing the helmet must reveal a
 modeled cockpit rather than an empty dark cavity; the dedicated `Abitacolo`

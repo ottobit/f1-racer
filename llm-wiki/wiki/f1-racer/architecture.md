@@ -76,9 +76,9 @@ keeps `showDriver: false`.
 `garage-setup.js` implement the setup bay. Setup data is persisted under
 `f1racer-garage-v1` and read by race startup.
 
-The garage previews setup families visually and persists the selected livery.
-The race reads that livery for the player car while AI cars keep their team
-color pairs.
+The garage previews setup families visually. The player car's livery comes
+from the selected driver's team (`playerLivery()` in `garage-setup.js`), in
+both the Garage and the race, matching how AI cars get theirs.
 
 `circuits.js` also owns each track's recommended five-component setup and its
 rationale. `menu.js` persists the active carousel circuit; `garage.js` reads it,
