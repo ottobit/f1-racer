@@ -183,3 +183,33 @@ already had 6 circuits.
 Does not touch #1 (multiplayer) or #2 (performance, still open pending
 real-device measurement) despite #5's original framing mentioning both as
 downstream dependents.
+
+## 2026-09-23 — Fix: home carousel crashed for all circuits (#24)
+
+Real regression from #5, live on production (GitHub Pages serves `master`
+directly, no build step) until this fix: `menu.js` has its own
+`CIRCUIT_PERSONALITY` lookup (type/note/level shown on each carousel card),
+separate from and not derived from `circuits.js` — missed during #5's
+"confirmed generic" check, which only verified the carousel/championship/
+map-rendering *logic* was generic, not this second hardcoded per-id table.
+The three new circuits had no entry, so `personality.type` threw on
+`undefined` for the first of them and killed the *entire* carousel-slide
+render loop — not just those three, all nine, because it's one `.map()`
+call with no per-item error isolation. User reported this as "non vedo più
+la prossima gara"; confirmed with headless Chromium against the live
+`master` HTML before fixing (`[pageerror] Cannot read properties of
+undefined (reading 'type')`, 0 slides, 0 dots).
+
+Fix: added the three missing entries, plus a `DEFAULT_PERSONALITY` fallback
+(`CIRCUIT_PERSONALITY[circuit.id] || DEFAULT_PERSONALITY`) so a future
+missing/typo'd id degrades that one slide instead of blanking the whole
+carousel again. Verified in an actual headless browser (Playwright +
+the prebuilt Chromium at `/opt/pw-browsers`, static file served via
+`python3 -m http.server`, not just `node --check`): navigated all nine
+slides via the real arrow button, zero console/page errors, correct
+type/level/note text on each.
+
+Lesson for future circuit-roster changes: grep for the circuit id being
+added across the *whole* repo, not just the files already known to read
+`CIRCUITS` — a per-id lookup table like this one won't show up in a search
+for `CIRCUITS.length` or similar genericity checks.
