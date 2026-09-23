@@ -32,13 +32,20 @@
   hardware; the PR stayed open for `Concludi` rather than auto-concluding
   for exactly this reason. Revisit this bullet once that pass happens.
 - [#6](https://github.com/ottobit/f1-racer/issues/6) (ex-portfolio-arcade#173):
-  `tools/validate-circuits.mjs` now checks closure/winding/segment length/
+  `tools/validate-circuits.mjs` checks closure/winding/segment length/
   curvature/non-adjacent separation for every circuit and can write a
-  top-down diagnostic SVG. All six existing circuits pass (Marzamemi's
-  shared corridor as a documented warning, not an error). Practical
-  dependency for [#5](https://github.com/ottobit/f1-racer/issues/5)
-  (ex-portfolio-arcade#152, four new circuits): run the validator against
-  new control points before adding them to `circuits.js`.
+  top-down diagnostic SVG. All nine current circuits pass (Marzamemi's
+  shared corridor as a documented warning, not an error) — it was the
+  actual generation tool for #5's three new ones, not just a checker run
+  after the fact.
+- [#5](https://github.com/ottobit/f1-racer/issues/5) (ex-portfolio-arcade#152,
+  revised from four new circuits/ten total down to three/nine — the
+  real-map-based fourth is dropped from this issue, a future separate one
+  if it happens): resolved. Added `pianalago`, `serramonte`, `baiadoro` —
+  all procedurally generated and validated with #6's tool rather than
+  hand-placed, all passing with zero issues. Every circuit in the roster
+  now has a distinct width, 9 through 17. See `F1-RACER-WIKI.md`'s track
+  system section for each one's identity.
 - Continue keeping `main.js` as orchestration and move reusable logic into
   focused modules only when it reduces real complexity.
 - Keep setup effects centralized in `garage-setup.js`.

@@ -149,3 +149,37 @@ this PR stays open for the user's `Concludi` instead of auto-concluding —
 the one exception in a batch the user otherwise asked to auto-conclude.
 Also out of scope here: distant-scenery/reflection profile-awareness,
 Garage integration. See `roadmap.md`.
+
+## 2026-09-23 — Three new circuits, procedurally generated (#5)
+
+User revised #5 from four new circuits/ten total to three/nine, dropping the
+real-map-based fourth from this issue (a future separate issue if it
+happens — updated the issue title/body accordingly). Added `pianalago`
+(width 15, purely flowing — no corner anywhere near the wall margin),
+`serramonte` (width 10, now the tightest/narrowest circuit in the roster,
+overtaking Montenero — that entry's stale "tightest of the four"
+superlative was fixed) and `baiadoro` (width 17, the widest, a long
+straight into a tighter technical complex rather than uniform sweeps).
+
+Unlike the first six's hand-placed points, all three were generated
+procedurally: star-convex angle placement with a per-circuit radius profile
+(a few sine harmonics at different frequency/amplitude/phase, seeded RNG for
+reproducibility) shaped toward each circuit's intended character, then
+accepted only once `node tools/validate-circuits.mjs <id>` (#6) reported
+zero errors and zero warnings at those exact coordinates — the validator
+built for #6 was the actual design tool here, not just a check run after
+the fact. Picked widths so every circuit in the roster (existing six plus
+these three) now has a distinct integer width, 9 through 17, reinforcing
+the "larghezza... distinti" criterion beyond just the three new ones.
+
+Confirmed the carousel (`menu.js`), championship (`championship.js`) and
+circuit map rendering are all already fully generic over `CIRCUITS` (no
+hardcoded circuit count anywhere in those) — no code changes needed there,
+only the new `circuits.js` entries. Fixed two now-stale hardcoded "5
+circuiti" strings in `index.html` (meta description/og:description and the
+hero stat) to 9 — already inaccurate before this change, since the game
+already had 6 circuits.
+
+Does not touch #1 (multiplayer) or #2 (performance, still open pending
+real-device measurement) despite #5's original framing mentioning both as
+downstream dependents.
