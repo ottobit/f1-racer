@@ -96,6 +96,16 @@ This repository currently has no automated browser/physics test runner and no Gi
 - [ ] Start a race after changing setup and verify top speed, braking, turn authority/stability, traction and runoff behaviour respond to the relevant choices.
 - [ ] Balanced setup remains close to the pre-Garage baseline and no variant is a universal upgrade.
 
+### Garage mobile restyle / driver livery (#30)
+
+- [x] No livery picker; the car wears the selected driver's team colours in the Garage and in the race (headless check: Vivian Wendy → blue Nettuno in both, zero console errors).
+- [x] An old save containing `livery` and an invalid variant loads cleanly: valid parts kept, invalid one falls back to balanced.
+- [x] 390×844 and 360×740 portrait: one page scroll (no nested scroll box), car pinned on top, "Scegli il circuito" pinned at the bottom, no horizontal scroll, no touch target under 44px.
+- [x] 844×390 and 740×360 landscape: two columns, car fully visible, setup pane scrolls on the right with the CTA pinned.
+- [x] The 3D canvas fills its box at DPR 2 (it used to render at device-pixel size and show a cropped corner on every high-DPR phone).
+- [ ] On a real phone: sticky car/CTA behave with the browser toolbar showing and hiding; safe-area insets on notched phones in landscape.
+- [ ] Desktop Garage layout unchanged apart from the removed picker.
+
 
 ## Driving dynamics regression
 
@@ -125,7 +135,6 @@ This repository currently has no automated browser/physics test runner and no Gi
 - [ ] Check all four camera presets at desktop, portrait mobile and landscape sizes.
 - [ ] Orbit with mouse/touch; release, pointer cancellation and a second touch must not leave dragging stuck.
 - [ ] Toggle 360°; reduced-motion users must not get automatic movement.
-- [ ] Preview all three paint finishes; only body paint changes and race livery stays unchanged.
 - [ ] Select all 15 setup variants; reload to verify persistence and stat bars.
 - [ ] Drag each component family to its matching target; reject a different target.
 - [ ] Verify keyboard focus and pressed state on view, paint and setup buttons.

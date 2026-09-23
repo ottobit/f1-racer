@@ -1,5 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { applyCarLivery, buildCar, createStudioEnvironment } from './car-model.js?v=28';
+import { buildCar, createStudioEnvironment } from './car-model.js?v=28';
 
 const SHOWROOM_VIEWS={
   hero:[.72,.34,10.4],
@@ -62,8 +62,5 @@ export function createShowroom(host, { livery } = {}) {
     document.getElementById('garage-orbit').setAttribute('aria-pressed','false');
     document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed','false'));
   }
-  function setLivery(nextLivery) {
-    applyCarLivery(car, nextLivery);
-  }
-  return {car,renderer,focusPart,setLivery};
+  return {car,renderer,focusPart};
 }

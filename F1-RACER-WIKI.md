@@ -17,9 +17,11 @@ fill lights, a circular metal platform and an architectural studio backdrop.
 No external model, HDR texture or new package dependency is required.
 
 The atelier supports pointer/touch orbit, four camera presets, optional automatic
-rotation (disabled by reduced-motion preference), and five persistent race liveries.
-Setup choices persist under `f1racer-garage-v1`, including the livery applied to
-the player car at race startup. The five named drop targets appear during component dragging;
+rotation (disabled by reduced-motion preference). Since #30 there is no livery
+picker: the car wears the team colours of the driver chosen on the home page
+(`playerLivery()` in `garage-setup.js`), in the Garage and in the race.
+Setup choices persist under `f1racer-garage-v1`; `loadGarageSetup()` keeps only
+known part/variant pairs, so older saves' `livery` field is dropped. The five named drop targets appear during component dragging;
 click/tap remains the mounting fallback. Complete front/rear wing assemblies
 respond to setup selection. DPR is capped at 1.5 on compact viewports and 2 on
 desktop; shadow maps use 1024/2048 respectively. Hidden tabs skip rendering.
@@ -508,7 +510,7 @@ Five component families each expose three trade-off variants: front wing, rear w
 Each circuit carries a data-driven recommended setup and a short rationale.
 The selected carousel circuit is persisted and passed into the Garage, which
 compares all five current components with the recommendation. Applying the
-preset is explicit and preserves the chosen livery; manual tuning remains free.
+preset is explicit; manual tuning remains free.
 The five live setup parameters are rendered as a compact translucent overlay on
 the car stage, with label, bar and numeric value, rather than consuming vertical
 space in the scrolling component panel.
@@ -599,27 +601,24 @@ keys or setup effect values is made.
 ## Driver themes and real liveries
 
 `driver-themes.js` centralizes the five team liveries and the cockpit themes for
-the custom friend names. `garage-setup.js` persists the selected livery under the
-existing `f1racer-garage-v1` setup object. `garage.js` renders all five primary /
-secondary color pairs and updates the shared showroom car immediately. The livery
-selector sits at the top of the scrollable setup panel so it remains discoverable
-on mobile while the car preview stays fixed.
+the custom friend names. The player's livery is derived, not chosen:
+`playerLivery(driverId)` returns `liveryById(driver.team)` for the selected
+driver, the same source the AI grid uses, so the player shares colours with
+their AI teammate (#30 removed the old five-way Garage picker).
 
 The `Posteriore` and rear-wing presets remain inside the modeled studio back
 wall. A preset must not orbit beyond z=-8, where the opaque backdrop would sit
 between the camera and the car.
 
-`main.js` reads the saved garage livery at race startup and applies it only to
-the player car. AI cars continue to use their team liveries from the same shared
-theme data. `race-camera.js` adds a small cockpit-view overlay with themed rails,
+`main.js` applies `playerLivery(SELECTED_DRIVER_ID)` to the player car at race
+startup. AI cars use their team liveries from the same shared theme data. `race-camera.js` adds a small cockpit-view overlay with themed rails,
 dash glow and name/motto badge for the selected driver; the top HUD remains
 unchanged.
 
 Each team livery also carries a fictional sponsor pair in `driver-themes.js`:
 IGNIX / TORQ LABS, PELAGOS / AZUR SYSTEMS, LUMENZA / ORBITA ENERGY, VIREON /
 CANOPY TECH and NIVALIS / BOREAL DATA. `car-model.js` turns those values into
-small cached canvas decals for both teammates and updates them with the Garage
-livery. Placement stays limited to the sidepods, nose and rear wing.
+small cached canvas decals for both teammates. Placement stays limited to the sidepods, nose and rear wing.
 
 ## Circuit carousel and bilateral contact
 

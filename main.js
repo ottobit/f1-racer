@@ -4,7 +4,7 @@ import { POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
 import { displayDriverName, loadSelectedDriverId } from "./driver-selection.js";
 import { DRIVER_ROSTER } from "./driver-roster.js";
 import { cockpitThemeForDriver, liveryById } from "./driver-themes.js?v=27";
-import { loadGarageSetup, selectedGarageLivery, setupEffects } from "./garage-setup.js?v=27";
+import { loadGarageSetup, playerLivery, setupEffects } from "./garage-setup.js?v=28";
 
 import { createStudioEnvironment } from "./car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
@@ -36,8 +36,8 @@ import {
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
-const PLAYER_LIVERY = selectedGarageLivery(GARAGE_SETUP);
 const SELECTED_DRIVER_ID = loadSelectedDriverId();
+const PLAYER_LIVERY = playerLivery(SELECTED_DRIVER_ID);
 const PLAYER_COCKPIT_THEME = cockpitThemeForDriver(SELECTED_DRIVER_ID);
 
 /*
