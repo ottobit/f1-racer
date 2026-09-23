@@ -793,11 +793,19 @@ setupRaceCommands({
   getRaceState: () => raceState,
 });
 
-// Gear mapping and synthesized engine/shift audio live in race-audio.js;
-// updateEngineSound gates its own volume by race state, so it only needs a
-// getter rather than reaching into this module's raceState directly.
-const raceAudio = setupRaceAudio({ getRaceState: () => raceState });
-const { initEngineSound, updateEngineSound, playShiftClick } = raceAudio;
+// Gear mapping and synthesized engine/shift/grid-chorus audio live in
+// race-audio.js. "Engine active" spans both session phases the player can
+// actually drive in: racing (raceState === "racing") and an in-progress
+// qualifying lap (qualiState === "running") — sessionPhase flips to "race"
+// once qualifying ends, so the two branches never overlap. A race-only
+// check here previously left the engine silent for the entire qualifying
+// session (#10).
+const raceAudio = setupRaceAudio({
+  getEngineActive: () =>
+    (sessionPhase === "race" && raceState === "racing") ||
+    (sessionPhase === "qualifying" && qualiState === "running"),
+});
+const { initEngineSound, updateEngineSound, playShiftClick, updateAmbientChorus } = raceAudio;
 window.addEventListener("keydown", initEngineSound, { once: true });
 window.addEventListener("pointerdown", initEngineSound, { once: true });
 
@@ -829,6 +837,7 @@ const hud = setupRaceHud({
   nameOf: displayDriverName,
   updateEngineSound,
   playShiftClick,
+  updateAmbientChorus,
   minimapCanvasSize: MINIMAP_CANVAS_SIZE,
   minimapTrackPoints,
   minimapPoint,

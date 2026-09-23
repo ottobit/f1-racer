@@ -96,3 +96,24 @@ which still described #3 as open, to say closed and point future
 extraction at a new issue instead. This log entry documents that;
 individual past entries above are left as written, per this wiki's
 append-only rule.
+
+## 2026-09-23 — Fix qualifying engine silence; add grid chorus (#10)
+
+Two real bugs the user reported as "feels unnatural": (1) the player's own
+engine was gated by `raceState === "racing"`, a race-phase-only variable
+never touched by the separate qualifying state machine — so the engine was
+silent for an entire qualifying session even while actively driving; (2) AI
+cars never made any engine sound at all, so a ten-car standing start was
+silent except for the player. Renamed `race-audio.js`'s injected getter
+from `getRaceState` to `getEngineActive`, now composed in `main.js` from
+both `raceState` and `qualiState`/`sessionPhase` so it's true whenever the
+player can actually drive, in either session. Added a second, cheap ambient
+"grid chorus" (two detuned low oscillators, not a per-car chain — explicit
+mobile-cost constraint in #10) whose volume scales with how many AI cars
+are within a fixed radius of the player, capped at 6 counted voices: loud
+at a bunched standing start, thins out as the pack spreads. Verified the
+gate logic and the chorus proximity/volume math standalone in Node (pure
+functions, no AudioContext needed for that part); the actual Web Audio
+output is unverifiable without a browser, same limitation as the rest of
+this file's audio code — left for the user's manual playtest per
+`RELEASE-CHECKLIST.md`.
