@@ -84,3 +84,15 @@ module is wired up, same TDZ-safe pattern `getRaceState` already uses.
 `architecture.md`/`roadmap.md` accordingly; still owns scene/track-mesh
 construction, ghost-lap persistence and the qualifying/race state machines
 per roadmap.md.
+
+## 2026-09-23 — Close #3; sync roadmap.md/tooling.md (#17)
+
+User closed #3 after the two cuts above (#14, #16) — it had no fixed
+acceptance criteria, so closing it is a "enough for now" call, not "fully
+done"; main.js still owns scene/track-mesh construction, ghost-lap
+persistence and the qualifying/race state machines. Updated
+`roadmap.md`'s #3 bullet and `tooling.md`'s Path B mitigation note, both of
+which still described #3 as open, to say closed and point future
+extraction at a new issue instead. This log entry documents that;
+individual past entries above are left as written, per this wiki's
+append-only rule.

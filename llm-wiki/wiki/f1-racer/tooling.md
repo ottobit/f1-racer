@@ -56,10 +56,10 @@ GitHub adds one).
 - Known limit: both calls still require the complete new file content, so
   Path B cannot itself avoid the full-file payload cost. The only real
   mitigation available from this side is keeping the touched files small —
-  which is the same direction as the `main.js` decomposition already
-  tracked in [#3](https://github.com/ottobit/f1-racer/issues/3)
-  (ex-portfolio-arcade#143): smaller, focused modules mean a Path B edit
-  resends less unrelated code.
+  the same direction as the `main.js` decomposition (`race-audio.js`,
+  `race-weather.js`, done under the now-closed
+  [#3](https://github.com/ottobit/f1-racer/issues/3)/ex-portfolio-arcade#143):
+  smaller, focused modules mean a Path B edit resends less unrelated code.
 
 ## Recommendation
 
