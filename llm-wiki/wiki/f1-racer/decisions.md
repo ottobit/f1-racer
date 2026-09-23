@@ -59,11 +59,14 @@ selection were the two dominant commands until #40: the user's explicit call
 was that multiplayer (playing with other real people) is the more important
 thing to grow, and deserves the same visual weight as Garage, not a secondary
 banner (#36's original placement). Garage and **multiplayer** (`room.html`)
-are now the two `home-command` cards; solo circuit selection ("Scegli la
-gara") moved to the slim, full-width, visually secondary link below them —
-the position multiplayer used to occupy. If this gets revisited, don't
-silently swap the pairing back — re-confirm with the user first, since this
-was a deliberate product priority call, not a layout preference.
+are now the two `home-command` cards. The user then asked to drop the solo-
+play shortcut entirely rather than demote it to a secondary link — there is
+no dedicated "jump to circuit selection" entry point left above the fold;
+solo play is still fully reachable by scrolling to its own numbered section
+further down the page, just not called out separately at the top. If this
+gets revisited, don't silently restore either the pairing or the shortcut —
+re-confirm with the user first, since these were deliberate product priority
+calls, not layout preferences.
 
 **#38 correction:** the two `home-command` cards and the numbered `f1-home-
 section`s (Prepara la sessione / Prossima gara / Campionato) are two

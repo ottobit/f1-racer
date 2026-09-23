@@ -822,8 +822,9 @@ body:not(:has(#app)) {
 .garage-entry{width:min(68rem,calc(100% - 2rem));margin:0 auto 2rem}.garage-entry a{display:flex;justify-content:space-between;gap:1rem;padding:1rem 1.2rem;border:1px solid rgba(225,6,0,.45);border-radius:12px;background:linear-gradient(90deg,rgba(225,6,0,.14),rgba(255,255,255,.03));text-decoration:none;color:#fff}.garage-entry span{color:var(--text-dim,#9aa1b0)}
 
 /* Home command hierarchy: garage and multiplayer are the two dominant
-   commands (#40: playing with others over solo, to grow the player base),
-   with solo circuit selection as a secondary shortcut below them. */
+   commands (#40: playing with others over solo, to grow the player base).
+   No secondary solo-play shortcut (#40 follow-up) — solo circuit
+   selection is reached by scrolling to its own section further down. */
 html{scroll-behavior:smooth}
 .f1-home-hero{padding-bottom:1.5rem}
 .home-command-center{width:min(68rem,calc(100% - 2rem));margin:0 auto 2.6rem;display:grid;grid-template-columns:1.15fr .85fr;gap:12px}
@@ -835,14 +836,6 @@ html{scroll-behavior:smooth}
 .home-command-index{grid-column:1/-1;font-size:.65rem;font-weight:900;letter-spacing:.16em;color:#d5a5a7}.home-command--multiplayer .home-command-index{color:#91a3b9}
 .home-command-copy{align-self:end;display:flex;flex-direction:column;gap:5px}.home-command-copy strong{font-size:clamp(1.35rem,3vw,2rem);letter-spacing:-.035em}.home-command-copy small{color:#afb5c0;font-size:.75rem}
 .home-command-arrow{align-self:end;display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#e10600;font-size:1.5rem;font-weight:300}.home-command--multiplayer .home-command-arrow{background:#252b36}
-.home-secondary-entry{width:min(68rem,calc(100% - 2rem));margin:0 auto 2.2rem;display:flex;align-items:center;gap:14px;padding:14px 20px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);color:#dfe3ea;text-decoration:none;transition:border-color .2s,background .2s}
-.home-secondary-entry:hover{border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.06)}
-.home-secondary-kicker{flex:0 0 auto;color:#7f8795;font-size:.65rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
-.home-secondary-body{flex:1;min-width:0;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.home-secondary-body>span{font-weight:700;font-size:.85rem;white-space:nowrap}
-.home-secondary-body>small{flex:1;min-width:0;color:#9aa1ad;font-size:.72rem;line-height:1.4}
-.home-secondary-entry>span[aria-hidden]{font-size:1.1rem;opacity:.7}
-@media(max-width:700px){.home-secondary-entry{width:calc(100% - 1.2rem);flex-wrap:wrap;padding:12px 16px}.home-secondary-kicker{flex-basis:100%}.home-secondary-body>small{flex-basis:100%}}
 .race-setup-panel{margin-bottom:2.7rem}.race-setup-grid{display:flex;flex-direction:column;gap:14px}.setup-choice{min-width:0;padding:18px;border:1px solid rgba(255,255,255,.11);border-radius:14px;background:rgba(17,20,27,.82)}
 .setup-choice-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}.setup-choice-head strong{display:flex;align-items:center;gap:8px;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em}.setup-choice-head strong i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#292e38;color:#c7cbd3;font-size:.64rem;font-style:normal}.setup-choice-head span{font-size:.65rem;color:#7f8795;text-transform:uppercase;letter-spacing:.08em}
 .setup-choice .difficulty-select{max-width:none;margin:0;padding:0}.difficulty-control{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.driver-control{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
