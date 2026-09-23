@@ -795,20 +795,6 @@ body:not(:has(#app)) {
   font-size: clamp(1.05rem, 2.6vw, 1.45rem);
   color: var(--text-dim, #9aa1b0);
 }
-.f1-home-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-.f1-home-stats span {
-  padding: 0.45rem 0.7rem;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 999px;
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.f1-home-stats strong { color: #fff; font-size: 1rem; }
 .f1-home-section {
   width: min(68rem, calc(100% - 2rem));
   margin: 0 auto 2rem;
