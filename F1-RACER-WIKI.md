@@ -712,16 +712,28 @@ driver) is an established, deliberate layout (see
 Coverage so far is the DPR/shadow/particle-count levers with the clearest
 performance-per-risk payoff. Distant-scenery density (`track-art.js`
 instancing) and reflections (`car-model.js`'s studio PMREM environment) are
-not yet profile-aware — a deliberate follow-up, not an oversight; see
-`llm-wiki/wiki/f1-racer/roadmap.md`. The Garage page does not yet read the
-profile either.
+still not profile-aware — deliberately: without a real measured bottleneck
+(the issue's own required first step, still blocked — see below), changing
+either would be tuning against a guess, not a finding. See
+`llm-wiki/wiki/f1-racer/roadmap.md`.
+
+The Garage now reads the same profile (`showroom.js`'s `createShowroom`
+takes an optional `graphicsProfile`; `garage.js` passes
+`loadGraphicsProfile()`) and applies it to its own renderer's DPR cap and
+shadow map, instead of the old viewport-width-only heuristic
+(`matchMedia('(max-width: 760px)')`, still the fallback when no profile is
+passed). This is a straight extension of an already-decided level system to
+a second scene with the same characteristics, not new tuning.
 
 `race-diagnostics.js` (`setupDiagnosticsOverlay`) is a dev-only FPS/frame-time
 and `renderer.info` (draw calls, triangles, geometries, textures) overlay.
 Off by default — no DOM node is created unless explicitly enabled via
 `?diag=1` (persisted in `localStorage` so it survives navigating from
 qualifying into the race; `?diag=0` clears it) — so normal play never creates
-or sees it.
+or sees it. Also wired into the Garage (`showroom.js` takes an optional
+`onFrame(dt)` callback from its own `setAnimationLoop`), covering the
+issue's "misurare... più garage" activity the same way the race scene
+already was.
 
 Real-device measurement (the issue's own acceptance bar: a measured
 before/after on at least one real smartphone and one desktop) has not been

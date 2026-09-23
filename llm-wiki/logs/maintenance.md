@@ -349,3 +349,47 @@ none. Added a dedicated F1-RACER-WIKI.md section and an architecture.md
 bullet describing the actual contract (getState/step/release, the
 onHumanInput hand-back path, the digital-pedal and automatic-DRS deviations
 from the issue's original spec).
+
+## 2026-09-23 — Garage graphics-profile and diagnostics integration (#2, partial)
+
+Continued #2 where the earlier pass left off — its own roadmap.md bullet
+already named the two gaps: distant-scenery/reflection profile-awareness and
+Garage integration. Did the second one, skipped the first, and said why:
+without a real measured bottleneck (the issue's own required first step,
+still blocked in this environment), touching distant-scenery density or
+reflections would be tuning against a guess, not a finding — the opposite of
+what #2 asks for.
+
+Garage integration was a real, bounded gap: `showroom.js` had its own
+ad hoc viewport-width heuristic (`matchMedia('(max-width: 760px)')`) for DPR
+cap and shadow map size, completely separate from `graphics-profiles.js`'s
+device-signal profile `main.js` already uses for the race. A phone set to
+`gfx=low` for the race got full-cost rendering in the Garage regardless.
+Added an optional `graphicsProfile` param to `createShowroom` (falls back to
+the old heuristic if omitted, so this is a strict addition) and wired
+`garage.js` to pass `loadGraphicsProfile()` — same profile object, same
+three levels, no new heuristic invented. Verified in headless Chromium at a
+high device pixel ratio that low/medium/high produce visibly different
+canvas backing sizes (843x656 / 1264x984 / 1686x1312) with the car still
+rendering correctly and zero console errors at each level.
+
+Also wired `race-diagnostics.js`'s overlay into the Garage (`showroom.js`
+gained an optional `onFrame(dt)` from its own `setAnimationLoop`), since
+#2's own activity list names "misurare... più garage" explicitly and the
+overlay was already scene-agnostic — it just needed a `renderer` and a
+per-frame `dt`, both of which `showroom.js` already had internally. Confirmed
+`?diag=1` shows the same overlay format the race uses and stays absent
+without it.
+
+While verifying the diagnostics overlay, hit a concrete instance of why real-
+device measurement can't be faked here: at typical headless-run wait times
+(1.5-3s) the FPS reading stayed at 0, not because of a bug but because this
+sandbox's software rendering (swiftshader, no real GPU) is slow enough that
+accumulating one 0.5-second FPS sample took roughly 15 real seconds. Confirmed
+the mechanism was correct by waiting that long (FPS populated correctly:
+21fps/47ms at gfx:medium) rather than assuming a bug — but this is exactly
+the kind of number that would be meaningless as a real performance
+measurement, reinforcing why #2 stays open for the user's own hardware pass.
+
+Does not close #2. Real-device measurement remains the actual acceptance bar
+and remains entirely out of this environment's reach.

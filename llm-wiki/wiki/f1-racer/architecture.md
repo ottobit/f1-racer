@@ -95,6 +95,15 @@ The garage previews setup families visually. The player car's livery comes
 from the selected driver's team (`playerLivery()` in `garage-setup.js`), in
 both the Garage and the race, matching how AI cars get theirs.
 
+`showroom.js`'s `createShowroom` takes an optional `graphicsProfile`
+(`garage.js` passes `loadGraphicsProfile()`, #2) applied to its own
+renderer's DPR cap and shadow map — the same profile the race applies to
+its own renderer, so a device set to "basso" gets that treatment in both
+places, not just the race. Falls back to its own old viewport-width check
+if no profile is passed. It also takes an optional `onFrame(dt)` from its
+`setAnimationLoop`, which `garage.js` uses to drive the same
+`race-diagnostics.js` overlay the race uses (`?diag=1`, off by default).
+
 `circuits.js` also owns each track's recommended five-component setup and its
 rationale. `menu.js` persists the active carousel circuit; `garage.js` reads it,
 renders current-to-recommended differences and applies the preset only after an

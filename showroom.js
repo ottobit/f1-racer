@@ -10,21 +10,28 @@ const SHOWROOM_VIEWS={
   cockpit:[.2,.72,4.8],
 };
 
-export function createShowroom(host, { livery } = {}) {
+// graphicsProfile: the same {dprCap, shadowsEnabled, shadowMapSize} object
+// main.js applies to the race renderer (see graphics-profiles.js, #2) — a
+// device that's set to "basso" for the race gets the same treatment here,
+// instead of the showroom silently ignoring it and always paying full DPR
+// and a 2048 shadow map. Falls back to the old viewport-only heuristic if a
+// caller doesn't pass one, so this stays a strict addition.
+export function createShowroom(host, { livery, graphicsProfile, onFrame } = {}) {
   const compact=matchMedia('(max-width: 760px)').matches;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+  const profile=graphicsProfile || { dprCap: compact?1.5:2, shadowsEnabled: true, shadowMapSize: compact?1024:2048 };
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,compact?1.5:2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio,profile.dprCap));
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
-  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled=profile.shadowsEnabled;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   host.appendChild(renderer.domElement);
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x080d14);scene.fog=new THREE.FogExp2(0x080d14,.035);
   const camera=new THREE.PerspectiveCamera(36,1,.1,80);
   const env=createStudioEnvironment(renderer);scene.environment=env.texture;
   const car=buildCar(livery || 0xbd1024,{detail:true,showDriver:false,scale:1.15}).group;car.position.y=.13;scene.add(car);
   scene.add(new THREE.HemisphereLight(0xbfd6ff,0x10151d,1.4));
-  const key=new THREE.SpotLight(0xe8f2ff,110,25,.65,.65,1.5);key.position.set(2,7,4);key.castShadow=true;key.shadow.mapSize.set(compact?1024:2048,compact?1024:2048);key.shadow.bias=-.0003;key.shadow.normalBias=.025;scene.add(key);
+  const key=new THREE.SpotLight(0xe8f2ff,110,25,.65,.65,1.5);key.position.set(2,7,4);key.castShadow=profile.shadowsEnabled;key.shadow.mapSize.set(profile.shadowMapSize,profile.shadowMapSize);key.shadow.bias=-.0003;key.shadow.normalBias=.025;scene.add(key);
   const rim=new THREE.PointLight(0x679dff,28,14,2);rim.position.set(-4,3,-3);scene.add(rim);
   const warm=new THREE.PointLight(0xff5b3e,18,12,2);warm.position.set(4,2,-2);scene.add(warm);
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:0x101822,metalness:.6,roughness:.32}));floor.rotation.x=-Math.PI/2;floor.position.y=-.08;floor.receiveShadow=true;scene.add(floor);
@@ -55,7 +62,7 @@ export function createShowroom(host, { livery } = {}) {
   document.getElementById('garage-orbit').addEventListener('click',e=>{auto=!auto;e.currentTarget.setAttribute('aria-pressed',String(auto));});
   const observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();});observer.observe(host);
   let previous=0;
-  renderer.setAnimationLoop(time=>{const dt=Math.min((time-previous)/1000,.05);previous=time;if(document.hidden)return;if(auto&&pointer===null&&!reduced.matches)azimuth+=dt*.18;updateCamera();renderer.render(scene,camera);});
+  renderer.setAnimationLoop(time=>{const dt=Math.min((time-previous)/1000,.05);previous=time;if(document.hidden)return;if(auto&&pointer===null&&!reduced.matches)azimuth+=dt*.18;updateCamera();renderer.render(scene,camera);if(onFrame)onFrame(dt);});
   function focusPart(part) {
     const views={frontWing:[.48,.36,8.8],rearWing:[Math.PI,.34,6.65],floor:[2.4,.22,7.4],brakes:[1.25,.28,8.6],suspension:[.6,.62,8.6]};
     [azimuth,elevation,distance]=views[part];auto=false;
