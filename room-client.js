@@ -40,6 +40,7 @@ export function createRoomClient() {
   const pending = new Map(); // reqId -> {resolve, reject, timer}
   const stateListeners = new Set();
   const connectionListeners = new Set();
+  const carStateListeners = new Set();
   let session = loadSession(); // {roomCode, participantId, reconnectToken}
   let lastRoom = null;
   let pingTimer = null;
@@ -72,6 +73,12 @@ export function createRoomClient() {
   function handleMessage(raw) {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
+    if (msg.type === "car_state") {
+      // High-frequency, ephemeral — never touches session/room state or the
+      // pending-request map, so it can't collide with a real reqId.
+      carStateListeners.forEach((cb) => cb(msg));
+      return;
+    }
     if (msg.type === "room_closed") {
       saveSession(null);
       session = null;
@@ -148,7 +155,17 @@ export function createRoomClient() {
   function reserveDriver(driverId) { return send("reserve_driver", { driverId }); }
   function releaseDriver() { return send("release_driver"); }
   function setReady(ready) { return send("set_ready", { ready }); }
+  function setCircuit(circuitId, difficulty) { return send("set_circuit", { circuitId, difficulty }); }
   function startRace() { return send("start_race"); }
+  function reportQualiTime(timeMs) { return send("report_quali_time", { timeMs }); }
+
+  // Fire-and-forget, no reqId/ack — called every frame during a
+  // multiplayer qualifying/race session (Stage 2, #44), too frequent to pay
+  // the pending-request bookkeeping the other methods use.
+  function sendCarState(data) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: "car_state", ...data }));
+  }
 
   async function leaveRoom() {
     try { await send("leave_room"); } catch { /* best-effort — we're leaving anyway */ }
@@ -161,6 +178,7 @@ export function createRoomClient() {
 
   function onStateChange(cb) { stateListeners.add(cb); return () => stateListeners.delete(cb); }
   function onConnectionChange(cb) { connectionListeners.add(cb); return () => connectionListeners.delete(cb); }
+  function onCarState(cb) { carStateListeners.add(cb); return () => carStateListeners.delete(cb); }
 
   return {
     createRoom,
@@ -169,10 +187,14 @@ export function createRoomClient() {
     reserveDriver,
     releaseDriver,
     setReady,
+    setCircuit,
     startRace,
+    reportQualiTime,
+    sendCarState,
     leaveRoom,
     onStateChange,
     onConnectionChange,
+    onCarState,
     hasSavedSession: () => !!session,
     get room() { return lastRoom; },
     get participantId() { return session ? session.participantId : null; },

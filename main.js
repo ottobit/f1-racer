@@ -19,6 +19,7 @@ import { setupRaceCommands } from "./race-commands.js";
 import { setupCarCollisions } from "./race-collisions.js";
 import { setupRaceNameplates } from "./race-nameplates.js";
 import { setupAgentApi } from "./agent-api.js";
+import { setupMultiplayer } from "./race-multiplayer.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
@@ -39,6 +40,13 @@ const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
 const SELECTED_DRIVER_ID = loadSelectedDriverId();
 const PLAYER_LIVERY = playerLivery(SELECTED_DRIVER_ID);
 const PLAYER_COCKPIT_THEME = cockpitThemeForDriver(SELECTED_DRIVER_ID);
+
+// Multiplayer Stage 2 (#44): null for a normal solo session (no ?room= in
+// the URL, or a room session that couldn't be resumed — see
+// race-bootstrap.js/race-multiplayer.js). Every integration point below is
+// an explicit branch on this, so solo play's existing behavior is
+// unchanged when it's null — never a silent shared code path.
+const multiplayer = setupMultiplayer();
 
 /*
  * F1 Racer — championship mode: a fixed-lap race against two AI rivals on
@@ -535,9 +543,20 @@ scene.add(playerCar.group);
 // scattered partway around the track already at speed — see
 // startRaceCountdown() for the 3-2-1. Grid order itself comes from
 // qualifying (see finishQualifying()), not this fixed identity order.
-const AI_DRIVERS = DRIVER_ROSTER
-  .filter((driver) => driver.id !== SELECTED_DRIVER_ID)
-  .map((driver) => ({ id: driver.id, livery: liveryById(driver.team) }));
+// Multiplayer (#44): the other real participants' reserved drivers, no AI
+// padding for empty slots — a room with 3 people races with 3 cars total,
+// a deliberate decision (see decisions.md). aiCars below carries these
+// exactly like AI entries (same shape/fields), just driven by network
+// samples in the main loop instead of updateAiCar().
+const AI_DRIVERS = multiplayer
+  ? multiplayer.getRemoteDrivers().map(({ participantId, driverId }) => ({
+      id: driverId,
+      participantId,
+      livery: liveryById(DRIVER_ROSTER.find((d) => d.id === driverId).team),
+    }))
+  : DRIVER_ROSTER
+      .filter((driver) => driver.id !== SELECTED_DRIVER_ID)
+      .map((driver) => ({ id: driver.id, livery: liveryById(driver.team) }));
 
 // --- DRS ---------------------------------------------------------------
 //
@@ -643,6 +662,11 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     pitServiceEndTime: 0,
     lastImpactEffectTime: 0,
     lastCollisionTime: 0,
+    // Multiplayer (#44): driven by network samples in update(), never by
+    // updateAiCar() — see updateRemoteCar() further down. Always false/null
+    // for solo play's real AI entries.
+    isRemote: !!multiplayer,
+    participantId: driver.participantId ?? null,
   };
 });
 
@@ -653,8 +677,10 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
 const ALL_GRID_SLOTS = [{ row: 0, lane: -1 }, ...AI_GRID_SLOTS];
 
 // The AI only appears once the grid order is set (see finishQualifying) —
-// during qualifying it's a solo flying lap, no traffic.
-aiCars.forEach((car) => (car.group.visible = false));
+// during qualifying it's a solo flying lap, no traffic. Multiplayer (#44)
+// is never a solo flying lap — every participant is really out there at
+// once — so remote cars stay visible from the start.
+if (!multiplayer) aiCars.forEach((car) => (car.group.visible = false));
 
 // --- State -------------------------------------------------------------
 
@@ -840,11 +866,27 @@ function circuitLabel() {
 }
 
 // Generated once: the tower and the real grid consume the same result set.
-const AI_QUALIFYING_RESULTS = AI_DRIVERS.map((driver) => ({
-  id: driver.id,
-  name: displayDriverName(driver.id),
-  time: synthesizeAiQualiTime(),
-})).sort((a, b) => a.time - b.time);
+// Multiplayer (#44) has no synthesized set — multiplayerQualifyingRivals()
+// below reads live participant times instead, since those change over the
+// session; solo keeps this static list, built once.
+const AI_QUALIFYING_RESULTS = multiplayer
+  ? []
+  : AI_DRIVERS.map((driver) => ({
+      id: driver.id,
+      name: displayDriverName(driver.id),
+      time: synthesizeAiQualiTime(),
+    })).sort((a, b) => a.time - b.time);
+
+function multiplayerQualifyingRivals() {
+  return multiplayer.getRemoteDrivers().map(({ participantId, driverId }) => {
+    const participant = multiplayer.room.participants.find((p) => p.participantId === participantId);
+    return { id: driverId, name: displayDriverName(driverId), time: participant?.qualiBestTime ?? Infinity };
+  });
+}
+
+function isDriverDisconnected(driverId) {
+  return multiplayer ? multiplayer.isDriverDisconnected(driverId) : false;
+}
 
 const hud = setupRaceHud({
   circuitLabel,
@@ -864,6 +906,8 @@ const hud = setupRaceHud({
   minimapTrackPoints,
   minimapPoint,
   qualifyingRivals: AI_QUALIFYING_RESULTS,
+  getQualifyingRivals: multiplayer ? multiplayerQualifyingRivals : undefined,
+  isDisconnected: isDriverDisconnected,
 });
 
 // --- Main loop -------------------------------------------------------------
@@ -939,10 +983,7 @@ function driverName(driverId) {
 function finishRace() {
   raceState = "finished";
   const order = currentRaceOrder().map((o) => o.driverId);
-  const state2 = recordRaceResult(circuit.id, order);
-
   const position = order.indexOf("player") + 1;
-  const points = POINTS_BY_POSITION[position - 1] || 0;
 
   document.getElementById("results-title").textContent =
     position === 1 ? "Vittoria!" : `Arrivato ${position}°`;
@@ -954,16 +995,30 @@ function finishRace() {
       )}</span></li>`;
     })
     .join("");
-  document.getElementById("results-points").textContent = `+${points} punti`;
 
-  const nextCircuitId = getNextUnracedCircuitId(state2);
   const nextLink = document.getElementById("results-next");
-  if (nextCircuitId) {
-    nextLink.href = `race.html?circuit=${nextCircuitId}`;
-    nextLink.textContent = "Prossimo circuito";
-  } else {
+  if (multiplayer) {
+    // Multiplayer (#44) deliberately never touches the solo championship —
+    // these results are the room's own, not a campaign result, so no
+    // points/next-unraced-circuit chain here. There's no "back to the same
+    // room to race again" flow yet either (Stage 2 stops at one race); the
+    // room itself is likely gone by now (its code isn't reusable once a
+    // room's race started — see rooms.mjs).
+    document.getElementById("results-points").textContent = "";
     nextLink.href = "index.html";
-    nextLink.textContent = "Vedi classifica finale";
+    nextLink.textContent = "Torna alla home";
+  } else {
+    const state2 = recordRaceResult(circuit.id, order);
+    const points = POINTS_BY_POSITION[position - 1] || 0;
+    document.getElementById("results-points").textContent = `+${points} punti`;
+    const nextCircuitId = getNextUnracedCircuitId(state2);
+    if (nextCircuitId) {
+      nextLink.href = `race.html?circuit=${nextCircuitId}`;
+      nextLink.textContent = "Prossimo circuito";
+    } else {
+      nextLink.href = "index.html";
+      nextLink.textContent = "Vedi classifica finale";
+    }
   }
 
   document.getElementById("results-overlay").hidden = false;
@@ -990,6 +1045,7 @@ const raceNameplates = setupRaceNameplates({
   mount: document.getElementById("driver-nameplates"),
   cars: aiCars,
   nameOf: displayDriverName,
+  isDisconnected: isDriverDisconnected,
 });
 const { integratePlayerMotion } = setupPlayerPhysics({
   car: CAR,
@@ -1019,18 +1075,36 @@ function synthesizeAiQualiTime() {
   return idealLapTimeMs * CORNERING_LOSS_FACTOR * variance;
 }
 
-// Ends the qualifying session: combines the player's best flying lap (or
-// no time at all, if they never completed one — same as a real DNF in
-// qualifying, sent to the back) with synthesized AI times, sorts fastest
-// first, and hands that order to applyGridPositions() before handing off
-// to the race's own countdown.
-function finishQualifying() {
-  const results = [
-    { id: "player", time: qualiBestTime === null ? Infinity : qualiBestTime },
-    ...AI_QUALIFYING_RESULTS.map(({ id, time }) => ({ id, time })),
-  ];
-  results.sort((a, b) => a.time - b.time);
-  applyGridPositions(results.map((r) => r.id));
+// Multiplayer (#44): pulls a remote car toward the latest network sample
+// instead of computing physics for it — client-authoritative, see
+// decisions.md. Smoothed rather than snapped so a ~80ms broadcast interval
+// doesn't read as choppy. advanceProgress() is still called with THIS
+// client's own nearestTrackInfo() on the now-updated x/z, so lap/position
+// bookkeeping for a remote car is derived the same deterministic way as
+// everyone else's, not trusted from the sender's own claimed values.
+const REMOTE_SMOOTH_FACTOR = 0.35;
+function updateRemoteCar(car, dt) {
+  const sample = multiplayer.getRemoteSample(car.participantId);
+  if (!sample) return; // no broadcast received yet — stays at its grid slot
+  const t = Math.min(REMOTE_SMOOTH_FACTOR * dt * 60, 1);
+  car.x += (sample.x - car.x) * t;
+  car.z += (sample.z - car.z) * t;
+  let dh = sample.heading - car.heading;
+  while (dh > Math.PI) dh -= Math.PI * 2;
+  while (dh < -Math.PI) dh += Math.PI * 2;
+  car.heading += dh * t;
+  car.speed = sample.speed || 0;
+  const info = nearestTrackInfo(car.x, car.z);
+  advanceProgress(car, info.idx / centerline.length);
+}
+
+// Applies a decided qualifying result (grid order, pole first) and hands
+// off to the race's own countdown. Solo computes that order itself, right
+// below; multiplayer (#44) receives it from the server instead — see the
+// multiplayer.onGridReady wiring below this function. Either way this one
+// function is what actually starts the race once the order is known.
+function applyQualifyingResult(order) {
+  applyGridPositions(order);
   aiCars.forEach((car) => {
     car.group.visible = true;
     applyCarToMesh(car, car.x, car.z, car.heading, 0, 0);
@@ -1047,6 +1121,37 @@ function finishQualifying() {
   startRaceCountdown();
 }
 
+// Ends the qualifying session: combines the player's best flying lap (or
+// no time at all, if they never completed one — same as a real DNF in
+// qualifying, sent to the back) with synthesized AI times, sorts fastest
+// first. Solo only — multiplayer's qualifying end is server-timed (see
+// below), never triggered from this client's own local countdown, so two
+// participants' browsers can't end qualifying at slightly different
+// moments.
+function finishQualifying() {
+  const results = [
+    { id: "player", time: qualiBestTime === null ? Infinity : qualiBestTime },
+    ...AI_QUALIFYING_RESULTS.map(({ id, time }) => ({ id, time })),
+  ];
+  results.sort((a, b) => a.time - b.time);
+  applyQualifyingResult(results.map((r) => r.id));
+}
+
+if (multiplayer) {
+  multiplayer.onGridReady((driverIds) => {
+    // The server's grid lists real participants by their reserved
+    // driverId — "player" (this browser's own car) isn't one of those
+    // entries, since applyGridPositions/currentRaceOrder key the local car
+    // as "player" internally. Translate this participant's own driverId
+    // back to "player"; every other entry is already what the
+    // corresponding remote aiCars entry is keyed by.
+    const myDriverId = multiplayer.room.participants.find(
+      (p) => p.participantId === multiplayer.myParticipantId
+    )?.driverId;
+    applyQualifyingResult(driverIds.map((id) => (id === myDriverId ? "player" : id)));
+  });
+}
+
 function updateQualifying(dt) {
   const now = performance.now();
 
@@ -1054,6 +1159,12 @@ function updateQualifying(dt) {
     // Car sits frozen at the line until the lights go out, same as the
     // race's own grid start.
     applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
+    if (multiplayer) {
+      for (const car of aiCars) {
+        updateRemoteCar(car, dt);
+        applyCarToMesh(car, car.x, car.z, car.heading, car.speed, dt);
+      }
+    }
     raceCamera.updateCamera(dt);
     hud.updateQualifyingHud(qualiTimeRemainingMs, qualiBestTime);
     return;
@@ -1062,6 +1173,18 @@ function updateQualifying(dt) {
   const info = integratePlayerMotion(dt);
   applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
 
+  // Multiplayer (#44): other participants are really out on track during
+  // qualifying too (no solo flying lap here), driven by network samples;
+  // this client also broadcasts its own state every frame (throttled
+  // internally — see race-multiplayer.js).
+  if (multiplayer) {
+    for (const car of aiCars) {
+      updateRemoteCar(car, dt);
+      applyCarToMesh(car, car.x, car.z, car.heading, car.speed, dt);
+    }
+    multiplayer.broadcastState({ x: state.x, z: state.z, heading: state.heading, speed: state.speed });
+  }
+
   // Multiple flying laps are allowed within the session — only the best
   // one counts, same as a real qualifying hour.
   const justCompletedLap = advanceProgress(state, info.idx / centerline.length);
@@ -1069,6 +1192,7 @@ function updateQualifying(dt) {
     const lapTime = now - state.lapStartTime;
     if (qualiBestTime === null || lapTime < qualiBestTime) {
       qualiBestTime = lapTime;
+      if (multiplayer) multiplayer.reportQualiTime(lapTime);
     }
     state.lapStartTime = now;
   }
@@ -1080,7 +1204,11 @@ function updateQualifying(dt) {
   raceCamera.updateSpeedFov(dt);
   hud.updateQualifyingHud(qualiTimeRemainingMs, qualiBestTime);
 
-  if (qualiTimeRemainingMs <= 0) finishQualifying();
+  // Multiplayer's qualifying end is server-timed (see the
+  // multiplayer.onGridReady wiring above finishQualifying) so every client
+  // transitions together off the same clock — this browser's own
+  // countdown reaching zero must not also end qualifying itself.
+  if (!multiplayer && qualiTimeRemainingMs <= 0) finishQualifying();
 }
 
 function update(dt) {
@@ -1115,7 +1243,18 @@ function update(dt) {
 
   const info = integratePlayerMotion(dt);
   const allCars = [state, ...aiCars];
-  for (const car of aiCars) updateAiCar(car, dt, allCars);
+  // Multiplayer (#44): remote cars are driven by the latest network sample
+  // (updateRemoteCar), never by updateAiCar() — see race-multiplayer.js.
+  for (const car of aiCars) {
+    if (car.isRemote) updateRemoteCar(car, dt);
+    else updateAiCar(car, dt, allCars);
+  }
+  if (multiplayer) {
+    multiplayer.broadcastState({
+      x: state.x, z: state.z, heading: state.heading, speed: state.speed,
+      lap: state.lap, totalProgress: state.totalProgress,
+    });
+  }
   carCollisions.resolve(allCars, now);
 
   applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);

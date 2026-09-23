@@ -18,6 +18,7 @@ canvas {
 #driver-nameplates{position:fixed;inset:0;pointer-events:none;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 .driver-nameplate{position:absolute;left:0;top:0;transform-origin:center bottom;padding:3px 7px 4px;border-radius:4px;background:rgba(5,8,12,.72);color:#f4f7fa;font-size:10px;font-weight:700;line-height:1;letter-spacing:.025em;white-space:nowrap;text-shadow:0 1px 2px #000;box-shadow:inset 3px 0 var(--driver-color),0 2px 8px rgba(0,0,0,.4);will-change:transform,opacity}
 .driver-nameplate[hidden]{display:none}
+.driver-nameplate--disconnected{opacity:.45;filter:grayscale(1)}
 @media(max-width:760px){.driver-nameplate{padding:3px 6px;font-size:9px}}
 
 /* The race viewport is an interaction surface, not a document: prevent
@@ -449,6 +450,7 @@ html.race #app canvas {
   .qualifying-timing ol{display:grid;gap:2px;margin:0;padding:0;list-style:none}
   .qualifying-timing li{display:grid;grid-template-columns:16px minmax(0,1fr) auto;align-items:center;gap:5px;min-height:19px;padding:0 4px;border-left:1px solid #ffffff28;background:linear-gradient(90deg,#06101970,transparent)}
   .qualifying-timing li.is-player{border-left:2px solid #70e1c5;background:linear-gradient(90deg,#70e1c52b,transparent);color:#fff}
+  .qualifying-timing li.is-disconnected{opacity:.4;filter:grayscale(1)}
   .qualifying-timing__position{color:#8ca3b3;text-align:center}
   .qualifying-timing__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .qualifying-timing strong{font:700 9px/1 ui-monospace,SFMono-Regular,Consolas,monospace}
@@ -889,7 +891,7 @@ html{scroll-behavior:smooth}
 .room-hero .f1-home-kicker a:hover{text-decoration:underline}
 .room-lobby{width:min(46rem,calc(100% - 2rem));margin:0 auto 3rem}
 .room-field{display:flex;flex-direction:column;gap:6px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9aa1ad;margin-bottom:16px}
-.room-field input{font:inherit;text-transform:none;letter-spacing:normal;padding:11px 13px;border-radius:8px;border:1px solid #303541;background:#10131a;color:#fff}
+.room-field input,.room-field select{font:inherit;text-transform:none;letter-spacing:normal;padding:11px 13px;border-radius:8px;border:1px solid #303541;background:#10131a;color:#fff}
 .room-entry-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
 .room-join-row{display:flex;gap:8px}
 .room-join-row input{width:7rem;padding:11px 13px;border-radius:8px;border:1px solid #303541;background:#10131a;color:#fff;text-transform:uppercase;letter-spacing:.1em;font-weight:700;text-align:center}
@@ -922,6 +924,10 @@ html{scroll-behavior:smooth}
 .room-driver-option small{display:block;color:#7f8795;font-size:.6rem;text-transform:uppercase;letter-spacing:.06em}
 .room-driver-option.active{border-color:#e10600;background:rgba(225,6,0,.14)}
 .room-driver-option:disabled{opacity:.45;cursor:default}
+.room-session-setup{margin-top:26px}
+.room-session-setup h2{margin:0 0 12px;font-size:.85rem;text-transform:uppercase;letter-spacing:.08em}
+.room-session-fields{display:flex;flex-wrap:wrap;gap:14px}
+.room-session-fields .room-field{flex:1;min-width:160px;margin-bottom:0}
 .room-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:22px}
 .room-ready-toggle{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.85rem}
 .room-ready-toggle input{width:20px;height:20px}

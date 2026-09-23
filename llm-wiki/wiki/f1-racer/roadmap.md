@@ -7,26 +7,32 @@
 
 ## Technical Follow-Ups
 
-- [#1](https://github.com/ottobit/f1-racer/issues/1) / [#36](https://github.com/ottobit/f1-racer/issues/36),
-  **not closed — Stage 1 only.** #1 itself demands staged delivery (rooms,
-  then race sync, then voice, each its own PR). #36 is Stage 1: rooms and
-  driver reservation, built and verified with a real WebSocket server and
-  real headless-browser clients — see `F1-RACER-WIKI.md`'s "Multiplayer
-  Stage 1" section and `architecture.md`'s matching section for the module
-  map and protocol. This is the project's first-ever backend
-  (`server/rooms.mjs` + `server/room-server.mjs`); the shipped static site
-  itself (race/garage/menu) is untouched and still has zero server
-  dependency on its own. Explicitly out of Stage 1: race-state sync, voice/
-  WebRTC/SFU, and any live public deployment — this sandbox has no way to
-  host the room server reachably by real separate devices. The user chose
-  **Render** for hosting when it's time to go live (already used it before,
-  plans to self-ping the free tier to avoid its 15-minute sleep — flagged to
-  them that the free tier's ~750 free instance-hours/month is close to what
-  a 24/7 self-pinged service would consume on its own, so it may tip into
-  billing or need the paid Starter tier depending on other usage on the
-  account; not something to solve from inside this repo). `RELEASE-CHECKLIST.md`'s
-  former blanket "no backend/server dependency" release gate has been scoped
-  to solo/local play accordingly — see that file.
+- [#1](https://github.com/ottobit/f1-racer/issues/1) / [#36](https://github.com/ottobit/f1-racer/issues/36) /
+  [#44](https://github.com/ottobit/f1-racer/issues/44),
+  **not closed — voice is the only stage left.** #1 itself demands staged
+  delivery (rooms, then race sync, then voice, each its own PR). #36
+  (rooms/driver reservation) and #44 (qualifying/race sync, client-
+  authoritative, host picks circuit/difficulty, no AI padding) are both
+  built and verified — see `F1-RACER-WIKI.md`'s "Multiplayer" section and
+  `architecture.md`'s matching sections for the module map and protocol.
+  This is the project's first-ever backend (`server/rooms.mjs` +
+  `server/room-server.mjs`); the shipped static site itself (race/garage/
+  menu) is untouched for a normal solo session and still has zero server
+  dependency on its own. Explicitly still out of scope: voice/WebRTC/SFU,
+  and — for #44 specifically — a multiplayer race actually driven to its
+  finish line in a real test (qualifying→racing transition and live sync
+  are verified; the finish line isn't, see `RELEASE-CHECKLIST.md`). The
+  user chose **Render** for hosting when it's time to go live (already used
+  it before, plans to self-ping the free tier to avoid its 15-minute sleep
+  — flagged to them that the free tier's ~750 free instance-hours/month is
+  close to what a 24/7 self-pinged service would consume on its own, so it
+  may tip into billing or need the paid Starter tier depending on other
+  usage on the account; not something to solve from inside this repo), and
+  on 2026-09-23 verified real cross-device `wss://` reachability themselves
+  (a real phone + a real PC through an `ngrok http` tunnel, not Render
+  itself yet) — see `decisions.md`. `RELEASE-CHECKLIST.md`'s former blanket
+  "no backend/server dependency" release gate has been scoped to solo/local
+  play accordingly — see that file.
 - [#8](https://github.com/ottobit/f1-racer/issues/8): resolved by PR #9,
   merged well before this bullet was written. It stayed open because "Chiude
   #8" (Italian) in the PR body doesn't trigger GitHub's auto-close keyword

@@ -473,3 +473,76 @@ so a future session does not silently revert it.
 Verified with real Playwright screenshots (desktop 1440px, mobile 390px) before
 committing. No JS files touched; confirmed via grep that no script depends on the
 renamed CSS classes or the old kicker text (GRIGLIA/Modalita alternativa).
+
+## 2026-09-23 — Multiplayer Stage 2: qualifying and race sync (#44, part of #1)
+
+After #36 (Stage 1: rooms/driver reservation) and the home reorg (#38/#40),
+the user asked to proceed to a real synced race. Design decisions confirmed
+via direct back-and-forth rather than assumed: client-authoritative sync
+(each browser keeps simulating its own car, broadcasts position/heading/
+speed a few times a second, others render it as a network-driven ghost —
+rejected server-side physics as its own separate project); disconnection
+mid-race freezes the car in place and greys out its list/nameplate entry
+(a natural consequence of client-authoritative sync, reusing #36's existing
+grace-period mechanism unchanged); no AI padding for empty room slots (a
+3-person room races with 3 cars, not a mixed AI field); host picks circuit
+and difficulty inside the room, broadcast to everyone at start.
+
+Read main.js in full before touching it (had not been read yet this
+session) and found one more real design gap before writing code: rooms had
+no concept of a circuit at all, since Stage 1 stopped at a bare
+confirmation. Surfaced this explicitly and got the host-picks-in-room
+answer before proceeding, rather than guessing.
+
+Implementation: rooms.mjs gained sessionPhase/circuitId/difficulty/
+qualiBestTime/grid and setCircuit/startRace (now gated on ready+driver for
+everyone)/reportQualiTime/finishQualifying; room-server.mjs added
+set_circuit/report_quali_time handlers, an ephemeral unstored car_state
+relay, and its own setTimeout-driven qualifying timer (ROOM_QUALI_MS) so
+every client transitions off one server clock. room-client.js/room.js
+gained a host-only circuit/difficulty picker and navigation into race.html
+once qualifying begins. Two new files bridge a room into the actual race:
+race-bootstrap.js (resolves the async room reconnect before main.js loads,
+since main.js's own top-level code is entirely synchronous and was never
+rewritten to be async — hands off the connected client via a one-shot
+window.__mpClient) and race-multiplayer.js (wraps that connection into the
+small synchronous API main.js calls). Every multiplayer touchpoint in
+main.js is an explicit branch on one multiplayer variable, null for solo —
+AI_DRIVERS becomes the room's other participants, aiCars entries tagged
+isRemote/participantId and driven by a new updateRemoteCar() instead of
+updateAiCar(), while currentRaceOrder/applyGridPositions/DRS/collisions/
+HUD/nameplates all worked unchanged since they were already generic over
+aiCars. race-hud.js and race-nameplates.js gained an optional isDisconnected
+check for the grey-out treatment; race-hud.js also gained a
+getQualifyingRivals getter alongside its old static array, since
+multiplayer's live times change over the session. finishRace() skips the
+solo championship entirely for a multiplayer session, to avoid polluting
+the user's own solo standings with room results.
+
+Verified in stages, same methodology as Stage 1: 12/12 direct checks
+against rooms.mjs's new functions (host/validation gating, ready+driver
+requirement, DNF-to-the-back grid ordering, idempotency); then a real
+two-browser-context Playwright session against a real room-server.mjs
+process covering the full path — room creation/join, ready-gated
+circuit-chosen "Avvia", both clients navigating to race.html with matching
+params, the server-timed qualifying-to-racing transition actually firing,
+a real computed grid, live position/timing-tower classification for both
+cars, the remote participant's nameplate visible and moving, and — after
+closing one browser context mid-race — the remaining client's nameplate
+and timing-tower row greying out once the grace window expired. A separate
+real-browser run confirmed solo play (no ?room=) is completely unaffected:
+no page errors, HUD/tower/synthesized-AI list all render, acceleration
+responds normally. Three.js was served from the local node_modules copy in
+these tests since this sandbox's network policy blocks the jsdelivr CDN
+main.js normally loads it from in production — an environment-only
+substitution, not a code change.
+
+What this did not verify, said plainly rather than glossed over: no test
+drove a multiplayer race to its actual finish line (would need sustained
+scripted driving matching each circuit's line); real phones/separate
+networks were verified for Stage 1's rooms but not re-verified here for
+qualifying/race sync specifically; collision behavior between a local car
+and a network-driven remote car was not watched by eye (expected to be a
+harmless one-frame jitter self-corrected by the next network sample, not
+confirmed visually). RELEASE-CHECKLIST.md records all of this as explicit
+open items, not silently assumed fine.

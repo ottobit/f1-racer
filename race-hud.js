@@ -23,7 +23,14 @@ export function setupRaceHud({
   minimapTrackPoints,
   minimapPoint,
   qualifyingRivals,
+  getQualifyingRivals,
+  isDisconnected = () => false,
 }) {
+  // Solo play passes a static qualifyingRivals array (synthesized once);
+  // multiplayer (#44) passes getQualifyingRivals instead, since live
+  // participant times change over the session — this normalizes both to a
+  // getter so the rest of this module only ever calls one.
+  const readQualifyingRivals = getQualifyingRivals || (() => qualifyingRivals);
   const circuitNameEl = document.getElementById("circuit-name");
   const positionEl = document.getElementById("position");
   const lapEl = document.getElementById("lap");
@@ -68,16 +75,17 @@ export function setupRaceHud({
   function updateQualifyingTiming(qualiBestTime) {
     const classification = [
       { id: "player", name: "TU", time: qualiBestTime ?? Infinity },
-      ...qualifyingRivals,
+      ...readQualifyingRivals(),
     ].sort((a, b) => a.time - b.time);
     const playerPosition = classification.findIndex((entry) => entry.id === "player") + 1;
-    if (lastQualifyingTowerTime === qualiBestTime) return playerPosition;
-    lastQualifyingTowerTime = qualiBestTime;
+    const signature = classification.map((e) => `${e.id}:${e.time}`).join("|");
+    if (lastQualifyingTowerTime === signature) return playerPosition;
+    lastQualifyingTowerTime = signature;
 
     qualifyingTimingEl.innerHTML = `
       <div class="qualifying-timing__title">TEMPI</div>
       <ol>${classification.map((entry, index) => `
-        <li class="${entry.id === "player" ? "is-player" : ""}">
+        <li class="${entry.id === "player" ? "is-player" : ""}${entry.id !== "player" && isDisconnected(entry.id) ? " is-disconnected" : ""}">
           <span class="qualifying-timing__position">${index + 1}</span>
           <span class="qualifying-timing__name">${entry.name}</span>
           <strong>${Number.isFinite(entry.time) ? formatTime(entry.time) : "--:--.--"}</strong>
@@ -88,14 +96,14 @@ export function setupRaceHud({
 
   function updateRaceTiming(order) {
     const signature = order
-      .map((entry) => `${entry.driverId}:${Math.floor(entry.totalProgress)}`)
+      .map((entry) => `${entry.driverId}:${Math.floor(entry.totalProgress)}:${isDisconnected(entry.driverId)}`)
       .join("|");
     if (signature === lastRaceTowerSignature) return;
     lastRaceTowerSignature = signature;
     qualifyingTimingEl.innerHTML = `
       <div class="qualifying-timing__title">CLASSIFICA GARA</div>
       <ol>${order.map((entry, index) => `
-        <li class="${entry.driverId === "player" ? "is-player" : ""}">
+        <li class="${entry.driverId === "player" ? "is-player" : ""}${entry.driverId !== "player" && isDisconnected(entry.driverId) ? " is-disconnected" : ""}">
           <span class="qualifying-timing__position">${index + 1}</span>
           <span class="qualifying-timing__name">${entry.driverId === "player" ? "TU" : nameOf(entry.driverId)}</span>
           <strong>G${Math.min(Math.floor(entry.totalProgress) + 1, lapsPerRace)}</strong>

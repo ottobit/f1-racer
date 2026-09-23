@@ -13,7 +13,7 @@
   <header class="f1-home-hero room-hero">
     <p class="f1-home-kicker"><a href="./">← TORNA A F1 RACER</a></p>
     <h1 class="wordmark">Stanza multiplayer</h1>
-    <p class="f1-home-lead">Fase 1: crea o entra in una stanza e scegli il pilota. La sincronizzazione della gara vera arriva in una fase successiva — per ora "Avvia" è solo una conferma condivisa.</p>
+    <p class="f1-home-lead">Crea o entra in una stanza, scegli il pilota — l'host sceglie circuito e difficoltà, poi qualifica e gara si corrono davvero insieme.</p>
   </header>
 
   <section class="f1-home-section room-lobby">
@@ -47,14 +47,31 @@
         <div id="room-driver-grid" class="room-driver-grid" role="radiogroup" aria-label="Pilota"></div>
       </div>
 
+      <div id="room-session-setup" class="room-session-setup">
+        <h2>Circuito e difficoltà</h2>
+        <div id="room-circuit-host" class="room-session-fields" hidden>
+          <label class="room-field">Circuito
+            <select id="room-circuit-select"><option value="">— scegli —</option></select>
+          </label>
+          <label class="room-field">Difficoltà
+            <select id="room-difficulty-select">
+              <option value="facile">Facile</option>
+              <option value="normale" selected>Normale</option>
+              <option value="difficile">Difficile</option>
+            </select>
+          </label>
+        </div>
+        <p id="room-circuit-display" class="room-status"></p>
+      </div>
+
       <div class="room-actions">
         <label class="room-ready-toggle"><input id="room-ready-checkbox" type="checkbox" /> Pronto</label>
         <button id="room-start-btn" type="button" class="room-btn room-btn--primary" hidden>Avvia (solo host)</button>
       </div>
-      <p id="room-race-started" class="room-status room-status--started" hidden>🏁 Gara al via — la sincronizzazione arriva nella prossima fase.</p>
+      <p id="room-race-started" class="room-status room-status--started" hidden></p>
     </div>
   </section>
 
-  <script type="module" src="room.js?v=1"></script>
+  <script type="module" src="room.js?v=2"></script>
 </body>
 </html>
