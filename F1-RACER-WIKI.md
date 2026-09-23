@@ -481,6 +481,13 @@ the narrow shared central corridor is separated for racing clearance.
 The upper HUD markup and existing `style.css` are unchanged; lower control styles
 are isolated in `race-controls.css`.
 
+`race-weather.js` owns sky cloud billboards, the rain particle field and
+impact spark FX — self-contained scene objects that nothing outside
+`main.js` references. It takes a `getPlayerState` getter rather than the
+player state object directly, since it is wired up before that object
+exists in `main.js`; only its rain recycling needs it, once actually
+called per frame.
+
 `steering.js` owns dead-zone shaping, exponential input smoothing and a
 speed-sensitive yaw target. A touch starts at neutral wherever the thumb lands;
 horizontal travel from that contact point requests steering. Only one pointer

@@ -28,6 +28,8 @@ The current race runtime is coordinated by `main.js`, with focused helpers:
 - `race-commands.js`: command bindings and race UI actions.
 - `race-audio.js`: gear mapping and synthesized engine/shift-click Web Audio,
   gated by a `getRaceState` getter rather than a shared module variable.
+- `race-weather.js`: sky cloud billboards, rain particle field and impact
+  spark FX, gated by a `getPlayerState` getter for the same reason.
 
 ## Shared Car Model
 

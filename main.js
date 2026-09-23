@@ -23,6 +23,7 @@ import { setupAgentApi } from "./agent-api.js";
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=38";
 import { gearInfo, setupRaceAudio } from "./race-audio.js";
+import { setupRaceWeather } from "./race-weather.js";
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
@@ -297,155 +298,16 @@ scene.fog = new THREE.Fog(SKY_HORIZON, isRaining ? 90 : 150, isRaining ? 260 : 4
   scene.add(sky);
 }
 
-// A handful of soft cloud billboards scattered around the circuit, high up
-// and always facing the camera (THREE.Sprite) — cheap compared to a real
-// volumetric or textured skybox, and enough to read as "sky" rather than
-// an empty dome. Excluded from fog (like the dome itself) so they don't
-// fade into invisibility at the distance they're placed.
-function buildCloudTexture() {
-  const size = 128;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  // A few overlapping soft puffs instead of one perfect circle, so it
-  // reads as an irregular cloud rather than a flat glowing disc.
-  const puffs = [
-    [0.5, 0.55, 0.42],
-    [0.3, 0.52, 0.3],
-    [0.7, 0.52, 0.3],
-    [0.5, 0.34, 0.3],
-  ];
-  for (const [cx, cy, r] of puffs) {
-    const grad = ctx.createRadialGradient(cx * size, cy * size, 0, cx * size, cy * size, r * size);
-    grad.addColorStop(0, "rgba(255,255,255,0.95)");
-    grad.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx * size, cy * size, r * size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  return new THREE.CanvasTexture(canvas);
-}
-
-const cloudGroup = new THREE.Group();
-{
-  const cloudTexture = buildCloudTexture();
-  const cloudTint = isRaining ? 0x9aa3ad : 0xffffff;
-  const cloudCount = isRaining ? 14 : 8;
-  const cloudOpacity = isRaining ? 0.6 : 0.8;
-  for (let i = 0; i < cloudCount; i++) {
-    const cloud = new THREE.Sprite(
-      new THREE.SpriteMaterial({
-        map: cloudTexture,
-        color: cloudTint,
-        transparent: true,
-        opacity: cloudOpacity,
-        depthWrite: false,
-        fog: false,
-      })
-    );
-    const angle = (i / cloudCount) * Math.PI * 2 + Math.random() * 0.4;
-    const radius = 260 + Math.random() * 220;
-    const scale = 70 + Math.random() * 90;
-    cloud.scale.set(scale, scale * 0.55, 1);
-    cloud.position.set(
-      Math.cos(angle) * radius,
-      (isRaining ? 65 : 110) + Math.random() * 60,
-      Math.sin(angle) * radius
-    );
-    cloudGroup.add(cloud);
-  }
-  scene.add(cloudGroup);
-}
-
-// --- Weather / impact effects ---------------------------------------------
-// Rain is a lightweight world-space particle field, kept deliberately small
-// so the game remains comfortable on mobile GPUs. Particles are recycled
-// around the player instead of allocating new objects every frame.
-const rainCount = isRaining ? 850 : 0;
-let rainPoints = null;
-let rainPositions = null;
-if (isRaining) {
-  rainPositions = new Float32Array(rainCount * 3);
-  for (let i = 0; i < rainCount; i++) {
-    rainPositions[i * 3] = (Math.random() - 0.5) * 90;
-    rainPositions[i * 3 + 1] = 8 + Math.random() * 65;
-    rainPositions[i * 3 + 2] = (Math.random() - 0.5) * 90;
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(rainPositions, 3));
-  const material = new THREE.PointsMaterial({
-    color: 0xbfd8ef,
-    size: 0.09,
-    transparent: true,
-    opacity: 0.42,
-    depthWrite: false,
-  });
-  rainPoints = new THREE.Points(geometry, material);
-  scene.add(rainPoints);
-}
-
-const impactSparks = [];
-
-function spawnImpactSparks(x, z) {
-  for (let i = 0; i < 7; i++) {
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.055, 5, 5),
-      new THREE.MeshBasicMaterial({
-        color: 0xffd166,
-        transparent: true,
-        opacity: 0.95,
-      })
-    );
-    mesh.position.set(x, 0.45 + Math.random() * 0.35, z);
-    scene.add(mesh);
-    impactSparks.push({
-      mesh,
-      vx: (Math.random() - 0.5) * 5,
-      vy: 1.5 + Math.random() * 3.5,
-      vz: (Math.random() - 0.5) * 5,
-      life: 0.22 + Math.random() * 0.22,
-    });
-  }
-}
-
-function updateImpactSparks(dt) {
-  for (let i = impactSparks.length - 1; i >= 0; i--) {
-    const spark = impactSparks[i];
-    spark.life -= dt;
-    spark.vy -= 9 * dt;
-    spark.mesh.position.x += spark.vx * dt;
-    spark.mesh.position.y += spark.vy * dt;
-    spark.mesh.position.z += spark.vz * dt;
-    spark.mesh.material.opacity = Math.max(0, spark.life * 4);
-    if (spark.life <= 0) {
-      scene.remove(spark.mesh);
-      spark.mesh.geometry.dispose();
-      spark.mesh.material.dispose();
-      impactSparks.splice(i, 1);
-    }
-  }
-}
-
-function updateRain(dt) {
-  if (!rainPoints || !rainPositions) return;
-  const px = state.x;
-  const pz = state.z;
-  for (let i = 0; i < rainCount; i++) {
-    const j = i * 3;
-    rainPositions[j] += 4 * dt;
-    rainPositions[j + 1] -= 58 * dt;
-    rainPositions[j + 2] += 7 * dt;
-    const dx = rainPositions[j] - px;
-    const dz = rainPositions[j + 2] - pz;
-    if (rainPositions[j + 1] < 0 || dx * dx + dz * dz > 70 * 70) {
-      rainPositions[j] = px + (Math.random() - 0.5) * 90;
-      rainPositions[j + 1] = 38 + Math.random() * 55;
-      rainPositions[j + 2] = pz + (Math.random() - 0.5) * 90;
-    }
-  }
-  rainPoints.geometry.attributes.position.needsUpdate = true;
-}
+// Sky clouds, rain particles and impact sparks live in race-weather.js.
+// `getPlayerState` is a getter (not `state` itself) because `state` isn't
+// declared yet at this point in the file — same TDZ-safe pattern as
+// `getRaceState` elsewhere — and updateRain() only needs it once actually
+// called each frame, long after `state` exists.
+const { spawnImpactSparks, updateWeather } = setupRaceWeather({
+  scene,
+  isRaining,
+  getPlayerState: () => state,
+});
 
 const camera = new THREE.PerspectiveCamera(
   60,
@@ -1365,9 +1227,7 @@ function animate() {
   updateSteeringInput(dt);
   update(dt);
   raceNameplates.update();
-  updateImpactSparks(dt);
-  updateRain(dt);
-  cloudGroup.rotation.y += dt * 0.004; // slow drift, always running regardless of session phase
+  updateWeather(dt); // sparks, rain and cloud drift; always runs regardless of session phase
   sun.position.set(state.x + 30, 55, state.z + 25);
   sun.target.position.set(state.x, 0, state.z);
   renderer.render(scene, camera);
