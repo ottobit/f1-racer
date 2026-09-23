@@ -24,6 +24,8 @@ import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=38";
 import { gearInfo, setupRaceAudio } from "./race-audio.js";
 import { setupRaceWeather } from "./race-weather.js";
+import { loadGraphicsProfile } from "./graphics-profiles.js";
+import { setupDiagnosticsOverlay } from "./race-diagnostics.js";
 import {
   sampleCenterline,
   headingOf,
@@ -63,6 +65,10 @@ const CONTROL_POINTS = circuit.points.map(([x, z]) => new THREE.Vector3(x, 0, z)
 const isRaining = circuit.weather === "pioggia";
 const RAIN_TURN_RATE_MULTIPLIER = 0.82;
 const RAIN_MAX_SPEED_MULTIPLIER = 0.93;
+
+// Scales rendering cost (DPR, shadows, rain/cloud counts) by device, never
+// gameplay/physics — see graphics-profiles.js (#2).
+const graphicsProfile = loadGraphicsProfile();
 
 const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom", circuit.curveTension ?? 0.5);
 
@@ -289,6 +295,8 @@ const { spawnImpactSparks, updateWeather } = setupRaceWeather({
   scene,
   isRaining,
   getPlayerState: () => state,
+  cloudCountMultiplier: graphicsProfile.cloudCountMultiplier,
+  rainParticleMultiplier: graphicsProfile.rainParticleMultiplier,
 });
 
 const camera = new THREE.PerspectiveCamera(
@@ -302,12 +310,16 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = isRaining ? 1.05 : 1.15;
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = graphicsProfile.shadowsEnabled;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const carEnvironment = createStudioEnvironment(renderer);
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, graphicsProfile.dprCap));
 document.getElementById("app").appendChild(renderer.domElement);
+
+// Dev-only overlay (see race-diagnostics.js, #2): a no-op unless explicitly
+// enabled, so normal play never creates or sees the DOM node.
+const diagnostics = setupDiagnosticsOverlay({ renderer, graphicsProfileId: graphicsProfile.id });
 
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -321,7 +333,8 @@ const sun = new THREE.DirectionalLight(0xffffff, isRaining ? 0.7 : 1.2);
 sun.position.set(80, 120, 40);
 sun.intensity = isRaining ? 1.4 : 2.6;
 sun.color.set(isRaining ? 0xdbe5f5 : 0xffedcf);
-sun.castShadow = true; sun.shadow.mapSize.set(1024,1024);
+sun.castShadow = graphicsProfile.shadowsEnabled;
+sun.shadow.mapSize.set(graphicsProfile.shadowMapSize, graphicsProfile.shadowMapSize);
 Object.assign(sun.shadow.camera, {left:-32,right:32,top:32,bottom:-32,near:1,far:120});
 sun.shadow.bias = -.0003; sun.shadow.normalBias = .04;
 scene.add(sun, sun.target);
@@ -1222,6 +1235,7 @@ function animate() {
   sun.position.set(state.x + 30, 55, state.z + 25);
   sun.target.position.set(state.x, 0, state.z);
   renderer.render(scene, camera);
+  diagnostics.update(dt);
   requestAnimationFrame(animate);
 }
 

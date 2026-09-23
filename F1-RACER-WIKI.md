@@ -640,3 +640,37 @@ After the start, the same tower becomes the live race order and changes when
 cars overtake, while preserving the player's highlighted row.
 The top-right qualifying summary shows the player's provisional grid position
 beside the lap time, rather than labeling a merely personal best as “Migliore”.
+
+## Performance and graphics profiles
+
+`graphics-profiles.js` (`loadGraphicsProfile`) picks a rendering cost profile
+— DPR cap, shadow map enabled/size, rain particle count and cloud count —
+from cheap, synchronous device signals (coarse-pointer media query, CPU core
+count, native device pixel ratio), no benchmarking pass. It never touches
+`CAR`/`AI` tuning, `TRACK_WIDTH`, `GRASS_LIMIT`/`WALL_LIMIT` or any other
+gameplay-visible constant: only rendering cost changes, never physics or race
+visibility (#2). The choice persists in `localStorage`
+(`f1racer-graphics-profile-v1`); a `?gfx=low|medium|high` URL param overrides
+and re-persists it, for testing. There is deliberately no new UI for this on
+the home screen — the session-setup panel's "two choices" (difficulty,
+driver) is an established, deliberate layout (see
+`llm-wiki/wiki/f1-racer/decisions.md`) that a third control would disturb.
+
+Coverage so far is the DPR/shadow/particle-count levers with the clearest
+performance-per-risk payoff. Distant-scenery density (`track-art.js`
+instancing) and reflections (`car-model.js`'s studio PMREM environment) are
+not yet profile-aware — a deliberate follow-up, not an oversight; see
+`llm-wiki/wiki/f1-racer/roadmap.md`. The Garage page does not yet read the
+profile either.
+
+`race-diagnostics.js` (`setupDiagnosticsOverlay`) is a dev-only FPS/frame-time
+and `renderer.info` (draw calls, triangles, geometries, textures) overlay.
+Off by default — no DOM node is created unless explicitly enabled via
+`?diag=1` (persisted in `localStorage` so it survives navigating from
+qualifying into the race; `?diag=0` clears it) — so normal play never creates
+or sees it.
+
+Real-device measurement (the issue's own acceptance bar: a measured
+before/after on at least one real smartphone and one desktop) has not been
+done from this environment, which has no real mobile hardware or GPU
+rendering — left for the user's own pass with the diagnostics overlay.

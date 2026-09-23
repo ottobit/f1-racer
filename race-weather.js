@@ -34,11 +34,11 @@ function buildCloudTexture() {
   return new THREE.CanvasTexture(canvas);
 }
 
-function buildClouds(scene, isRaining) {
+function buildClouds(scene, isRaining, cloudCountMultiplier) {
   const cloudGroup = new THREE.Group();
   const cloudTexture = buildCloudTexture();
   const cloudTint = isRaining ? 0x9aa3ad : 0xffffff;
-  const cloudCount = isRaining ? 14 : 8;
+  const cloudCount = Math.max(1, Math.round((isRaining ? 14 : 8) * cloudCountMultiplier));
   const cloudOpacity = isRaining ? 0.6 : 0.8;
   for (let i = 0; i < cloudCount; i++) {
     const cloud = new THREE.Sprite(
@@ -69,8 +69,8 @@ function buildClouds(scene, isRaining) {
 // Rain is a lightweight world-space particle field, kept deliberately small
 // so the game remains comfortable on mobile GPUs. Particles are recycled
 // around the player instead of allocating new objects every frame.
-function buildRain(scene, isRaining) {
-  const rainCount = isRaining ? 850 : 0;
+function buildRain(scene, isRaining, rainParticleMultiplier) {
+  const rainCount = isRaining ? Math.max(1, Math.round(850 * rainParticleMultiplier)) : 0;
   if (!isRaining) return { rainCount, rainPoints: null, rainPositions: null };
 
   const rainPositions = new Float32Array(rainCount * 3);
@@ -98,9 +98,15 @@ function buildRain(scene, isRaining) {
 // only needs it later, once updateWeather()'s updateRain() is actually
 // called each frame — same TDZ-safe pattern main.js already uses for
 // `getRaceState`.
-export function setupRaceWeather({ scene, isRaining, getPlayerState }) {
-  const cloudGroup = buildClouds(scene, isRaining);
-  const { rainCount, rainPoints, rainPositions } = buildRain(scene, isRaining);
+export function setupRaceWeather({
+  scene,
+  isRaining,
+  getPlayerState,
+  cloudCountMultiplier = 1,
+  rainParticleMultiplier = 1,
+}) {
+  const cloudGroup = buildClouds(scene, isRaining, cloudCountMultiplier);
+  const { rainCount, rainPoints, rainPositions } = buildRain(scene, isRaining, rainParticleMultiplier);
   const impactSparks = [];
 
   function spawnImpactSparks(x, z) {

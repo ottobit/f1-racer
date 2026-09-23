@@ -117,3 +117,35 @@ functions, no AudioContext needed for that part); the actual Web Audio
 output is unverifiable without a browser, same limitation as the rest of
 this file's audio code — left for the user's manual playtest per
 `RELEASE-CHECKLIST.md`.
+
+## 2026-09-23 — Graphics profiles and diagnostics overlay (#2, partial)
+
+Added `graphics-profiles.js` (auto-detected, persisted DPR/shadow/particle-
+count profile from cheap device signals — coarse pointer, core count, native
+DPR; `?gfx=` URL override) and `race-diagnostics.js` (dev-only FPS/
+`renderer.info` overlay, opt-in via `?diag=1`, no-op otherwise). Wired both
+into `main.js` (renderer DPR/shadowMap/sun.shadow, `setupRaceWeather`'s
+rain/cloud counts) and `race-weather.js` (accepts the two count
+multipliers, default 1 so the change is backward compatible). Deliberately
+no new home-screen UI: the session-setup panel's two-choice layout
+(difficulty, driver) is a documented, deliberate design
+(`decisions.md`) a third control would disturb — automatic detection plus a
+URL override covers the issue's "regolabili o automatici" either/or.
+
+Verified both modules' pure logic standalone in Node with mocked browser
+globals (`matchMedia`/`navigator`/`localStorage`/`location`/`document`):
+the auto-detection heuristic across desktop/weak-phone/high-DPR-phone/
+mid-phone cases, URL-override application and persistence, invalid-override
+fallback, and the diagnostics enable/persist/clear/re-enable-on-next-load
+cycle — all matched expectations.
+
+**Does not close #2.** The issue's own acceptance bar is a measured
+before/after on a real smartphone and a real desktop; this dev environment
+has neither real mobile hardware nor real GPU rendering (this repo's own
+prior validation records already flag headless/software rendering as non-
+representative of real performance). Reporting that criterion as met without
+having actually measured it would violate this repo's own testing rule, so
+this PR stays open for the user's `Concludi` instead of auto-concluding —
+the one exception in a batch the user otherwise asked to auto-conclude.
+Also out of scope here: distant-scenery/reflection profile-awareness,
+Garage integration. See `roadmap.md`.
