@@ -310,3 +310,20 @@ the scene — on every phone, since the Garage existed. Fixed with a
 Also caught before commit: a TDZ ordering bug in `main.js` (`PLAYER_LIVERY`
 computed one line before `SELECTED_DRIVER_ID` was declared) that would have
 crashed every race start.
+
+## 2026-09-23 — Home carousel zoom trap on phones (#32)
+
+User: an annoying zoom while browsing circuits that they could not undo.
+Not reproducible headless (Chromium there applies neither double-tap zoom
+nor pinch), so the fix rests on the code: carousel arrows sit over the card
+on phones with default `touch-action`, so quick repeated taps read as a
+double-tap zoom; `.circuit-viewport` had `touch-action: pan-y`, which
+excludes pinch, and covers ~71% of a 390×844 screen — once zoomed it filled
+the view and no pinch could start anywhere else. Added a `f1-home` body class
+and, scoped to it, `touch-action: manipulation` on links/buttons/radios plus
+`pan-y pinch-zoom` on the carousel viewport. Page zoom stays enabled. Verified
+the computed values and that swipe/arrow navigation still work; the actual
+gesture behaviour is left for a real-phone check in `RELEASE-CHECKLIST.md`.
+`index.html` now loads `style.css?v=34`, not the next free number for that
+page, because `garage.html` already uses `?v=22` for the same file and a
+shared URL could serve a stale cached copy.

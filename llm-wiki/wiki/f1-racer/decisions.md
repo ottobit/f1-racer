@@ -44,6 +44,12 @@ Swipe capture applies only to touch/pen input that starts outside the race CTA.
 Mouse input uses the carousel arrows and must never enter pointer capture, so
 desktop activation of `Scendi in pista` remains a normal link click.
 
+The home keeps browser page zoom enabled (accessibility), but its controls use
+`touch-action: manipulation` so quick repeated taps on carousel arrows/dots
+never trigger double-tap zoom, and the carousel viewport allows `pinch-zoom`
+alongside `pan-y` so a zoomed page can always be pinched back out (#32: with
+`pan-y` alone the carousel, ~70% of a phone screen, trapped users zoomed in).
+
 The home prioritizes actions over reference data. Garage and circuit selection
 are the two primary commands directly below the hero, with Garage visually
 dominant. Difficulty and driver live in one session-setup panel, and standings

@@ -56,6 +56,7 @@ Run one complete pass on a current Chromium/Firefox/Safari browser.
 3. [ ] Confirm the steering wheel is draggable and analog.
 4. [ ] Repeated tap, double-tap and pinch on the race canvas must not zoom or move the browser viewport.
 5. [ ] Confirm steering drag and simultaneous gas/brake touches do not trigger browser zoom/gesture handling.
+5b. [ ] Home on a phone: tap the carousel arrows/dots quickly several times — the page must not zoom; if the page is pinched in, pinching out over the carousel returns it to normal scale; horizontal swipe still changes circuit (#32).
 6. [ ] Rotate to landscape and accelerate to high speed: the chase camera must keep the player car prominently readable and must not progressively shrink it.
 7. [ ] Confirm HUD remains readable without covering the controls.
 8. [ ] Confirm race rendering remains responsive.
