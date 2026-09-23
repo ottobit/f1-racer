@@ -28,6 +28,9 @@ The current race runtime is coordinated by `main.js`, with focused helpers:
 - `race-commands.js`: command bindings and race UI actions.
 - `race-audio.js`: gear mapping and synthesized engine/shift-click Web Audio,
   gated by a `getRaceState` getter rather than a shared module variable.
+- `track-geometry.js`: pure centerline sampling/query rules, framework-
+  agnostic (takes a curve object rather than importing three.js), shared
+  between `main.js` and `tools/validate-circuits.mjs` (#6).
 
 ## Shared Car Model
 

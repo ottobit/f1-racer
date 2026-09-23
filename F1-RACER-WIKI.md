@@ -186,6 +186,30 @@ route. Its separated dogbone spline preserves the long parallel street legs
 and both end loops while leaving enough clearance for a closed racing surface.
 It uses a narrow nine-unit urban road and its own Garage recommendation.
 
+### Shared geometry rules and offline validation
+
+`track-geometry.js` owns the pure, framework-agnostic rules used to turn a
+circuit's raw control points into the runtime's centerline: sampling the
+closed curve, deriving heading/side-normal at a sample, and finding the
+nearest sample to a point. It takes an already-built curve object rather
+than importing three.js itself, so the exact same rules run both in
+`main.js` (fed the browser's CDN three.js build) and in
+`tools/validate-circuits.mjs` (fed the pinned npm `three` build — see
+`package.json`, a dev-only dependency never shipped with the static site).
+
+`node tools/validate-circuits.mjs [ids...] [--svg [outDir]]` (#6) checks
+every circuit in `circuits.js` for a broken closure, a self-crossing or
+reversed loop, degenerate/oversized sampled segments, corners tighter than
+the runtime's own wall margin (`width/2 + 4`, same formula as `WALL_LIMIT`
+in `main.js` — a corner this tight is also where a kerb ribbon would
+detach), and two unrelated parts of the track running closer together than
+their wall margins allow. A circuit can declare a documented, narrower
+floor for the last check when it's intentionally close (Marzamemi's shared
+coastal corridor is the current example) — still flagged as a warning, not
+silently skipped, so a further regression is still caught. `--svg` writes a
+top-down diagnostic preview per circuit to `tools/out/` (gitignored,
+dev-only, not referenced by the shipped game).
+
 ## 7. Race progress and lap counting
 
 Race position is based on `totalProgress`, a monotonic travelled-distance accumulator.
@@ -487,7 +511,11 @@ horizontal travel from that contact point requests steering. Only one pointer
 owns the wheel, independently of the pedal pointers. Capture, cancellation,
 lost capture, window blur and backgrounding clear held state. The visual wheel
 rotates with the filtered command; yaw becomes zero at zero speed and reverses
-in reverse gear. `node --test tests/steering.test.mjs` verifies the pure math.
+in reverse gear. No automated test currently exercises this pure math in
+this repository (a prior `tests/steering.test.mjs` claim here did not carry
+over from the `portfolio-arcade` extraction and does not exist — see #6's
+`tools/validate-circuits.mjs` for the repo's first Node-runnable check, on
+circuit geometry rather than steering).
 
 The garage fills the available dynamic viewport. On desktop the configuration
 pane scrolls beside the fixed car stage; portrait mobile uses a stage above a

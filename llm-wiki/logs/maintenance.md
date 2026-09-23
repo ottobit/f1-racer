@@ -27,6 +27,37 @@ sharing state across modules, following the same pattern already used by
 boundary; `main.js` still owns everything else roadmap.md lists as open
 under #3.
 
+## 2026-09-23 — Circuit geometry validator (#6)
+
+Extracted the pure centerline-sampling/query rules from `main.js` into
+`track-geometry.js` (framework-agnostic: takes a curve object rather than
+importing three.js, so the exact same rules run in the browser and in
+Node). Added `tools/validate-circuits.mjs`, a Node script checking every
+`circuits.js` entry for closure, winding, segment length, curvature (vs.
+the runtime's own wall margin — same formula as `WALL_LIMIT`) and
+non-adjacent separation, plus an optional `--svg` top-down diagnostic
+preview (gitignored `tools/out/`, dev-only, never shipped). It uses the
+real npm `three@0.160.0` (pinned to the CDN version `main.js` loads) as a
+devDependency — first `package.json`/`package-lock.json` in this repo,
+dev tooling only, no build step or bundler added to the shipped site.
+
+All six existing circuits pass; Marzamemi's known shared coastal corridor
+is a documented warning (a floor, not a blanket exemption) rather than an
+error. Verified the checks actually catch broken geometry against three
+adversarial cases (near-duplicate closure points, a self-crossing figure-
+eight, two legs pushed pathologically close with no allowlist entry) before
+trusting the "all circuits pass" result. Practical dependency for #5 (four
+new circuits).
+
+Also corrected two stale claims found while in this area: `circuits.js`'s
+header referenced "the project's dev notes" for a validation script that
+never existed until now (updated to point at the real one), and
+`F1-RACER-WIKI.md` claimed `tests/steering.test.mjs` verifies steering
+math — no `tests/` directory exists anywhere in this repo's git history
+(confirmed via `git log --all`), so that either never carried over from
+the `portfolio-arcade` extraction or was always aspirational. Noted as a
+real gap rather than removed silently.
+
 ## 2026-09-23 — Surface the publish rule in procedure.md (#12)
 
 `procedure.md` is the first file every session reads, so `tooling.md`'s

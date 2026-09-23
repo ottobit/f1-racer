@@ -13,6 +13,7 @@ Manual regression checklist for the static browser release of F1 Racer. The proj
 - [x] AI state fields are initialized and reset on grid placement.
 - [x] Race systems (tyres, ERS, pit state) are represented in the wiki.
 - [x] No backend/server dependency was introduced.
+- [ ] `node tools/validate-circuits.mjs` passes for every circuit (no `ERROR` lines) whenever `circuits.js` changed — see #6.
 
 ## Browser smoke test — desktop
 
