@@ -62,6 +62,20 @@ dilute the Garage/circuit-selection pair this section already establishes as
 dominant. It's a slim, full-width, visually secondary link below the two
 primary cards instead.
 
+**#38 correction:** the two `home-command` cards and the numbered `f1-home-
+section`s (Prepara la sessione / Prossima gara / Campionato) are two
+different index systems that happened to both look like "0N" labels,
+reading as one broken sequence instead of two intentional ones. Fixed by
+dropping numerals from the top command cards (PIT LANE / GRIGLIA, no
+number — they're primary actions, not steps) and renumbering the page
+sections 01→03 with no gaps. The multiplayer banner got an explicit
+"Modalità alternativa" kicker instead of no label, so it reads as a
+deliberate parallel path rather than an afterthought wedged between
+sections. The session-setup panel (difficulty + driver) stacks vertically
+on all viewports now, not just mobile — side-by-side on desktop left a
+visible empty gap under the 3-option difficulty column next to the taller
+10-option driver grid.
+
 ## Multiplayer Stage 1 (#36, part of #1)
 
 Stage 1 is rooms and driver reservation only — race-state sync and voice are
