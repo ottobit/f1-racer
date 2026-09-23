@@ -327,3 +327,25 @@ gesture behaviour is left for a real-phone check in `RELEASE-CHECKLIST.md`.
 `index.html` now loads `style.css?v=34`, not the next free number for that
 page, because `garage.html` already uses `?v=22` for the same file and a
 shared URL could serve a stale cached copy.
+
+## 2026-09-23 — Close #8 (Agent API), backfill its wiki docs
+
+Issue #8 (window._ENVIRONMENT_ MVP) was already fully implemented and merged
+via PR #9 — from a different Claude Code session than this one's own history,
+timestamped before this conversation ever picked it up. It stayed open only
+because the PR body said "Chiude #8" (Italian), which GitHub does not parse
+as a closing keyword; only English "Closes #N" does. This repo already
+learned that lesson once for issue-closing prose comments and apparently
+never generalized it to PR bodies. Did not just trust the PR description's
+own claim of prior testing: re-verified independently in a real headless
+browser (state snapshot present and correctly shaped, mutating a returned
+snapshot does not affect the next getState() call, out-of-range step()
+input is clamped rather than throwing, a concurrent step() is rejected, a
+step neutralizes throttle/brake/steer once its duration elapses) before
+closing. Also backfilled what PR #9 skipped: neither F1-RACER-WIKI.md nor
+this wiki's architecture.md/roadmap.md ever mentioned the Agent API — every
+other merged feature in this repo's history got a wiki entry, this one had
+none. Added a dedicated F1-RACER-WIKI.md section and an architecture.md
+bullet describing the actual contract (getState/step/release, the
+onHumanInput hand-back path, the digital-pedal and automatic-DRS deviations
+from the issue's original spec).
