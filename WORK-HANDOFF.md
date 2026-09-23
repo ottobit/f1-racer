@@ -5,16 +5,15 @@ This file is the compact entry point for a new ChatGPT Work session. Do not trea
 ## Read first
 
 1. `procedure.md` — mandatory repository workflow.
-2. `games/f1-racer/WORK-HANDOFF.md` — this operational snapshot.
-3. `games/f1-racer/F1-RACER-WIKI.md` — architecture and current behavior.
-4. `games/f1-racer/RELEASE-CHECKLIST.md` — release/regression gates.
+2. `WORK-HANDOFF.md` — this operational snapshot.
+3. `F1-RACER-WIKI.md` — architecture and current behavior.
+4. `RELEASE-CHECKLIST.md` — release/regression gates.
 5. Inspect the current files and open GitHub issues/PRs before changing code. Repository state wins over this snapshot if they differ.
 
 ## Repository / project
 
-- Repository: `ottobit/portfolio-arcade`
+- Repository: `ottobit/f1-racer`
 - Default branch: `master`
-- Game: `games/f1-racer/`
 - Browser-only Three.js game; Three.js is imported from CDN.
 - No Vite/backend and currently no automated browser test suite/CI.
 - Core runtime is still mostly in `main.js`.
@@ -63,4 +62,4 @@ Before making assumptions, inspect current `master`, because this handoff is int
 
 Use this when opening a fresh Work session:
 
-> Open the GitHub repository `ottobit/portfolio-arcade` and work on F1 Racer in `games/f1-racer/`. First read `procedure.md`, `games/f1-racer/WORK-HANDOFF.md`, `games/f1-racer/F1-RACER-WIKI.md`, and `games/f1-racer/RELEASE-CHECKLIST.md`. Inspect current master plus open issues/PRs before acting. Follow the repository procedure strictly: issue → branch → development → real tests where available → commit/push → PR → release test. Never write directly to master. Unless auto-conclusion was explicitly agreed before development, leave the PR open until I say `Concludi`. Do not call static/source checks runtime tests; mark unavailable tests `non testato`. Then handle my requested F1 Racer task.
+> Open the GitHub repository `ottobit/f1-racer`. First read `procedure.md`, `WORK-HANDOFF.md`, `F1-RACER-WIKI.md`, and `RELEASE-CHECKLIST.md`. Inspect current master plus open issues/PRs before acting. Follow the repository procedure strictly: issue → branch → development → real tests where available → commit/push → PR → release test. Never write directly to master. Unless auto-conclusion was explicitly agreed before development, leave the PR open until I say `Concludi`. Do not call static/source checks runtime tests; mark unavailable tests `non testato`. Then handle my requested F1 Racer task.

@@ -6,7 +6,7 @@ Manual regression checklist for the static browser release of F1 Racer. The proj
 
 ## Static/source checks
 
-- [x] `games/f1-racer/main.js` loads Three.js from the configured CDN.
+- [x] `main.js` loads Three.js from the configured CDN.
 - [x] `race.html` references `main.js` and `style.css`.
 - [x] HUD element IDs referenced by `main.js` exist in `race.html`.
 - [x] Current physics state fields are initialized and reset on grid placement.

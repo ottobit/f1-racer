@@ -26,7 +26,7 @@ desktop; shadow maps use 1024/2048 respectively. Hidden tabs skip rendering.
 
 
 > Living technical reference for the current F1 Racer implementation.  
-> Source of truth: the code in `games/f1-racer/`.
+> Source of truth: the code in this repository.
 >
 > Broader project memory lives in `llm-wiki/wiki/f1-racer/`, following the
 > repository's LLM Wiki workflow.
@@ -34,7 +34,6 @@ desktop; shadow maps use 1024/2048 respectively. Hidden tabs skip rendering.
 ## 1. Project map
 
 ```
-games/f1-racer/
 ├── index.html          # race setup / circuit and difficulty selection
 ├── menu.js             # menu state and navigation
 ├── race.html           # race-page DOM/HUD shell
