@@ -26,6 +26,8 @@ The current race runtime is coordinated by `main.js`, with focused helpers:
 - `race-nameplates.js`: screen-space labels projected from visible AI cars.
 - `race-car-view.js`: visual race car mounting and updates.
 - `race-commands.js`: command bindings and race UI actions.
+- `race-audio.js`: gear mapping and synthesized engine/shift-click Web Audio,
+  gated by a `getRaceState` getter rather than a shared module variable.
 
 ## Shared Car Model
 

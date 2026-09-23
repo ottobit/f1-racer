@@ -9,7 +9,10 @@
 
 - [#3](https://github.com/ottobit/f1-racer/issues/3) (ex-portfolio-arcade#143):
   reduce the remaining responsibilities in `main.js` where extraction
-  lowers real complexity.
+  lowers real complexity. First cut: gear mapping and engine/shift-click
+  audio moved to `race-audio.js`. `main.js` still owns scene/track-mesh
+  construction, ghost-lap persistence, weather/impact effects and the
+  qualifying/race state machines — further extraction stays open.
 - [#4](https://github.com/ottobit/f1-racer/issues/4) (ex-portfolio-arcade#144):
   resolved — see [tooling.md](tooling.md) for the documented patch/diff
   publishing workflow and its contents-API fallback.
