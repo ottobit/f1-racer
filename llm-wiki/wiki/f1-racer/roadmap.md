@@ -7,6 +7,16 @@
 
 ## Technical Follow-Ups
 
+- [#8](https://github.com/ottobit/f1-racer/issues/8): resolved by PR #9,
+  merged well before this bullet was written. It stayed open because "Chiude
+  #8" (Italian) in the PR body doesn't trigger GitHub's auto-close keyword
+  parsing — English "Closes #N" is required, a lesson this wiki already
+  recorded once for issue-closing comments and evidently missed for a PR
+  body. `agent-api.js` / `window._ENVIRONMENT_` — see `F1-RACER-WIKI.md`'s
+  Agent API section. Independently re-verified in a real headless browser
+  before closing (not just re-reading the code): state snapshot shape,
+  mutation isolation, input clamping, concurrent-step rejection, and that a
+  step neutralizes its own inputs.
 - [#3](https://github.com/ottobit/f1-racer/issues/3) (ex-portfolio-arcade#143),
   closed: two incremental cuts landed — gear mapping and engine/shift-click
   audio to `race-audio.js` (#14); sky clouds, rain and impact sparks to

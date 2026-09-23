@@ -727,3 +727,56 @@ Real-device measurement (the issue's own acceptance bar: a measured
 before/after on at least one real smartphone and one desktop) has not been
 done from this environment, which has no real mobile hardware or GPU
 rendering — left for the user's own pass with the diagnostics overlay.
+
+## Agent API (`window._ENVIRONMENT_`)
+
+`agent-api.js` (#8/#9) lets an external agent drive the player car from an
+already-open race page, without simulating touch/keyboard events. It's
+opt-in only, via `?agent=1` on `race.html`; `main.js` never imports it
+otherwise, so a normal human session pays nothing for it. Once wired up it
+sets `window._ENVIRONMENT_ = { getState, step, release }` and fires
+`f1-environment-ready` on `window`.
+
+```js
+const s = window._ENVIRONMENT_.getState();
+await window._ENVIRONMENT_.step({ throttle: 1, durationMs: 800 });                 // straight-line accel
+await window._ENVIRONMENT_.step({ steer: -0.4, throttle: 0.6, durationMs: 600 });  // turn left into a corner
+window._ENVIRONMENT_.release();                                                     // hand control back
+```
+
+`getState()` returns a compact, freshly-built (never-shared) snapshot, so
+mutating the returned object cannot affect internal state: session
+phase/state, `speedKmh`, lap/laps, race position, `totalProgress`,
+`lateralOffsetMeters` and `headingErrorRad` from the ideal line, `onTrack`,
+damage/tyre/DRS status, a `nextCorner` heuristic (direction/distance/
+curvature — the largest heading change found within a fixed lookahead window
+over the same centerline samples the AI steers by, not a real geometric
+radius), up to 5 `nearbyCars` (relative distance/lateral offset, closest
+first), and `finished`/`raceResult` once the race ends.
+
+`step(action)` validates and clamps `steer` (-1..1), `throttle`/`brake`
+(0..1) and `durationMs` (50–3000ms, default 500) rather than throwing on bad
+input; a second `step()` while one is in flight is rejected. It drives the
+exact same input the human player uses — `input.forward`/`input.back`
+booleans (pedals are digital in this game, so 0..1 throttle/brake are
+thresholded to on/off) and a new `setExternalSteer()` in `race-input.js` that
+overrides `steering.value` without being reset to 0 by the keyboard/wheel/
+motion smoothing that runs every frame. When the step's duration elapses it
+neutralizes throttle/brake/steer and returns the new `getState()` — so one
+`step()` call is both the action and the next observation. There is no `drs`
+action: DRS is fully automatic here (gap-based), so `getState()` only
+reports `drsActive` read-only.
+
+Human control always wins immediately: `race-input.js`'s real DOM handlers
+(keydown, pointer, motion) call an `onHumanInput` callback synchronously —
+never the agent itself — which the agent API uses to abort its current step,
+clear the external steer override and release any pedal it was holding, all
+before the human's own input is applied. `release()` does the same
+explicitly, for an agent that wants to hand back control without waiting for
+a step to finish.
+
+Verified in a real headless browser (Playwright, Chromium): the API appears
+and matches this contract, `getState()` snapshots are JSON-serializable and
+isolated from mutation, out-of-range `step()` input is clamped rather than
+throwing, a concurrent `step()` is rejected, and a step neutralizes its
+inputs once its duration elapses.
