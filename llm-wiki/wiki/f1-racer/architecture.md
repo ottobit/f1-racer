@@ -35,6 +35,11 @@ The current race runtime is coordinated by `main.js`, with focused helpers:
 - `track-geometry.js`: pure centerline sampling/query rules, framework-
   agnostic (takes a curve object rather than importing three.js), shared
   between `main.js` and `tools/validate-circuits.mjs` (#6).
+- `graphics-profiles.js`: automatic, persisted, device-signal-based
+  rendering-cost profile (DPR/shadows/particle counts only — never physics
+  or race visibility). No new UI (#2).
+- `race-diagnostics.js`: dev-only FPS/`renderer.info` overlay, a no-op
+  unless explicitly enabled (#2).
 
 ## Shared Car Model
 

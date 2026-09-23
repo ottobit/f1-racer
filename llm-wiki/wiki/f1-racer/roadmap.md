@@ -20,6 +20,17 @@
 - [#4](https://github.com/ottobit/f1-racer/issues/4) (ex-portfolio-arcade#144):
   resolved — see [tooling.md](tooling.md) for the documented patch/diff
   publishing workflow and its contents-API fallback.
+- [#2](https://github.com/ottobit/f1-racer/issues/2) (ex-portfolio-arcade#172),
+  **not closed — real-device measurement is still owed.** `graphics-profiles.js`
+  (auto DPR/shadow/particle profile, no new UI) and `race-diagnostics.js`
+  (dev-only FPS/`renderer.info` overlay) landed and cover the issue's
+  activities #1 and part of #3. Not done: distant-scenery/reflection
+  profile-awareness, Garage integration, and — the issue's actual
+  acceptance bar — a measured before/after on a real smartphone and a real
+  desktop. This dev environment has no real mobile hardware or GPU
+  rendering, so that measurement can only happen on the user's own
+  hardware; the PR stayed open for `Concludi` rather than auto-concluding
+  for exactly this reason. Revisit this bullet once that pass happens.
 - [#6](https://github.com/ottobit/f1-racer/issues/6) (ex-portfolio-arcade#173):
   `tools/validate-circuits.mjs` now checks closure/winding/segment length/
   curvature/non-adjacent separation for every circuit and can write a
