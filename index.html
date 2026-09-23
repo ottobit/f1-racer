@@ -13,7 +13,7 @@
   <meta property="og:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="stylesheet" href="style.css?v=35" />
+  <link rel="stylesheet" href="style.css?v=36" />
 </head>
 <body class="f1-home">
   <header class="f1-home-hero">
@@ -24,34 +24,37 @@
 
   <nav class="home-command-center" aria-label="Azioni principali">
     <a class="home-command home-command--garage" href="garage.html">
-      <span class="home-command-index">01 / PIT LANE</span>
+      <span class="home-command-index">PIT LANE</span>
       <span class="home-command-copy"><strong>Entra nel garage</strong><small>Livrea, aerodinamica, freni e sospensioni</small></span>
       <span class="home-command-arrow" aria-hidden="true">→</span>
     </a>
     <a class="home-command home-command--race" href="#circuit-carousel">
-      <span class="home-command-index">PROSSIMA SESSIONE</span>
+      <span class="home-command-index">GRIGLIA</span>
       <span class="home-command-copy"><strong>Scegli la gara</strong><small>Vai direttamente al carosello dei circuiti</small></span>
       <span class="home-command-arrow" aria-hidden="true">↓</span>
     </a>
   </nav>
 
   <a class="home-multiplayer-entry" href="room.html">
-    <span>🏁 Stanza multiplayer</span>
-    <small>Fase 1: crea o entra in una stanza e scegli il pilota — la sincronizzazione della gara arriva in una fase successiva</small>
+    <span class="home-multiplayer-kicker">Modalità alternativa</span>
+    <span class="home-multiplayer-body">
+      <span>🏁 Stanza multiplayer</span>
+      <small>Fase 1: crea o entra in una stanza e scegli il pilota — la sincronizzazione della gara arriva in una fase successiva</small>
+    </span>
     <span aria-hidden="true">→</span>
   </a>
 
   <div id="champion-banner" hidden></div>
 
   <section class="f1-home-section race-setup-panel">
-    <div class="f1-home-section-head"><span>02</span><div><h2>Prepara la sessione</h2><p>Due scelte, poi si corre.</p></div></div>
+    <div class="f1-home-section-head"><span>01</span><div><h2>Prepara la sessione</h2><p>Due scelte, poi si corre.</p></div></div>
     <div class="race-setup-grid">
       <div class="setup-choice setup-choice--difficulty"><div class="setup-choice-head"><strong><i>A</i>Difficoltà</strong><span>Ritmo IA</span></div><div id="difficulty-select" class="difficulty-select difficulty-control" role="radiogroup" aria-label="Difficoltà avversari"></div></div>
       <div class="setup-choice setup-choice--driver"><div class="setup-choice-head"><strong><i>B</i>Pilota</strong><span>Identità in gara</span></div><div id="driver-select" class="difficulty-select driver-control" role="radiogroup" aria-label="Pilota"></div></div>
     </div>
   </section>
 
-  <main class="f1-home-section circuit-stage"><div class="f1-home-section-head"><span>03</span><div><h2>Prossima gara</h2><p>Scorri le mappe, scegli il circuito e scendi in pista.</p></div></div>
+  <main class="f1-home-section circuit-stage"><div class="f1-home-section-head"><span>02</span><div><h2>Prossima gara</h2><p>Scorri le mappe, scegli il circuito e scendi in pista.</p></div></div>
     <div id="circuit-carousel" class="circuit-carousel" tabindex="0" aria-roledescription="carosello" aria-label="Selezione circuito">
       <button id="circuit-prev" class="circuit-arrow circuit-arrow--prev" type="button" aria-label="Circuito precedente">‹</button>
       <div class="circuit-viewport"><div id="circuit-list" class="circuit-track"></div></div>
@@ -61,7 +64,7 @@
     <p id="circuit-live" class="sr-only" aria-live="polite"></p>
   </main>
 
-  <section class="f1-home-section championship-panel"><div class="f1-home-section-head"><span>04</span><div><h2>Campionato</h2><p>La classifica dopo ogni bandiera a scacchi.</p></div></div><div class="menu-standings">
+  <section class="f1-home-section championship-panel"><div class="f1-home-section-head"><span>03</span><div><h2>Campionato</h2><p>La classifica dopo ogni bandiera a scacchi.</p></div></div><div class="menu-standings">
     <table>
       <thead><tr><th>Pos.</th><th>Pilota</th><th>Punti</th></tr></thead>
       <tbody id="standings-body"></tbody>
