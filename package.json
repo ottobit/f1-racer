@@ -2,11 +2,13 @@
   "name": "f1-racer-tooling",
   "private": true,
   "type": "module",
-  "description": "Dev-only tooling for the F1 Racer static site. The game itself ships with zero build step and loads three.js from a CDN (see index.html/race.html/garage.html); this package.json exists only so Node-side scripts under tools/ can import the exact same three.js version for circuit geometry checks. Nothing here is bundled or shipped.",
+  "description": "Dev-only tooling for the F1 Racer static site, plus the opt-in multiplayer room server (#36, part of #1). The game itself ships with zero build step and loads three.js from a CDN (see index.html/race.html/garage.html); this package.json exists so Node-side scripts under tools/ can import the exact same three.js version for circuit geometry checks, and so server/room-server.mjs can use the ws package. Nothing here is bundled into the shipped static site — the room server is a separate opt-in process a room-enabled session connects to over WebSocket, not something race.html/garage.html load.",
   "scripts": {
-    "validate:circuits": "node tools/validate-circuits.mjs"
+    "validate:circuits": "node tools/validate-circuits.mjs",
+    "start:room-server": "node server/room-server.mjs"
   },
   "devDependencies": {
-    "three": "0.160.0"
+    "three": "0.160.0",
+    "ws": "8.18.0"
   }
 }

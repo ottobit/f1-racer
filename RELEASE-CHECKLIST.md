@@ -12,7 +12,7 @@ Manual regression checklist for the static browser release of F1 Racer. The proj
 - [x] Current physics state fields are initialized and reset on grid placement.
 - [x] AI state fields are initialized and reset on grid placement.
 - [x] Race systems (tyres, ERS, pit state) are represented in the wiki.
-- [x] No backend/server dependency was introduced.
+- [x] Solo/local play (menu → garage → qualifying → race) has no backend/server dependency — verify this still holds with the room server unreachable or not running at all (#36 intentionally introduced one, opt-in, for multiplayer only; see the dedicated section below).
 - [ ] `node tools/validate-circuits.mjs` passes for every circuit (no `ERROR` lines) whenever `circuits.js` changed — see #6.
 
 ## Browser smoke test — desktop
@@ -240,3 +240,15 @@ in this environment, so no hardware performance claim is made.
 - [ ] Guardrails: continuous where present, none crossing each other where two legs run close; posts sit on the rail.
 - [ ] Marzamemi: kerb look unchanged apart from the sand runoff shoulder, which is now actually visible.
 - [ ] Load time on a phone not noticeably worse (denser road/kerb meshes plus fold resolution run once at scene setup).
+
+## Multiplayer Stage 1 regression (#36, part of #1: rooms, driver reservation)
+
+- [x] Solo flow (home → difficulty/driver → circuit → race with 9 AI) works identically whether or not `server/room-server.mjs` is running — verified with the room server stopped entirely, zero console errors.
+- [x] Home page shows the new "Stanza multiplayer" secondary entry below the two primary Garage/Gara cards, correct link to `room.html`.
+- [x] Two real headless-browser clients against a real local `room-server.mjs`: create room → 4-char code; join with that code; both see each other via live `room_state` broadcast.
+- [x] A driver reservation by one participant is broadcast live and disables that driver for the other participant; reserving an already-taken driver is rejected with a clear error.
+- [x] Non-host `start_race` is hidden/rejected; host `start_race` reaches both clients as the Stage 1 "gara al via" confirmation — no car/position/lap sync happens (not implemented in this stage).
+- [x] Reloading a page resumes the same room/participant via the saved `f1racer-room-session-v1` session, without creating a duplicate participant.
+- [x] `server/rooms.mjs`'s pure functions verified directly (no socket): atomic driver reservation (exactly one of two concurrent reservations wins), grace-period retention of a disconnected participant's driver, reconnect before expiry reclaims it, expiry after the grace window releases it and rejects a later reconnect, host handoff to the longest-connected remaining participant, room deletion once empty, 11th join into a full room rejected, `toPublicRoom()` never includes `reconnectToken` or a live timer handle.
+- [ ] On a real phone: create/join a room, reserve a driver, background the tab/lock the screen, come back — confirm reconnect behaves as expected on a real mobile browser/network (not just two sandbox browser contexts on one machine).
+- [ ] Once actually deployed (Render, per the user's choice — see `roadmap.md`): two genuinely separate devices/networks can create/join the same room over `wss://`; this was not and could not be verified from this sandbox.

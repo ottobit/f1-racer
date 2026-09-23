@@ -55,6 +55,47 @@ are the two primary commands directly below the hero, with Garage visually
 dominant. Difficulty and driver live in one session-setup panel, and standings
 follow the circuit carousel instead of interrupting the path into a race.
 
+The multiplayer room lobby (#36) needs *some* discoverable entry point —
+unlike `?agent=1`/`?diag=1`, real friends can't be expected to know a URL
+param — but does not get a third co-equal `home-command` card: that would
+dilute the Garage/circuit-selection pair this section already establishes as
+dominant. It's a slim, full-width, visually secondary link below the two
+primary cards instead.
+
+## Multiplayer Stage 1 (#36, part of #1)
+
+Stage 1 is rooms and driver reservation only — race-state sync and voice are
+separate future issues, deliberately not designed here, each with their own
+infra/protocol decisions #1 itself demands be made before implementation.
+`startRace()` sets a shared "started" confirmation and stops there on
+purpose; it must not be extended into car/position sync without that being
+its own decision.
+
+Starting a room's race is host-only for Stage 1. Chosen as the simplest rule
+that avoids a race (pun intended) between two participants both hitting
+start, not because "all-ready" was ruled out — revisit if it feels wrong
+once real rooms are used.
+
+Room/participant state is in-memory only, one process, no database — a
+deliberate Stage 1 scope limit given hosting itself was still an open
+question, not an oversight. State resets on server restart; this must stay
+true and documented, not quietly fixed with a database later without saying
+so.
+
+Room identity (`f1racer-room-session-v1`) and solo-play identity
+(`driver-selection.js`'s `f1racer-selected-driver-v1`) are deliberately
+independent — the local-only `"player"` pseudo-id must never become a valid
+room `driverId`, and joining/leaving a room must never alter the solo
+flow's own saved driver choice.
+
+Hosting for when Stage 1 goes live: the user picked **Render** (prior
+experience with it) over Fly.io's cheaper always-on pricing, with a
+self-ping to dodge the free tier's 15-minute sleep. Flagged, not
+overridden: a self-pinged 24/7 service uses close to Render's free-tier
+monthly instance-hour allowance on its own, so it may need the paid Starter
+tier depending on what else runs on the same account — the user's call, not
+this repo's to solve.
+
 Inside session setup, difficulty is a three-segment choice with short intent
 labels. Driver selection is a numbered 3-column touch grid on ordinary phones
 and falls back to 2 columns on very narrow screens. Targets remain at least

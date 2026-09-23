@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stanza multiplayer — F1 Racer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏁</text></svg>" />
+  <meta name="description" content="F1 Racer — stanza multiplayer: crea o entra in una stanza e scegli il pilota." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="style.css?v=35" />
+</head>
+<body class="f1-home room-page">
+  <header class="f1-home-hero room-hero">
+    <p class="f1-home-kicker"><a href="./">← TORNA A F1 RACER</a></p>
+    <h1 class="wordmark">Stanza multiplayer</h1>
+    <p class="f1-home-lead">Fase 1: crea o entra in una stanza e scegli il pilota. La sincronizzazione della gara vera arriva in una fase successiva — per ora "Avvia" è solo una conferma condivisa.</p>
+  </header>
+
+  <section class="f1-home-section room-lobby">
+    <div id="room-entry" class="room-entry">
+      <label class="room-field">Nome<input id="room-nickname" type="text" maxlength="24" placeholder="Il tuo nome" autocomplete="off" /></label>
+      <div class="room-entry-actions">
+        <button id="room-create-btn" type="button" class="room-btn room-btn--primary">Crea una stanza</button>
+        <div class="room-join-row">
+          <input id="room-code-input" type="text" maxlength="4" placeholder="CODICE" autocapitalize="characters" autocomplete="off" />
+          <button id="room-join-btn" type="button" class="room-btn">Entra</button>
+        </div>
+      </div>
+      <p id="room-entry-status" class="room-status" role="status" aria-live="polite"></p>
+    </div>
+
+    <div id="room-view" class="room-view" hidden>
+      <div class="room-view-head">
+        <div class="room-code-block"><span>Codice stanza</span><strong id="room-code-display"></strong></div>
+        <button id="room-leave-btn" type="button" class="room-btn room-btn--ghost">Esci</button>
+      </div>
+      <p id="room-connection-status" class="room-status" role="status" aria-live="polite"></p>
+      <p id="room-view-status" class="room-status" role="status" aria-live="polite"></p>
+
+      <div class="room-participants">
+        <h2>Partecipanti <span id="room-participant-count"></span></h2>
+        <ul id="room-participant-list"></ul>
+      </div>
+
+      <div class="room-drivers">
+        <h2>Scegli il pilota</h2>
+        <div id="room-driver-grid" class="room-driver-grid" role="radiogroup" aria-label="Pilota"></div>
+      </div>
+
+      <div class="room-actions">
+        <label class="room-ready-toggle"><input id="room-ready-checkbox" type="checkbox" /> Pronto</label>
+        <button id="room-start-btn" type="button" class="room-btn room-btn--primary" hidden>Avvia (solo host)</button>
+      </div>
+      <p id="room-race-started" class="room-status room-status--started" hidden>🏁 Gara al via — la sincronizzazione arriva nella prossima fase.</p>
+    </div>
+  </section>
+
+  <script type="module" src="room.js?v=1"></script>
+</body>
+</html>
