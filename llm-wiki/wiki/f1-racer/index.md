@@ -32,3 +32,4 @@ browser game built with plain HTML/CSS/JavaScript and Three.js.
 - Architecture page: [architecture.md](architecture.md)
 - Decisions page: [decisions.md](decisions.md)
 - Roadmap page: [roadmap.md](roadmap.md)
+- Developer tooling / publishing workflow: [tooling.md](tooling.md)

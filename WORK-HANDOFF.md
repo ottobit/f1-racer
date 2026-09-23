@@ -10,6 +10,16 @@ This file is the compact entry point for a new ChatGPT Work session. Do not trea
 4. `RELEASE-CHECKLIST.md` — release/regression gates.
 5. Inspect the current files and open GitHub issues/PRs before changing code. Repository state wins over this snapshot if they differ.
 
+## Publishing files without a local git clone
+
+If this session has no shell/git access and can only reach GitHub through a
+contents-API connector, read
+[`llm-wiki/wiki/f1-racer/tooling.md`](llm-wiki/wiki/f1-racer/tooling.md)
+before writing any file. It documents the SHA/concurrency rules and the
+multi-file commit path for that mode. If a real git clone is available
+instead, prefer it: it gives true patch-level edits, native push
+concurrency safety and needs none of that connector-specific handling.
+
 ## Repository / project
 
 - Repository: `ottobit/f1-racer`

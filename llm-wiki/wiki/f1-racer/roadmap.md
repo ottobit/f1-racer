@@ -7,11 +7,12 @@
 
 ## Technical Follow-Ups
 
-- [#143](https://github.com/ottobit/portfolio-arcade/issues/143): reduce the
-  remaining responsibilities in `main.js` where extraction lowers real
-  complexity.
-- [#144](https://github.com/ottobit/portfolio-arcade/issues/144): replace
-  whole-file GitHub publication with a patch/diff-oriented workflow.
+- [#3](https://github.com/ottobit/f1-racer/issues/3) (ex-portfolio-arcade#143):
+  reduce the remaining responsibilities in `main.js` where extraction
+  lowers real complexity.
+- [#4](https://github.com/ottobit/f1-racer/issues/4) (ex-portfolio-arcade#144):
+  resolved — see [tooling.md](tooling.md) for the documented patch/diff
+  publishing workflow and its contents-API fallback.
 - Continue keeping `main.js` as orchestration and move reusable logic into
   focused modules only when it reduces real complexity.
 - Keep setup effects centralized in `garage-setup.js`.
