@@ -40,6 +40,14 @@ In assenza di un accordo preventivo esplicito sulla modalita auto-conclusione, v
 - Se una verifica richiede molti token o tempo, dichiararla come verifica manuale dell'utente invece di eseguirla automaticamente.
 - Se il repository non dispone dell'ambiente necessario per un check strutturale, indicare esplicitamente il limite nella PR.
 
+## Regole di pubblicazione
+
+Quando la sessione dispone di un clone git locale (come in questa sessione), pubblicare **sempre** le modifiche tramite patch/diff mirate sul working tree seguite da `git commit`/`git push`. Non usare la contents API di GitHub (`create_or_update_file`, `push_files`, `delete_file`) per modifiche a codice o sorgenti: richiede il reinvio del file intero anche per una modifica minima e non offre protezioni migliori del push non-fast-forward di git contro aggiornamenti concorrenti.
+
+Dettagli, motivazione e fallback per sessioni senza clone locale (es. contents-API-only): `llm-wiki/wiki/f1-racer/tooling.md`.
+
+Questa regola vale per il repository in cui `procedure.md` è presente. Non si applica automaticamente ad altri progetti: per un vincolo valido su ogni progetto serve una preferenza a livello di account Claude, non un file di questo repository.
+
 ## F1 Racer
 
 Mantenere aggiornati quando necessario:

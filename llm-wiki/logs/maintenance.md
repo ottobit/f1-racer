@@ -12,3 +12,13 @@ and `roadmap.md` to link it and to point the migrated #143/#144 references
 at the current `ottobit/f1-racer` issue numbers (#3/#4) instead of the
 stale `portfolio-arcade` ones. Added a short pointer in `WORK-HANDOFF.md`
 so a shell-less session reads the fallback rules before writing files.
+
+## 2026-09-23 — Surface the publish rule in procedure.md (#12)
+
+`procedure.md` is the first file every session reads, so `tooling.md`'s
+Path A rule (local clone → always git diff/commit/push, never the contents
+API) was invisible unless a session also opened the wiki. Added a short
+"Regole di pubblicazione" section in `procedure.md` stating the rule and
+linking `tooling.md`, and noted explicitly that the rule is scoped to this
+repository — a durable cross-project version would need an account-level
+Claude preference, which this repo cannot set.
