@@ -126,15 +126,60 @@ client-only `"player"` id is never valid here — solo and room identity
 never touch each other's `localStorage` key.
 
 `room-client.js` (browser) and `room.html`/`room.js` (lobby UI) are the only
-client-side additions; race/garage/qualifying are entirely untouched and
-still work with the room server unreachable or absent. See
-`F1-RACER-WIKI.md`'s "Multiplayer Stage 1" section for the message protocol,
-grace/reconnect/host-handoff rules, and what was and wasn't verified without
-a live public deployment.
+client-side additions; race/garage/qualifying are entirely untouched *when
+no room is involved* (see Stage 2 below for how a room actually reaches the
+race itself now). See `F1-RACER-WIKI.md`'s "Multiplayer" section for the
+message protocol, grace/reconnect/host-handoff rules, and what was and
+wasn't verified without a live public deployment.
 
-Stage 2 (race-state sync) and voice are separate future issues with their
-own protocol/infra decisions — not designed here; `startRace()` deliberately
-stops at a shared confirmation (`room.startedAt`), not a synced race.
+Voice is a separate future issue with its own protocol/infra decisions —
+not designed here.
+
+## Multiplayer Stage 2 (qualifying and race sync)
+
+`rooms.mjs` gained `sessionPhase` ("lobby" → "qualifying" → "racing"),
+`circuitId`/`difficulty` (host-chosen, see `setCircuit()`), per-participant
+`qualiBestTime`, and `grid` (set once by `finishQualifying()`, called by
+`room-server.mjs`'s own `setTimeout` — `ROOM_QUALI_MS`, defaults to 60s —
+not by any client, so every participant's browser transitions off the same
+clock). `room-server.mjs` also relays a new ephemeral, unstored message,
+`car_state`, straight to a room's other sockets — the client-authoritative
+position broadcast this stage is built on (see decisions.md).
+
+Two new browser-side files bridge a room into an actual race:
+- `race-bootstrap.js`: `race.html`'s real entry point now (not `main.js`
+  directly). If `?room=CODE` is present and a saved room session exists, it
+  resolves the WebSocket reconnect *before* `main.js` loads — `main.js`'s
+  own top-level code is entirely synchronous (builds the whole scene
+  top-to-bottom in one pass) and was never made async; this bootstrap is
+  what keeps that true while still needing an async reconnect first. Hands
+  the already-connected client to `main.js` via a one-shot
+  `window.__mpClient`.
+- `race-multiplayer.js`: `setupMultiplayer()` wraps that already-connected
+  client into the small synchronous API `main.js` actually calls
+  (`getRemoteDrivers()`, `getRemoteSample()`, `broadcastState()`,
+  `reportQualiTime()`, `onGridReady()`, `isDriverDisconnected()`). Returns
+  `null` for solo play (no `?room=`, or an unresumable session) — every
+  integration point in `main.js` is an explicit `if (multiplayer)` branch
+  on this one value, never a silently-shared code path.
+
+Inside `main.js`: multiplayer's `AI_DRIVERS` come from the room's other
+participants' reserved driver ids instead of `DRIVER_ROSTER`-minus-self —
+no AI padding (see decisions.md). Each resulting `aiCars` entry is tagged
+`isRemote: true` and `participantId`, and driven every frame by
+`updateRemoteCar()` (pulls toward the latest `car_state` sample, smoothed,
+then calls the same `advanceProgress()` everyone else's lap/position
+bookkeeping uses) instead of `updateAiCar()`'s real steering AI — everything
+downstream (`currentRaceOrder`, `applyGridPositions`, DRS eligibility, car
+collisions, the HUD/nameplate rendering) already worked generically over
+`aiCars` and needed no changes to accept remote-driven entries. Qualifying
+itself runs locally exactly like solo (own flying laps, own best time
+tracked, own lap-completion detection) but reports each improved time to
+the room (`reportQualiTime`) instead of only using it locally, and never
+self-triggers the qualifying-to-racing transition — that only ever happens
+from `multiplayer.onGridReady()`, fired once when the server's own timer
+broadcasts the real grid. `finishRace()` skips the solo championship
+entirely for a multiplayer session (see decisions.md).
 
 ## Championship and Drivers
 

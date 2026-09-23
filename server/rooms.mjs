@@ -13,14 +13,23 @@
 // — solo play and room play are deliberately independent.
 
 import { DRIVER_ROSTER } from "../driver-roster.js";
+import { CIRCUITS } from "../circuits.js";
 
 const ROOM_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"; // no 0/O, 1/I/L
 const ROOM_CODE_LENGTH = 4;
 const MAX_NICKNAME_LENGTH = 24;
 export const MAX_PARTICIPANTS = DRIVER_ROSTER.length; // 10 — one slot per reservable driver
 export const DEFAULT_GRACE_MS = 30000;
+// Stage 2 (#44): must match main.js's own QUALIFYING_DURATION_MS — the two
+// can't share an import across the browser/Node boundary, so this is a
+// deliberately duplicated constant, not a typo. The server times qualifying
+// out itself (see room-server.mjs) so every client transitions together
+// instead of each browser's own clock deciding independently.
+export const QUALIFYING_DURATION_MS = 60000;
 
 const VALID_DRIVER_IDS = new Set(DRIVER_ROSTER.map((d) => d.id));
+const VALID_CIRCUIT_IDS = new Set(CIRCUITS.map((c) => c.id));
+const VALID_DIFFICULTIES = new Set(["facile", "normale", "difficile"]);
 
 export class RoomError extends Error {
   constructor(code, message) {
@@ -75,6 +84,7 @@ function newParticipant(nickname) {
       nickname: sanitizeNickname(nickname),
       driverId: null,
       ready: false,
+      qualiBestTime: null,
       connectionState: "connected",
       graceTimer: null,
       connectedAt: Date.now(),
@@ -92,7 +102,12 @@ export function createRoom(store, { nickname } = {}) {
     code,
     hostParticipantId: participantId,
     createdAt: Date.now(),
-    startedAt: null,
+    circuitId: null,
+    difficulty: "normale",
+    sessionPhase: "lobby", // "lobby" -> "qualifying" -> "racing"
+    qualifyingStartedAt: null,
+    raceStartedAt: null,
+    grid: null, // array of driverId, pole first — set once qualifying ends
     participants: new Map([[participantId, participant]]),
   };
   store.rooms.set(code, room);
@@ -101,7 +116,7 @@ export function createRoom(store, { nickname } = {}) {
 
 export function joinRoom(store, { roomCode, nickname } = {}) {
   const room = findRoom(store, roomCode);
-  if (room.startedAt) throw new RoomError("race_started", "La gara di questa stanza è già iniziata.");
+  if (room.sessionPhase !== "lobby") throw new RoomError("race_started", "La gara di questa stanza è già iniziata.");
   if (room.participants.size >= MAX_PARTICIPANTS) throw new RoomError("room_full", "La stanza è piena.");
   const { participant, participantId } = newParticipant(nickname);
   room.participants.set(participantId, participant);
@@ -145,15 +160,68 @@ export function setReady(store, { roomCode, participantId, ready }) {
   return room;
 }
 
+export function setCircuit(store, { roomCode, participantId, circuitId, difficulty }) {
+  const room = findRoom(store, roomCode);
+  findParticipant(room, participantId);
+  if (room.hostParticipantId !== participantId) throw new RoomError("not_host", "Solo l'host può scegliere il circuito.");
+  if (room.sessionPhase !== "lobby") throw new RoomError("race_started", "La gara è già iniziata.");
+  if (!VALID_CIRCUIT_IDS.has(circuitId)) throw new RoomError("invalid_circuit", "Circuito non valido.");
+  if (difficulty !== undefined && !VALID_DIFFICULTIES.has(difficulty)) {
+    throw new RoomError("invalid_difficulty", "Difficoltà non valida.");
+  }
+  room.circuitId = circuitId;
+  if (difficulty !== undefined) room.difficulty = difficulty;
+  return room;
+}
+
+// Begins qualifying (Stage 2, #44): requires a circuit chosen and every
+// participant both driver-reserved and ready, so "Pronto" actually gates
+// the start instead of being decorative as it was in Stage 1. The 60s
+// qualifying window itself is timed by the transport layer
+// (room-server.mjs), which calls finishQualifying() below when it elapses
+// — every client transitions together off the same server clock, not each
+// browser's own countdown.
 export function startRace(store, { roomCode, participantId }) {
   const room = findRoom(store, roomCode);
   findParticipant(room, participantId);
   if (room.hostParticipantId !== participantId) throw new RoomError("not_host", "Solo l'host può avviare la gara.");
-  if (room.startedAt) throw new RoomError("race_started", "La gara è già iniziata.");
-  // Stage 1 stops here deliberately: this marks the room as started for
-  // display purposes only. Actual car/position/lap sync is Stage 2's job
-  // (a separate issue) — see room-client.js's confirmation-only handling.
-  room.startedAt = Date.now();
+  if (room.sessionPhase !== "lobby") throw new RoomError("race_started", "La gara è già iniziata.");
+  if (!room.circuitId) throw new RoomError("no_circuit", "Scegli prima un circuito.");
+  for (const p of room.participants.values()) {
+    if (!p.driverId || !p.ready) throw new RoomError("not_ready", "Tutti i partecipanti devono aver scelto un pilota ed essere pronti.");
+  }
+  room.sessionPhase = "qualifying";
+  room.qualifyingStartedAt = Date.now();
+  return room;
+}
+
+// Called by room-server.mjs's own timer once QUALIFYING_DURATION_MS has
+// elapsed since qualifyingStartedAt — not a client-invokable message.
+// Grid order: fastest qualiBestTime first, participants with no time at
+// all (DNF, same as a real qualifying no-show) sent to the back, same rule
+// solo play already uses for a null bestTime.
+export function finishQualifying(store, { roomCode }) {
+  const room = findRoom(store, roomCode);
+  if (room.sessionPhase !== "qualifying") return room;
+  const ranked = [...room.participants.values()]
+    .filter((p) => p.driverId)
+    .sort((a, b) => (a.qualiBestTime ?? Infinity) - (b.qualiBestTime ?? Infinity));
+  room.grid = ranked.map((p) => p.driverId);
+  room.sessionPhase = "racing";
+  room.raceStartedAt = Date.now();
+  return room;
+}
+
+export function reportQualiTime(store, { roomCode, participantId, timeMs }) {
+  const room = findRoom(store, roomCode);
+  const participant = findParticipant(room, participantId);
+  if (room.sessionPhase !== "qualifying") throw new RoomError("not_qualifying", "La qualifica non è in corso.");
+  if (typeof timeMs !== "number" || !Number.isFinite(timeMs) || timeMs <= 0) {
+    throw new RoomError("invalid_time", "Tempo non valido.");
+  }
+  if (participant.qualiBestTime === null || timeMs < participant.qualiBestTime) {
+    participant.qualiBestTime = timeMs;
+  }
   return room;
 }
 
@@ -242,13 +310,19 @@ export function toPublicRoom(room) {
     code: room.code,
     hostParticipantId: room.hostParticipantId,
     createdAt: room.createdAt,
-    startedAt: room.startedAt,
+    circuitId: room.circuitId,
+    difficulty: room.difficulty,
+    sessionPhase: room.sessionPhase,
+    qualifyingStartedAt: room.qualifyingStartedAt,
+    raceStartedAt: room.raceStartedAt,
+    grid: room.grid,
     maxParticipants: MAX_PARTICIPANTS,
     participants: [...room.participants.values()].map((p) => ({
       participantId: p.participantId,
       nickname: p.nickname,
       driverId: p.driverId,
       ready: p.ready,
+      qualiBestTime: p.qualiBestTime,
       connectionState: p.connectionState,
     })),
   };

@@ -1,6 +1,9 @@
-import { createRoomClient } from "./room-client.js?v=1";
+import { createRoomClient } from "./room-client.js?v=2";
 import { DRIVER_ROSTER } from "./driver-roster.js";
 import { liveryById } from "./driver-themes.js?v=27";
+import { CIRCUITS } from "./circuits.js?v=38";
+
+const DIFFICULTY_LABELS = { facile: "Facile", normale: "Normale", difficile: "Difficile" };
 
 const client = createRoomClient();
 
@@ -22,7 +25,15 @@ const el = {
   readyCheckbox: document.getElementById("room-ready-checkbox"),
   startBtn: document.getElementById("room-start-btn"),
   raceStarted: document.getElementById("room-race-started"),
+  circuitHost: document.getElementById("room-circuit-host"),
+  circuitSelect: document.getElementById("room-circuit-select"),
+  difficultySelect: document.getElementById("room-difficulty-select"),
+  circuitDisplay: document.getElementById("room-circuit-display"),
 };
+
+el.circuitSelect.innerHTML += CIRCUITS.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+
+let navigatedToRace = false;
 
 function hex(color) {
   return `#${color.toString(16).padStart(6, "0")}`;
@@ -84,8 +95,45 @@ function renderRoom(room) {
   }).join("");
 
   el.readyCheckbox.checked = !!me?.ready;
-  el.startBtn.hidden = !isHost || !!room.startedAt;
-  el.raceStarted.hidden = !room.startedAt;
+
+  const inLobby = room.sessionPhase === "lobby";
+  el.circuitHost.hidden = !isHost || !inLobby;
+  if (isHost && inLobby) {
+    if (el.circuitSelect.value !== (room.circuitId || "")) el.circuitSelect.value = room.circuitId || "";
+    if (el.difficultySelect.value !== room.difficulty) el.difficultySelect.value = room.difficulty;
+  }
+  const circuitName = room.circuitId ? (CIRCUITS.find((c) => c.id === room.circuitId)?.name || room.circuitId) : null;
+  el.circuitDisplay.textContent = inLobby
+    ? (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]}` : (isHost ? "" : "In attesa che l'host scelga il circuito."))
+    : (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]}` : "");
+
+  const allReady = room.participants.length > 0 && room.participants.every((p) => p.driverId && p.ready);
+  el.startBtn.hidden = !isHost || !inLobby;
+  el.startBtn.disabled = !room.circuitId || !allReady;
+
+  if (inLobby) {
+    el.raceStarted.hidden = true;
+  } else if (room.sessionPhase === "qualifying") {
+    el.raceStarted.hidden = false;
+    el.raceStarted.textContent = "🏁 Qualifica in corso — passa alla gara…";
+    goToRace(room);
+  } else if (room.sessionPhase === "racing") {
+    el.raceStarted.hidden = false;
+    el.raceStarted.textContent = "🏁 Gara in corso — passa alla gara…";
+    goToRace(room);
+  }
+}
+
+// Navigates this tab into the actual race once the host starts the
+// session (Stage 2, #44) — room-client's saved session lets race.html's
+// multiplayer adapter reconnect as the same participant on load.
+function goToRace(room) {
+  if (navigatedToRace || !room.circuitId) return;
+  navigatedToRace = true;
+  const params = new URLSearchParams({ circuit: room.circuitId, difficulty: room.difficulty, room: room.code });
+  const roomServer = new URLSearchParams(location.search).get("roomServer");
+  if (roomServer) params.set("roomServer", roomServer);
+  location.href = `race.html?${params.toString()}`;
 }
 
 client.onStateChange(renderRoom);
@@ -139,6 +187,13 @@ el.driverGrid.addEventListener("click", async (e) => {
 el.readyCheckbox.addEventListener("change", () => {
   client.setReady(el.readyCheckbox.checked).catch((err) => { el.viewStatus.textContent = err.message; });
 });
+
+function submitCircuitChoice() {
+  if (!el.circuitSelect.value) return;
+  client.setCircuit(el.circuitSelect.value, el.difficultySelect.value).catch((err) => { el.viewStatus.textContent = err.message; });
+}
+el.circuitSelect.addEventListener("change", submitCircuitChoice);
+el.difficultySelect.addEventListener("change", submitCircuitChoice);
 
 el.startBtn.addEventListener("click", async () => {
   el.viewStatus.textContent = "";

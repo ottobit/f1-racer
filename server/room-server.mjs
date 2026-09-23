@@ -19,17 +19,22 @@ import {
   reserveDriver,
   releaseDriver,
   setReady,
+  setCircuit,
   startRace,
+  finishQualifying,
+  reportQualiTime,
   touch,
   leaveRoom,
   markDisconnected,
   toPublicRoom,
   RoomError,
   DEFAULT_GRACE_MS,
+  QUALIFYING_DURATION_MS,
 } from "./rooms.mjs";
 
 const PORT = Number(process.env.PORT) || 8787;
 const GRACE_MS = Number(process.env.ROOM_GRACE_MS) || DEFAULT_GRACE_MS;
+const QUALI_MS = Number(process.env.ROOM_QUALI_MS) || QUALIFYING_DURATION_MS;
 
 const store = createStore();
 
@@ -67,8 +72,34 @@ function requireBound(bound) {
   if (!bound) throw new RoomError("not_in_room", "Devi essere in una stanza per farlo.");
 }
 
+// Qualifying is timed here, not by each browser's own clock, so every
+// client transitions to racing together (Stage 2, #44). roomCode -> timer.
+const qualifyingTimers = new Map();
+
+function clearQualifyingTimer(roomCode) {
+  const timer = qualifyingTimers.get(roomCode);
+  if (timer) {
+    clearTimeout(timer);
+    qualifyingTimers.delete(roomCode);
+  }
+}
+
+function scheduleQualifyingEnd(roomCode) {
+  clearQualifyingTimer(roomCode);
+  const timer = setTimeout(() => {
+    qualifyingTimers.delete(roomCode);
+    try {
+      const room = finishQualifying(store, { roomCode });
+      broadcastRoom(roomCode, room);
+    } catch (err) {
+      if (!(err instanceof RoomError)) console.error("[room-server] unexpected error ending qualifying", err);
+    }
+  }, QUALI_MS);
+  qualifyingTimers.set(roomCode, timer);
+}
+
 const wss = new WebSocketServer({ port: PORT });
-console.log(`[room-server] listening on ws://localhost:${PORT} (grace ${GRACE_MS}ms)`);
+console.log(`[room-server] listening on ws://localhost:${PORT} (grace ${GRACE_MS}ms, qualifying ${QUALI_MS}ms)`);
 
 wss.on("connection", (ws) => {
   // Which room/participant this specific socket currently represents, if
@@ -134,21 +165,58 @@ wss.on("connection", (ws) => {
           broadcastRoom(bound.roomCode, room);
           break;
         }
+        case "set_circuit": {
+          requireBound(bound);
+          const room = setCircuit(store, { roomCode: bound.roomCode, participantId: bound.participantId, circuitId: msg.circuitId, difficulty: msg.difficulty });
+          send(ws, { type: "circuit_set", reqId });
+          broadcastRoom(bound.roomCode, room);
+          break;
+        }
         case "start_race": {
           requireBound(bound);
           const room = startRace(store, { roomCode: bound.roomCode, participantId: bound.participantId });
-          // Stage 1 stops at a shared confirmation, not a synced race — see
-          // rooms.mjs's startRace comment. room_state's startedAt is what
-          // the client keys its confirmation UI off; this ack just
-          // correlates the request for whoever clicked "Avvia".
+          // Stage 2 (#44): this now begins a real, timed qualifying phase
+          // (see scheduleQualifyingEnd) instead of Stage 1's bare
+          // confirmation — sessionPhase in the broadcast room_state is what
+          // clients key their transition off.
           send(ws, { type: "race_start_ack", reqId });
+          scheduleQualifyingEnd(bound.roomCode);
           broadcastRoom(bound.roomCode, room);
+          break;
+        }
+        case "report_quali_time": {
+          requireBound(bound);
+          const room = reportQualiTime(store, { roomCode: bound.roomCode, participantId: bound.participantId, timeMs: msg.timeMs });
+          send(ws, { type: "quali_time_ack", reqId });
+          broadcastRoom(bound.roomCode, room);
+          break;
+        }
+        // Ephemeral per-frame position broadcast (Stage 2, #44): relayed
+        // directly to the room's other sockets, never stored in rooms.mjs —
+        // client-authoritative, so the server is just a fan-out relay here,
+        // same spirit as room_state but far too frequent to route through
+        // the pure state machine or its full-snapshot broadcast.
+        case "car_state": {
+          requireBound(bound);
+          const map = socketsByRoom.get(bound.roomCode);
+          if (map) {
+            const payload = JSON.stringify({
+              type: "car_state",
+              participantId: bound.participantId,
+              x: msg.x, z: msg.z, heading: msg.heading, speed: msg.speed,
+              lap: msg.lap, totalProgress: msg.totalProgress,
+            });
+            for (const [pid, peer] of map) {
+              if (pid !== bound.participantId && peer.readyState === peer.OPEN) peer.send(payload);
+            }
+          }
           break;
         }
         case "leave_room": {
           requireBound(bound);
           const { room } = leaveRoom(store, { roomCode: bound.roomCode, participantId: bound.participantId });
           socketsFor(bound.roomCode).delete(bound.participantId);
+          if (!room) clearQualifyingTimer(bound.roomCode);
           send(ws, { type: "left_room", reqId });
           broadcastRoom(bound.roomCode, room);
           bound = null;
@@ -181,7 +249,10 @@ wss.on("connection", (ws) => {
         roomCode: bound.roomCode,
         participantId: bound.participantId,
         graceMs: GRACE_MS,
-        onExpire: ({ room: expiredRoom }) => broadcastRoom(bound.roomCode, expiredRoom),
+        onExpire: ({ room: expiredRoom }) => {
+          if (!expiredRoom) clearQualifyingTimer(bound.roomCode);
+          broadcastRoom(bound.roomCode, expiredRoom);
+        },
       });
       broadcastRoom(bound.roomCode, room);
     } catch (err) {

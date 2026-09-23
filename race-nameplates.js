@@ -1,4 +1,4 @@
-export function setupRaceNameplates({ camera, mount, cars, nameOf }) {
+export function setupRaceNameplates({ camera, mount, cars, nameOf, isDisconnected = () => false }) {
   const projected = camera.position.clone();
   const labels = cars.map((car) => {
     const label = document.createElement("span");
@@ -23,6 +23,7 @@ export function setupRaceNameplates({ camera, mount, cars, nameOf }) {
         Math.abs(projected.x) < 1.08 && Math.abs(projected.y) < 1.08 &&
         distance < 72;
       label.hidden = !visible;
+      label.classList.toggle("driver-nameplate--disconnected", isDisconnected(car.driverId));
       if (!visible) continue;
       const x = (projected.x * 0.5 + 0.5) * width;
       const y = (-projected.y * 0.5 + 0.5) * height;

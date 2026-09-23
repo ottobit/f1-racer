@@ -116,6 +116,66 @@ monthly instance-hour allowance on its own, so it may need the paid Starter
 tier depending on what else runs on the same account — the user's call, not
 this repo's to solve.
 
+**Verified live (2026-09-23):** the user connected a real phone and a real
+PC, on separate networks, to the same room through the room server tunneled
+with `ngrok http` (not Render itself yet, but the same `wss://` path a real
+deployment uses) — real cross-device `wss://` reachability, not just two
+browser contexts on one sandbox machine.
+
+## Multiplayer Stage 2 (#44, part of #1): qualifying and race sync
+
+Stage 1's `startRace()` deliberately stopped at a bare confirmation and said
+extending it into real sync needed "its own decision" — Stage 2 is that
+decision, made explicitly by the user, not a quiet extension:
+
+- **Sync model: client-authoritative.** Every browser keeps simulating its
+  own car exactly as solo play always has and broadcasts position/heading/
+  speed/progress a few times a second (`car_state`, relayed by
+  `room-server.mjs`, never stored — see `architecture.md`). No server-side
+  physics; porting `player-physics.js`/`race-ai.js`/`race-collisions.js` to
+  run headless on Node was considered and rejected as its own project, not
+  this stage's job.
+- **Disconnection during qualifying/race:** the disconnected participant's
+  car simply freezes where it was (no more broadcasts arrive — a natural
+  consequence of client-authoritative sync, not extra logic) and their
+  entry visibly greys out, both the on-track nameplate and the timing
+  tower. Reuses Stage 1's existing grace-period/`connectionState` mechanism
+  unchanged — no new server-side disconnect handling needed for this.
+- **No AI padding.** A room races with exactly as many cars as it has real
+  participants — a 3-person room runs a 3-car race, not a 3-human/7-AI
+  mixed field. Filling empty slots with AI was explicitly rejected: it
+  would need its own synchronization decision (who simulates the shared AI,
+  and how do all clients agree on its state) that isn't worth solving for
+  this stage.
+- **Circuit/difficulty: the host decides**, inside the room (new UI in
+  `room.html`), the same way solo picks them — not a vote, not a fixed
+  track. Broadcast to everyone once qualifying begins so every participant
+  lands on `race.html` with the same `circuit`/`difficulty`/`room` query
+  params.
+
+Qualifying itself is timed **server-side** (`room-server.mjs`'s own
+`setTimeout`, `ROOM_QUALI_MS` configurable, defaults to matching solo's own
+60s), not by each browser's local countdown — every client must transition
+to racing together off one clock, not whoever's tab happens to reach zero
+first. The grid is real: fastest reported qualifying lap wins pole, a
+participant with no time at all goes to the back (same DNF rule solo
+already used for a null best time).
+
+Multiplayer race results deliberately never touch the solo championship —
+no points recorded, no next-unraced-circuit chain. A room's race is the
+room's own result, not a campaign result; recording it into
+`f1racer-championship-v1`-backed state would silently pollute the user's
+own solo standings with results from races they may not have even driven
+themselves to the finish.
+
+`main.js` itself is only ever touched through explicit `if (multiplayer)`
+branches gated on one variable, `null` for a normal solo session (no
+`?room=` in the URL, or a room session that couldn't be resumed) — see
+`race-bootstrap.js`/`race-multiplayer.js` in `architecture.md`. Every
+branch was chosen so solo play's existing code path runs completely
+unchanged when that variable is null, verified by an actual real-browser
+solo smoke test (not just code review) after these changes landed.
+
 Inside session setup, difficulty is a three-segment choice with short intent
 labels. Driver selection is a numbered 3-column touch grid on ordinary phones
 and falls back to 2 columns on very narrow screens. Targets remain at least
