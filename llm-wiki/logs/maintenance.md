@@ -793,3 +793,16 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   width 4.2rem→8.5rem (6.5rem on short landscape phones, was 3rem).
 - Trade-off: no whole-circuit overview any more during the race.
 - Verified with `node --check` + `git diff --check` only.
+
+## 2026-09-24 — Braking hint on the minimap rim (#71)
+
+- User idea from F1 games: a green/red cue near the map for corners. Built
+  as a *braking* cue, not a mere "corner ahead" flag.
+- `main.js`: `cornerTargetSpeed[]` per centerline sample (AI's severity
+  formula, `maxSpeed * (1 - 0.48 * severity)`) and `centerlineStep[]`,
+  precomputed once; `brakeUrgency()` = max over the next 140 samples of
+  needed decel / (0.8 * brakeDecel).
+- `race-hud.js`: minimap rim green (<0.55), yellow (<0.9), red (>=0.9).
+- Needs verification: thresholds and the 0.48 factor are borrowed from
+  the AI, not tuned for the player — may warn too early or too late.
+- Verified with `node --check` + `git diff --check` only.
