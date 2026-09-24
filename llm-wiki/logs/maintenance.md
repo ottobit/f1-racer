@@ -781,3 +781,15 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Risk: corner exits are much slower, so lap times and the player/AI
   balance shift; tune `accel` in `main.js` if the AI feels off.
 - Verified with `node --check` + `git diff --check` only.
+
+## 2026-09-24 — Heading-up minimap (#69)
+
+- Tester feedback: the north-up whole-circuit trace with a dot never told
+  where the next corner was or how tight; players ended up on the grass.
+- `race-hud.js` `drawMinimap()`: heading-up and zoomed (~220 m to the rim),
+  player arrow fixed at 2/3 height so more road ahead shows, track drawn
+  as an outlined band, rivals as dots, inside a dark round disc.
+- Bigger: canvas 130→200 px (`MINIMAP_CANVAS_SIZE`, `race.html`), CSS
+  width 4.2rem→8.5rem (6.5rem on short landscape phones, was 3rem).
+- Trade-off: no whole-circuit overview any more during the race.
+- Verified with `node --check` + `git diff --check` only.
