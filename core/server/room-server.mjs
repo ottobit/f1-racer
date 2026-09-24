@@ -212,6 +212,17 @@ wss.on("connection", (ws) => {
           }
           break;
         }
+        // Race voice chat (#1): WebRTC signaling (offer/answer/ICE/hello)
+        // relayed to one named peer in the same room. Audio itself flows
+        // peer-to-peer; the server never sees it and stores nothing.
+        case "voice_signal": {
+          requireBound(bound);
+          const peer = socketsByRoom.get(bound.roomCode)?.get(msg.to);
+          if (peer && msg.to !== bound.participantId) {
+            send(peer, { type: "voice_signal", from: bound.participantId, data: msg.data });
+          }
+          break;
+        }
         case "leave_room": {
           requireBound(bound);
           const { room } = leaveRoom(store, { roomCode: bound.roomCode, participantId: bound.participantId });
