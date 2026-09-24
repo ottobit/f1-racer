@@ -80,20 +80,23 @@ connects architecture, decisions, roadmap and external patterns.
 - Flow per work cycle (not per change): one GitHub issue -> one branch ->
   one draft PR (Italian body). Each change in the cycle is its own commit
   on that branch (`node --check` + `git diff --check` before each), pushed
-  as it lands. The user closes the cycle with the literal "Concludi" ->
-  one `logs/maintenance.md` entry, ready, merge ("Closes #N"), pull
-  `master`, delete branch; then remind the user to run `/compact`.
+  as it lands. Once the work is done, close the cycle right away without
+  waiting (user's rule, 2026-09-24: the user tests on `master`, never on
+  branches) — same steps as "Concludi": one `logs/maintenance.md` entry,
+  ready, merge ("Closes #N"), pull `master`, delete branch; then remind
+  the user to run `/compact`.
 - Risky changes (multiplayer protocol, start/race flow) get their own cycle.
 - Every relative client import/script/link carries a `?vNN` query (a new
   import starts at `?v=1`); bump it on every import/script/link whose file
   changed, all the way up to the HTML page. Unversioned imports can be
   served stale from the GitHub Pages cache (~10 min) after a deploy.
 - Token budget matters (user's explicit request, 2026-09-24):
-  - no browser/Playwright tests for small changes — syntax checks only,
-    the user plays and reports; real browser tests only for risky changes
-    (multiplayer protocol, start/race flow) and only when asked;
+  - no browser/Playwright tests — syntax checks only; the user plays on
+    `master` and reports (browser tests only if the user asks);
   - docs: one entry in `logs/maintenance.md` per cycle; touch `wiki/`
     pages, `F1-RACER-WIKI.md` or `RELEASE-CHECKLIST.md` only when
     architecture or a decision changes;
-  - no PR activity subscriptions or scheduled check-ins (no CI here);
+  - no scheduled check-ins (no CI here); the platform auto-subscribes
+    the session when a PR is created — leave it, don't spend a call
+    removing it mid-cycle; `Concludi` unsubscribes;
   - short replies: what was done, what the user must decide.

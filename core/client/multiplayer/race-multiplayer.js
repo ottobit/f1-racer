@@ -10,6 +10,8 @@
 // module hands those broadcasts to main.js and relays main.js's own local
 // state back out. No physics happen here.
 
+import { startVoiceChat, mountVoiceToggle } from "./voice-chat.js?v=1";
+
 const BROADCAST_INTERVAL_MS = 80; // ~12/s — plenty smooth at N<=10, trivial bandwidth
 
 export function setupMultiplayer() {
@@ -88,6 +90,15 @@ export function setupMultiplayer() {
 
     reportQualiTime(timeMs) {
       client.reportQualiTime(timeMs).catch(() => {});
+    },
+
+    // Race voice chat (#1). Call from inside a user gesture (the engine
+    // gate) so the mic permission prompt is allowed. Idempotent.
+    startVoice() {
+      if (this.voice || !window.RTCPeerConnection) return;
+      const toggle = mountVoiceToggle(document.getElementById("hud-topleft"));
+      this.voice = startVoiceChat({ client, onStatus: toggle.onStatus });
+      toggle.attach(this.voice);
     },
   };
 }

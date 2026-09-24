@@ -9,7 +9,7 @@
 
 - [#1](https://github.com/ottobit/f1-racer/issues/1) / [#36](https://github.com/ottobit/f1-racer/issues/36) /
   [#44](https://github.com/ottobit/f1-racer/issues/44),
-  **not closed — voice is the only stage left.** #1 itself demands staged
+  **closed — voice landed in #62 (P2P WebRTC mesh, race only, no TURN).** #1 itself demanded staged
   delivery (rooms, then race sync, then voice, each its own PR). #36
   (rooms/driver reservation) and #44 (qualifying/race sync, client-
   authoritative, host picks circuit/difficulty, no AI padding) are both

@@ -41,6 +41,7 @@ export function createRoomClient() {
   const stateListeners = new Set();
   const connectionListeners = new Set();
   const carStateListeners = new Set();
+  const voiceSignalListeners = new Set();
   let session = loadSession(); // {roomCode, participantId, reconnectToken}
   let lastRoom = null;
   let pingTimer = null;
@@ -77,6 +78,10 @@ export function createRoomClient() {
       // High-frequency, ephemeral — never touches session/room state or the
       // pending-request map, so it can't collide with a real reqId.
       carStateListeners.forEach((cb) => cb(msg));
+      return;
+    }
+    if (msg.type === "voice_signal") {
+      voiceSignalListeners.forEach((cb) => cb(msg.from, msg.data));
       return;
     }
     if (msg.type === "room_closed") {
@@ -167,6 +172,13 @@ export function createRoomClient() {
     ws.send(JSON.stringify({ type: "car_state", ...data }));
   }
 
+  // Race voice chat (#1): WebRTC signaling to one peer, relayed verbatim
+  // by the server. Fire-and-forget like sendCarState.
+  function sendVoiceSignal(to, data) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: "voice_signal", to, data }));
+  }
+
   async function leaveRoom() {
     try { await send("leave_room"); } catch { /* best-effort — we're leaving anyway */ }
     saveSession(null);
@@ -179,6 +191,7 @@ export function createRoomClient() {
   function onStateChange(cb) { stateListeners.add(cb); return () => stateListeners.delete(cb); }
   function onConnectionChange(cb) { connectionListeners.add(cb); return () => connectionListeners.delete(cb); }
   function onCarState(cb) { carStateListeners.add(cb); return () => carStateListeners.delete(cb); }
+  function onVoiceSignal(cb) { voiceSignalListeners.add(cb); return () => voiceSignalListeners.delete(cb); }
 
   return {
     createRoom,
@@ -191,10 +204,12 @@ export function createRoomClient() {
     startRace,
     reportQualiTime,
     sendCarState,
+    sendVoiceSignal,
     leaveRoom,
     onStateChange,
     onConnectionChange,
     onCarState,
+    onVoiceSignal,
     hasSavedSession: () => !!session,
     get room() { return lastRoom; },
     get participantId() { return session ? session.participantId : null; },
