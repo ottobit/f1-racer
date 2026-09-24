@@ -19,7 +19,7 @@ import { setupRaceCommands } from "./race-commands.js?v=1";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=1";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=1";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=2";
 
 import { steeringYaw } from "./steering.js?v=1";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
@@ -1355,6 +1355,8 @@ function armEngine() {
   if (engineArmed) return;
   engineArmed = true;
   raceAudio.arm();
+  // Race voice chat (#1): same gesture, so the mic prompt is allowed.
+  if (multiplayer) multiplayer.startVoice();
   // A pad button is not a user activation, so the audio context may start
   // suspended: resume it on the next real key or tap.
   window.addEventListener("keydown", () => raceAudio.arm(), { once: true });

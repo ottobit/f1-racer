@@ -30,3 +30,7 @@ html.touch #touch-controls{padding:0 max(16px,env(safe-area-inset-right)) max(18
    the controls clear of that strip (no browser toolbar pushes them up). */
 @media(display-mode:standalone),(display-mode:fullscreen){html.touch #touch-controls{padding-bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}
 @media(display-mode:standalone) and (orientation:landscape),(display-mode:fullscreen) and (orientation:landscape){#motion-controls{bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}
+/* Race voice chat toggle (#1), under the lap counter. */
+.voice-toggle{display:block;margin-top:6px;min-height:36px;padding:4px 10px;border:1px solid #a8c6d866;border-radius:6px;background:#102331c9;color:#eef8ff;font:600 12px system-ui;pointer-events:auto;touch-action:manipulation}
+.voice-toggle[aria-pressed="true"]{border-color:#f7948599;color:#f7c9c2}
+.voice-toggle:disabled{opacity:.6}
