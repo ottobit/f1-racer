@@ -11,8 +11,8 @@ import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
 import { setupRaceInput } from "./race-input.js?v=41";
 import { setupRaceHud } from "./race-hud.js?v=33";
 import { setupRaceCamera } from "./race-camera.js?v=27";
-import { setupPlayerPhysics } from "./player-physics.js?v=2";
-import { setupRaceAi } from "./race-ai.js?v=27";
+import { setupPlayerPhysics } from "./player-physics.js?v=3";
+import { setupRaceAi } from "./race-ai.js?v=28";
 import { setupRaceSystems } from "./race-systems.js?v=27";
 import { setupRaceProgress } from "./race-progress.js?v=27";
 import { setupRaceCommands } from "./race-commands.js?v=1";
@@ -89,7 +89,9 @@ const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom"
 const CAR = {
   maxSpeed: 84 * (1 + GARAGE_EFFECTS.speed * 0.006) * (isRaining ? RAIN_MAX_SPEED_MULTIPLIER : 1),
   reverseMaxSpeed: -28,
-  accel: 47 * (1 + GARAGE_EFFECTS.traction * 0.006),
+  // Launch acceleration (m/s²); fades with speed in player-physics.js.
+  // Was a flat 47 (0-100 km/h in 0.6s); now ~1.8s 0-100, ~4s 0-200.
+  accel: 16 * (1 + GARAGE_EFFECTS.traction * 0.006),
   brakeDecel: 75 * (1 + GARAGE_EFFECTS.braking * 0.018),
   coastDecel: 28,
   maxTurnRate: 2.0 * (1 + GARAGE_EFFECTS.downforce * 0.012) * (isRaining ? RAIN_TURN_RATE_MULTIPLIER : 1), // rad/s ceiling; actual rate is scaled down further by
@@ -115,7 +117,7 @@ const diffPreset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.normale;
 
 const AI = {
   maxSpeed: 71 * diffPreset.speedMul * (isRaining ? RAIN_MAX_SPEED_MULTIPLIER : 1),
-  accel: 41 * diffPreset.accelMul,
+  accel: 14 * diffPreset.accelMul, // same player/AI ratio as the old 47/41
   turnRate: 2.1 * (isRaining ? RAIN_TURN_RATE_MULTIPLIER : 1),
   lookahead: 10, // base centerline samples ahead to steer toward
   cornerLookahead: 22, // samples used to preview upcoming bends

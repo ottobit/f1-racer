@@ -126,7 +126,10 @@ export function setupRaceAi({
     if (car.speed > aiMaxSpeed) {
       car.speed = Math.max(aiMaxSpeed, car.speed - ai.brakeDecel * dt);
     } else {
-      car.speed = Math.min(aiMaxSpeed, car.speed + ai.accel * dt);
+      // Same speed-fading power curve as the player (player-physics.js).
+      const speedFactor = Math.min(Math.abs(car.speed) / ai.maxSpeed, 1);
+      const powerFade = 1 - 0.85 * speedFactor * speedFactor;
+      car.speed = Math.min(aiMaxSpeed, car.speed + ai.accel * powerFade * dt);
     }
 
     const rate =

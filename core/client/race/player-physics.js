@@ -29,7 +29,10 @@ export function setupPlayerPhysics({
       state.speed -= car.brakeDecel * brakeAuthority * dt;
     } else if (throttle) {
       const traction = longitudinalGripBudget * (1 - accelerationLoadTransfer * 0.35);
-      state.speed += car.accel * traction * dt;
+      // Power fades with speed (aero drag): launch at car.accel, only ~15%
+      // of it left at top speed — roughly real F1 0-100/0-200/0-300 times.
+      const powerFade = 1 - 0.85 * preSpeedFactor * preSpeedFactor;
+      state.speed += car.accel * traction * powerFade * dt;
     } else {
       // Lift-off: aero drag + engine braking, strong at top speed (~1.4g)
       // and fading at low speed, instead of a flat ~3g that stopped the
