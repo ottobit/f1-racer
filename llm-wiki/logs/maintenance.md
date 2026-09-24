@@ -604,3 +604,42 @@ heredoc approach earlier in this session had corrupted a doc via backtick
 command substitution — this pass deliberately avoided that failure mode by
 keeping the substitution script in its own file, never inline in a
 double-quoted shell string.
+
+## 2026-09-24 — Fix: browser back button trapped users inside a multiplayer race (#48)
+
+User-reported bug: on desktop, once a multiplayer race started, pressing
+the browser's back button did not leave the race. Reproduced with a real
+Playwright `page.goBack()` before touching any code: the URL genuinely
+returned to room.html, but room.js's onStateChange handler saw the room's
+sessionPhase still "qualifying"/"racing" (the server session never
+changed just because this tab navigated away) and called goToRace() again
+immediately, bouncing straight back to race.html in the same tick — from
+the user's perspective indistinguishable from "back does nothing". Also
+checked and ruled out the HUD's own `.back-link` (`← circuiti` in
+race.html) as the culprit: a real synthetic mouse click there did
+navigate correctly, so that path was never the problem.
+
+Fix: room.js now tracks whether the current page load ever actually
+rendered the lobby (`sawLobbyThisLoad`). The auto-navigate-into-race call
+only fires when that's true — i.e. only for a live "the host just started
+it" transition witnessed while sitting in the lobby, never for a page
+load (via back-navigation or a fresh visit) that finds the room already
+mid-race. In that latter case the room-started banner shows a manual
+"Rientra in gara" link instead of forcing navigation, so back-navigating
+users get a real choice: rejoin, or actually leave via the existing "Esci"
+button / header link, both already unaffected by this bug.
+
+Verified with three real Playwright scenarios: back-navigate mid-qualifying
+now correctly stays on room.html (previously bounced straight back); the
+manual "Rientra in gara" link, when clicked, does navigate into the race
+as expected; and Esci from that state correctly returns to the room entry
+form. Zero page errors throughout.
+
+Also changed the home command card's copy from "Gioca con altri" to
+"Corri in multiplayer" per explicit user request ("la frase deve essere
+multiplayer o similari... immagina di dover vendere questa cosa") — kept
+the kicker ("STANZA") and the same verb+preposition+noun rhythm as the
+garage card's "Entra nel garage" for consistency, and punched up the
+subtext to lead with the benefit (challenge your friends) rather than
+just the mechanics (create/join a room). Verified with real screenshots,
+desktop and mobile, that the new copy still fits the card layout cleanly.
