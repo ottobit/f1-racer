@@ -688,3 +688,17 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   gate the audio context also resumes on the next real key or tap.
 - Decision: analog pedals deferred to a separate cycle (touches physics).
 - Verified with `node --check` + `git diff --check` only.
+
+## 2026-09-24 — Landscape fullscreen + home screen app (#56)
+
+- `race-input.js`: on touch devices, the first tap in landscape during
+  the race calls `requestFullscreen` (a user gesture is required, so
+  rotation alone cannot); rotating back to portrait exits. Skipped when
+  launched from the home screen (`display-mode` fullscreen/standalone).
+- New `manifest.webmanifest` (`display: fullscreen`) + icons
+  `assets/images/app-icon-{180,192,512}.png`; all 4 pages link it and
+  carry `apple-mobile-web-app-*` / `theme-color` meta.
+- Known limits: iPhone Safari has no page fullscreen — "Add to Home
+  Screen" is the only chrome-free route, keeps the iOS status bar, and
+  gets its own `localStorage` separate from Safari.
+- Verified with `node --check` + `git diff --check` only.
