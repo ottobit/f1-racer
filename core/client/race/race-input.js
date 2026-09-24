@@ -166,6 +166,7 @@ export function setupRaceInput({
   window.screen.orientation?.addEventListener("change", () => {
     if (motionActive || motionPending) stopMotion("Telefono ruotato: riattiva e calibra");
   });
+  setupLandscapeFullscreen();
 
   window.addEventListener("keydown", (event) => {
     if (event.target.closest?.("select,input,textarea,button")) return;
@@ -326,4 +327,29 @@ export function setupRaceInput({
   }
 
   return { input, steering, clearDrivingInput, updateSteeringInput, setExternalSteer };
+}
+
+// Video-style fullscreen on phones: browsers only allow requestFullscreen
+// from a user gesture, so rotating alone cannot enter it; the first tap in
+// landscape does. Rotating back to portrait leaves fullscreen. iPhone
+// Safari has no element fullscreen, so this silently does nothing there.
+function setupLandscapeFullscreen() {
+  const root = document.documentElement;
+  const request = root.requestFullscreen ?? root.webkitRequestFullscreen;
+  if (!request || !window.matchMedia("(pointer: coarse)").matches) return;
+  const landscape = window.matchMedia("(orientation: landscape)");
+  const fullscreenElement = () => document.fullscreenElement ?? document.webkitFullscreenElement;
+  window.addEventListener("touchend", () => {
+    if (!landscape.matches || fullscreenElement()) return;
+    try {
+      Promise.resolve(request.call(root, { navigationUI: "hide" })).catch(() => {});
+    } catch {}
+  });
+  landscape.addEventListener("change", () => {
+    if (landscape.matches || !fullscreenElement()) return;
+    const exit = document.exitFullscreen ?? document.webkitExitFullscreen;
+    try {
+      Promise.resolve(exit?.call(document)).catch(() => {});
+    } catch {}
+  });
 }
