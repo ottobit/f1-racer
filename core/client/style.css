@@ -227,7 +227,7 @@ html.race #app canvas {
 #minimap {
   display: block;
   margin: 0.35rem 0 0 auto;
-  width: 4.2rem;
+  width: 8.5rem;
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
 }
 
@@ -263,7 +263,7 @@ html.race #app canvas {
     display: none;
   }
   #minimap {
-    width: 3rem;
+    width: 6.5rem;
   }
   #hud-bottomright {
     padding: 0.3rem 0.55rem;
