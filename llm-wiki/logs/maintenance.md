@@ -745,3 +745,15 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   `master`), no browser tests; PR auto-subscription is left until close.
 - Verified with two Playwright contexts + fake mic against a local room
   server (connect, mute, reload, leave); not yet on real phones.
+
+## 2026-09-24 — Touch controls no longer start text selection on iOS (#63)
+
+- `race-controls.css`: on touch race pages, `user-select`, touch callout and
+  tap highlight are disabled for the body and every touch control; the
+  wheel's SVG (with its "OB" text) no longer takes pointer events, so the
+  `#wheel-control` div gets them.
+- Cause (probable, from the user's report): in the iPhone home-screen app,
+  landscape, a long press on control labels began a text selection and
+  iOS cancelled the touch, so the upper part of wheel/pedals felt dead.
+- Verified with `git diff --check` only (CSS); confirmation on the iPhone
+  pending.
