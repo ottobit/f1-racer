@@ -1,32 +1,32 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "../shared/circuits.js?v=38";
-import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js";
-import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js";
-import { DRIVER_ROSTER } from "../shared/driver-roster.js";
+import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=1";
+import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=1";
+import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
 import { cockpitThemeForDriver, liveryById } from "../shared/driver-themes.js?v=27";
-import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=28";
+import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=29";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
-import { setupRaceInput } from "./race-input.js?v=40";
+import { setupRaceInput } from "./race-input.js?v=41";
 import { setupRaceHud } from "./race-hud.js?v=33";
 import { setupRaceCamera } from "./race-camera.js?v=27";
-import { setupPlayerPhysics } from "./player-physics.js";
+import { setupPlayerPhysics } from "./player-physics.js?v=1";
 import { setupRaceAi } from "./race-ai.js?v=27";
 import { setupRaceSystems } from "./race-systems.js?v=27";
 import { setupRaceProgress } from "./race-progress.js?v=27";
-import { setupRaceCommands } from "./race-commands.js";
-import { setupCarCollisions } from "./race-collisions.js";
-import { setupRaceNameplates } from "./race-nameplates.js";
-import { setupAgentApi } from "./agent-api.js";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js";
+import { setupRaceCommands } from "./race-commands.js?v=1";
+import { setupCarCollisions } from "./race-collisions.js?v=1";
+import { setupRaceNameplates } from "./race-nameplates.js?v=1";
+import { setupAgentApi } from "./agent-api.js?v=1";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=1";
 
-import { steeringYaw } from "./steering.js";
+import { steeringYaw } from "./steering.js?v=1";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
 import { gearInfo, setupRaceAudio } from "./race-audio.js?v=2";
-import { setupRaceWeather } from "./race-weather.js";
-import { loadGraphicsProfile } from "../shared/graphics-profiles.js";
-import { setupDiagnosticsOverlay } from "./race-diagnostics.js";
+import { setupRaceWeather } from "./race-weather.js?v=1";
+import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=1";
+import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=1";
 import {
   sampleCenterline,
   headingOf,

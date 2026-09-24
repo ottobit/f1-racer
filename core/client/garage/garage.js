@@ -4,12 +4,12 @@ import {
   playerLivery,
   saveGarageSetup,
   setupEffects,
-} from "../shared/garage-setup.js?v=28";
+} from "../shared/garage-setup.js?v=29";
 import { createShowroom } from "./showroom.js?v=30";
 import { getCircuit } from "../shared/circuits.js?v=38";
-import { loadSelectedDriverId } from "../shared/driver-selection.js";
-import { loadGraphicsProfile } from "../shared/graphics-profiles.js";
-import { setupDiagnosticsOverlay } from "../race/race-diagnostics.js";
+import { loadSelectedDriverId } from "../shared/driver-selection.js?v=1";
+import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=1";
+import { setupDiagnosticsOverlay } from "../race/race-diagnostics.js?v=1";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
 const requestedCircuit = new URLSearchParams(location.search).get("circuit");
