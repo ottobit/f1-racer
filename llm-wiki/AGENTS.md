@@ -95,5 +95,7 @@ connects architecture, decisions, roadmap and external patterns.
   - docs: one entry in `logs/maintenance.md` per cycle; touch `wiki/`
     pages, `F1-RACER-WIKI.md` or `RELEASE-CHECKLIST.md` only when
     architecture or a decision changes;
-  - no PR activity subscriptions or scheduled check-ins (no CI here);
+  - no scheduled check-ins (no CI here); the platform auto-subscribes
+    the session when a PR is created — leave it, don't spend a call
+    removing it mid-cycle; `Concludi` unsubscribes;
   - short replies: what was done, what the user must decide.
