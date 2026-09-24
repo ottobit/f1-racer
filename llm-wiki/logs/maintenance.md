@@ -757,3 +757,15 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   iOS cancelled the touch, so the upper part of wheel/pedals felt dead.
 - Verified with `git diff --check` only (CSS); confirmation on the iPhone
   pending.
+
+## 2026-09-24 — Gentler lift-off and brake over throttle (#65)
+
+- Tester feedback: "either stopped or flat out"; no way to dab the brake
+  while holding full gas.
+- `player-physics.js`: brake now wins when both pedals are held (throttle
+  = forward && !back, also used for load transfer/stability). Lift-off
+  decel is `coastDecel * (0.12 + 0.38 * v²/vmax²)`: ~14 m/s² at top speed,
+  ~3.4 m/s² near a standstill (was a flat 28 m/s² at any speed).
+- Not changed: acceleration (still a flat 47 m/s², very quick to top
+  speed) — left for a separate decision since it shifts balance vs AI.
+- Verified with `node --check` + `git diff --check` only.
