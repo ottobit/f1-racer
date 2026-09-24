@@ -711,3 +711,17 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Known limit: `/compact` is a client command; no skill or hook can run
   it, so it stays a manual step for the user.
 - Verified with `git diff --check` only; first real run on the next cycle.
+
+## 2026-09-24 — Versioned imports and iOS home-screen touch controls (#60)
+
+- Every relative import in `core/client` now carries `?vNN` (new ones
+  start at `?v=1`), with version bumps chained up to the HTML pages, so the
+  installed PWA never mixes new pages with modules cached from before a
+  deploy. Rule made explicit in `llm-wiki/AGENTS.md`.
+- Known limit: GitHub Pages caches HTML ~10 min; there is no service
+  worker, so updates show on reopen after that window.
+- `race-controls.css`: in `display-mode: standalone/fullscreen` the touch
+  controls (and landscape motion controls) sit at least 34px above the
+  bottom edge; iOS was swallowing some taps in the home-indicator strip.
+- Verified with `node --check` + `git diff --check` only; the iOS fix still
+  needs confirmation on the user's iPhone.
