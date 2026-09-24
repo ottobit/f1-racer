@@ -830,3 +830,14 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race-brake-bar.js` renamed to `race-brake-map.js`: heading-up section (30 m behind to 300 m ahead) around the player's dot, per-segment green -> yellow -> red from the braking envelope, rivals in the section as dots, faded edges.
 - Canvas `#brake-map`: 11rem at right-center on desktop, 9rem (7.5rem at `max-height:520px`) above the gas pedal on touch.
 - Verified with `node --check`, `git diff --check` and a node script printing the per-circuit corner speeds; not played.
+
+## 2026-09-24 — Steering no longer caps top speed (#79)
+
+- `core/client/race/player-physics.js`: corner scrub factor 0.9 -> 0.2 and
+  sliding traction cut 0.42 -> 0.15. Before, half lock held the car at
+  ~185 km/h and full lock at ~107 km/h flat out, acting as a hidden limiter.
+- Now (node sim, grip 1): half lock ~289 km/h, full lock ~253 km/h; going
+  in too fast ends off the road instead of being slowed by the game.
+- Version bumps: `player-physics.js?v=4`, `main.js?v=56`,
+  `race-bootstrap.js?v=15`.
+- Verified with `node --check` and `git diff --check`; no browser test.
