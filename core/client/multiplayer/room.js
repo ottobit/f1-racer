@@ -34,6 +34,15 @@ const el = {
 el.circuitSelect.innerHTML += CIRCUITS.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
 
 let navigatedToRace = false;
+// Set only when this page load actually rendered the lobby at least once —
+// distinguishes "the race just started while I was sitting here" (auto-
+// navigate, the whole point of this redirect) from "I landed on room.html
+// with the room already mid-race" (e.g. the browser's back button after
+// room.html already sent me to race.html once) — the latter must NOT
+// immediately bounce the user right back into the race with no way to
+// actually leave (bug reported by the user: desktop back button trapped
+// inside the race).
+let sawLobbyThisLoad = false;
 
 function hex(color) {
   return `#${color.toString(16).padStart(6, "0")}`;
@@ -112,15 +121,17 @@ function renderRoom(room) {
   el.startBtn.disabled = !room.circuitId || !allReady;
 
   if (inLobby) {
+    sawLobbyThisLoad = true;
     el.raceStarted.hidden = true;
-  } else if (room.sessionPhase === "qualifying") {
+  } else if (room.sessionPhase === "qualifying" || room.sessionPhase === "racing") {
+    const label = room.sessionPhase === "qualifying" ? "Qualifica" : "Gara";
     el.raceStarted.hidden = false;
-    el.raceStarted.textContent = "🏁 Qualifica in corso — passa alla gara…";
-    goToRace(room);
-  } else if (room.sessionPhase === "racing") {
-    el.raceStarted.hidden = false;
-    el.raceStarted.textContent = "🏁 Gara in corso — passa alla gara…";
-    goToRace(room);
+    if (sawLobbyThisLoad) {
+      el.raceStarted.textContent = `🏁 ${label} in corso — passa alla gara…`;
+      goToRace(room);
+    } else {
+      el.raceStarted.innerHTML = `🏁 ${label} già in corso in questa stanza. <a href="#" id="room-rejoin-link">Rientra in gara</a>`;
+    }
   }
 }
 
@@ -135,6 +146,12 @@ function goToRace(room) {
   if (roomServer) params.set("roomServer", roomServer);
   location.href = `race.html?${params.toString()}`;
 }
+
+el.raceStarted.addEventListener("click", (e) => {
+  if (e.target.id !== "room-rejoin-link") return;
+  e.preventDefault();
+  if (client.room) goToRace(client.room);
+});
 
 client.onStateChange(renderRoom);
 client.onConnectionChange((status) => {

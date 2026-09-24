@@ -868,8 +868,8 @@ labeled, a livery colour dot per driver via `core/client/shared/driver-themes.js
 button (disabled until a circuit is chosen and everyone is ready) that now
 navigates every participant's tab to `race.html?circuit=...&difficulty=...
 &room=...` once qualifying actually begins. `index.html` promotes it to one
-of the two dominant `home-command` cards ("Gioca con altri", #40) — see
-`decisions.md`'s "Home and Circuit Selection" section for that history.
+of the two dominant `home-command` cards ("Corri in multiplayer", #40) —
+see `decisions.md`'s "Home and Circuit Selection" section for that history.
 
 **Stage 2's bridge into the actual race** — `core/client/multiplayer/race-bootstrap.js` and
 `core/client/multiplayer/race-multiplayer.js`, both new:

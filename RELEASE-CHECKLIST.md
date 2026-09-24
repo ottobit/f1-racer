@@ -244,7 +244,7 @@ in this environment, so no hardware performance claim is made.
 ## Multiplayer Stage 1 regression (#36, part of #1: rooms, driver reservation)
 
 - [x] Solo flow (home → difficulty/driver → circuit → race with 9 AI) works identically whether or not `server/room-server.mjs` is running — verified with the room server stopped entirely, zero console errors.
-- [x] Home page links to `room.html` — **superseded by #40/#38**: multiplayer is now one of the two dominant `home-command` cards (Garage + "Gioca con altri"), not a secondary entry; the solo circuit shortcut was removed outright per user request. See `decisions.md`'s "Home and Circuit Selection" section for the full history.
+- [x] Home page links to `room.html` — **superseded by #40/#38**: multiplayer is now one of the two dominant `home-command` cards (Garage + "Corri in multiplayer"), not a secondary entry; the solo circuit shortcut was removed outright per user request. See `decisions.md`'s "Home and Circuit Selection" section for the full history.
 - [x] Two real headless-browser clients against a real local `room-server.mjs`: create room → 4-char code; join with that code; both see each other via live `room_state` broadcast.
 - [x] A driver reservation by one participant is broadcast live and disables that driver for the other participant; reserving an already-taken driver is rejected with a clear error.
 - [x] Non-host `start_race` is hidden/rejected; host `start_race` began qualifying in Stage 1's own testing — **superseded by Stage 2 (#44, see the dedicated section below)**, where `start_race` now requires a chosen circuit and every participant ready, and genuinely begins a synced qualifying session instead of a bare confirmation.
