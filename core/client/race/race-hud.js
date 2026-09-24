@@ -22,6 +22,7 @@ export function setupRaceHud({
   minimapCanvasSize,
   minimapTrackPoints,
   minimapPoint,
+  brakeUrgency = () => 0,
   qualifyingRivals,
   getQualifyingRivals,
   isDisconnected = () => false,
@@ -192,9 +193,13 @@ export function setupRaceHud({
     ctx.lineWidth = 1;
     ctx.stroke();
 
+    // Braking hint rim (#71): green = no need to brake, yellow = brake
+    // soon, red = brake now for the corner ahead.
+    const urgency = brakeUrgency();
     ctx.beginPath();
-    ctx.arc(half, half, half - 1, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.arc(half, half, half - 4, 0, Math.PI * 2);
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = urgency >= 0.9 ? "#ff4b3e" : urgency >= 0.55 ? "#ffd24a" : "rgba(112, 225, 197, 0.85)";
     ctx.stroke();
   }
 
