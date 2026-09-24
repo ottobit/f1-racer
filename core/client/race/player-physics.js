@@ -23,7 +23,9 @@ export function setupPlayerPhysics({
     const throttle = input.forward && !input.back;
     const brakingLoadTransfer = input.back ? 0.12 + 0.12 * preSpeedFactor : 0;
     const accelerationLoadTransfer = throttle ? 0.08 + 0.08 * preSpeedFactor : 0;
-    const longitudinalGripBudget = Math.max(0.5, 1 - preLateralDemand * 0.42);
+    // Mild traction cut while sliding (#79): a stronger cut acted as an
+    // invisible speed limiter whenever the wheel was turned.
+    const longitudinalGripBudget = Math.max(0.5, 1 - preLateralDemand * 0.15);
     if (input.back) {
       const brakeAuthority = longitudinalGripBudget * (1 + brakingLoadTransfer * 0.25);
       state.speed -= car.brakeDecel * brakeAuthority * dt;
@@ -90,7 +92,10 @@ export function setupPlayerPhysics({
         : 0;
     const cornerDrag = 1 + slipRatio * (1.8 - grip);
     if (state.speed > 0) {
-      state.speed = Math.max(0, state.speed - state.speed * (cornerDrag - 1) * 0.9 * dt);
+      // Light tyre scrub only (#79): going in too fast must end off the
+      // road, not be slowed down by the game (was 0.9: 185 km/h cap at
+      // half lock).
+      state.speed = Math.max(0, state.speed - state.speed * (cornerDrag - 1) * 0.2 * dt);
     }
 
     const forwardX = Math.sin(state.heading);
