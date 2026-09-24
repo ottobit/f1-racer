@@ -1,7 +1,7 @@
 import { CIRCUITS, LAPS_PER_RACE } from "../shared/circuits.js?v=38";
-import { computeStandings, resetChampionship } from "../shared/championship.js";
-import { DRIVER_ROSTER } from "../shared/driver-roster.js";
-import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js";
+import { computeStandings, resetChampionship } from "../shared/championship.js?v=1";
+import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
+import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=1";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
 

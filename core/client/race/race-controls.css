@@ -25,3 +25,8 @@ html.touch #touch-controls{padding:0 max(16px,env(safe-area-inset-right)) max(18
    wide, comfortably above the usual 44px minimum touch target. */
 @media(max-height:520px){#wheel-control{width:164px;height:164px}.touch-btn{height:88px;width:68px}#btn-gas{height:116px;width:76px}.touch-btn::before{height:24px}html.touch #touch-controls{padding-bottom:max(8px,env(safe-area-inset-bottom))}}
 @media(max-width:380px){#wheel-control{width:168px;height:168px}.touch-btn{width:64px}#btn-gas{width:70px}#touch-controls .touch-group{gap:8px}}
+/* Home-screen app on iPhone: the page reaches the bottom edge, where iOS
+   gives its home-indicator gesture priority and swallows some taps. Keep
+   the controls clear of that strip (no browser toolbar pushes them up). */
+@media(display-mode:standalone),(display-mode:fullscreen){html.touch #touch-controls{padding-bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}
+@media(display-mode:standalone) and (orientation:landscape),(display-mode:fullscreen) and (orientation:landscape){#motion-controls{bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}

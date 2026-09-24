@@ -84,7 +84,10 @@ connects architecture, decisions, roadmap and external patterns.
   one `logs/maintenance.md` entry, ready, merge ("Closes #N"), pull
   `master`, delete branch; then remind the user to run `/compact`.
 - Risky changes (multiplayer protocol, start/race flow) get their own cycle.
-- Bump the `?vNN` query on every import/script/link whose file changed.
+- Every relative client import/script/link carries a `?vNN` query (a new
+  import starts at `?v=1`); bump it on every import/script/link whose file
+  changed, all the way up to the HTML page. Unversioned imports can be
+  served stale from the GitHub Pages cache (~10 min) after a deploy.
 - Token budget matters (user's explicit request, 2026-09-24):
   - no browser/Playwright tests for small changes — syntax checks only,
     the user plays and reports; real browser tests only for risky changes

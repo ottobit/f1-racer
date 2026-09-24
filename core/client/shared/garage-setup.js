@@ -1,5 +1,5 @@
 import { liveryById } from "./driver-themes.js?v=27";
-import { driverById } from "./driver-roster.js";
+import { driverById } from "./driver-roster.js?v=1";
 
 export const GARAGE_KEY = "f1racer-garage-v1";
 export const DEFAULT_SETUP = { frontWing:"balanced", rearWing:"balanced", floor:"balanced", brakes:"balanced", suspension:"balanced" };
