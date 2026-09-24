@@ -19,9 +19,6 @@ export function setupRaceHud({
   updateEngineSound,
   playShiftClick,
   updateAmbientChorus,
-  minimapCanvasSize,
-  minimapTrackPoints,
-  minimapPoint,
   qualifyingRivals,
   getQualifyingRivals,
   isDisconnected = () => false,
@@ -52,7 +49,6 @@ export function setupRaceHud({
   const shiftLedEls = Array.from(document.querySelectorAll(".shift-led"));
   const hintEl = document.getElementById("hint");
   const penaltyNoticeEl = document.getElementById("penalty-notice");
-  const minimapCtx = document.getElementById("minimap").getContext("2d");
   const raceHintText = hintEl.textContent;
   const kmhPerUnit = 3.6;
   const gaugeMaxKmh = 300;
@@ -122,83 +118,6 @@ export function setupRaceHud({
     penaltyNoticeTimeout = setTimeout(() => penaltyNoticeEl.classList.remove("visible"), 2500);
   }
 
-  // Heading-up, zoomed-in map (#69): the track turns around the player's
-  // arrow so the next corner and how tight it is read at a glance; the old
-  // north-up whole-circuit trace didn't tell you which way the road bends.
-  const MINIMAP_VIEW_RADIUS = 220; // world units (m) from the arrow to the rim
-  const minimapUnit = minimapPoint(1, 0).x - minimapPoint(0, 0).x;
-
-  function drawMinimap() {
-    const ctx = minimapCtx;
-    const size = minimapCanvasSize;
-    const half = size / 2;
-    const anchorY = size * 0.66; // more road ahead than behind
-    const zoom = half / (MINIMAP_VIEW_RADIUS * minimapUnit);
-    ctx.clearRect(0, 0, size, size);
-
-    ctx.save();
-
-    // World forward is (sin h, cos h) in minimap space (x right, z down);
-    // rotate it to screen-up.
-    const forwardAngle = Math.atan2(Math.cos(state.heading), Math.sin(state.heading));
-    const player = minimapPoint(state.x, state.z);
-    ctx.translate(half, anchorY);
-    ctx.rotate(-Math.PI / 2 - forwardAngle);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-player.x, -player.y);
-
-    const traceTrack = () => {
-      ctx.beginPath();
-      minimapTrackPoints.forEach((point, index) => {
-        if (index === 0) ctx.moveTo(point.x, point.y);
-        else ctx.lineTo(point.x, point.y);
-      });
-      ctx.closePath();
-    };
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
-    ctx.lineWidth = 13 / zoom;
-    traceTrack();
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(235, 242, 248, 0.85)";
-    ctx.lineWidth = 8 / zoom;
-    traceTrack();
-    ctx.stroke();
-
-    for (const car of aiCars) {
-      const point = minimapPoint(car.x, car.z);
-      ctx.fillStyle = `#${car.color.toString(16).padStart(6, "0")}`;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, 4.5 / zoom, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-
-    // Player arrow, always centered and pointing up.
-    ctx.beginPath();
-    ctx.moveTo(half, anchorY - 8);
-    ctx.lineTo(half + 6, anchorY + 6);
-    ctx.lineTo(half, anchorY + 3);
-    ctx.lineTo(half - 6, anchorY + 6);
-    ctx.closePath();
-    ctx.fillStyle = "#70e1c5";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.7)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // No disc or rim (#73): the edges just fade out, so the map reads as
-    // part of the HUD instead of a badge.
-    ctx.save();
-    ctx.globalCompositeOperation = "destination-in";
-    const fade = ctx.createRadialGradient(half, half, half * 0.62, half, half, half);
-    fade.addColorStop(0, "rgba(0, 0, 0, 1)");
-    fade.addColorStop(1, "rgba(0, 0, 0, 0)");
-    ctx.fillStyle = fade;
-    ctx.fillRect(0, 0, size, size);
-    ctx.restore();
-  }
-
   function updateSpeedoHud() {
     const speedKmh = Math.abs(state.speed) * kmhPerUnit;
     speedValueEl.textContent = Math.round(speedKmh);
@@ -248,7 +167,6 @@ export function setupRaceHud({
 
     updateEngineSound(Math.abs(state.speed) / carMaxSpeed, rpmRatio);
     updateAmbientChorus(aiCars, state);
-    drawMinimap();
   }
 
   function updateHud() {

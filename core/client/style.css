@@ -221,14 +221,17 @@ html.race #app canvas {
   display: none;
 }
 
-/* Heading-up track map tucked under the top-right text, no card of
-   its own — a drop shadow instead of a background is enough to read
-   against any part of the sky or track behind it. */
-#minimap {
-  display: block;
-  margin: 0.35rem 0 0 auto;
-  width: 11rem;
+/* Braking bar (#75): the next 300 m as a vertical strip on the right edge.
+   Touch layouts move it above the gas pedal (race-controls.css). */
+#brake-bar {
+  position: fixed;
+  right: 1.2rem;
+  top: 50%;
+  width: 32px;
+  height: 180px;
+  transform: translateY(-50%);
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
 }
 
 /* Top-center instrument cluster: shift lights, DRS/ERS, speed bar and
@@ -261,9 +264,6 @@ html.race #app canvas {
      screens either side of the race itself. */
   #circuit-name {
     display: none;
-  }
-  #minimap {
-    width: 8.5rem;
   }
   #hud-bottomright {
     padding: 0.3rem 0.55rem;
