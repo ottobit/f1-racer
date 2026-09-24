@@ -769,3 +769,15 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Not changed: acceleration (still a flat 47 m/s², very quick to top
   speed) — left for a separate decision since it shifts balance vs AI.
 - Verified with `node --check` + `git diff --check` only.
+
+## 2026-09-24 — Realistic acceleration curve (#67)
+
+- Acceleration was a flat 47 m/s² (player) / 41 (AI): 0-100 km/h in 0.6s,
+  0-300 in 1.8s. Real F1: ~2.6s / ~4.5s (0-200) / ~10s.
+- Now `accel * (1 - 0.85 * (v/vmax)²)` for both player
+  (`player-physics.js`) and AI (`race-ai.js`), with launch accel 16 / 14
+  (same player/AI ratio as before). Player: ~1.8s 0-100, ~4s 0-200, top
+  speed after ~9-10s.
+- Risk: corner exits are much slower, so lap times and the player/AI
+  balance shift; tune `accel` in `main.js` if the AI feels off.
+- Verified with `node --check` + `git diff --check` only.
