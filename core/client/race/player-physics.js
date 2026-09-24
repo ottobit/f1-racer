@@ -18,17 +18,23 @@ export function setupPlayerPhysics({
       Math.abs(state.lateralSpeed) / Math.max(Math.abs(state.speed) * 0.3, 1),
       1
     );
+    // Brake wins over throttle, so the brake can be dabbed while the gas
+    // stays pinned (touch pedals can be held together).
+    const throttle = input.forward && !input.back;
     const brakingLoadTransfer = input.back ? 0.12 + 0.12 * preSpeedFactor : 0;
-    const accelerationLoadTransfer = input.forward ? 0.08 + 0.08 * preSpeedFactor : 0;
+    const accelerationLoadTransfer = throttle ? 0.08 + 0.08 * preSpeedFactor : 0;
     const longitudinalGripBudget = Math.max(0.5, 1 - preLateralDemand * 0.42);
-    if (input.forward) {
-      const traction = longitudinalGripBudget * (1 - accelerationLoadTransfer * 0.35);
-      state.speed += car.accel * traction * dt;
-    } else if (input.back) {
+    if (input.back) {
       const brakeAuthority = longitudinalGripBudget * (1 + brakingLoadTransfer * 0.25);
       state.speed -= car.brakeDecel * brakeAuthority * dt;
+    } else if (throttle) {
+      const traction = longitudinalGripBudget * (1 - accelerationLoadTransfer * 0.35);
+      state.speed += car.accel * traction * dt;
     } else {
-      const decel = car.coastDecel * dt;
+      // Lift-off: aero drag + engine braking, strong at top speed (~1.4g)
+      // and fading at low speed, instead of a flat ~3g that stopped the
+      // car from 300 km/h in about three seconds.
+      const decel = car.coastDecel * (0.12 + 0.38 * preSpeedFactor * preSpeedFactor) * dt;
       if (state.speed > 0) state.speed = Math.max(0, state.speed - decel);
       else if (state.speed < 0) state.speed = Math.min(0, state.speed + decel);
     }
@@ -47,7 +53,7 @@ export function setupPlayerPhysics({
     const steerSign = state.speed >= 0 ? 1 : -1;
     const steerAmount = steering.value;
 
-    const loadTransferSteer = input.back ? 1.08 : input.forward ? 0.94 : 1;
+    const loadTransferSteer = input.back ? 1.08 : throttle ? 0.94 : 1;
     const combinedDemand = Math.min(Math.abs(state.lateralSpeed) / Math.max(Math.abs(state.speed) * 0.28, 1), 1);
     const gripSaturation = 1 - combinedDemand * 0.22;
     const targetYawRate = steeringYaw(steerAmount, state.speed, car.maxTurnRate, grip, loadTransferSteer * gripSaturation);
@@ -65,7 +71,7 @@ export function setupPlayerPhysics({
     const maxLateral = Math.abs(state.speed) * 0.32;
     const desiredLateral =
       steerAmount * Math.abs(state.speed) * 0.16 * (0.55 + 0.45 * grip) * steerSign;
-    const rearStability = input.back ? 0.86 : input.forward ? 0.92 : 1;
+    const rearStability = input.back ? 0.86 : throttle ? 0.92 : 1;
     const lateralResponse = (5.0 + grip * 3.0) * rearStability;
     state.lateralSpeed +=
       (desiredLateral - state.lateralSpeed) *
