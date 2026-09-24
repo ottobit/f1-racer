@@ -677,3 +677,14 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   one log entry per cycle; "Concludi" closes the cycle, then `/compact`.
 - Verified with `node --check` + `git diff --check` only; feel to be
   judged in play.
+
+## 2026-09-24 — PlayStation pad support (#54)
+
+- `race-input.js`: Gamepad API polled every frame ("standard" mapping).
+  Left stick steers (deadzone 0.12 + `shapeSteering`); R2/L2 are digital
+  gas/brake (threshold 0.25); Cross, Triangle, Square, R1 are replayed as
+  synthetic `keydown` (gate, `KeyC` camera, `KeyP` pit, `KeyE` ERS).
+- `main.js`: a pad press is not a user activation, so after the engine
+  gate the audio context also resumes on the next real key or tap.
+- Decision: analog pedals deferred to a separate cycle (touches physics).
+- Verified with `node --check` + `git diff --check` only.

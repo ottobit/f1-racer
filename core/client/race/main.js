@@ -8,7 +8,7 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
-import { setupRaceInput } from "./race-input.js?v=38";
+import { setupRaceInput } from "./race-input.js?v=39";
 import { setupRaceHud } from "./race-hud.js?v=33";
 import { setupRaceCamera } from "./race-camera.js?v=27";
 import { setupPlayerPhysics } from "./player-physics.js";
@@ -1355,6 +1355,10 @@ function armEngine() {
   if (engineArmed) return;
   engineArmed = true;
   raceAudio.arm();
+  // A pad button is not a user activation, so the audio context may start
+  // suspended: resume it on the next real key or tap.
+  window.addEventListener("keydown", () => raceAudio.arm(), { once: true });
+  window.addEventListener("pointerdown", () => raceAudio.arm(), { once: true });
   engineGateEl.hidden = true;
   window.removeEventListener("keydown", armEngine);
   window.removeEventListener("pointerdown", armEngine);
