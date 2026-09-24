@@ -9,7 +9,7 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 import { createStudioEnvironment } from "../shared/car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
 import { setupRaceInput } from "./race-input.js?v=41";
-import { setupRaceHud } from "./race-hud.js?v=34";
+import { setupRaceHud } from "./race-hud.js?v=35";
 import { setupRaceCamera } from "./race-camera.js?v=27";
 import { setupPlayerPhysics } from "./player-physics.js?v=3";
 import { setupRaceAi } from "./race-ai.js?v=28";
@@ -246,6 +246,54 @@ function minimapPoint(x, z) {
   return { x: x * minimapScale + minimapOffsetX, y: z * minimapScale + minimapOffsetZ };
 }
 const minimapTrackPoints = centerline.map((p) => minimapPoint(p.x, p.z));
+
+// --- Braking hint (#71) ------------------------------------------------------
+// Precomputed once: the speed to carry at each centerline sample, from the
+// same corner-severity estimate the AI brakes on (race-ai.js), and the
+// distance between samples. Each frame, brakeUrgency() asks how hard the
+// player must brake to reach every upcoming target speed in the distance
+// left, relative to what the brakes can do: <0.55 fine, <0.9 brake soon,
+// >=0.9 brake now. Drives the minimap rim colour.
+const BRAKE_HINT_CORNER_WINDOW = 22;
+const BRAKE_HINT_MAX_AHEAD = 140; // samples scanned ahead (~well past any braking zone)
+const cornerTargetSpeed = centerline.map((_, i) => {
+  let total = 0;
+  let maxStep = 0;
+  let previous = headingOf(centerline[i]);
+  for (let step = 1; step <= BRAKE_HINT_CORNER_WINDOW; step++) {
+    const heading = headingOf(centerline[(i + step) % centerline.length]);
+    let delta = heading - previous;
+    while (delta > Math.PI) delta -= Math.PI * 2;
+    while (delta < -Math.PI) delta += Math.PI * 2;
+    total += delta;
+    maxStep = Math.max(maxStep, Math.abs(delta));
+    previous = heading;
+  }
+  const severity = Math.min(1, Math.max(Math.abs(total) * 0.72, maxStep * 6));
+  return CAR.maxSpeed * (1 - 0.48 * severity);
+});
+const centerlineStep = centerline.map((p, i) => {
+  const next = centerline[(i + 1) % centerline.length];
+  return Math.hypot(next.x - p.x, next.z - p.z);
+});
+
+function brakeUrgency() {
+  const v = state.speed;
+  if (v < 8) return 0;
+  const start = nearestTrackInfo(state.x, state.z).idx;
+  const usableBrake = CAR.brakeDecel * 0.8;
+  let urgency = 0;
+  let distance = 0;
+  for (let k = 0; k < BRAKE_HINT_MAX_AHEAD; k++) {
+    const idx = (start + k) % centerline.length;
+    distance += centerlineStep[idx];
+    const target = cornerTargetSpeed[idx];
+    if (target >= v) continue;
+    const needed = (v * v - target * target) / (2 * distance);
+    urgency = Math.max(urgency, needed / usableBrake);
+  }
+  return urgency;
+}
 
 // Thin closure over this file's own `centerline` around the imported pure
 // query, so every existing 2-arg call site (main.js and every setupXxx()
@@ -907,6 +955,7 @@ const hud = setupRaceHud({
   minimapCanvasSize: MINIMAP_CANVAS_SIZE,
   minimapTrackPoints,
   minimapPoint,
+  brakeUrgency,
   qualifyingRivals: AI_QUALIFYING_RESULTS,
   getQualifyingRivals: multiplayer ? multiplayerQualifyingRivals : undefined,
   isDisconnected: isDriverDisconnected,
