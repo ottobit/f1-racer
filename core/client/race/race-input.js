@@ -337,6 +337,8 @@ function setupLandscapeFullscreen() {
   const root = document.documentElement;
   const request = root.requestFullscreen ?? root.webkitRequestFullscreen;
   if (!request || !window.matchMedia("(pointer: coarse)").matches) return;
+  // Launched from the home screen: the app is already chrome-free.
+  if (window.matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches) return;
   const landscape = window.matchMedia("(orientation: landscape)");
   const fullscreenElement = () => document.fullscreenElement ?? document.webkitFullscreenElement;
   window.addEventListener("touchend", () => {
