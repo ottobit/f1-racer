@@ -71,6 +71,25 @@ Periodically check for:
 
 ## Local Policy
 
-For ``, keep `F1-RACER-WIKI.md` as the compact
+For this repository, keep `F1-RACER-WIKI.md` as the compact
 technical handoff, and use this LLM Wiki as the broader memory system that
 connects architecture, decisions, roadmap and external patterns.
+## Session workflow (user rules)
+
+- Talk to the user in Italian; commits, code and code comments in English.
+- Flow per change: GitHub issue -> branch -> code -> `node --check` +
+  `git diff --check` -> commit ("Closes #N") -> push -> draft PR (Italian
+  body) -> wait for the user's literal "Concludi" -> ready, merge, pull
+  `master`, delete branch.
+- Bump the `?vNN` query on every import/script/link whose file changed.
+- Token budget matters (user's explicit request, 2026-09-24):
+  - no browser/Playwright tests for small changes — syntax checks only,
+    the user plays and reports; real browser tests only for risky changes
+    (multiplayer protocol, start/race flow) and only when asked;
+  - docs: one entry in `logs/maintenance.md` per change; touch `wiki/`
+    pages, `F1-RACER-WIKI.md` or `RELEASE-CHECKLIST.md` only when
+    architecture or a decision changes;
+  - no PR activity subscriptions or scheduled check-ins (no CI here);
+  - short replies: what was done, what the user must decide.
+- GitHub Pages serves `master` root; a branch can be previewed at
+  `https://raw.githack.com/ottobit/f1-racer/<branch>/index.html`.
