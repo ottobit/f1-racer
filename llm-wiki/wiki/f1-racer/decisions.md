@@ -273,3 +273,23 @@ described the old per-segment boxes as "sembra che stai giocando a fare i
 collage". Road-hugging strips are built from `offsetEdge()` (miter-cut at
 tight apexes) on a denser render-only sampling; gameplay keeps the
 360-sample centerline.
+
+## Start procedure and engine gate (#50)
+
+The 3-2-1-VIA countdown was replaced with the official F1 procedure, on
+explicit user request ("Lo start rendilo realistico: come fanno nelle gare
+ufficiali?"): race = five red lights one per second, random hold, lights
+out = go, no green light; qualifying = pit-exit light red -> green (real
+qualifying has no standing start). Don't reintroduce a green light or a
+numeric countdown for the race.
+
+The user also asked to hear the engine before the start. Browsers block
+audio until a user gesture, so the race page now opens with an "Avvia il
+motore" gate: the first key/tap fires the engine up and only then do the
+lights start. This is a hard platform constraint, not a design choice to
+"simplify away". Known trade-off: in multiplayer the server's qualifying
+clock keeps running while a player sits at the gate.
+
+The random hold (0.2-3s) is an estimate of the real range, not a sourced
+figure. In multiplayer it is seeded from the server's `raceStartedAt`
+so every participant gets the same hold.

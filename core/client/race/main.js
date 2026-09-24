@@ -23,7 +23,7 @@ import { setupMultiplayer } from "../multiplayer/race-multiplayer.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
-import { gearInfo, setupRaceAudio } from "./race-audio.js";
+import { gearInfo, setupRaceAudio } from "./race-audio.js?v=2";
 import { setupRaceWeather } from "./race-weather.js";
 import { loadGraphicsProfile } from "../shared/graphics-profiles.js";
 import { setupDiagnosticsOverlay } from "./race-diagnostics.js";
@@ -842,20 +842,20 @@ setupRaceCommands({
 });
 
 // Gear mapping and synthesized engine/shift/grid-chorus audio live in
-// race-audio.js. "Engine active" spans both session phases the player can
-// actually drive in: racing (raceState === "racing") and an in-progress
-// qualifying lap (qualiState === "running") — sessionPhase flips to "race"
-// once qualifying ends, so the two branches never overlap. A race-only
-// check here previously left the engine silent for the entire qualifying
-// session (#10).
+// race-audio.js. "grid" covers every moment the car is held on the line
+// (qualifying's pit-exit light, the race's five red lights): the engine
+// idles and the throttle free-revs it. "driving" is an actual flying lap
+// or the race itself (#10: qualifying counts too).
 const raceAudio = setupRaceAudio({
-  getEngineActive: () =>
-    (sessionPhase === "race" && raceState === "racing") ||
-    (sessionPhase === "qualifying" && qualiState === "running"),
+  getPhase: () => {
+    if (sessionPhase === "qualifying") return qualiState === "running" ? "driving" : "grid";
+    if (raceState === "racing") return "driving";
+    if (raceState === "countdown") return "grid";
+    return "idle";
+  },
+  getThrottle: () => (input.forward ? 1 : 0),
 });
-const { initEngineSound, updateEngineSound, playShiftClick, updateAmbientChorus } = raceAudio;
-window.addEventListener("keydown", initEngineSound, { once: true });
-window.addEventListener("pointerdown", initEngineSound, { once: true });
+const { updateEngineSound, playShiftClick, updateAmbientChorus } = raceAudio;
 
 // --- HUD -----------------------------------------------------------------
 
@@ -982,6 +982,7 @@ function driverName(driverId) {
 
 function finishRace() {
   raceState = "finished";
+  raceAudio.coolDown();
   const order = currentRaceOrder().map((o) => o.driverId);
   const position = order.indexOf("player") + 1;
 
@@ -1118,7 +1119,7 @@ function applyQualifyingResult(order) {
 
   sessionPhase = "race";
   raceState = "countdown";
-  startRaceCountdown();
+  startRaceCountdown(multiplayer ? multiplayer.room.raceStartedAt : null);
 }
 
 // Ends the qualifying session: combines the player's best flying lap (or
@@ -1332,46 +1333,151 @@ function update(dt) {
   hud.updateHud();
 }
 
-// Real standing start: the car(s) sit still while this counts down, then
-// everyone is free to move at once. Shared by the qualifying launch and
-// the race start — same 3-2-1-VIA, different thing happens once the
-// lights go out (see the two wrappers below).
-function runStartCountdown(onGo) {
-  const el = document.getElementById("countdown-overlay");
-  const steps = ["3", "2", "1", "VIA!"];
-  let i = 0;
-  function tick() {
-    if (!el) return;
-    el.textContent = steps[i];
-    el.hidden = false;
-    i++;
-    if (i < steps.length) {
-      setTimeout(tick, 900);
-    } else {
-      setTimeout(() => {
-        el.hidden = true;
-        onGo();
-      }, 600);
+// --- Engine fire-up gate -------------------------------------------------
+//
+// Browsers block audio until a user gesture, and the engine has to be
+// heard on the grid before the start — so no start procedure begins until
+// the player fires the engine up (any key or tap). ?agent=1 skips the gate:
+// an external agent has no gesture to give and doesn't need sound.
+const isAgentSession = new URLSearchParams(location.search).get("agent") === "1";
+const engineGateEl = document.getElementById("engine-gate");
+const ENGINE_FIREUP_MS = 1200; // let the fire-up be heard before the lights
+let engineArmed = false;
+let engineReady = isAgentSession;
+const engineReadyQueue = [];
+
+function whenEngineReady(fn) {
+  if (engineReady) fn();
+  else engineReadyQueue.push(fn);
+}
+
+function armEngine() {
+  if (engineArmed) return;
+  engineArmed = true;
+  raceAudio.arm();
+  engineGateEl.hidden = true;
+  window.removeEventListener("keydown", armEngine);
+  window.removeEventListener("pointerdown", armEngine);
+  setTimeout(() => {
+    engineReady = true;
+    engineReadyQueue.splice(0).forEach((fn) => fn());
+  }, ENGINE_FIREUP_MS);
+}
+
+if (!isAgentSession) {
+  engineGateEl.hidden = false;
+  window.addEventListener("keydown", armEngine);
+  window.addEventListener("pointerdown", armEngine);
+}
+
+// --- Start procedures ----------------------------------------------------
+//
+// Race: the F1 standing start. Five red lights come on one per second;
+// after the fifth, a random hold, then all five go out together — lights
+// out IS the start, there is no green light. Qualifying has no standing
+// start in real F1: the session opens when the pit-exit light turns from
+// red to green, so that's what the qualifying launch shows.
+//
+// In multiplayer the random hold is seeded from the server's own
+// raceStartedAt, so every participant's lights go out after the same
+// delay instead of each browser rolling its own — otherwise one player
+// could get a free head start of up to ~3s.
+const startLightsEl = document.getElementById("start-lights");
+const LIGHT_INTERVAL_MS = 1000;
+const LIGHTS_OUT_MIN_MS = 200;
+const LIGHTS_OUT_MAX_MS = 3000;
+const PIT_EXIT_RED_MS = 1800;
+
+function seededUnit(seed) {
+  let t = (Math.floor(seed) >>> 0) + 0x6d2b79f5;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+// Each start sequence gets an id; a newer one (e.g. multiplayer's server
+// grid arriving while qualifying's pit-exit light is still red) makes any
+// older sequence's pending timers no-ops, so they can't hide or overwrite
+// the gantry the new sequence is using.
+let startSequenceId = 0;
+
+function showGantry(podCount, caption) {
+  startSequenceId++;
+  startLightsEl.innerHTML = `
+    <div class="start-lights-gantry">${'<span class="start-light-pod"><i></i><i></i></span>'.repeat(podCount)}</div>
+    <p class="start-lights-caption">${caption}</p>`;
+  startLightsEl.classList.remove("is-leaving");
+  startLightsEl.hidden = false;
+  return [...startLightsEl.querySelectorAll(".start-light-pod")];
+}
+
+function hideGantry(afterMs) {
+  const id = startSequenceId;
+  setTimeout(() => {
+    if (id !== startSequenceId) return;
+    startLightsEl.classList.add("is-leaving");
+    setTimeout(() => {
+      if (id === startSequenceId) startLightsEl.hidden = true;
+    }, 400);
+  }, afterMs);
+}
+
+function runRaceStartLights(seed, onGo) {
+  const pods = showGantry(5, "");
+  const id = startSequenceId;
+  const unit = seed == null ? Math.random() : seededUnit(seed);
+  const hold = LIGHTS_OUT_MIN_MS + unit * (LIGHTS_OUT_MAX_MS - LIGHTS_OUT_MIN_MS);
+  let lit = 0;
+  raceAudio.setGridIntensity(0.25);
+  function lightNext() {
+    if (id !== startSequenceId) return;
+    pods[lit].classList.add("is-red");
+    lit++;
+    // The whole field builds revs as the lights come on.
+    raceAudio.setGridIntensity(0.25 + lit * 0.15);
+    if (lit < pods.length) {
+      setTimeout(lightNext, LIGHT_INTERVAL_MS);
+      return;
     }
+    setTimeout(() => {
+      if (id !== startSequenceId) return;
+      pods.forEach((pod) => pod.classList.remove("is-red"));
+      onGo();
+      hideGantry(900);
+    }, hold);
   }
-  tick();
+  setTimeout(lightNext, LIGHT_INTERVAL_MS);
+}
+
+function runPitExitLight(onGo) {
+  const pods = showGantry(1, "Uscita box");
+  const id = startSequenceId;
+  pods[0].classList.add("is-red");
+  setTimeout(() => {
+    if (id !== startSequenceId) return;
+    pods[0].classList.remove("is-red");
+    pods[0].classList.add("is-green");
+    startLightsEl.querySelector(".start-lights-caption").textContent = "Pista aperta";
+    onGo();
+    hideGantry(1200);
+  }, PIT_EXIT_RED_MS);
 }
 
 function startQualifyingCountdown() {
-  runStartCountdown(() => {
+  whenEngineReady(() => runPitExitLight(() => {
     state.lapStartTime = performance.now();
     qualiState = "running";
-  });
+  }));
 }
 
-function startRaceCountdown() {
-  runStartCountdown(() => {
+function startRaceCountdown(seed = null) {
+  whenEngineReady(() => runRaceStartLights(seed, () => {
     // state.lapStartTime is reset to the moment the lights go out, not
     // construction time, so the on-screen lap clock doesn't start ticking
-    // during the countdown itself.
+    // during the start sequence itself.
     state.lapStartTime = performance.now();
     raceState = "racing";
-  });
+  }));
 }
 
 function animate() {
@@ -1388,7 +1494,7 @@ function animate() {
 }
 
 // Agent API (#176): opt-in only, via ?agent=1, so normal play is untouched.
-if (new URLSearchParams(location.search).get("agent") === "1") {
+if (isAgentSession) {
   const agentApi = setupAgentApi({
     state,
     aiCars,

@@ -23,11 +23,11 @@ Run one complete pass on a current Chromium/Firefox/Safari browser.
 2. [ ] Select each difficulty once.
 3. [ ] Open each available circuit.
 4. [ ] Confirm the page renders without a blank canvas.
-5. [ ] Confirm the qualifying countdown starts and the qualifying session is 60 seconds.
+5. [ ] Confirm the "Avvia il motore" gate appears, a key/tap fires the engine up (audible idle), then the pit-exit light turns red -> green and the qualifying session is 60 seconds.
 6. [ ] Drive at least one complete qualifying lap.
 7. [ ] Confirm a qualifying time is recorded.
 8. [ ] Let qualifying finish and confirm a 10-car grid is produced.
-9. [ ] Confirm the race countdown freezes all cars until GO.
+9. [ ] Confirm the race start: five red lights one per second, random hold, all out together (no green); all cars frozen until lights out; throttle on the grid revs the engine.
 10. [ ] Confirm grid-position digits face toward the start/finish direction.
 11. [ ] Drive one clean lap and verify position/lap/time HUD.
 12. [ ] Confirm gear/speed instrument panel is centered at the top and does not overlap left/right HUD.
