@@ -40,6 +40,6 @@ html.touch #touch-controls{padding:0 max(16px,env(safe-area-inset-right)) max(18
    meant to be selected on touch. */
 html.race.touch body,html.race.touch #touch-controls *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 #wheel-control svg,#wheel-control svg *{pointer-events:none}
-/* Braking bar (#75) sits right above the gas pedal on touch. */
-html.touch #brake-bar{top:auto;transform:none;right:calc(1rem + 22px);bottom:calc(1rem + 140px + env(safe-area-inset-bottom,0px))}
-@media(max-height:520px){html.touch #brake-bar{height:130px;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 126px)}}
+/* Braking map (#77) sits right above the gas pedal on touch. */
+html.touch #brake-map{top:auto;transform:none;right:.25rem;width:9rem;height:9rem;bottom:calc(1rem + 134px + env(safe-area-inset-bottom,0px))}
+@media(max-height:520px){html.touch #brake-map{width:7.5rem;height:7.5rem;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 120px)}}

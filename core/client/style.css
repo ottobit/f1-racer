@@ -221,14 +221,14 @@ html.race #app canvas {
   display: none;
 }
 
-/* Braking bar (#75): the next 300 m as a vertical strip on the right edge.
-   Touch layouts move it above the gas pedal (race-controls.css). */
-#brake-bar {
+/* Braking map (#77): heading-up section of the next 300 m on the right
+   edge. Touch layouts move it above the gas pedal (race-controls.css). */
+#brake-map {
   position: fixed;
-  right: 1.2rem;
+  right: 1rem;
   top: 50%;
-  width: 32px;
-  height: 180px;
+  width: 11rem;
+  height: 11rem;
   transform: translateY(-50%);
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
   pointer-events: none;

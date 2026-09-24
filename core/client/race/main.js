@@ -10,7 +10,7 @@ import { createStudioEnvironment } from "../shared/car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
 import { setupRaceInput } from "./race-input.js?v=41";
 import { setupRaceHud } from "./race-hud.js?v=37";
-import { setupBrakeBar } from "./race-brake-bar.js?v=1";
+import { setupBrakeMap } from "./race-brake-map.js?v=1";
 import { setupRaceCamera } from "./race-camera.js?v=27";
 import { setupPlayerPhysics } from "./player-physics.js?v=3";
 import { setupRaceAi } from "./race-ai.js?v=28";
@@ -219,27 +219,48 @@ const centerline = sampleCenterline(trackCurve, CENTERLINE_SAMPLES);
 // Gameplay (progress, AI, collisions) keeps the 360-sample centerline.
 const visualCenterline = sampleCenterline(trackCurve, CENTERLINE_SAMPLES * 4);
 
-// --- Braking hint (#71, #75) -------------------------------------------------
-// Precomputed once: the speed to carry at each centerline sample, from the
-// same corner-severity estimate the AI brakes on (race-ai.js), and the
-// distance between samples. The braking bar (race-brake-bar.js) turns these
-// into a green-to-red strip of the next 300 m every frame.
-const BRAKE_HINT_CORNER_WINDOW = 22;
+// --- Braking hint (#71, #75, #77) --------------------------------------------
+// Precomputed once: the fastest speed the player's car can take each
+// centerline sample at, from the local curvature and the yaw rate the
+// steering model can actually deliver at that speed (steering.js, with a
+// margin for worn tyres and imperfect lines), plus the distance between
+// samples. The braking map (race-brake-map.js) turns these into a
+// green-to-red section of the next 300 m every frame. #75 reused the AI's
+// corner-severity estimate, which never dropped below ~160-210 km/h on
+// these short circuits, so the hint stayed green.
+const BRAKE_HINT_CURVE_HALF_WINDOW_M = 6;
+const BRAKE_HINT_YAW_MARGIN = 0.8;
 const cornerTargetSpeed = centerline.map((_, i) => {
-  let total = 0;
-  let maxStep = 0;
-  let previous = headingOf(centerline[i]);
-  for (let step = 1; step <= BRAKE_HINT_CORNER_WINDOW; step++) {
-    const heading = headingOf(centerline[(i + step) % centerline.length]);
-    let delta = heading - previous;
-    while (delta > Math.PI) delta -= Math.PI * 2;
-    while (delta < -Math.PI) delta += Math.PI * 2;
-    total += delta;
-    maxStep = Math.max(maxStep, Math.abs(delta));
-    previous = heading;
+  const n = centerline.length;
+  let back = i;
+  let ahead = i;
+  let length = 0;
+  while (length < BRAKE_HINT_CURVE_HALF_WINDOW_M * 2 && ahead - back < n / 4) {
+    const nextAhead = (ahead + 1) % n;
+    const pa = centerline[ahead % n];
+    const pb = centerline[nextAhead];
+    length += Math.hypot(pb.x - pa.x, pb.z - pa.z);
+    ahead += 1;
+    const pBack = centerline[(back - 1 + n) % n];
+    const pCur = centerline[(back + n) % n];
+    length += Math.hypot(pCur.x - pBack.x, pCur.z - pBack.z);
+    back -= 1;
   }
-  const severity = Math.min(1, Math.max(Math.abs(total) * 0.72, maxStep * 6));
-  return CAR.maxSpeed * (1 - 0.48 * severity);
+  let turn = headingOf(centerline[ahead % n]) - headingOf(centerline[(back + n) % n]);
+  while (turn > Math.PI) turn -= Math.PI * 2;
+  while (turn < -Math.PI) turn += Math.PI * 2;
+  const curvature = Math.abs(turn) / Math.max(length, 1e-3);
+  const canHold = (v) =>
+    Math.abs(steeringYaw(1, v, CAR.maxTurnRate, 1, 1)) * BRAKE_HINT_YAW_MARGIN >= v * curvature;
+  if (canHold(CAR.maxSpeed)) return CAR.maxSpeed;
+  let lo = 5;
+  let hi = CAR.maxSpeed;
+  for (let k = 0; k < 24; k++) {
+    const mid = (lo + hi) / 2;
+    if (canHold(mid)) lo = mid;
+    else hi = mid;
+  }
+  return lo;
 });
 const centerlineStep = centerline.map((p, i) => {
   const next = centerline[(i + 1) % centerline.length];
@@ -889,8 +910,8 @@ function isDriverDisconnected(driverId) {
   return multiplayer ? multiplayer.isDriverDisconnected(driverId) : false;
 }
 
-const brakeBar = setupBrakeBar({
-  canvas: document.getElementById("brake-bar"),
+const brakeMap = setupBrakeMap({
+  canvas: document.getElementById("brake-map"),
   centerline,
   centerlineStep,
   cornerTargetSpeed,
@@ -1185,7 +1206,7 @@ function updateQualifying(dt) {
 
   const info = integratePlayerMotion(dt);
   applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
-  brakeBar();
+  brakeMap();
 
   // Multiplayer (#44): other participants are really out on track during
   // qualifying too (no solo flying lap here), driven by network samples;
@@ -1272,7 +1293,7 @@ function update(dt) {
   carCollisions.resolve(allCars, now);
 
   applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
-  brakeBar();
+  brakeMap();
   for (const car of aiCars) applyCarToMesh(car, car.x, car.z, car.heading, car.speed, dt);
 
   // Lap timing (current/best lap) uses the same fair progress accumulator

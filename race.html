@@ -25,8 +25,8 @@
   <meta name="twitter:description" content="Time trial 3D su circuito misto, su una griglia da 10 auto. Giocabile subito nel browser." />
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="stylesheet" href="core/client/style.css?v=41" />
-  <link rel="stylesheet" href="core/client/race/race-controls.css?v=41" />
+  <link rel="stylesheet" href="core/client/style.css?v=42" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=42" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -99,7 +99,7 @@
       </div>
     </div>
 
-    <canvas id="brake-bar" width="64" height="360" aria-hidden="true"></canvas>
+    <canvas id="brake-map" width="256" height="256" aria-hidden="true"></canvas>
 
     <div id="hud-bottomright" class="hud-panel">
       <div id="shift-lights" aria-hidden="true">
@@ -187,6 +187,6 @@
     </div>
   </div>
 
-  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=13"></script>
+  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=14"></script>
 </body>
 </html>
