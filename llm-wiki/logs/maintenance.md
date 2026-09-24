@@ -822,3 +822,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race-hud.js`: `drawMinimap()` and its params removed. `race.html`: `#minimap` canvas replaced by `#brake-bar`.
 - Layout: right edge, vertically centered on desktop (`style.css`); above the gas pedal on touch (`race-controls.css`), shorter at `max-height:520px`. The canvas backing store follows its CSS box.
 - Verified with `node --check` and `git diff --check` only.
+
+## 2026-09-24 — Rotating braking map with real corner speeds (#77)
+
+- Root cause of "always green" in #75: `cornerTargetSpeed` reused the AI corner-severity formula, whose minimum is ~157-212 km/h on the current (short, 400-1900 m) circuits, so the player rarely exceeded it.
+- `main.js`: `cornerTargetSpeed` now = highest speed where `|steeringYaw(1, v, CAR.maxTurnRate)| * 0.8 >= v * curvature`, curvature over a ±6 m window. Corners come out at ~50-140 km/h.
+- `race-brake-bar.js` renamed to `race-brake-map.js`: heading-up section (30 m behind to 300 m ahead) around the player's dot, per-segment green -> yellow -> red from the braking envelope, rivals in the section as dots, faded edges.
+- Canvas `#brake-map`: 11rem at right-center on desktop, 9rem (7.5rem at `max-height:520px`) above the gas pedal on touch.
+- Verified with `node --check`, `git diff --check` and a node script printing the per-circuit corner speeds; not played.
