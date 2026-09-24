@@ -34,3 +34,9 @@ html.touch #touch-controls{padding:0 max(16px,env(safe-area-inset-right)) max(18
 .voice-toggle{display:block;margin-top:6px;min-height:36px;padding:4px 10px;border:1px solid #a8c6d866;border-radius:6px;background:#102331c9;color:#eef8ff;font:600 12px system-ui;pointer-events:auto;touch-action:manipulation}
 .voice-toggle[aria-pressed="true"]{border-color:#f7948599;color:#f7c9c2}
 .voice-toggle:disabled{opacity:.6}
+/* iOS: a long press on control labels (the wheel's SVG "OB" text, "STERZO",
+   pedal captions) started a text selection/callout and cancelled the touch,
+   so the upper part of the controls felt dead. Nothing on the race page is
+   meant to be selected on touch. */
+html.race.touch body,html.race.touch #touch-controls *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#wheel-control svg,#wheel-control svg *{pointer-events:none}
