@@ -122,38 +122,79 @@ export function setupRaceHud({
     penaltyNoticeTimeout = setTimeout(() => penaltyNoticeEl.classList.remove("visible"), 2500);
   }
 
+  // Heading-up, zoomed-in map (#69): the track turns around the player's
+  // arrow so the next corner and how tight it is read at a glance; the old
+  // north-up whole-circuit trace didn't tell you which way the road bends.
+  const MINIMAP_VIEW_RADIUS = 220; // world units (m) from the arrow to the rim
+  const minimapUnit = minimapPoint(1, 0).x - minimapPoint(0, 0).x;
+
   function drawMinimap() {
     const ctx = minimapCtx;
-    ctx.clearRect(0, 0, minimapCanvasSize, minimapCanvasSize);
+    const size = minimapCanvasSize;
+    const half = size / 2;
+    const anchorY = size * 0.66; // more road ahead than behind
+    const zoom = half / (MINIMAP_VIEW_RADIUS * minimapUnit);
+    ctx.clearRect(0, 0, size, size);
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-    ctx.lineWidth = 3;
+    ctx.save();
     ctx.beginPath();
-    minimapTrackPoints.forEach((point, index) => {
-      if (index === 0) ctx.moveTo(point.x, point.y);
-      else ctx.lineTo(point.x, point.y);
-    });
-    ctx.closePath();
+    ctx.arc(half, half, half - 1, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(5, 10, 16, 0.5)";
+    ctx.fill();
+    ctx.clip();
+
+    // World forward is (sin h, cos h) in minimap space (x right, z down);
+    // rotate it to screen-up.
+    const forwardAngle = Math.atan2(Math.cos(state.heading), Math.sin(state.heading));
+    const player = minimapPoint(state.x, state.z);
+    ctx.translate(half, anchorY);
+    ctx.rotate(-Math.PI / 2 - forwardAngle);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-player.x, -player.y);
+
+    const traceTrack = () => {
+      ctx.beginPath();
+      minimapTrackPoints.forEach((point, index) => {
+        if (index === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      });
+      ctx.closePath();
+    };
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.lineWidth = 13 / zoom;
+    traceTrack();
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(235, 242, 248, 0.85)";
+    ctx.lineWidth = 8 / zoom;
+    traceTrack();
     ctx.stroke();
 
-    const drawDot = (x, z, fillStyle, radius) => {
-      const point = minimapPoint(x, z);
-      ctx.fillStyle = fillStyle;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-      ctx.fill();
-    };
-
     for (const car of aiCars) {
-      drawDot(car.x, car.z, `#${car.color.toString(16).padStart(6, "0")}`, 2.5);
+      const point = minimapPoint(car.x, car.z);
+      ctx.fillStyle = `#${car.color.toString(16).padStart(6, "0")}`;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 4.5 / zoom, 0, Math.PI * 2);
+      ctx.fill();
     }
-    const playerPoint = minimapPoint(state.x, state.z);
-    ctx.fillStyle = "#ffffff";
+    ctx.restore();
+
+    // Player arrow, always centered and pointing up.
     ctx.beginPath();
-    ctx.arc(playerPoint.x, playerPoint.y, 3.5, 0, Math.PI * 2);
+    ctx.moveTo(half, anchorY - 8);
+    ctx.lineTo(half + 6, anchorY + 6);
+    ctx.lineTo(half, anchorY + 3);
+    ctx.lineTo(half - 6, anchorY + 6);
+    ctx.closePath();
+    ctx.fillStyle = "#70e1c5";
     ctx.fill();
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.7)";
     ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(half, half, half - 1, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
     ctx.stroke();
   }
 

@@ -9,7 +9,7 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 import { createStudioEnvironment } from "../shared/car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
 import { setupRaceInput } from "./race-input.js?v=41";
-import { setupRaceHud } from "./race-hud.js?v=33";
+import { setupRaceHud } from "./race-hud.js?v=34";
 import { setupRaceCamera } from "./race-camera.js?v=27";
 import { setupPlayerPhysics } from "./player-physics.js?v=3";
 import { setupRaceAi } from "./race-ai.js?v=28";
@@ -222,7 +222,7 @@ const visualCenterline = sampleCenterline(trackCurve, CENTERLINE_SAMPLES * 4);
 // The track never moves, so the world-to-minimap mapping (scale + offset
 // to fit the circuit's bounding box into the canvas, preserving its aspect
 // ratio) is worked out once here rather than every frame.
-const MINIMAP_CANVAS_SIZE = 130;
+const MINIMAP_CANVAS_SIZE = 200;
 const MINIMAP_PADDING = 10;
 let minimapScale = 1;
 let minimapOffsetX = 0;
