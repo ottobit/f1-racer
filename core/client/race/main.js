@@ -1138,7 +1138,10 @@ function finishQualifying() {
   applyQualifyingResult(results.map((r) => r.id));
 }
 
-if (multiplayer) {
+// Deferred to after this module finishes evaluating: on a reload mid-race
+// the grid is already known, onGridReady fires synchronously, and the
+// start procedure it triggers reads engine-gate state declared further down.
+if (multiplayer) queueMicrotask(() => {
   multiplayer.onGridReady((driverIds) => {
     // The server's grid lists real participants by their reserved
     // driverId — "player" (this browser's own car) isn't one of those
@@ -1151,7 +1154,7 @@ if (multiplayer) {
     )?.driverId;
     applyQualifyingResult(driverIds.map((id) => (id === myDriverId ? "player" : id)));
   });
-}
+});
 
 function updateQualifying(dt) {
   const now = performance.now();
