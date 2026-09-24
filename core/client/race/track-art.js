@@ -1,5 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { offsetEdge } from './track-geometry.js?v=39';
+import { offsetEdge } from '../shared/track-geometry.js?v=39';
 
 function random(seed=17){return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
 export function surfaceTexture(kind,renderer){

@@ -7,21 +7,24 @@
 // enough to detach its kerb ribbon, or two unrelated parts of the track
 // running closer together than their wall margins allow.
 //
-// Usage:
+// Usage (run from inside core/ — this and package.json both live there,
+// see core/package.json's "validate:circuits" script):
 //   node tools/validate-circuits.mjs                 validate every circuit
 //   node tools/validate-circuits.mjs <id> [<id> ...]  validate only these ids
 //   node tools/validate-circuits.mjs --svg [outDir]   also write a top-down
 //                                                      diagnostic SVG per
 //                                                      circuit (default
 //                                                      outDir: tools/out,
-//                                                      gitignored — dev-only,
-//                                                      never shipped)
+//                                                      relative to the
+//                                                      current working
+//                                                      directory — gitignored,
+//                                                      dev-only, never shipped)
 //
 // Exit code is 1 if any circuit has an unsuppressed issue, 0 otherwise.
 
 import * as THREE from "three";
-import { CIRCUITS } from "../circuits.js";
-import { sampleCenterline, headingOf, sideNormal } from "../track-geometry.js";
+import { CIRCUITS } from "../client/shared/circuits.js";
+import { sampleCenterline, headingOf, sideNormal } from "../client/shared/track-geometry.js";
 
 const SAMPLES = 360; // matches main.js's CENTERLINE_SAMPLES: validate the resolution the game actually drives on
 

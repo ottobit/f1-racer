@@ -2,7 +2,7 @@
 
 ## Atelier / shared car rendering
 
-`car-model.js` owns the procedural car used by both race and garage. Elliptical
+`core/client/shared/car-model.js` owns the procedural car used by both race and garage. Elliptical
 body sections, multi-element wings, halo, suspension, diffuser and wheel details
 replace the duplicated primitive models. `buildCar(color, {scale, detail, showDriver})` keeps
 +Z forward, four rolling wheel groups and the original scaled 0.4 wheel radius.
@@ -11,7 +11,7 @@ spokes, cooling slots and a procedural carbon bump texture. Materials belong to
 each car, so ghost transparency does not affect the player or opponents.
 
 `createStudioEnvironment` produces a one-time PMREM from procedural light cards.
-Race cars receive it locally without changing track materials. `showroom.js`
+Race cars receive it locally without changing track materials. `core/client/garage/showroom.js`
 uses the same environment, ACES tone mapping, a shadowed spotlight, cool/warm
 fill lights, a circular metal platform and an architectural studio backdrop.
 No external model, HDR texture or new package dependency is required.
@@ -19,7 +19,7 @@ No external model, HDR texture or new package dependency is required.
 The atelier supports pointer/touch orbit, four camera presets, optional automatic
 rotation (disabled by reduced-motion preference). Since #30 there is no livery
 picker: the car wears the team colours of the driver chosen on the home page
-(`playerLivery()` in `garage-setup.js`), in the Garage and in the race.
+(`playerLivery()` in `core/client/shared/garage-setup.js`), in the Garage and in the race.
 Setup choices persist under `f1racer-garage-v1`; `loadGarageSetup()` keeps only
 known part/variant pairs, so older saves' `livery` field is dropped. The five named drop targets appear during component dragging;
 click/tap remains the mounting fallback. Complete front/rear wing assemblies
@@ -49,7 +49,7 @@ There is currently no application bundler requirement for the race page: the gam
 
 ## 2. Runtime architecture
 
-`main.js` currently acts as the game engine and orchestration layer.
+`core/client/race/main.js` currently acts as the game engine and orchestration layer.
 
 Main responsibilities currently living there:
 - Three.js scene, camera, renderer and world objects.
@@ -164,7 +164,7 @@ The model now has a lightweight dynamic layer: explicit lateral velocity, finite
 
 ## 6. Track system
 
-Circuit geometry is defined in `circuits.js`.
+Circuit geometry is defined in `core/client/shared/circuits.js`.
 
 The runtime builds a centerline sampled into track points and uses Catmull-Rom spline geometry.
 
@@ -193,8 +193,8 @@ the first six's hand-placed points, all three were generated procedurally
 (star-convex placement with a per-circuit angular radius profile — a smooth
 low-amplitude one for Pianalago's sweeps, higher-frequency corners for
 Serramonte's hairpins, one dominant long-straight harmonic for Baiadoro) and
-accepted only once `tools/validate-circuits.mjs` (#6) reported zero errors
-and warnings — see each entry's comment in `circuits.js` for the exact
+accepted only once `core/tools/validate-circuits.mjs` (#6) reported zero errors
+and warnings — see each entry's comment in `core/client/shared/circuits.js` for the exact
 command. Every circuit in the roster now has a distinct integer width, 9
 through 17. Serramonte is now the tightest/narrowest circuit overall
 (Montenero's comment was updated to stop claiming that superlative); Baiadoro
@@ -214,21 +214,21 @@ gets one deep hairpin at the end of its long straight.
 
 ### Shared geometry rules and offline validation
 
-`track-geometry.js` owns the pure, framework-agnostic rules used to turn a
+`core/client/shared/track-geometry.js` owns the pure, framework-agnostic rules used to turn a
 circuit's raw control points into the runtime's centerline: sampling the
 closed curve, deriving heading/side-normal at a sample, finding the
 nearest sample to a point, and building fold-free offset edges for the
 road-hugging meshes (`offsetEdge`). It takes an already-built curve object rather
 than importing three.js itself, so the exact same rules run both in
-`main.js` (fed the browser's CDN three.js build) and in
-`tools/validate-circuits.mjs` (fed the pinned npm `three` build — see
+`core/client/race/main.js` (fed the browser's CDN three.js build) and in
+`core/tools/validate-circuits.mjs` (fed the pinned npm `three` build — see
 `package.json`, a dev-only dependency never shipped with the static site).
 
 `node tools/validate-circuits.mjs [ids...] [--svg [outDir]]` (#6) checks
-every circuit in `circuits.js` for a broken closure, a self-crossing or
+every circuit in `core/client/shared/circuits.js` for a broken closure, a self-crossing or
 reversed loop, degenerate/oversized sampled segments, corners tighter than
 the runtime's own wall margin (`width/2 + 4`, same formula as `WALL_LIMIT`
-in `main.js` — a corner this tight is also where a kerb ribbon would
+in `core/client/race/main.js` — a corner this tight is also where a kerb ribbon would
 detach), and two unrelated parts of the track running closer together than
 their wall margins allow. A circuit can declare a documented, narrower
 floor for the last check when it's intentionally close (Marzamemi's shared
@@ -401,13 +401,13 @@ The player's visual car is hidden in cockpit mode.
 
 ## 15. Audio
 
-`race-audio.js` owns gear mapping and the synthesized engine/shift sound
-(`setupRaceAudio`), wired from `main.js` through a `getEngineActive` getter
+`core/client/race/race-audio.js` owns gear mapping and the synthesized engine/shift sound
+(`setupRaceAudio`), wired from `core/client/race/main.js` through a `getEngineActive` getter
 rather than a shared module variable — true while racing or while actually
 driving a qualifying lap, not just during the race phase, so the player's
 engine is audible in both sessions (#10; previously silent for all of
-qualifying). `race-hud.js` calls the returned `updateEngineSound`/
-`playShiftClick`/`updateAmbientChorus` each frame; `main.js` only owns lazy
+qualifying). `core/client/race/race-hud.js` calls the returned `updateEngineSound`/
+`playShiftClick`/`updateAmbientChorus` each frame; `core/client/race/main.js` only owns lazy
 initialization on first input. The engine sound is synthesized with Web
 Audio rather than external audio assets.
 
@@ -430,7 +430,7 @@ Audio initializes lazily after user interaction to satisfy browser autoplay rest
 
 ## 16. Championship and persistence
 
-`championship.js` stores championship progress/results locally.
+`core/client/shared/championship.js` stores championship progress/results locally.
 
 The race reports final classification and points, then determines the next unraced circuit.
 
@@ -438,7 +438,7 @@ This means the game remains fully client-side.
 
 ## 17. Mobile
 
-Touch controls are implemented in `main.js` and styled in `style.css`.
+Touch controls are implemented in `core/client/race/main.js` and styled in `core/client/style.css`.
 
 On the race page, browser zoom/gesture handling is explicitly suppressed for gameplay surfaces on touch devices. CSS `touch-action: none` is combined with iOS Safari gesture-event and rapid-double-tap guards, while normal link interaction remains available.
 
@@ -451,7 +451,7 @@ This is important to preserve when refactoring input.
 ## 18. Known architectural limitations
 
 ### Monolithic engine file
-`main.js` currently contains most engine systems. This is the biggest maintainability risk.
+`core/client/race/main.js` currently contains most engine systems. This is the biggest maintainability risk.
 
 ### Physics abstraction
 Player physics is still mostly direct speed/heading integration.
@@ -503,9 +503,9 @@ Added `RELEASE-CHECKLIST.md` with source-level gates and desktop/mobile browser 
 
 ## Garage setup
 
-`garage.html` + `garage.js` provide an interactive Three.js setup bay with a 360° rotatable open-wheel car. Components can be mounted by drag-and-drop or click/tap. `garage-setup.js` is the shared data/physics contract and persists the setup under `f1racer-garage-v1`.
+`garage.html` + `core/client/garage/garage.js` provide an interactive Three.js setup bay with a 360° rotatable open-wheel car. Components can be mounted by drag-and-drop or click/tap. `core/client/shared/garage-setup.js` is the shared data/physics contract and persists the setup under `f1racer-garage-v1`.
 
-Five component families each expose three trade-off variants: front wing, rear wing, floor/diffuser, brakes and suspension. The setup produces modifiers for speed, downforce, braking, stability, traction and runoff behaviour. `main.js` reads these modifiers at race startup, so Garage choices alter actual race physics rather than only UI stats. Front/rear wing choices also alter the Garage car geometry for immediate visual feedback.
+Five component families each expose three trade-off variants: front wing, rear wing, floor/diffuser, brakes and suspension. The setup produces modifiers for speed, downforce, braking, stability, traction and runoff behaviour. `core/client/race/main.js` reads these modifiers at race startup, so Garage choices alter actual race physics rather than only UI stats. Front/rear wing choices also alter the Garage car geometry for immediate visual feedback.
 
 Each circuit carries a data-driven recommended setup and a short rationale.
 The selected carousel circuit is persisted and passed into the Garage, which
@@ -534,7 +534,7 @@ For a fresh ChatGPT Work session, start with `WORK-HANDOFF.md`. It is a compact 
 
 ## Race art, controls and persistent garage preview
 
-`track-art.js` generates seeded asphalt/grass textures and circuit dressing:
+`core/client/race/track-art.js` generates seeded asphalt/grass textures and circuit dressing:
 painted track margins, rubber deposits, runoff, welded kerbs, swept guardrails,
 instanced posts/trees, low mountains and pit-straight structures. Candidate scenery locations are kept
 away from adjacent road segments. These remain decorative, not new collision
@@ -556,9 +556,9 @@ is the closest one — which also removes rails that used to cross each other
 where two legs run close.
 
 The road, kerbs, runoff and painted lines are meshed from `visualCenterline`
-(`main.js`: the same curve sampled 4x denser than the 360-sample gameplay
+(`core/client/race/main.js`: the same curve sampled 4x denser than the 360-sample gameplay
 `centerline`) so tight hairpins render smooth, and every edge comes from
-`offsetEdge()` (`track-geometry.js`), which cuts the self-intersecting loop an
+`offsetEdge()` (`core/client/shared/track-geometry.js`), which cuts the self-intersecting loop an
 inner offset forms wherever the curve bends tighter than the offset (miter
 join) — without it those apexes folded into dark bow-tie shards. Scenery
 placement still steps through the coarse centerline, so object spacing is
@@ -568,17 +568,17 @@ plane is now subdivided and depth-offset so those millimetre-thin strips and
 the road always win over it at low camera angles.
 Its map-traced angular layout uses local corner supports and tension 0.18;
 the narrow shared central corridor is separated for racing clearance.
-The upper HUD markup and existing `style.css` are unchanged; lower control styles
-are isolated in `race-controls.css`.
+The upper HUD markup and existing `core/client/style.css` are unchanged; lower control styles
+are isolated in `core/client/race/race-controls.css`.
 
-`race-weather.js` owns sky cloud billboards, the rain particle field and
+`core/client/race/race-weather.js` owns sky cloud billboards, the rain particle field and
 impact spark FX — self-contained scene objects that nothing outside
-`main.js` references. It takes a `getPlayerState` getter rather than the
+`core/client/race/main.js` references. It takes a `getPlayerState` getter rather than the
 player state object directly, since it is wired up before that object
-exists in `main.js`; only its rain recycling needs it, once actually
+exists in `core/client/race/main.js`; only its rain recycling needs it, once actually
 called per frame.
 
-`steering.js` owns dead-zone shaping, exponential input smoothing and a
+`core/client/race/steering.js` owns dead-zone shaping, exponential input smoothing and a
 speed-sensitive yaw target. A touch starts at neutral wherever the thumb lands;
 horizontal travel from that contact point requests steering. Only one pointer
 owns the wheel, independently of the pedal pointers. Capture, cancellation,
@@ -587,7 +587,7 @@ rotates with the filtered command; yaw becomes zero at zero speed and reverses
 in reverse gear. No automated test currently exercises this pure math in
 this repository (a prior `tests/steering.test.mjs` claim here did not carry
 over from the `portfolio-arcade` extraction and does not exist — see #6's
-`tools/validate-circuits.mjs` for the repo's first Node-runnable check, on
+`core/tools/validate-circuits.mjs` for the repo's first Node-runnable check, on
 circuit geometry rather than steering).
 
 The garage fills the available dynamic viewport. On desktop the configuration
@@ -595,12 +595,12 @@ pane scrolls beside the fixed car stage; portrait mobile uses a stage above a
 separately scrolling setup pane. Selecting a part automatically frames that
 assembly. Front/rear wing geometry, floor width/diffuser height, spring spacing
 and caliper finish preview each setup family. These are representative visual
-cues: mechanical effects still come from `garage-setup.js`. No change to storage
+cues: mechanical effects still come from `core/client/shared/garage-setup.js`. No change to storage
 keys or setup effect values is made.
 
 ## Driver themes and real liveries
 
-`driver-themes.js` centralizes the five team liveries and the cockpit themes for
+`core/client/shared/driver-themes.js` centralizes the five team liveries and the cockpit themes for
 the custom friend names. The player's livery is derived, not chosen:
 `playerLivery(driverId)` returns `liveryById(driver.team)` for the selected
 driver, the same source the AI grid uses, so the player shares colours with
@@ -610,30 +610,30 @@ The `Posteriore` and rear-wing presets remain inside the modeled studio back
 wall. A preset must not orbit beyond z=-8, where the opaque backdrop would sit
 between the camera and the car.
 
-`main.js` applies `playerLivery(SELECTED_DRIVER_ID)` to the player car at race
-startup. AI cars use their team liveries from the same shared theme data. `race-camera.js` adds a small cockpit-view overlay with themed rails,
+`core/client/race/main.js` applies `playerLivery(SELECTED_DRIVER_ID)` to the player car at race
+startup. AI cars use their team liveries from the same shared theme data. `core/client/race/race-camera.js` adds a small cockpit-view overlay with themed rails,
 dash glow and name/motto badge for the selected driver; the top HUD remains
 unchanged.
 
-Each team livery also carries a fictional sponsor pair in `driver-themes.js`:
+Each team livery also carries a fictional sponsor pair in `core/client/shared/driver-themes.js`:
 IGNIX / TORQ LABS, PELAGOS / AZUR SYSTEMS, LUMENZA / ORBITA ENERGY, VIREON /
-CANOPY TECH and NIVALIS / BOREAL DATA. `car-model.js` turns those values into
+CANOPY TECH and NIVALIS / BOREAL DATA. `core/client/shared/car-model.js` turns those values into
 small cached canvas decals for both teammates. Placement stays limited to the sidepods, nose and rear wing.
 
 ## Circuit carousel and bilateral contact
 
-The home circuit grid is now a single map-led carousel. `menu.js` normalizes
+The home circuit grid is now a single map-led carousel. `core/client/home/menu.js` normalizes
 each circuit's control points into an inline SVG map and keeps swipe, arrow,
 keyboard and dot navigation on one selected index. The active slide combines
 track character, weather, race status and a large launch action; mobile arrows
 and dots keep 44–48 px touch targets.
 
-`race-collisions.js` owns car-to-car overlap correction and equal-mass impulse
+`core/client/race/race-collisions.js` owns car-to-car overlap correction and equal-mass impulse
 transfer. Both player and AI cars can lose forward speed, gain a damped lateral
 slide and yaw, and receive the same capped damage from hard relative impacts.
 Sparks and player camera shake expose meaningful contact while a short cooldown
 prevents continuous damage from one lingering overlap. AI lateral/yaw recovery
-is integrated in `race-ai.js`; the existing HUD already reveals player damage.
+is integrated in `core/client/race/race-ai.js`; the existing HUD already reveals player damage.
 
 The home follows an action-first order. A prominent Garage command and a direct
 race shortcut sit immediately below the hero; difficulty and driver are grouped
@@ -658,8 +658,8 @@ and pen can still swipe from the rest of the circuit card.
 
 ## Unique grid and exposed Garage cockpit
 
-`driver-roster.js` defines ten identities: the nine supplied friend names plus
-Eddy Nitro. The selected identity becomes the player; `main.js` filters it out
+`core/client/shared/driver-roster.js` defines ten identities: the nine supplied friend names plus
+Eddy Nitro. The selected identity becomes the player; `core/client/race/main.js` filters it out
 before building the other nine cars, eliminating duplicate names while keeping
 a full ten-car grid. Championship scoring normalizes the runtime `player` slot
 back to the selected identity and ignores duplicate legacy entries.
@@ -671,15 +671,15 @@ Garage view formerly called `Dettaglio` is now the closer `Abitacolo` preset.
 
 ## Visible race drivers and nameplates
 
-When `showDriver` is enabled, `car-model.js` builds a seated procedural driver:
+When `showDriver` is enabled, `core/client/shared/car-model.js` builds a seated procedural driver:
 torso, shoulders and arms use a matte material tagged with the primary livery
 role, while gloves stay dark and the helmet keeps the secondary team color.
 Race cars also expose a compact steering-wheel group. Both gloves are children
-of that group at the grips, and `race-car-view.js` rotates the wheel and hands
+of that group at the grips, and `core/client/race/race-car-view.js` rotates the wheel and hands
 from the same analog steering value that drives the front-wheel pivots.
 These static pieces remain compatible with race-car geometry batching.
 
-`race-nameplates.js` projects a point above each visible AI car through the
+`core/client/race/race-nameplates.js` projects a point above each visible AI car through the
 active Three.js camera and positions a small DOM label in screen space. Labels
 inherit a team-color marker, fade with distance, disappear outside the frustum
 or beyond 72 units, and never intercept input. The player car intentionally has
@@ -696,7 +696,7 @@ beside the lap time, rather than labeling a merely personal best as “Migliore�
 
 ## Performance and graphics profiles
 
-`graphics-profiles.js` (`loadGraphicsProfile`) picks a rendering cost profile
+`core/client/shared/graphics-profiles.js` (`loadGraphicsProfile`) picks a rendering cost profile
 — DPR cap, shadow map enabled/size, rain particle count and cloud count —
 from cheap, synchronous device signals (coarse-pointer media query, CPU core
 count, native device pixel ratio), no benchmarking pass. It never touches
@@ -710,27 +710,27 @@ driver) is an established, deliberate layout (see
 `llm-wiki/wiki/f1-racer/decisions.md`) that a third control would disturb.
 
 Coverage so far is the DPR/shadow/particle-count levers with the clearest
-performance-per-risk payoff. Distant-scenery density (`track-art.js`
-instancing) and reflections (`car-model.js`'s studio PMREM environment) are
+performance-per-risk payoff. Distant-scenery density (`core/client/race/track-art.js`
+instancing) and reflections (`core/client/shared/car-model.js`'s studio PMREM environment) are
 still not profile-aware — deliberately: without a real measured bottleneck
 (the issue's own required first step, still blocked — see below), changing
 either would be tuning against a guess, not a finding. See
 `llm-wiki/wiki/f1-racer/roadmap.md`.
 
-The Garage now reads the same profile (`showroom.js`'s `createShowroom`
-takes an optional `graphicsProfile`; `garage.js` passes
+The Garage now reads the same profile (`core/client/garage/showroom.js`'s `createShowroom`
+takes an optional `graphicsProfile`; `core/client/garage/garage.js` passes
 `loadGraphicsProfile()`) and applies it to its own renderer's DPR cap and
 shadow map, instead of the old viewport-width-only heuristic
 (`matchMedia('(max-width: 760px)')`, still the fallback when no profile is
 passed). This is a straight extension of an already-decided level system to
 a second scene with the same characteristics, not new tuning.
 
-`race-diagnostics.js` (`setupDiagnosticsOverlay`) is a dev-only FPS/frame-time
+`core/client/race/race-diagnostics.js` (`setupDiagnosticsOverlay`) is a dev-only FPS/frame-time
 and `renderer.info` (draw calls, triangles, geometries, textures) overlay.
 Off by default — no DOM node is created unless explicitly enabled via
 `?diag=1` (persisted in `localStorage` so it survives navigating from
 qualifying into the race; `?diag=0` clears it) — so normal play never creates
-or sees it. Also wired into the Garage (`showroom.js` takes an optional
+or sees it. Also wired into the Garage (`core/client/garage/showroom.js` takes an optional
 `onFrame(dt)` callback from its own `setAnimationLoop`), covering the
 issue's "misurare... più garage" activity the same way the race scene
 already was.
@@ -742,9 +742,9 @@ rendering — left for the user's own pass with the diagnostics overlay.
 
 ## Agent API (`window._ENVIRONMENT_`)
 
-`agent-api.js` (#8/#9) lets an external agent drive the player car from an
+`core/client/race/agent-api.js` (#8/#9) lets an external agent drive the player car from an
 already-open race page, without simulating touch/keyboard events. It's
-opt-in only, via `?agent=1` on `race.html`; `main.js` never imports it
+opt-in only, via `?agent=1` on `race.html`; `core/client/race/main.js` never imports it
 otherwise, so a normal human session pays nothing for it. Once wired up it
 sets `window._ENVIRONMENT_ = { getState, step, release }` and fires
 `f1-environment-ready` on `window`.
@@ -771,7 +771,7 @@ first), and `finished`/`raceResult` once the race ends.
 input; a second `step()` while one is in flight is rejected. It drives the
 exact same input the human player uses — `input.forward`/`input.back`
 booleans (pedals are digital in this game, so 0..1 throttle/brake are
-thresholded to on/off) and a new `setExternalSteer()` in `race-input.js` that
+thresholded to on/off) and a new `setExternalSteer()` in `core/client/race/race-input.js` that
 overrides `steering.value` without being reset to 0 by the keyboard/wheel/
 motion smoothing that runs every frame. When the step's duration elapses it
 neutralizes throttle/brake/steer and returns the new `getState()` — so one
@@ -779,7 +779,7 @@ neutralizes throttle/brake/steer and returns the new `getState()` — so one
 action: DRS is fully automatic here (gap-based), so `getState()` only
 reports `drsActive` read-only.
 
-Human control always wins immediately: `race-input.js`'s real DOM handlers
+Human control always wins immediately: `core/client/race/race-input.js`'s real DOM handlers
 (keydown, pointer, motion) call an `onHumanInput` callback synchronously —
 never the agent itself — which the agent API uses to abort its current step,
 clear the external steer override and release any pedal it was holding, all
@@ -793,7 +793,7 @@ isolated from mutation, out-of-range `step()` input is clamped rather than
 throwing, a concurrent `step()` is rejected, and a step neutralizes its
 inputs once its duration elapses.
 
-## Multiplayer: rooms, driver reservation, qualifying and race sync (`server/`, `room-client.js`, `room.html`, `race-bootstrap.js`, `race-multiplayer.js`)
+## Multiplayer: rooms, driver reservation, qualifying and race sync (`server/`, `core/client/multiplayer/room-client.js`, `room.html`, `core/client/multiplayer/race-bootstrap.js`, `core/client/multiplayer/race-multiplayer.js`)
 
 Two of #1's staged deliveries so far. Stage 1 (#36): rooms and driver
 reservation. Stage 2 (#44): a real, synced qualifying session and race —
@@ -802,9 +802,9 @@ future issue with its own protocol/infrastructure decisions. This is the
 **first backend this project has ever had**; everything else in this
 codebase is still a zero-build static site, and solo race/garage/qualifying
 stay entirely local-only regardless of whether the room server is
-reachable — see `main.js`'s `multiplayer` variable (`null` for solo).
+reachable — see `core/client/race/main.js`'s `multiplayer` variable (`null` for solo).
 
-`server/rooms.mjs` is a pure room/participant state machine — plain JS
+`core/server/rooms.mjs` is a pure room/participant state machine — plain JS
 `Map`s in memory, no sockets, no database, no framework. State resets on
 process restart; that's a deliberate Stage 1 limitation (casual, short-lived
 rooms among friends), not an oversight to fix later without saying so.
@@ -812,13 +812,13 @@ Every function takes a `store` plus plain data and returns plain data, so
 it's directly unit-testable (`createStore`, `createRoom`, `joinRoom`,
 `reconnectParticipant`, `reserveDriver`/`releaseDriver`, `setReady`,
 `startRace`, `leaveRoom`, `markDisconnected`, `toPublicRoom`). Reservable
-driver ids are exactly `driver-roster.js`'s ten `rival-*` entries — the
-client-only `"player"` pseudo-id `driver-selection.js` uses for solo play is
+driver ids are exactly `core/client/shared/driver-roster.js`'s ten `rival-*` entries — the
+client-only `"player"` pseudo-id `core/client/shared/driver-selection.js` uses for solo play is
 never a valid room driverId; solo and room identity are deliberately
 independent, neither reads nor writes the other's `localStorage` key.
 
-`server/room-server.mjs` is a thin WebSocket transport (`ws` package) around
-`rooms.mjs`: parses JSON envelopes (`{type, reqId, ...}`), calls straight
+`core/server/room-server.mjs` is a thin WebSocket transport (`ws` package) around
+`core/server/rooms.mjs`: parses JSON envelopes (`{type, reqId, ...}`), calls straight
 into the pure state machine, sends a direct `reqId`-correlated response or
 `error{code,message}`, and broadcasts a full `room_state` snapshot to every
 socket bound to that room on any change. Message types: `create_room`,
@@ -829,7 +829,7 @@ requires a chosen circuit and every participant driver-reserved + ready,
 and now genuinely begins a timed qualifying session — see below — not just
 a bare confirmation), `report_quali_time` (Stage 2, keeps only a
 participant's best), `car_state` (Stage 2, ephemeral — relayed straight to
-the room's other sockets, never stored in `rooms.mjs`), `leave_room`
+the room's other sockets, never stored in `core/server/rooms.mjs`), `leave_room`
 (immediate slot release), `ping`/`pong` (heartbeat). A closed socket doesn't
 release its slot immediately: `markDisconnected` starts a grace timer
 (`ROOM_GRACE_MS`, default 30s) during which the participant's `driverId` is
@@ -848,7 +848,7 @@ happens to reach zero first. Run locally with `npm run start:room-server`
 separate Node process, never imported by `race.html`/`garage.html`/
 `index.html`.
 
-`room-client.js` is the browser-side protocol client — plain WebSocket,
+`core/client/multiplayer/room-client.js` is the browser-side protocol client — plain WebSocket,
 `reqId`-correlated promises, a `roomCode/participantId/reconnectToken`
 session persisted under its own `f1racer-room-session-v1` localStorage key
 (never touching `f1racer-selected-driver-v1` or championship state), and a
@@ -858,11 +858,11 @@ URL comes from `?roomServer=` (default `ws://localhost:8787` — a
 placeholder until Stage 1 is actually deployed somewhere reachable),
 mirroring the existing `?agent=1`/`?diag=1`/`?gfx=` query-param convention.
 
-`room.html`/`room.js` is the lobby page: nickname, create/join, a live
+`room.html`/`core/client/multiplayer/room.js` is the lobby page: nickname, create/join, a live
 participant list (name, reserved driver, ready state, host crown, a
 "riconnessione…" tag during another participant's grace period), a driver
-grid modeled on `menu.js`'s `renderDriverSelect()` (taken slots disabled and
-labeled, a livery colour dot per driver via `driver-themes.js`'s
+grid modeled on `core/client/home/menu.js`'s `renderDriverSelect()` (taken slots disabled and
+labeled, a livery colour dot per driver via `core/client/shared/driver-themes.js`'s
 `liveryById`), a ready toggle, a host-only circuit/difficulty picker (Stage
 2 — plain `<select>`s, not the home's carousel), and a host-only "Avvia"
 button (disabled until a circuit is chosen and everyone is ready) that now
@@ -871,25 +871,25 @@ navigates every participant's tab to `race.html?circuit=...&difficulty=...
 of the two dominant `home-command` cards ("Gioca con altri", #40) — see
 `decisions.md`'s "Home and Circuit Selection" section for that history.
 
-**Stage 2's bridge into the actual race** — `race-bootstrap.js` and
-`race-multiplayer.js`, both new:
-- `race-bootstrap.js` is `race.html`'s real script entry point now (not
-  `main.js` directly). `main.js`'s own top-level code is entirely
+**Stage 2's bridge into the actual race** — `core/client/multiplayer/race-bootstrap.js` and
+`core/client/multiplayer/race-multiplayer.js`, both new:
+- `core/client/multiplayer/race-bootstrap.js` is `race.html`'s real script entry point now (not
+  `core/client/race/main.js` directly). `core/client/race/main.js`'s own top-level code is entirely
   synchronous — it builds the whole Three.js scene top-to-bottom in one
   pass — and was never rewritten to be async. So if `?room=CODE` is present
   and a saved room session exists, this bootstrap `await`s the WebSocket
-  reconnect *first*, hands the already-connected client to `main.js` via a
+  reconnect *first*, hands the already-connected client to `core/client/race/main.js` via a
   one-shot `window.__mpClient`, and only then dynamically `import()`s
-  `main.js`. Solo play (no `?room=`) skips straight to importing it.
-- `race-multiplayer.js`'s `setupMultiplayer()` wraps that already-connected
-  client into the small synchronous API `main.js` actually calls:
+  `core/client/race/main.js`. Solo play (no `?room=`) skips straight to importing it.
+- `core/client/multiplayer/race-multiplayer.js`'s `setupMultiplayer()` wraps that already-connected
+  client into the small synchronous API `core/client/race/main.js` actually calls:
   `getRemoteDrivers()`, `getRemoteSample(participantId)`,
   `broadcastState(data)` (throttled to ~12/s internally),
   `reportQualiTime(ms)`, `onGridReady(cb)`, `isDriverDisconnected(driverId)`.
   Returns `null` for solo play or an unresumable session — mirrors
-  `agent-api.js`'s `?agent=1` opt-in shape.
+  `core/client/race/agent-api.js`'s `?agent=1` opt-in shape.
 
-Inside `main.js`, every multiplayer touchpoint is an explicit branch on one
+Inside `core/client/race/main.js`, every multiplayer touchpoint is an explicit branch on one
 `multiplayer` variable (`null` for solo): `AI_DRIVERS` comes from the room's
 other participants instead of `DRIVER_ROSTER`-minus-self (no AI padding —
 see decisions.md); each resulting `aiCars` entry is tagged `isRemote`/
@@ -899,9 +899,9 @@ smoothly toward the latest `car_state` sample, then calls the same
 instead of `updateAiCar()`'s steering AI. `currentRaceOrder`,
 `applyGridPositions`, DRS eligibility, car collisions, the HUD position/
 timing tower and the nameplates all already worked generically over
-`aiCars` and needed no structural changes — `race-hud.js` and
-`race-nameplates.js` only gained an optional `isDisconnected` check for the
-grey-out treatment, and `race-hud.js` gained a `getQualifyingRivals` getter
+`aiCars` and needed no structural changes — `core/client/race/race-hud.js` and
+`core/client/race/race-nameplates.js` only gained an optional `isDisconnected` check for the
+grey-out treatment, and `core/client/race/race-hud.js` gained a `getQualifyingRivals` getter
 alongside its old static `qualifyingRivals` array, since multiplayer's live
 participant times change over the session where solo's synthesized AI times
 don't. Qualifying itself still runs locally exactly like solo (own flying
@@ -914,7 +914,7 @@ entirely for a multiplayer session — see decisions.md for why.
 
 Verified with a real WebSocket server and real headless-browser clients
 (Playwright, two separate browser contexts against the actual
-`room-server.mjs` process, `three.js` served from the local `node_modules`
+`core/server/room-server.mjs` process, `three.js` served from the local `node_modules`
 copy since this sandbox's network policy blocks the CDN it normally loads
 from): room creation/join, live broadcast of a driver reservation, a taken
 driver rejected with a clear error, "Avvia" staying disabled until a
@@ -928,7 +928,7 @@ remaining client's nameplate and timing-tower row for that participant
 turning grey once the existing grace window expired. A separate real-
 browser run confirmed solo play (no `?room=`) is completely unaffected: no
 page errors, the qualifying HUD/tower/synthesized-AI list all render, and
-acceleration responds normally. `rooms.mjs`'s pure functions are
+acceleration responds normally. `core/server/rooms.mjs`'s pure functions are
 additionally covered by direct unit checks (`setCircuit` host/validation
 gating, `startRace`'s new "everyone driver-reserved and ready" requirement,
 `reportQualiTime` keeping only the best, `finishQualifying`'s DNF-to-the-
