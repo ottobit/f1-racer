@@ -5,6 +5,9 @@ const CHASE_CAM_BASE_FOV = 58;
 const CHASE_CAM_BASE_ASPECT = 1.7;
 const CHASE_CAM_LANDSCAPE_MAX_DISTANCE = 5.2;
 const CHASE_CAM_TRACK_MARGIN = 2.5;
+// Camera yaw trails the car heading so the car visibly rotates into corners.
+const CHASE_CAM_YAW_RESPONSE = 3.2;
+const CHASE_CAM_MAX_YAW_LAG = 0.45;
 
 function isCompactLandscapeViewport() {
   return window.innerWidth > window.innerHeight && window.innerHeight <= 520;
@@ -60,6 +63,7 @@ function buildCockpitView(theme) {
 export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, cockpitTheme, nearestTrackInfo, trackWidth }) {
   let cameraMode = "chase";
   let chaseCameraReady = false;
+  let cameraHeading = 0;
   const desiredPosition = new THREE.Vector3();
   const cockpitView = cockpitTheme ? buildCockpitView(cockpitTheme) : null;
   if (cockpitView) scene.add(cockpitView);
@@ -85,8 +89,14 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
       camHeight = 3.15;
     }
 
-    let desiredX = state.x - Math.sin(state.heading) * camDistance;
-    let desiredZ = state.z - Math.cos(state.heading) * camDistance;
+    if (!chaseCameraReady) cameraHeading = state.heading;
+    let yawLag = Math.atan2(Math.sin(state.heading - cameraHeading), Math.cos(state.heading - cameraHeading));
+    yawLag -= yawLag * (1 - Math.exp(-CHASE_CAM_YAW_RESPONSE * dt));
+    yawLag = THREE.MathUtils.clamp(yawLag, -CHASE_CAM_MAX_YAW_LAG, CHASE_CAM_MAX_YAW_LAG);
+    cameraHeading = state.heading - yawLag;
+
+    let desiredX = state.x - Math.sin(cameraHeading) * camDistance;
+    let desiredZ = state.z - Math.cos(cameraHeading) * camDistance;
     if (nearestTrackInfo && trackWidth) {
       const track = nearestTrackInfo(desiredX, desiredZ);
       const safeOffset = trackWidth / 2 + CHASE_CAM_TRACK_MARGIN;
@@ -104,9 +114,9 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
       camera.position.lerp(desiredPosition, 1 - Math.pow(0.001, dt));
     }
     const lookTarget = new THREE.Vector3(
-      state.x + Math.sin(state.heading) * 4,
+      state.x + Math.sin(cameraHeading) * 4,
       1,
-      state.z + Math.cos(state.heading) * 4
+      state.z + Math.cos(cameraHeading) * 4
     );
     camera.lookAt(lookTarget);
 

@@ -10,7 +10,7 @@ import { createStudioEnvironment } from "../shared/car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
 import { setupRaceInput } from "./race-input.js?v=38";
 import { setupRaceHud } from "./race-hud.js?v=33";
-import { setupRaceCamera } from "./race-camera.js?v=26";
+import { setupRaceCamera } from "./race-camera.js?v=27";
 import { setupPlayerPhysics } from "./player-physics.js";
 import { setupRaceAi } from "./race-ai.js?v=27";
 import { setupRaceSystems } from "./race-systems.js?v=27";

@@ -666,3 +666,14 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Known limits: gate needed on every page load; multiplayer qualifying
   clock runs while a player is at the gate; hold range 0.2-3s is an
   estimate; no jump-start penalty; no clock-skew compensation.
+
+## 2026-09-24 — Lagged chase camera yaw + per-cycle workflow (#52)
+
+- `race-camera.js`: chase camera yaw trails the car heading with an
+  exponential response (`CHASE_CAM_YAW_RESPONSE = 3.2`/s, lag clamped to
+  0.45 rad), so the car visibly rotates into corners instead of staying
+  locked straight on screen. Cockpit camera unchanged.
+- `AGENTS.md`: one issue/branch/PR per work cycle, one commit per change,
+  one log entry per cycle; "Concludi" closes the cycle, then `/compact`.
+- Verified with `node --check` + `git diff --check` only; feel to be
+  judged in play.
