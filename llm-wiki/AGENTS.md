@@ -91,5 +91,3 @@ connects architecture, decisions, roadmap and external patterns.
     architecture or a decision changes;
   - no PR activity subscriptions or scheduled check-ins (no CI here);
   - short replies: what was done, what the user must decide.
-- GitHub Pages serves `master` root; a branch can be previewed at
-  `https://raw.githack.com/ottobit/f1-racer/<branch>/index.html`.
