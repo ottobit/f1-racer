@@ -725,3 +725,23 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   bottom edge; iOS was swallowing some taps in the home-indicator strip.
 - Verified with `node --check` + `git diff --check` only; the iOS fix still
   needs confirmation on the user's iPhone.
+
+## 2026-09-24 — Race voice chat, last stage of multiplayer (#1)
+
+- `core/server/room-server.mjs` relays `voice_signal` (offer/answer/ICE/
+  hello) to one named peer in the same room; audio never touches the
+  server. `room-client.js` gains `sendVoiceSignal`/`onVoiceSignal`.
+- New `core/client/multiplayer/voice-chat.js`: peer-to-peer WebRTC mesh,
+  race only (not the lobby), started from the engine-gate tap so the mic
+  prompt has a gesture. Smaller participantId offers; signaling waits for
+  the mic answer; no mic = listen-only. HUD toggle 🎙/🔇 with peer count.
+- Known limits: STUN only (Google), no TURN — some 4G/5G peers may not
+  connect; iOS audio routing/volume with the mic open is unverified.
+- Fixed a pre-existing crash: reloading `race.html` after the grid was set
+  hit engine-gate state before its declaration (TDZ); `onGridReady` is now
+  registered after module evaluation. The reloaded car still restarts from
+  its grid slot (position is not restored).
+- Workflow rule changed: cycles close right after the work (user tests on
+  `master`), no browser tests; PR auto-subscription is left until close.
+- Verified with two Playwright contexts + fake mic against a local room
+  server (connect, mute, reload, leave); not yet on real phones.
