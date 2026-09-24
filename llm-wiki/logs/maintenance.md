@@ -702,3 +702,12 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   Screen" is the only chrome-free route, keeps the iOS status bar, and
   gets its own `localStorage` separate from Safari.
 - Verified with `node --check` + `git diff --check` only.
+
+## 2026-09-24 — /concludi project skill (#58)
+
+- New `.claude/skills/concludi/SKILL.md`: scripted cycle close (log entry,
+  PR ready, merge with "Closes #N", pull `master`, delete branch,
+  unsubscribe PR activity, `/compact` reminder).
+- Known limit: `/compact` is a client command; no skill or hook can run
+  it, so it stays a manual step for the user.
+- Verified with `git diff --check` only; first real run on the next cycle.
