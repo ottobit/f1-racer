@@ -1,12 +1,12 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "./circuits.js?v=38";
-import { POINTS_BY_POSITION, recordRaceResult } from "./championship.js";
-import { displayDriverName, loadSelectedDriverId } from "./driver-selection.js";
-import { DRIVER_ROSTER } from "./driver-roster.js";
-import { cockpitThemeForDriver, liveryById } from "./driver-themes.js?v=27";
-import { loadGarageSetup, playerLivery, setupEffects } from "./garage-setup.js?v=28";
+import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "../shared/circuits.js?v=38";
+import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js";
+import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js";
+import { DRIVER_ROSTER } from "../shared/driver-roster.js";
+import { cockpitThemeForDriver, liveryById } from "../shared/driver-themes.js?v=27";
+import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=28";
 
-import { createStudioEnvironment } from "./car-model.js?v=28";
+import { createStudioEnvironment } from "../shared/car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
 import { setupRaceInput } from "./race-input.js?v=38";
 import { setupRaceHud } from "./race-hud.js?v=33";
@@ -19,13 +19,13 @@ import { setupRaceCommands } from "./race-commands.js";
 import { setupCarCollisions } from "./race-collisions.js";
 import { setupRaceNameplates } from "./race-nameplates.js";
 import { setupAgentApi } from "./agent-api.js";
-import { setupMultiplayer } from "./race-multiplayer.js";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js";
 
 import { steeringYaw } from "./steering.js";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
 import { gearInfo, setupRaceAudio } from "./race-audio.js";
 import { setupRaceWeather } from "./race-weather.js";
-import { loadGraphicsProfile } from "./graphics-profiles.js";
+import { loadGraphicsProfile } from "../shared/graphics-profiles.js";
 import { setupDiagnosticsOverlay } from "./race-diagnostics.js";
 import {
   sampleCenterline,
@@ -33,7 +33,7 @@ import {
   sideNormal,
   offsetEdge,
   nearestTrackInfo as nearestPointOnCenterline,
-} from "./track-geometry.js?v=39";
+} from "../shared/track-geometry.js?v=39";
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);

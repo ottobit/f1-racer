@@ -15,8 +15,8 @@
   authoritative, host picks circuit/difficulty, no AI padding) are both
   built and verified — see `F1-RACER-WIKI.md`'s "Multiplayer" section and
   `architecture.md`'s matching sections for the module map and protocol.
-  This is the project's first-ever backend (`server/rooms.mjs` +
-  `server/room-server.mjs`); the shipped static site itself (race/garage/
+  This is the project's first-ever backend (`core/server/rooms.mjs` +
+  `core/server/room-server.mjs`); the shipped static site itself (race/garage/
   menu) is untouched for a normal solo session and still has zero server
   dependency on its own. Explicitly still out of scope: voice/WebRTC/SFU,
   and — for #44 specifically — a multiplayer race actually driven to its
@@ -38,30 +38,30 @@
   #8" (Italian) in the PR body doesn't trigger GitHub's auto-close keyword
   parsing — English "Closes #N" is required, a lesson this wiki already
   recorded once for issue-closing comments and evidently missed for a PR
-  body. `agent-api.js` / `window._ENVIRONMENT_` — see `F1-RACER-WIKI.md`'s
+  body. `core/client/race/agent-api.js` / `window._ENVIRONMENT_` — see `F1-RACER-WIKI.md`'s
   Agent API section. Independently re-verified in a real headless browser
   before closing (not just re-reading the code): state snapshot shape,
   mutation isolation, input clamping, concurrent-step rejection, and that a
   step neutralizes its own inputs.
 - [#3](https://github.com/ottobit/f1-racer/issues/3) (ex-portfolio-arcade#143),
   closed: two incremental cuts landed — gear mapping and engine/shift-click
-  audio to `race-audio.js` (#14); sky clouds, rain and impact sparks to
-  `race-weather.js` (#16). `main.js` still owns scene/track-mesh
+  audio to `core/client/race/race-audio.js` (#14); sky clouds, rain and impact sparks to
+  `core/client/race/race-weather.js` (#16). `core/client/race/main.js` still owns scene/track-mesh
   construction, ghost-lap persistence and the qualifying/race state
   machines. No issue currently tracks extracting those — #3 had no fixed
   acceptance criteria and was closed once these two cuts felt like enough
   for now, not because the rest was ruled out. Open a new, scoped issue if
-  `main.js` starts costing real time again; the general direction is the
+  `core/client/race/main.js` starts costing real time again; the general direction is the
   next bullet below, not this closed one.
 - [#4](https://github.com/ottobit/f1-racer/issues/4) (ex-portfolio-arcade#144):
   resolved — see [tooling.md](tooling.md) for the documented patch/diff
   publishing workflow and its contents-API fallback.
 - [#2](https://github.com/ottobit/f1-racer/issues/2) (ex-portfolio-arcade#172),
   **still not closed — real-device measurement is still owed.**
-  `graphics-profiles.js` (auto DPR/shadow/particle profile, no new UI) and
-  `race-diagnostics.js` (dev-only FPS/`renderer.info` overlay) landed and
+  `core/client/shared/graphics-profiles.js` (auto DPR/shadow/particle profile, no new UI) and
+  `core/client/race/race-diagnostics.js` (dev-only FPS/`renderer.info` overlay) landed and
   cover the issue's activities #1 and part of #3. Garage integration
-  (second pass): `showroom.js`/`garage.js` now read the same profile and
+  (second pass): `core/client/garage/showroom.js`/`core/client/garage/garage.js` now read the same profile and
   drive the same diagnostics overlay the race does, so the "misurare...
   garage" activity is coverable and the DPR/shadow gap between the two
   scenes is closed. Deliberately still not done: distant-scenery/reflection
@@ -78,7 +78,7 @@
   auto-concluding for exactly this reason. Revisit this bullet once that
   pass happens.
 - [#6](https://github.com/ottobit/f1-racer/issues/6) (ex-portfolio-arcade#173):
-  `tools/validate-circuits.mjs` checks closure/winding/segment length/
+  `core/tools/validate-circuits.mjs` checks closure/winding/segment length/
   curvature/non-adjacent separation for every circuit and can write a
   top-down diagnostic SVG. All nine current circuits pass (Marzamemi's
   shared corridor as a documented warning, not an error) — it was the
@@ -108,12 +108,12 @@
   swept guardrails on every circuit, fold-free road edges, and the
   previously invisible runoff/painted lines (culled `ribbon()` winding) now
   render.
-- Continue keeping `main.js` as orchestration and move reusable logic into
+- Continue keeping `core/client/race/main.js` as orchestration and move reusable logic into
   focused modules only when it reduces real complexity.
-- Keep setup effects centralized in `garage-setup.js`.
-- Keep livery and cockpit theme data centralized in `driver-themes.js`.
-- Keep car presentation details in `car-model.js`, `race-car-view.js`,
-  `showroom.js` and garage-specific preview code.
+- Keep setup effects centralized in `core/client/shared/garage-setup.js`.
+- Keep livery and cockpit theme data centralized in `core/client/shared/driver-themes.js`.
+- Keep car presentation details in `core/client/shared/car-model.js`, `core/client/race/race-car-view.js`,
+  `core/client/garage/showroom.js` and garage-specific preview code.
 - Update this LLM Wiki and `F1-RACER-WIKI.md` when architecture
   or user-facing decisions change.
 

@@ -12,8 +12,8 @@
 // "player" pseudo-id from driver-selection.js is never a valid value here
 // — solo play and room play are deliberately independent.
 
-import { DRIVER_ROSTER } from "../driver-roster.js";
-import { CIRCUITS } from "../circuits.js";
+import { DRIVER_ROSTER } from "../client/shared/driver-roster.js";
+import { CIRCUITS } from "../client/shared/circuits.js";
 
 const ROOM_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"; // no 0/O, 1/I/L
 const ROOM_CODE_LENGTH = 4;

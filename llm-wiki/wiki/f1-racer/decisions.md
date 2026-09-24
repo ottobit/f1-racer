@@ -103,7 +103,7 @@ true and documented, not quietly fixed with a database later without saying
 so.
 
 Room identity (`f1racer-room-session-v1`) and solo-play identity
-(`driver-selection.js`'s `f1racer-selected-driver-v1`) are deliberately
+(`core/client/shared/driver-selection.js`'s `f1racer-selected-driver-v1`) are deliberately
 independent — the local-only `"player"` pseudo-id must never become a valid
 room `driverId`, and joining/leaving a room must never alter the solo
 flow's own saved driver choice.
@@ -131,8 +131,8 @@ decision, made explicitly by the user, not a quiet extension:
 - **Sync model: client-authoritative.** Every browser keeps simulating its
   own car exactly as solo play always has and broadcasts position/heading/
   speed/progress a few times a second (`car_state`, relayed by
-  `room-server.mjs`, never stored — see `architecture.md`). No server-side
-  physics; porting `player-physics.js`/`race-ai.js`/`race-collisions.js` to
+  `core/server/room-server.mjs`, never stored — see `architecture.md`). No server-side
+  physics; porting `core/client/race/player-physics.js`/`core/client/race/race-ai.js`/`core/client/race/race-collisions.js` to
   run headless on Node was considered and rejected as its own project, not
   this stage's job.
 - **Disconnection during qualifying/race:** the disconnected participant's
@@ -153,7 +153,7 @@ decision, made explicitly by the user, not a quiet extension:
   lands on `race.html` with the same `circuit`/`difficulty`/`room` query
   params.
 
-Qualifying itself is timed **server-side** (`room-server.mjs`'s own
+Qualifying itself is timed **server-side** (`core/server/room-server.mjs`'s own
 `setTimeout`, `ROOM_QUALI_MS` configurable, defaults to matching solo's own
 60s), not by each browser's local countdown — every client must transition
 to racing together off one clock, not whoever's tab happens to reach zero
@@ -168,10 +168,10 @@ room's own result, not a campaign result; recording it into
 own solo standings with results from races they may not have even driven
 themselves to the finish.
 
-`main.js` itself is only ever touched through explicit `if (multiplayer)`
+`core/client/race/main.js` itself is only ever touched through explicit `if (multiplayer)`
 branches gated on one variable, `null` for a normal solo session (no
 `?room=` in the URL, or a room session that couldn't be resumed) — see
-`race-bootstrap.js`/`race-multiplayer.js` in `architecture.md`. Every
+`core/client/multiplayer/race-bootstrap.js`/`core/client/multiplayer/race-multiplayer.js` in `architecture.md`. Every
 branch was chosen so solo play's existing code path runs completely
 unchanged when that variable is null, verified by an actual real-browser
 solo smoke test (not just code review) after these changes landed.
@@ -247,7 +247,7 @@ hidden outside the camera frustum and beyond the useful identification range;
 the player's own car has no label to preserve the driving view.
 
 Each selectable friend/driver has a cockpit theme with primary, secondary, glow
-and short motto values in `driver-themes.js`. Cockpit decoration should stay
+and short motto values in `core/client/shared/driver-themes.js`. Cockpit decoration should stay
 data-driven and readable rather than becoming hard-coded camera logic.
 
 The qualifying timing list is landscape-only and sits on the left without an

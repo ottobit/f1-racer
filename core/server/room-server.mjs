@@ -4,8 +4,8 @@
 // logic lives in rooms.mjs so it stays testable without a socket.
 //
 // Opt-in, separate process — never imported by race.html/garage.html/
-// index.html. Run with `npm run start:room-server` (PORT, ROOM_GRACE_MS
-// env vars optional).
+// index.html. Run from inside core/ with `npm run start:room-server`
+// (PORT, ROOM_GRACE_MS, ROOM_QUALI_MS env vars optional).
 //
 // State is in-memory only (see rooms.mjs) and resets on restart. Fine for
 // Stage 1's casual, short-lived rooms; not a database.

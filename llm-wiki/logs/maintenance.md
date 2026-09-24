@@ -546,3 +546,61 @@ and a network-driven remote car was not watched by eye (expected to be a
 harmless one-frame jitter self-corrected by the next network sample, not
 confirmed visually). RELEASE-CHECKLIST.md records all of this as explicit
 open items, not silently assumed fine.
+
+## 2026-09-24 — Source restructure: everything under core/ (#46)
+
+The user asked to restructure the flat 37-file repo root, going through
+Plan Mode. First proposal (feature folders sitting directly at repo root:
+race/, garage/, multiplayer/, shared/, home/) was corrected twice by the
+user: everything (except assets/) had to collect under one core/ folder,
+with a standard client/server/tools split inside it. Confirmed with the
+user directly, before moving anything, that the 4 HTML entry points must
+stay at the repo root — GitHub Pages here serves the branch root as-is, no
+build step, and does not support serving from an arbitrary subfolder like
+/core; moving them would have broken the live site. Also confirmed
+package.json belongs at core/ (parent of both server/ and tools/), not
+inside server/ alone as the user first suggested — re-read package.json's
+own description before answering and found it names two distinct
+consumers, three for tools/validate-circuits.mjs and ws for
+server/room-server.mjs, so nesting it under server/ would have broken
+tools/'s access to node_modules or forced a duplicate package.json.
+
+Final layout: core/{package.json,node_modules,client/{style.css,race/,
+garage/,multiplayer/,shared/,home/},server/,tools/}. HTML pages, assets/,
+and llm-wiki/ stay at the repo root. Inside client/, shared/ holds
+anything used by 2+ features (garage-setup.js included, since race/main.js
+reads it too, not just garage/garage.js); race-multiplayer.js stays
+grouped in multiplayer/ with room-client.js even though only race/main.js
+imports it, a conceptual-grouping call flagged in architecture.md rather
+than decided silently.
+
+Executed as a single mechanical pass: git mv for every file (keeps
+history), every relative import rewritten to the new cross-folder paths
+without touching existing ?vNN cache-busting query strings (the move
+itself isn't a functional change), the 4 HTML files' script/link tags
+updated, the two cross-boundary imports in rooms.mjs and
+validate-circuits.mjs repointed into client/shared/, .gitignore's
+node_modules//tools/out/ entries reprefixed with core/, old root
+node_modules deleted and a fresh npm install run inside core/.
+
+Verified before opening the PR: node --check on every moved file; npm run
+validate:circuits and a timed start of npm run start:room-server, both
+from inside core/; a real Playwright pass covering all four pages against
+the actually-restructured files — home (cards/carousel render, no errors),
+garage (showroom canvas renders, no errors), race in solo (qualifying
+marker, acceleration), and the full room-to-race multiplayer flow
+(room create/join, ready+circuit gating, both clients navigating to
+race.html with correct params, server-timed qualifying-to-racing
+transition, remote nameplate visible) — 16/16 checks passed, zero page
+errors across every page.
+
+Updated every file-path mention across architecture.md, F1-RACER-WIKI.md,
+decisions.md and roadmap.md to the new core/ paths (user's explicit call,
+asked before doing the large mechanical doc diff rather than assumed) —
+done with a single sed script over exact backtick-quoted filenames rather
+than by hand, then verified with a diff and a grep for any bare
+(un-prefixed) mention left over before applying, since a bash "python3 -c"
+heredoc approach earlier in this session had corrupted a doc via backtick
+command substitution — this pass deliberately avoided that failure mode by
+keeping the substitution script in its own file, never inline in a
+double-quoted shell string.
