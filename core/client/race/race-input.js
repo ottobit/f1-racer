@@ -11,6 +11,17 @@ const KEY_MAP = {
   KeyD: "right",
 };
 
+// PlayStation pad through the Gamepad API ("standard" mapping indices).
+const PAD_STEER_AXIS = 0;
+const PAD_BUTTON_CROSS = 0;
+const PAD_BUTTON_SQUARE = 2;
+const PAD_BUTTON_TRIANGLE = 3;
+const PAD_BUTTON_R1 = 5;
+const PAD_BUTTON_L2 = 6;
+const PAD_BUTTON_R2 = 7;
+const PAD_DEADZONE = 0.12;
+const PAD_TRIGGER_THRESHOLD = 0.25;
+
 export function setupRaceInput({
   wheelId = "wheel-control",
   gasId = "btn-gas",
@@ -29,6 +40,9 @@ export function setupRaceInput({
     externalSteer = value;
   }
   let touchSteer = 0;
+  let padSteer = 0;
+  const padHeld = { forward: false, back: false };
+  const padButtonsDown = new Set();
   let wheelPointer = null;
   let wheelOrigin = 0;
   const wheelEl = document.getElementById(wheelId);
@@ -216,6 +230,49 @@ export function setupRaceInput({
     wheelEl.addEventListener(type, releaseWheel);
   }
 
+  function setPadPedal(action, down) {
+    if (down === padHeld[action]) return;
+    padHeld[action] = down;
+    input[action] = down;
+    if (down) onHumanInput();
+  }
+
+  // Pad buttons that map to existing keyboard actions are replayed as
+  // keydown events so the camera toggle and engine gate need no pad code.
+  function padButtonEdge(index, isDown, code) {
+    if (isDown && !padButtonsDown.has(index)) {
+      padButtonsDown.add(index);
+      window.dispatchEvent(new KeyboardEvent("keydown", { code }));
+    } else if (!isDown) {
+      padButtonsDown.delete(index);
+    }
+  }
+
+  function pollGamepad() {
+    const pad = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
+    if (!pad) {
+      setPadPedal("forward", false);
+      setPadPedal("back", false);
+      padSteer = 0;
+      return;
+    }
+    const pressed = (index) => {
+      const button = pad.buttons[index];
+      return Boolean(button) && (button.pressed || button.value > PAD_TRIGGER_THRESHOLD);
+    };
+    setPadPedal("forward", pressed(PAD_BUTTON_R2));
+    setPadPedal("back", pressed(PAD_BUTTON_L2));
+    const x = pad.axes[PAD_STEER_AXIS] ?? 0;
+    padSteer = Math.abs(x) < PAD_DEADZONE
+      ? 0
+      : shapeSteering(Math.sign(x) * (Math.abs(x) - PAD_DEADZONE) / (1 - PAD_DEADZONE));
+    if (padSteer !== 0) onHumanInput();
+    padButtonEdge(PAD_BUTTON_CROSS, pressed(PAD_BUTTON_CROSS), "GamepadCross");
+    padButtonEdge(PAD_BUTTON_TRIANGLE, pressed(PAD_BUTTON_TRIANGLE), "KeyC");
+    padButtonEdge(PAD_BUTTON_SQUARE, pressed(PAD_BUTTON_SQUARE), "KeyP");
+    padButtonEdge(PAD_BUTTON_R1, pressed(PAD_BUTTON_R1), "KeyE");
+  }
+
   function clearDrivingInput() {
     Object.keys(input).forEach((key) => {
       input[key] = false;
@@ -223,6 +280,8 @@ export function setupRaceInput({
     pedalPointers.clear();
     wheelPointer = null;
     touchSteer = 0;
+    padSteer = 0;
+    padHeld.forward = padHeld.back = false;
     externalSteer = null;
     steering.value = 0;
     document.querySelectorAll(".touch-btn").forEach((button) => {
@@ -244,6 +303,7 @@ export function setupRaceInput({
   });
 
   function updateSteeringInput(dt) {
+    pollGamepad();
     if (externalSteer !== null) {
       // Agent-driven step in progress: skip human smoothing/sourcing
       // entirely so the agent's value isn't fought back toward 0.
@@ -253,7 +313,7 @@ export function setupRaceInput({
       const keyboard = (input.right ? 1 : 0) - (input.left ? 1 : 0);
       steering.value = smoothSteering(
         steering.value,
-        wheelPointer !== null ? touchSteer : keyboard || (motionActive ? motionValue : 0),
+        wheelPointer !== null ? touchSteer : keyboard || padSteer || (motionActive ? motionValue : 0),
         dt
       );
     }
