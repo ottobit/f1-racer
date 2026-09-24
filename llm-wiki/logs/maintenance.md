@@ -806,3 +806,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Needs verification: thresholds and the 0.48 factor are borrowed from
   the AI, not tuned for the player — may warn too early or too late.
 - Verified with `node --check` + `git diff --check` only.
+
+## 2026-09-24 — Rimless minimap and on-road brake trail (#73)
+
+- `race-hud.js`: minimap drops the dark disc and the #71 urgency rim; edges fade out via a `destination-in` radial gradient. `brakeUrgency` is no longer a HUD param.
+- `style.css` / `race.html` / `main.js`: minimap 11rem (8.5rem at `max-height:480px`), canvas 256px.
+- `main.js`: `brakeTrail` — additive, soft-edged plane on the tarmac from under the player car forward, sized from the car's bounding box; color green -> yellow -> red with `brakeUrgency()`, opacity rises with urgency, hidden below 8 m/s. Updated in the qualifying and race loops.
+- Chosen over a bottom-left HUD bar because the touch wheel owns that corner.
+- Verified with `node --check` and `git diff --check` only; thresholds and look to be tuned from play on `master`.

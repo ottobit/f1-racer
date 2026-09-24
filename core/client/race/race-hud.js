@@ -22,7 +22,6 @@ export function setupRaceHud({
   minimapCanvasSize,
   minimapTrackPoints,
   minimapPoint,
-  brakeUrgency = () => 0,
   qualifyingRivals,
   getQualifyingRivals,
   isDisconnected = () => false,
@@ -138,11 +137,6 @@ export function setupRaceHud({
     ctx.clearRect(0, 0, size, size);
 
     ctx.save();
-    ctx.beginPath();
-    ctx.arc(half, half, half - 1, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(5, 10, 16, 0.5)";
-    ctx.fill();
-    ctx.clip();
 
     // World forward is (sin h, cos h) in minimap space (x right, z down);
     // rotate it to screen-up.
@@ -193,14 +187,16 @@ export function setupRaceHud({
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Braking hint rim (#71): green = no need to brake, yellow = brake
-    // soon, red = brake now for the corner ahead.
-    const urgency = brakeUrgency();
-    ctx.beginPath();
-    ctx.arc(half, half, half - 4, 0, Math.PI * 2);
-    ctx.lineWidth = 7;
-    ctx.strokeStyle = urgency >= 0.9 ? "#ff4b3e" : urgency >= 0.55 ? "#ffd24a" : "rgba(112, 225, 197, 0.85)";
-    ctx.stroke();
+    // No disc or rim (#73): the edges just fade out, so the map reads as
+    // part of the HUD instead of a badge.
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-in";
+    const fade = ctx.createRadialGradient(half, half, half * 0.62, half, half, half);
+    fade.addColorStop(0, "rgba(0, 0, 0, 1)");
+    fade.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, 0, size, size);
+    ctx.restore();
   }
 
   function updateSpeedoHud() {

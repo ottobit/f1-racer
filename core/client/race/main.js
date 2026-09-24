@@ -9,7 +9,7 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 import { createStudioEnvironment } from "../shared/car-model.js?v=28";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
 import { setupRaceInput } from "./race-input.js?v=41";
-import { setupRaceHud } from "./race-hud.js?v=35";
+import { setupRaceHud } from "./race-hud.js?v=36";
 import { setupRaceCamera } from "./race-camera.js?v=27";
 import { setupPlayerPhysics } from "./player-physics.js?v=3";
 import { setupRaceAi } from "./race-ai.js?v=28";
@@ -222,7 +222,7 @@ const visualCenterline = sampleCenterline(trackCurve, CENTERLINE_SAMPLES * 4);
 // The track never moves, so the world-to-minimap mapping (scale + offset
 // to fit the circuit's bounding box into the canvas, preserving its aspect
 // ratio) is worked out once here rather than every frame.
-const MINIMAP_CANVAS_SIZE = 200;
+const MINIMAP_CANVAS_SIZE = 256;
 const MINIMAP_PADDING = 10;
 let minimapScale = 1;
 let minimapOffsetX = 0;
@@ -253,7 +253,7 @@ const minimapTrackPoints = centerline.map((p) => minimapPoint(p.x, p.z));
 // distance between samples. Each frame, brakeUrgency() asks how hard the
 // player must brake to reach every upcoming target speed in the distance
 // left, relative to what the brakes can do: <0.55 fine, <0.9 brake soon,
-// >=0.9 brake now. Drives the minimap rim colour.
+// >=0.9 brake now. Drives the brake trail under the player car (#73).
 const BRAKE_HINT_CORNER_WINDOW = 22;
 const BRAKE_HINT_MAX_AHEAD = 140; // samples scanned ahead (~well past any braking zone)
 const cornerTargetSpeed = centerline.map((_, i) => {
@@ -585,6 +585,71 @@ const playerCar = buildCar(PLAYER_LIVERY);
 // shared car geometry, wheel metadata, physics or collision dimensions.
 playerCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
 scene.add(playerCar.group);
+
+// Brake trail (#73): a glow painted on the tarmac from under the player
+// car forward, green while there's no corner to brake for, fading through
+// yellow to red as brakeUrgency() climbs. Lives on the road, not the HUD,
+// because the bottom corners belong to the touch wheel and pedals.
+const brakeTrail = (() => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 32;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  // Soft on every edge, strongest just ahead of the car (texture top = far).
+  const along = ctx.createLinearGradient(0, 0, 0, 128);
+  along.addColorStop(0, "rgba(255,255,255,0)");
+  along.addColorStop(0.55, "rgba(255,255,255,0.9)");
+  along.addColorStop(0.85, "rgba(255,255,255,0.9)");
+  along.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = along;
+  ctx.fillRect(0, 0, 32, 128);
+  ctx.globalCompositeOperation = "destination-in";
+  const across = ctx.createLinearGradient(0, 0, 32, 0);
+  across.addColorStop(0, "rgba(0,0,0,0)");
+  across.addColorStop(0.3, "rgba(0,0,0,1)");
+  across.addColorStop(0.7, "rgba(0,0,0,1)");
+  across.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = across;
+  ctx.fillRect(0, 0, 32, 128);
+
+  const size = new THREE.Box3().setFromObject(playerCar.group).getSize(new THREE.Vector3());
+  const width = Math.max(size.x, 1) * 1.1;
+  const length = Math.max(size.z, 2) * 3.2;
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(width, length),
+    new THREE.MeshBasicMaterial({
+      map: new THREE.CanvasTexture(canvas),
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+    })
+  );
+  mesh.geometry.rotateX(-Math.PI / 2);
+  // Rear edge sits under the car's rear axle, the rest reaches ahead.
+  mesh.geometry.translate(0, 0.04, length / 2 - size.z * 0.35);
+  mesh.renderOrder = 1;
+  mesh.visible = false;
+  scene.add(mesh);
+
+  const green = new THREE.Color(0x3dff8a);
+  const yellow = new THREE.Color(0xffd23a);
+  const red = new THREE.Color(0xff2a1a);
+  return {
+    update() {
+      mesh.position.set(state.x, 0, state.z);
+      mesh.rotation.y = state.heading;
+      const u = Math.min(Math.max(brakeUrgency(), 0), 1.2);
+      const color = mesh.material.color;
+      if (u < 0.35) color.copy(green);
+      else if (u < 0.7) color.copy(green).lerp(yellow, (u - 0.35) / 0.35);
+      else color.copy(yellow).lerp(red, Math.min((u - 0.7) / 0.3, 1));
+      // Faint when nothing is coming, bright when it matters.
+      mesh.material.opacity = 0.35 + 0.65 * Math.min(u / 0.9, 1);
+      mesh.visible = state.speed > 8;
+    },
+  };
+})();
 
 // Nine AI rivals in five colour pairs (teammates share a livery, like real
 // F1 teams) plus the player makes a full ten-car grid. Colors matched to
@@ -955,7 +1020,6 @@ const hud = setupRaceHud({
   minimapCanvasSize: MINIMAP_CANVAS_SIZE,
   minimapTrackPoints,
   minimapPoint,
-  brakeUrgency,
   qualifyingRivals: AI_QUALIFYING_RESULTS,
   getQualifyingRivals: multiplayer ? multiplayerQualifyingRivals : undefined,
   isDisconnected: isDriverDisconnected,
@@ -1227,6 +1291,7 @@ function updateQualifying(dt) {
 
   const info = integratePlayerMotion(dt);
   applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
+  brakeTrail.update();
 
   // Multiplayer (#44): other participants are really out on track during
   // qualifying too (no solo flying lap here), driven by network samples;
@@ -1313,6 +1378,7 @@ function update(dt) {
   carCollisions.resolve(allCars, now);
 
   applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
+  brakeTrail.update();
   for (const car of aiCars) applyCarToMesh(car, car.x, car.z, car.heading, car.speed, dt);
 
   // Lap timing (current/best lap) uses the same fair progress accumulator
