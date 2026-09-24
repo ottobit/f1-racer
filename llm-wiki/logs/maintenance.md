@@ -643,3 +643,26 @@ garage card's "Entra nel garage" for consistency, and punched up the
 subtext to lead with the benefit (challenge your friends) rather than
 just the mechanics (create/join a room). Verified with real screenshots,
 desktop and mobile, that the new copy still fits the card layout cleanly.
+
+## 2026-09-24 — Realistic engine audio and F1 start procedure (#50)
+
+User request: better engine sound, audible before the qualifying/race
+start, and a realistic start "come fanno nelle gare ufficiali".
+
+- `race-audio.js` rewritten: turbo V6 model (fundamental = rpm/20),
+  PeriodicWave firing tone + sub/half voices, combustion noise, turbo
+  whistle, tanh saturation, RPM inertia, fire-up sequence; phase-driven
+  API (`getPhase`/`getThrottle`) so the engine idles and free-revs on the
+  grid; `coolDown()` after the flag.
+- `main.js`: "Avvia il motore" gate (autoplay policy), pit-exit light for
+  qualifying, five-light gantry with random hold for the race (seeded from
+  the server in multiplayer), `startSequenceId` guard against stale timers.
+- Verified in real headless Chromium through a multiplayer room (server
+  qualifying + race): gate blocks audio until a keypress; idle firing
+  peak 242 Hz (model 230); pit light red -> green; car drives after green;
+  race lights 1 -> 5 -> all out, never green; car frozen with 5 reds and
+  engine revving (spectral centroid 1723 Hz vs 912 at idle); launch to
+  137 km/h after lights out; zero page errors.
+- Known limits: gate needed on every page load; multiplayer qualifying
+  clock runs while a player is at the gate; hold range 0.2-3s is an
+  estimate; no jump-start penalty; no clock-skew compensation.

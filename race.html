@@ -18,7 +18,7 @@
   <meta name="twitter:description" content="Time trial 3D su circuito misto, su una griglia da 10 auto. Giocabile subito nel browser." />
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="stylesheet" href="core/client/style.css?v=33" />
+  <link rel="stylesheet" href="core/client/style.css?v=38" />
   <link rel="stylesheet" href="core/client/race/race-controls.css?v=37" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
@@ -126,7 +126,14 @@
 
   <div id="caution-banner" aria-hidden="true" hidden>⚠️ Safety car — andatura ridotta</div>
 
-  <div id="countdown-overlay" hidden></div>
+  <div id="start-lights" class="start-lights" hidden aria-live="polite"></div>
+  <div id="engine-gate" class="engine-gate" hidden>
+    <div class="engine-gate-card">
+      <span class="engine-gate-kicker">IN GRIGLIA</span>
+      <strong>Avvia il motore</strong>
+      <small>Premi un tasto o tocca lo schermo</small>
+    </div>
+  </div>
 
   <div id="touch-controls">
     <div id="motion-controls" aria-label="Sterzo a movimento">
@@ -172,6 +179,6 @@
     </div>
   </div>
 
-  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=1"></script>
+  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=2"></script>
 </body>
 </html>

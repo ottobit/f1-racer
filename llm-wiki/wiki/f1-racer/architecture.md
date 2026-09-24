@@ -48,10 +48,20 @@ helpers (all under `race/` unless noted):
   (direction/distance/curvature over a lookahead window shared with the AI's
   own centerline sampling), up to 5 nearby cars, damage/tyres/DRS, and the
   final result once the race is over.
-- `race-audio.js`: gear mapping, synthesized engine/shift-click Web Audio and
-  an ambient AI "grid chorus", gated by a `getEngineActive` getter (true in
-  both racing and an in-progress qualifying lap, not race-only) rather than
-  a shared module variable (#10).
+- `race-audio.js`: gear mapping, synthesized V6-turbo engine (firing-order
+  PeriodicWave + sub/half harmonics, combustion noise, turbo whistle, tanh
+  saturation), shift click and an ambient "grid chorus" of the other cars.
+  `setupRaceAudio({ getPhase, getThrottle })`: main.js reports the phase
+  ("grid" = held on the line, throttle free-revs; "driving"; "idle" after
+  the flag) instead of a boolean, so the engine is audible before the start
+  of both qualifying and race, not only once moving (#50).
+- Start procedure (main.js): an "Avvia il motore" gate (browsers only allow
+  audio after a user gesture) fires the engine up, then qualifying opens
+  with a pit-exit light red -> green and the race with the F1 five-light
+  gantry (one per second, random 0.2-3s hold, lights out = go, no green).
+  In multiplayer the hold is seeded from the server's `raceStartedAt`, so
+  every client's lights go out together. `startSequenceId` invalidates the
+  timers of a superseded sequence (#50).
 - `race-weather.js`: sky cloud billboards, rain particle field and impact
   spark FX, gated by a `getPlayerState` getter for the same reason.
 - `../shared/track-geometry.js`: pure centerline sampling/query rules,

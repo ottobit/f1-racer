@@ -29,166 +29,281 @@ export function gearInfo(speedRatio) {
 
 // --- Engine sound ----------------------------------------------------------
 //
-// Synthesised, not a sample — this site has no audio assets and no build
-// step to fetch/bundle one. Two detuned oscillators (a low sawtooth for
-// body, a square an octave-and-a-half up for grit) through a lowpass filter
-// whose cutoff opens up with revs, roughly like an engine's tone
-// brightening as it climbs through a gear — see gearInfo() above for why
-// that's gear-relative "revs" and not just raw speed. Browsers block audio
-// before any user gesture, so the AudioContext is only created lazily on
-// the first key/touch input.
+// Synthesised, not a sample — the site has no audio assets and no build
+// step. Modelled on a 1.6 V6 turbo-hybrid: the engine keeps a real RPM
+// value (idle ~4600, launch ~10800, ~9800-12400 through each gear) and the
+// firing frequency is RPM/20 (six cylinders, four-stroke: three firings per
+// crank revolution), so the fundamental sits around 230 Hz at idle and
+// 490-620 Hz on the move — the high-pitched howl of a modern F1 car, not
+// the old ~70-330 Hz truck-like drone this replaced.
 //
-// `getEngineActive` reports whether the player is actively driving right
-// now — true while racing, but also while actually driving a qualifying
-// lap, not just during the race phase (see #10: the qualifying session has
-// its own state machine, so a race-only check left the engine silent for
-// the entire qualifying session even though the player was driving).
-export function setupRaceAudio({ getEngineActive }) {
-  let audioCtx = null;
-  let engineGain = null;
-  let engineFilter = null;
-  let engineOsc1 = null;
-  let engineOsc2 = null;
-  let engineOsc3 = null;
-  let engineHighpass = null;
-  let engineCompressor = null;
+// Layers: a harmonic-rich firing tone (PeriodicWave), a crank-order sub for
+// body, a 1.5-order half tone for growl, band-passed noise for intake/
+// exhaust roar, and a faint turbo whistle — mixed, soft-clipped, then
+// low-passed by engine load, so on-throttle is open and raspy and a lift is
+// muffled. RPM has inertia (rises faster than it falls), so blips and
+// upshift drops sound like a real engine rather than a pitch slider.
+//
+// Phases come from `getPhase()`: "grid" (car held on the line — idle, and
+// the throttle free-revs the engine like a real driver on the grid),
+// "driving" and "idle" (finished). Browsers only allow audio after a user
+// gesture, so nothing exists until `arm()` is called from one.
+const IDLE_RPM = 4600;
+const LAUNCH_RPM = 10800;
+const GEAR_LOW_RPM = 9800;
+const REDLINE_RPM = 12400;
+const rpmToHz = (rpm) => rpm / 20;
 
-  function initEngineSound() {
-    if (audioCtx) return;
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return; // no Web Audio support: fail silent, not fatal
-    audioCtx = new Ctx();
+export function setupRaceAudio({ getPhase, getThrottle }) {
+  let ctx = null;
+  let master = null;
+  let engineOut = null;
+  let mainOsc, subOsc, halfOsc, turboOsc;
+  let mainGain, noiseFilter, noiseGain, turboGain, bodyFilter, lumpLfo, lumpDepth;
+  let rpm = 0;
+  let load = 0;
+  let startupAt = -1;
+  let lastTick = 0;
+  let gridIntensity = 0.3;
+  let coolingDown = false;
+  let lastPhase = null;
 
-    engineGain = audioCtx.createGain();
-    engineGain.gain.value = 0;
-
-    engineFilter = audioCtx.createBiquadFilter();
-    engineFilter.type = "lowpass";
-    engineFilter.frequency.value = 300;
-
-    engineOsc1 = audioCtx.createOscillator();
-    engineOsc1.type = "sawtooth";
-    engineOsc1.frequency.value = 45;
-
-    engineOsc2 = audioCtx.createOscillator();
-    engineOsc2.type = "triangle";
-    engineOsc2.frequency.value = 45 * 2;
-    const osc2Gain = audioCtx.createGain();
-    osc2Gain.gain.value = 0.32;
-
-    engineOsc3 = audioCtx.createOscillator();
-    engineOsc3.type = "sawtooth";
-    engineOsc3.frequency.value = 45 * 3;
-    const osc3Gain = audioCtx.createGain();
-    osc3Gain.gain.value = 0.1;
-
-    engineHighpass = audioCtx.createBiquadFilter();
-    engineHighpass.type = "highpass";
-    engineHighpass.frequency.value = 70;
-    engineCompressor = audioCtx.createDynamicsCompressor();
-    engineCompressor.threshold.value = -18;
-    engineCompressor.knee.value = 12;
-    engineCompressor.ratio.value = 4;
-
-    engineOsc1.connect(engineFilter);
-    engineOsc2.connect(osc2Gain).connect(engineFilter);
-    engineOsc3.connect(osc3Gain).connect(engineFilter);
-    engineFilter.connect(engineHighpass).connect(engineGain).connect(engineCompressor).connect(audioCtx.destination);
-
-    engineOsc1.start();
-    engineOsc2.start();
-    engineOsc3.start();
+  function firingWave() {
+    const n = 28;
+    const real = new Float32Array(n);
+    const imag = new Float32Array(n);
+    for (let k = 1; k < n; k++) {
+      let a = 1 / Math.pow(k, 0.8);
+      if (k === 2) a *= 1.35;
+      if (k === 3) a *= 1.2;
+      if (k % 6 === 0) a *= 1.5;
+      imag[k] = k % 2 ? a : -a * 0.85;
+    }
+    return ctx.createPeriodicWave(real, imag);
   }
 
-  // speedRatio (0..1 of top speed) drives volume, which should keep rising
-  // with real speed; rpmRatio (0..1, resets each gear — see gearInfo()) drives
-  // pitch and filter brightness, which should climb through a gear and drop
-  // at the next shift, the way an engine actually sounds. Silent whenever
-  // getEngineActive() is false — the race grid countdown, or qualifying
-  // before the lights go out — so the note only kicks in once the player is
-  // actually free to drive.
-  function updateEngineSound(speedRatio, rpmRatio) {
-    if (!audioCtx) return;
-    const now = audioCtx.currentTime;
-    const baseFreq = 70 + rpmRatio * 260;
-    engineOsc1.frequency.setTargetAtTime(baseFreq, now, 0.025);
-    engineOsc2.frequency.setTargetAtTime(baseFreq * 2.01, now, 0.025);
-    engineOsc3.frequency.setTargetAtTime(baseFreq * 3.02, now, 0.025);
-    engineFilter.frequency.setTargetAtTime(650 + rpmRatio * 4200 + speedRatio * 900, now, 0.035);
-    engineHighpass.frequency.setTargetAtTime(65 + speedRatio * 70, now, 0.08);
-    const targetGain = getEngineActive() ? 0.045 + speedRatio * 0.11 : 0;
-    engineGain.gain.setTargetAtTime(targetGain, now, 0.08);
+  function noiseBuffer() {
+    const len = ctx.sampleRate * 2;
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    return buf;
   }
 
-  // A short percussive "thunk" layered over the continuous engine tone, fired
-  // once per gear change (see updateHud). The pitch drop in the engine note
-  // already implies a shift; a discrete click sells it as one.
-  function playShiftClick() {
-    if (!audioCtx) return;
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    osc.type = "square";
-    osc.frequency.setValueAtTime(180, now);
-    osc.frequency.exponentialRampToValueAtTime(80, now + 0.05);
-    const g = audioCtx.createGain();
-    g.gain.setValueAtTime(0.16, now);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
-    osc.connect(g).connect(audioCtx.destination);
-    osc.start(now);
-    osc.stop(now + 0.08);
+  function softClip(amount) {
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < curve.length; i++) {
+      const x = (i / (curve.length - 1)) * 2 - 1;
+      curve[i] = Math.tanh(x * amount) / Math.tanh(amount);
+    }
+    return curve;
   }
 
-  // Ambient "grid chorus": a hint of the other cars' engines, cheap enough
-  // for mobile because it's two oscillators total, not up to nine separate
-  // chains (#10). Loudest at a standing start, when the whole grid is
-  // bunched close together and everyone picks up speed at once; naturally
-  // thins out as the pack spreads around the lap. Pitched low (base ~36 Hz,
-  // even lower than the player's own ~45-70 Hz voice) and detuned between
-  // its two oscillators so it reads as a distant crowd of engines rather
-  // than a second copy of the player's own note.
-  const CHORUS_RADIUS = 40; // units; farther cars don't contribute
-  const CHORUS_MAX_VOICES = 6; // caps how many nearby cars count at once
-  let chorusGain = null;
-  let chorusFilter = null;
-  let chorusOsc1 = null;
-  let chorusOsc2 = null;
-
-  function ensureChorus() {
-    if (!audioCtx || chorusGain) return;
-    chorusGain = audioCtx.createGain();
-    chorusGain.gain.value = 0;
-    chorusFilter = audioCtx.createBiquadFilter();
-    chorusFilter.type = "lowpass";
-    chorusFilter.frequency.value = 220;
-    chorusOsc1 = audioCtx.createOscillator();
-    chorusOsc1.type = "sawtooth";
-    chorusOsc1.frequency.value = 36;
-    chorusOsc2 = audioCtx.createOscillator();
-    chorusOsc2.type = "sawtooth";
-    chorusOsc2.frequency.value = 36 * 1.014;
-    chorusOsc1.connect(chorusFilter);
-    chorusOsc2.connect(chorusFilter);
-    chorusFilter.connect(chorusGain).connect(audioCtx.destination);
-    chorusOsc1.start();
-    chorusOsc2.start();
-  }
-
-  // `nearbyCars` is the full AI car list; this filters by distance itself
-  // rather than requiring the caller to pre-filter, since it already needs
-  // to count them for the volume level regardless.
-  function updateAmbientChorus(nearbyCars, playerState) {
-    if (!audioCtx) return;
-    ensureChorus();
-    if (!chorusGain) return;
-    const now = audioCtx.currentTime;
-    if (!getEngineActive()) {
-      chorusGain.gain.setTargetAtTime(0, now, 0.08);
+  function arm() {
+    if (ctx) {
+      if (ctx.state === "suspended") ctx.resume();
       return;
     }
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return; // no Web Audio: fail silent, not fatal
+    ctx = new Ctx();
+    const wave = firingWave();
+
+    master = ctx.createGain();
+    master.gain.value = 0.9;
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -16;
+    comp.knee.value = 10;
+    comp.ratio.value = 4;
+    master.connect(comp).connect(ctx.destination);
+
+    const mix = ctx.createGain();
+    const shaper = ctx.createWaveShaper();
+    shaper.curve = softClip(2.2);
+    shaper.oversample = "2x";
+    bodyFilter = ctx.createBiquadFilter();
+    bodyFilter.type = "lowpass";
+    bodyFilter.Q.value = 0.9;
+    const highpass = ctx.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 45;
+    engineOut = ctx.createGain();
+    engineOut.gain.value = 0;
+    mix.connect(shaper).connect(bodyFilter).connect(highpass).connect(engineOut).connect(master);
+
+    mainOsc = ctx.createOscillator();
+    mainOsc.setPeriodicWave(wave);
+    mainGain = ctx.createGain();
+    mainGain.gain.value = 0.55;
+    mainOsc.connect(mainGain).connect(mix);
+
+    // Idle lumpiness: a slow amplitude wobble on the firing tone, deep at
+    // idle and nearly gone at high revs.
+    lumpLfo = ctx.createOscillator();
+    lumpLfo.frequency.value = 9;
+    lumpDepth = ctx.createGain();
+    lumpDepth.gain.value = 0;
+    lumpLfo.connect(lumpDepth).connect(mainGain.gain);
+
+    subOsc = ctx.createOscillator();
+    subOsc.type = "sawtooth";
+    const subGain = ctx.createGain();
+    subGain.gain.value = 0.3;
+    subOsc.connect(subGain).connect(mix);
+
+    halfOsc = ctx.createOscillator();
+    halfOsc.type = "triangle";
+    const halfGain = ctx.createGain();
+    halfGain.gain.value = 0.22;
+    halfOsc.connect(halfGain).connect(mix);
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer();
+    noise.loop = true;
+    noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = "bandpass";
+    noiseFilter.Q.value = 0.8;
+    noiseGain = ctx.createGain();
+    noiseGain.gain.value = 0;
+    noise.connect(noiseFilter).connect(noiseGain).connect(mix);
+
+    turboOsc = ctx.createOscillator();
+    turboOsc.type = "sine";
+    turboGain = ctx.createGain();
+    turboGain.gain.value = 0;
+    turboOsc.connect(turboGain).connect(engineOut);
+
+    for (const node of [mainOsc, lumpLfo, subOsc, halfOsc, noise, turboOsc]) node.start();
+
+    rpm = 0;
+    startupAt = ctx.currentTime;
+    document.addEventListener("visibilitychange", () => {
+      if (!ctx) return;
+      if (document.hidden) ctx.suspend();
+      else ctx.resume();
+    });
+  }
+
+  function targetRpmFor(phase, throttle, speedRatio, rpmRatio, now) {
+    if (startupAt >= 0) {
+      // Fire-up: a short starter crank, the engine catches with a rev
+      // flare, then settles to idle.
+      const t = now - startupAt;
+      if (t < 0.5) return 700 + t * 900;
+      if (t < 0.85) return 8200;
+      startupAt = -1;
+    }
+    if (phase === "driving") {
+      if (speedRatio < 0.015) return throttle ? LAUNCH_RPM : IDLE_RPM;
+      const inGear = GEAR_LOW_RPM + rpmRatio * (REDLINE_RPM - GEAR_LOW_RPM);
+      return throttle ? inGear : inGear - 700;
+    }
+    if (phase === "grid") {
+      if (throttle) return LAUNCH_RPM + Math.sin(now * 7) * 250;
+      return IDLE_RPM + gridIntensity * 900;
+    }
+    return IDLE_RPM;
+  }
+
+  // speedRatio (0..1 of top speed) and rpmRatio (0..1 through the current
+  // gear, see gearInfo) come from the HUD every frame, in every phase.
+  function updateEngineSound(speedRatio, rpmRatio) {
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dt = lastTick ? Math.min(Math.max(now - lastTick, 0), 0.1) : 0.016;
+    lastTick = now;
+    const phase = coolingDown ? "idle" : getPhase();
+    const throttle = coolingDown ? 0 : getThrottle();
+    lastPhase = phase;
+
+    const target = targetRpmFor(phase, throttle, speedRatio, rpmRatio, now);
+    const rising = target > rpm;
+    const rate = rising ? (phase === "driving" ? 45000 : 30000) : (phase === "driving" ? 32000 : 11000);
+    const step = rate * dt;
+    rpm = rising ? Math.min(target, rpm + step) : Math.max(target, rpm - step);
+
+    const loadTarget =
+      phase === "driving" ? (throttle ? 1 : 0.25) :
+      phase === "grid" ? (throttle ? 0.85 : 0.2) : 0.15;
+    load += (loadTarget - load) * Math.min(dt * 10, 1);
+
+    const f = rpmToHz(Math.max(rpm, 300));
+    const revs = Math.min(rpm / REDLINE_RPM, 1);
+    mainOsc.frequency.setTargetAtTime(f, now, 0.01);
+    subOsc.frequency.setTargetAtTime(f / 3, now, 0.01);
+    halfOsc.frequency.setTargetAtTime(f * 0.5, now, 0.01);
+    lumpLfo.frequency.setTargetAtTime(Math.max(f / 24, 4), now, 0.05);
+    lumpDepth.gain.setTargetAtTime(0.28 * (1 - revs) * (1 - load * 0.7), now, 0.05);
+
+    noiseFilter.frequency.setTargetAtTime(f * 3.5, now, 0.02);
+    noiseGain.gain.setTargetAtTime(0.03 + 0.12 * load * revs, now, 0.04);
+    turboOsc.frequency.setTargetAtTime(1600 + revs * 4200 * (0.55 + 0.45 * load), now, 0.08);
+    turboGain.gain.setTargetAtTime(0.002 + 0.012 * load * revs * revs, now, 0.1);
+    bodyFilter.frequency.setTargetAtTime(650 + load * 3600 + revs * 2600, now, 0.03);
+
+    const fadeIn = startupAt >= 0 ? Math.min((now - startupAt) / 0.3, 1) : 1;
+    const level = (0.05 + 0.075 * load + 0.035 * speedRatio) * fadeIn;
+    engineOut.gain.setTargetAtTime(level, now, 0.05);
+  }
+
+  // A short percussive clack on each gear change: the RPM drop already
+  // implies a shift, a discrete transient sells it.
+  function playShiftClick() {
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(90, now + 0.04);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.09, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    osc.connect(g).connect(master);
+    osc.start(now);
+    osc.stop(now + 0.06);
+  }
+
+  // Grid chorus: the other cars' engines, as two detuned voices (cheap on
+  // mobile). On the grid it follows `gridIntensity`, which the start
+  // sequence raises light by light — the whole field builds revs together
+  // as the lights come on. Once racing it follows how many visible cars are
+  // nearby and how fast they go, thinning out as the pack spreads.
+  const CHORUS_RADIUS = 40;
+  const CHORUS_MAX_VOICES = 6;
+  let chorusGain = null;
+  let chorusFilter = null;
+  let chorusA = null;
+  let chorusB = null;
+
+  function ensureChorus() {
+    if (!ctx || chorusGain) return;
+    const wave = firingWave();
+    chorusGain = ctx.createGain();
+    chorusGain.gain.value = 0;
+    chorusFilter = ctx.createBiquadFilter();
+    chorusFilter.type = "lowpass";
+    chorusFilter.frequency.value = 900;
+    chorusA = ctx.createOscillator();
+    chorusA.setPeriodicWave(wave);
+    chorusB = ctx.createOscillator();
+    chorusB.setPeriodicWave(wave);
+    chorusA.connect(chorusFilter);
+    chorusB.connect(chorusFilter);
+    chorusFilter.connect(chorusGain).connect(master);
+    chorusA.start();
+    chorusB.start();
+  }
+
+  function updateAmbientChorus(cars, playerState) {
+    if (!ctx) return;
+    ensureChorus();
+    const now = ctx.currentTime;
+    const phase = lastPhase;
     let count = 0;
     let speedSum = 0;
     const radiusSq = CHORUS_RADIUS * CHORUS_RADIUS;
-    for (const car of nearbyCars) {
+    for (const car of cars) {
+      if (car.group && !car.group.visible) continue;
       const dx = car.x - playerState.x;
       const dz = car.z - playerState.z;
       if (dx * dx + dz * dz > radiusSq) continue;
@@ -196,15 +311,56 @@ export function setupRaceAudio({ getEngineActive }) {
       speedSum += Math.abs(car.speed || 0);
       if (count >= CHORUS_MAX_VOICES) break;
     }
-    const level = count / CHORUS_MAX_VOICES;
-    const avgSpeed = count > 0 ? speedSum / count : 0;
-    const rpmish = Math.min(avgSpeed / 60, 1);
-    const baseFreq = 36 + rpmish * 40;
-    chorusOsc1.frequency.setTargetAtTime(baseFreq, now, 0.15);
-    chorusOsc2.frequency.setTargetAtTime(baseFreq * 1.014, now, 0.15);
-    chorusFilter.frequency.setTargetAtTime(220 + rpmish * 500, now, 0.2);
-    chorusGain.gain.setTargetAtTime(level * 0.05, now, 0.2);
+    const presence = count / CHORUS_MAX_VOICES;
+    let chorusRpm;
+    let level;
+    if (phase === "grid") {
+      chorusRpm = IDLE_RPM + gridIntensity * (LAUNCH_RPM - IDLE_RPM);
+      level = presence * (0.02 + gridIntensity * 0.05);
+    } else if (phase === "driving") {
+      const avg = count ? speedSum / count / 84 : 0;
+      chorusRpm = avg < 0.02 ? IDLE_RPM : GEAR_LOW_RPM + Math.min(avg, 1) * 2000;
+      level = presence * 0.035;
+    } else {
+      chorusRpm = IDLE_RPM;
+      level = presence * 0.012;
+    }
+    const f = rpmToHz(chorusRpm);
+    chorusA.frequency.setTargetAtTime(f * 0.985, now, 0.25);
+    chorusB.frequency.setTargetAtTime(f * 1.012, now, 0.25);
+    chorusFilter.frequency.setTargetAtTime(500 + (chorusRpm / REDLINE_RPM) * 1400, now, 0.3);
+    chorusGain.gain.setTargetAtTime(level, now, 0.25);
   }
 
-  return { initEngineSound, updateEngineSound, playShiftClick, updateAmbientChorus };
+  // 0..1: how hard the rest of the grid is revving during the start
+  // sequence (see main.js's race-start lights).
+  function setGridIntensity(value) {
+    gridIntensity = Math.min(Math.max(value, 0), 1);
+  }
+
+  // After the chequered flag the HUD stops updating; settle the engine to
+  // a quiet idle instead of freezing at whatever it was doing.
+  function coolDown() {
+    coolingDown = true;
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    engineOut.gain.setTargetAtTime(0.035, now, 0.6);
+    mainOsc.frequency.setTargetAtTime(rpmToHz(IDLE_RPM), now, 0.4);
+    subOsc.frequency.setTargetAtTime(rpmToHz(IDLE_RPM) / 3, now, 0.4);
+    halfOsc.frequency.setTargetAtTime(rpmToHz(IDLE_RPM) * 0.5, now, 0.4);
+    noiseGain.gain.setTargetAtTime(0.02, now, 0.4);
+    turboGain.gain.setTargetAtTime(0, now, 0.4);
+    bodyFilter.frequency.setTargetAtTime(900, now, 0.4);
+    if (chorusGain) chorusGain.gain.setTargetAtTime(0, now, 1);
+  }
+
+  return {
+    arm,
+    isArmed: () => !!ctx,
+    updateEngineSound,
+    playShiftClick,
+    updateAmbientChorus,
+    setGridIntensity,
+    coolDown,
+  };
 }

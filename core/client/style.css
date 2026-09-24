@@ -544,26 +544,137 @@ html.touch #touch-controls {
   pointer-events: none;
 }
 
-/* --- Starting grid countdown ---------------------------------------------- */
+/* --- Start lights: F1 gantry (race) / pit-exit light (qualifying) --------- */
 
-#countdown-overlay[hidden] {
+.start-lights[hidden],
+.engine-gate[hidden] {
   display: none;
 }
 
-#countdown-overlay {
+.start-lights {
+  position: fixed;
+  top: max(3.2rem, env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 500;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.start-lights.is-leaving {
+  opacity: 0;
+  transform: translate(-50%, -12px);
+}
+
+.start-lights-gantry {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #16181d, #0a0b0e);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.start-light-pod {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 7px;
+  border-radius: 8px;
+  background: #050506;
+}
+
+.start-light-pod i {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #3a1414, #1b0707 70%);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+  transition: background 0.06s linear, box-shadow 0.06s linear;
+}
+
+.start-light-pod.is-red i {
+  background: radial-gradient(circle at 38% 34%, #ffb3a8, #ff1a0a 45%, #b00000 80%);
+  box-shadow: 0 0 18px 4px rgba(255, 30, 10, 0.75), inset 0 -2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.start-light-pod.is-green i {
+  background: radial-gradient(circle at 38% 34%, #d4ffd9, #1fe05a 45%, #07902f 80%);
+  box-shadow: 0 0 18px 4px rgba(40, 230, 100, 0.7), inset 0 -2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.start-lights-caption {
+  margin: 0;
+  font: 800 0.72rem/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 1px 4px #000;
+}
+
+.start-lights-caption:empty {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .start-lights { top: max(2.4rem, env(safe-area-inset-top, 0px)); }
+  .start-lights-gantry { gap: 6px; padding: 7px 8px; }
+  .start-light-pod { gap: 5px; padding: 5px; }
+  .start-light-pod i { width: 20px; height: 20px; }
+}
+
+/* Engine fire-up gate: purely visual — the key/tap listener is on window,
+   so the HUD's back link stays clickable underneath. */
+.engine-gate {
   position: fixed;
   inset: 0;
-  z-index: 500;
+  z-index: 520;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 6rem;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 0.05em;
-  text-shadow: 0 0 28px rgba(225, 6, 0, 0.75), 0 4px 14px rgba(0, 0, 0, 0.7);
   pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.55));
+}
+
+.engine-gate-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 30px;
+  border: 1px solid rgba(225, 6, 0, 0.6);
+  border-radius: 14px;
+  background: rgba(10, 11, 15, 0.86);
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  text-align: center;
+  animation: engine-gate-pulse 1.6s ease-in-out infinite;
+}
+
+.engine-gate-kicker {
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: #ff5a4f;
+}
+
+.engine-gate-card strong {
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+}
+
+.engine-gate-card small {
+  font-size: 0.8rem;
+  color: #aeb5c1;
+}
+
+@keyframes engine-gate-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 6, 0, 0.35); }
+  50% { box-shadow: 0 0 0 10px rgba(225, 6, 0, 0); }
 }
 
 /* --- Post-race results overlay ------------------------------------------- */
