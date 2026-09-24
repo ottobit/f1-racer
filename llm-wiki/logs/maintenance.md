@@ -814,3 +814,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `main.js`: `brakeTrail` — additive, soft-edged plane on the tarmac from under the player car forward, sized from the car's bounding box; color green -> yellow -> red with `brakeUrgency()`, opacity rises with urgency, hidden below 8 m/s. Updated in the qualifying and race loops.
 - Chosen over a bottom-left HUD bar because the touch wheel owns that corner.
 - Verified with `node --check` and `git diff --check` only; thresholds and look to be tuned from play on `master`.
+
+## 2026-09-24 — 300 m braking bar replaces minimap and brake trail (#75)
+
+- New `core/client/race/race-brake-bar.js`: vertical strip of the next 300 m of centerline, player arrow at the bottom, rivals as dots (placed via nearest centerline sample). Each stretch is colored by a backwards braking envelope (`cornerTargetSpeed` + `0.8 * CAR.brakeDecel`) against the current speed: green = no braking, yellow -> red = braking zone/corner.
+- `main.js`: removed the minimap geometry, `brakeUrgency()` and the #73 `brakeTrail` mesh; `setupBrakeBar()` runs in the qualifying and race loops.
+- `race-hud.js`: `drawMinimap()` and its params removed. `race.html`: `#minimap` canvas replaced by `#brake-bar`.
+- Layout: right edge, vertically centered on desktop (`style.css`); above the gas pedal on touch (`race-controls.css`), shorter at `max-height:520px`. The canvas backing store follows its CSS box.
+- Verified with `node --check` and `git diff --check` only.
