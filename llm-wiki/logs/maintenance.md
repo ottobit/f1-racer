@@ -856,3 +856,17 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   `race-bootstrap.js?v=16`.
 - Verified with `node --check`, `git diff --check` and a node smoke test
   with a mock canvas; no browser test.
+
+## 2026-09-25 — Touch braking map bottom center (#83)
+
+- `race.html`: `#motion-controls` (tilt steering: toggle, calibrate,
+  sensitivity) gets `hidden`; the code in `race-input.js` is kept on the
+  user's request so it can come back.
+- `core/client/race/race-controls.css`: `#motion-controls[hidden]` now
+  really hides (the id rule set `display:flex`); on touch `#brake-map`
+  moves bottom center between wheel and pedals (landscape
+  `min(9rem, 100vw - 380px)`, 7.5rem on short screens, standalone lifted
+  above the iOS home strip); portrait puts it above the controls
+  (bottom 205px). Desktop unchanged (right edge).
+- Version bump: `race-controls.css?v=43`.
+- Verified with `git diff --check`; no browser test.
