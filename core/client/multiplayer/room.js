@@ -1,4 +1,4 @@
-import { createRoomClient } from "./room-client.js?v=5";
+import { createRoomClient } from "./room-client.js?v=6";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
 import { liveryById } from "../shared/driver-themes.js?v=27";
 import { CIRCUITS } from "../shared/circuits.js?v=38";
@@ -30,6 +30,7 @@ const el = {
   circuitHost: document.getElementById("room-circuit-host"),
   circuitSelect: document.getElementById("room-circuit-select"),
   difficultySelect: document.getElementById("room-difficulty-select"),
+  qualifyingCheckbox: document.getElementById("room-qualifying-checkbox"),
   circuitDisplay: document.getElementById("room-circuit-display"),
 };
 
@@ -112,11 +113,13 @@ function renderRoom(room) {
   if (isHost && inLobby) {
     if (el.circuitSelect.value !== (room.circuitId || "")) el.circuitSelect.value = room.circuitId || "";
     if (el.difficultySelect.value !== room.difficulty) el.difficultySelect.value = room.difficulty;
+    el.qualifyingCheckbox.checked = room.qualifying !== false;
   }
+  const formatLabel = room.qualifying === false ? "senza qualifica" : "con qualifica";
   const circuitName = room.circuitId ? (CIRCUITS.find((c) => c.id === room.circuitId)?.name || room.circuitId) : null;
   el.circuitDisplay.textContent = inLobby
-    ? (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]}` : (isHost ? "" : "In attesa che l'host scelga il circuito."))
-    : (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]}` : "");
+    ? (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]} · ${formatLabel}` : (isHost ? "" : "In attesa che l'host scelga il circuito."))
+    : (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]} · ${formatLabel}` : "");
 
   const allReady = room.participants.length > 0 && room.participants.every((p) => p.driverId && p.ready);
   el.startBtn.hidden = !isHost || !inLobby;
@@ -270,10 +273,11 @@ el.readyCheckbox.addEventListener("change", () => {
 
 function submitCircuitChoice() {
   if (!el.circuitSelect.value) return;
-  client.setCircuit(el.circuitSelect.value, el.difficultySelect.value).catch((err) => { el.viewStatus.textContent = err.message; });
+  client.setCircuit(el.circuitSelect.value, el.difficultySelect.value, el.qualifyingCheckbox.checked).catch((err) => { el.viewStatus.textContent = err.message; });
 }
 el.circuitSelect.addEventListener("change", submitCircuitChoice);
 el.difficultySelect.addEventListener("change", submitCircuitChoice);
+el.qualifyingCheckbox.addEventListener("change", submitCircuitChoice);
 
 el.startBtn.addEventListener("click", async () => {
   el.viewStatus.textContent = "";

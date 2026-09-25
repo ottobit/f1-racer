@@ -167,7 +167,7 @@ wss.on("connection", (ws) => {
         }
         case "set_circuit": {
           requireBound(bound);
-          const room = setCircuit(store, { roomCode: bound.roomCode, participantId: bound.participantId, circuitId: msg.circuitId, difficulty: msg.difficulty });
+          const room = setCircuit(store, { roomCode: bound.roomCode, participantId: bound.participantId, circuitId: msg.circuitId, difficulty: msg.difficulty, qualifying: msg.qualifying });
           send(ws, { type: "circuit_set", reqId });
           broadcastRoom(bound.roomCode, room);
           break;
@@ -180,7 +180,7 @@ wss.on("connection", (ws) => {
           // confirmation — sessionPhase in the broadcast room_state is what
           // clients key their transition off.
           send(ws, { type: "race_start_ack", reqId });
-          scheduleQualifyingEnd(bound.roomCode);
+          if (room.sessionPhase === "qualifying") scheduleQualifyingEnd(bound.roomCode);
           broadcastRoom(bound.roomCode, room);
           break;
         }

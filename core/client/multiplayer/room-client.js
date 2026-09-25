@@ -173,7 +173,7 @@ export function createRoomClient() {
   function reserveDriver(driverId) { return send("reserve_driver", { driverId }); }
   function releaseDriver() { return send("release_driver"); }
   function setReady(ready) { return send("set_ready", { ready }); }
-  function setCircuit(circuitId, difficulty) { return send("set_circuit", { circuitId, difficulty }); }
+  function setCircuit(circuitId, difficulty, qualifying) { return send("set_circuit", { circuitId, difficulty, qualifying }); }
   function startRace() { return send("start_race"); }
   function reportQualiTime(timeMs) { return send("report_quali_time", { timeMs }); }
 
