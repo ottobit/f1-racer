@@ -989,3 +989,9 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `core/server/room-server.mjs`: every server reply carries `serverNow`; `room-client.js` (`?v=7`) keeps the clock offset and exposes `serverNow()`, surfaced by `race-multiplayer.js` (`?v=5`).
 - `core/client/race/main.js`: `runRaceStartLights` takes an absolute anchor; in multiplayer the sequence starts `MP_START_LEAD_MS` (8 s) after `raceStartedAt` on the server clock. A late engine start joins the sequence in progress, or goes at once if the lights are already out. Solo is unchanged (anchor = now).
 - Clock offset ignores one-way latency (tens of ms). Chain: `room.js?v=9`, `main.js?v=66`, `race-bootstrap.js?v=27`. Verified with `node --check` only; needs the room server restarted.
+
+## 2026-09-25 — Smoother remote cars (#111)
+
+- Part of #105. `updateRemoteCar` chased the last `car_state` (~12/s); at 300 km/h samples are ~7 m apart, so the car eased towards a point it had already passed and stuttered.
+- `race-multiplayer.js` (`?v=6`) stamps each sample with `receivedAt`; `core/client/race/main.js` now chases the sample projected forward along its heading by `speed × age` (age capped at 250 ms, so a stalled stream stops the car quickly).
+- Chain: `main.js?v=67`, `race-bootstrap.js?v=28`. Verified with `node --check` only.

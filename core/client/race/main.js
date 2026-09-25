@@ -20,7 +20,7 @@ import { setupRaceCommands } from "./race-commands.js?v=1";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=1";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=5";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=6";
 
 import { steeringYaw } from "./steering.js?v=1";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
@@ -1139,12 +1139,20 @@ function synthesizeAiQualiTime() {
 // bookkeeping for a remote car is derived the same deterministic way as
 // everyone else's, not trusted from the sender's own claimed values.
 const REMOTE_SMOOTH_FACTOR = 0.35;
+const REMOTE_MAX_EXTRAPOLATION_S = 0.25; // a stalled stream stops the car soon
 function updateRemoteCar(car, dt) {
   const sample = multiplayer.getRemoteSample(car.participantId);
   if (!sample) return; // no broadcast received yet — stays at its grid slot
   const t = Math.min(REMOTE_SMOOTH_FACTOR * dt * 60, 1);
-  car.x += (sample.x - car.x) * t;
-  car.z += (sample.z - car.z) * t;
+  // Chase where the car is now, not where it was when the sample left
+  // (#111): project it forward along its heading by the sample's age, so
+  // it keeps moving between the ~12/s broadcasts instead of stalling.
+  const ageS = sample.receivedAt ? Math.min((performance.now() - sample.receivedAt) / 1000, REMOTE_MAX_EXTRAPOLATION_S) : 0;
+  const lead = (sample.speed || 0) * ageS;
+  const targetX = sample.x + Math.sin(sample.heading) * lead;
+  const targetZ = sample.z + Math.cos(sample.heading) * lead;
+  car.x += (targetX - car.x) * t;
+  car.z += (targetZ - car.z) * t;
   let dh = sample.heading - car.heading;
   while (dh > Math.PI) dh -= Math.PI * 2;
   while (dh < -Math.PI) dh += Math.PI * 2;

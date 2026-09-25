@@ -35,7 +35,8 @@ export function setupMultiplayer() {
   syncDisconnected(latestRoom);
 
   client.onCarState((msg) => {
-    remoteSamples.set(msg.participantId, msg);
+    // Arrival time lets the race extrapolate between samples (#111).
+    remoteSamples.set(msg.participantId, { ...msg, receivedAt: performance.now() });
   });
 
   client.onStateChange((room) => {
