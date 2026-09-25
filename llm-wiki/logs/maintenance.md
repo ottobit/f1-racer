@@ -1001,3 +1001,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Part of #105. `core/server/rooms.mjs`: participants carry `finishedAt`; `reportFinish` records the first finish report (server arrival order is the result); `rematch` (host only) puts the room back in `lobby`, keeping drivers and circuit, clearing ready flags, grid, quali times and finishes. `room-server.mjs` handles `report_finish` / `rematch`.
 - `core/client/race/main.js`: in multiplayer `finishRace` reports the finish and shows the room's shared order (finished by `finishedAt`, then "(in gara)" in running order, "N/M arrivati"), re-rendered on every room update. The host's primary button is "Rivincita"; any room back in `lobby` sends every race page to `room.html` (keeping `roomServer`). The old per-browser multiplayer order and "Torna alla home" branch is gone; solo results are unchanged.
 - Chain: `room-client.js?v=8`, `race-multiplayer.js?v=7`, `main.js?v=68`, `race-bootstrap.js?v=29`, `room.js?v=10`. Verified with `node --check` and a node run of finish + rematch in `rooms.mjs`; needs the room server restarted.
+
+## 2026-09-25 — Touch offset in iOS home-screen mode (#115)
+
+- User report: launched from the home screen, the race controls were drawn higher than their tap zone.
+- `race.html`: `viewport-fit=cover` plus `black-translucent` status bar, so the standalone viewport covers the whole screen and the status bar no longer shifts the layout.
+- `race.html`: an inline script pins the document scroll at 0,0 on resize, rotation and scroll.
+- Known limit: in portrait the top HUD can now sit under the status bar; the existing CSS already honours the left, right and bottom safe-area insets.
+- Verified by syntax check only; needs a test on the device from the home screen.
