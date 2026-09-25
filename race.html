@@ -2,12 +2,12 @@
 <html lang="it" class="race">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="assets/images/app-icon-180.png" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="F1 Racer" />
   <meta name="theme-color" content="#05060a" />
   <title>F1 Racer — ottobit arcade</title>
@@ -189,6 +189,18 @@
     </div>
   </div>
 
+  <script>
+    // iOS home-screen apps can leave the document scrolled after a
+    // rotation or viewport change; the page then draws shifted while taps
+    // still hit the old spot, so the controls respond only below where
+    // they appear. Keep the (non-scrollable) race page pinned at 0,0.
+    (function () {
+      function pin() { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); }
+      window.addEventListener("resize", pin);
+      window.addEventListener("orientationchange", function () { setTimeout(pin, 300); });
+      window.addEventListener("scroll", pin);
+    })();
+  </script>
   <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=29"></script>
 </body>
 </html>
