@@ -221,16 +221,18 @@ html.race #app canvas {
   display: none;
 }
 
-/* Braking map (#77): heading-up section of the next 300 m on the right
-   edge. Touch layouts move it above the gas pedal (race-controls.css). */
+/* Braking map (#77): heading-up section of the next 300 m, wide and
+   see-through at the bottom center, above the controls hint (#89). Touch
+   layouts size it between the pedals (race-controls.css). */
 #brake-map {
   position: fixed;
-  right: 1rem;
-  top: 50%;
-  width: 11rem;
-  height: 11rem;
-  transform: translateY(-50%);
-  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+  left: 50%;
+  bottom: 2.6rem;
+  width: min(22rem, 40vw);
+  height: auto;
+  aspect-ratio: 16 / 10;
+  transform: translateX(-50%);
+  opacity: 0.9;
   pointer-events: none;
 }
 
