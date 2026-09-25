@@ -39,16 +39,24 @@ import {
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
-const SELECTED_DRIVER_ID = loadSelectedDriverId();
-const PLAYER_LIVERY = playerLivery(SELECTED_DRIVER_ID);
-const PLAYER_COCKPIT_THEME = cockpitThemeForDriver(SELECTED_DRIVER_ID);
-
 // Multiplayer Stage 2 (#44): null for a normal solo session (no ?room= in
 // the URL, or a room session that couldn't be resumed — see
 // race-bootstrap.js/race-multiplayer.js). Every integration point below is
 // an explicit branch on this, so solo play's existing behavior is
 // unchanged when it's null — never a silent shared code path.
 const multiplayer = setupMultiplayer();
+
+// In a room the local car is the driver reserved there (#91), which is what
+// every other participant sees; the solo selection only applies offline.
+const ROOM_PARTICIPANTS_WITH_DRIVER = multiplayer
+  ? multiplayer.room.participants.filter((p) => p.driverId)
+  : [];
+const MY_ROOM_DRIVER_ID = multiplayer
+  ? ROOM_PARTICIPANTS_WITH_DRIVER.find((p) => p.participantId === multiplayer.myParticipantId)?.driverId ?? null
+  : null;
+const SELECTED_DRIVER_ID = MY_ROOM_DRIVER_ID || loadSelectedDriverId();
+const PLAYER_LIVERY = playerLivery(SELECTED_DRIVER_ID);
+const PLAYER_COCKPIT_THEME = cockpitThemeForDriver(SELECTED_DRIVER_ID);
 
 /*
  * F1 Racer — championship mode: a fixed-lap race against two AI rivals on
@@ -758,7 +766,15 @@ scene.add(ghostCar.group);
 // so comparing raw fractions directly would unfairly credit whoever
 // started closer to the line. Accumulating deltas since each car's own
 // start makes lap count and race position fair regardless of start offset.
-const start = gridSlot(0, -1); // pole position, left side of the front row
+// Solo qualifying starts from pole. In a room every participant is on track
+// at once, so each one takes its own grid slot (#91) by its index in the
+// server's participant list (same order on every client).
+const QUALI_START_INDEX = Math.max(
+  0,
+  ROOM_PARTICIPANTS_WITH_DRIVER.findIndex((p) => p.participantId === multiplayer?.myParticipantId)
+);
+const QUALI_START_SLOT = ALL_GRID_SLOTS[Math.min(QUALI_START_INDEX, ALL_GRID_SLOTS.length - 1)];
+const start = gridSlot(QUALI_START_SLOT.row, QUALI_START_SLOT.lane);
 const state = {
   x: start.x,
   z: start.z,
@@ -771,7 +787,7 @@ const state = {
   lapStartTime: performance.now(),
   currentLapTime: 0,
   bestLapTime: null,
-  prevRawProgress: 0,
+  prevRawProgress: nearestTrackInfo(start.x, start.z).idx / centerline.length,
   totalProgress: 0,
   damage: 0,
   drsActive: false,
