@@ -6,8 +6,8 @@ import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
 import { cockpitThemeForDriver, liveryById } from "../shared/driver-themes.js?v=27";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=29";
 
-import { createStudioEnvironment } from "../shared/car-model.js?v=28";
-import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=28";
+import { createStudioEnvironment } from "../shared/car-model.js?v=29";
+import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=29";
 import { setupRaceInput } from "./race-input.js?v=42";
 import { setupRaceHud } from "./race-hud.js?v=37";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
@@ -24,7 +24,8 @@ import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=2";
 
 import { steeringYaw } from "./steering.js?v=1";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
-import { gearInfo, setupRaceAudio } from "./race-audio.js?v=2";
+import { gearInfo, setupRaceAudio } from "./race-audio.js?v=3";
+import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
 import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=1";
 import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=1";
@@ -878,6 +879,14 @@ const raceAudio = setupRaceAudio({
   getThrottle: () => (input.forward ? 1 : 0),
 });
 const { updateEngineSound, playShiftClick, updateAmbientChorus } = raceAudio;
+const updateExhaust = setupExhaustPops({
+  carGroup: playerCar.group,
+  state,
+  input,
+  maxSpeed: CAR.maxSpeed,
+  gearInfo,
+  playPop: raceAudio.playExhaustPop,
+});
 
 // --- HUD -----------------------------------------------------------------
 
@@ -1525,6 +1534,7 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.1);
   updateSteeringInput(dt);
   update(dt);
+  updateExhaust(dt);
   raceNameplates.update();
   updateWeather(dt); // sparks, rain and cloud drift; always runs regardless of session phase
   sun.position.set(state.x + 30, 55, state.z + 25);

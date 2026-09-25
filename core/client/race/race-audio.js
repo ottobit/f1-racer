@@ -263,6 +263,37 @@ export function setupRaceAudio({ getPhase, getThrottle }) {
     osc.stop(now + 0.06);
   }
 
+  // Overrun crackle (#89): a short band-passed noise crack over a low
+  // thump, one per flame flicker from race-exhaust.js.
+  let popBuffer = null;
+  function playExhaustPop(intensity = 1) {
+    if (!ctx) return;
+    if (!popBuffer) popBuffer = noiseBuffer();
+    const now = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = popBuffer;
+    const band = ctx.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.value = 700 + Math.random() * 900;
+    band.Q.value = 1.4;
+    const crack = ctx.createGain();
+    crack.gain.setValueAtTime(0.32 * intensity, now);
+    crack.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+    src.connect(band).connect(crack).connect(master);
+    src.start(now, Math.random() * 1.5, 0.08);
+
+    const thump = ctx.createOscillator();
+    thump.type = "sine";
+    thump.frequency.setValueAtTime(120, now);
+    thump.frequency.exponentialRampToValueAtTime(45, now + 0.06);
+    const body = ctx.createGain();
+    body.gain.setValueAtTime(0.22 * intensity, now);
+    body.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    thump.connect(body).connect(master);
+    thump.start(now);
+    thump.stop(now + 0.09);
+  }
+
   // Grid chorus: the other cars' engines, as two detuned voices (cheap on
   // mobile). On the grid it follows `gridIntensity`, which the start
   // sequence raises light by light — the whole field builds revs together
@@ -359,6 +390,7 @@ export function setupRaceAudio({ getPhase, getThrottle }) {
     isArmed: () => !!ctx,
     updateEngineSound,
     playShiftClick,
+    playExhaustPop,
     updateAmbientChorus,
     setGridIntensity,
     coolDown,

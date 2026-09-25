@@ -1,5 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { buildCar, createStudioEnvironment } from '../shared/car-model.js?v=28';
+import { buildCar, createStudioEnvironment } from '../shared/car-model.js?v=29';
 
 const SHOWROOM_VIEWS={
   hero:[.72,.34,10.4],
