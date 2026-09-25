@@ -51,6 +51,8 @@ export function setupMultiplayer() {
   return {
     get myParticipantId() { return client.participantId; },
     get room() { return latestRoom; },
+    // Server-clock "now" (ms), for timestamps like raceStartedAt (#109).
+    serverNow() { return client.serverNow(); },
 
     // Other participants who reserved a driver, in stable participant order
     // (not grid order — that only exists once qualifying ends).
