@@ -1,4 +1,4 @@
-// Braking map (#77): a heading-up section of the track, from a little
+// Braking map (#77, restyled in #81): a heading-up section of the track, from a little
 // behind the player to 300 m ahead, turning around the player's dot like
 // the #69 minimap. Each stretch is colored by how much the player would
 // have to brake if they were there at their current speed: green = no
@@ -85,10 +85,23 @@ export function setupBrakeMap({
       envelope[k] = next;
     }
 
+    // Braking point: the first sample ahead of the player where the current
+    // speed is already above the envelope. Its distance is shown under the
+    // arrow.
+    const v = Math.max(state.speed, 0);
+    const playerK = Math.max(idxs.indexOf(start), 0);
+    let brakeDist = null;
+    for (let k = playerK; k < idxs.length; k++) {
+      if (v > envelope[k] + 0.5) {
+        brakeDist = dists[k] - dists[playerK];
+        break;
+      }
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
     // World forward is (sin h, cos h) with canvas x = world x, canvas y =
-    // world z; rotate it to screen-up around the dot.
+    // world z; rotate it to screen-up around the arrow.
     const forwardAngle = Math.atan2(Math.cos(state.heading), Math.sin(state.heading));
     ctx.translate(half, anchorY);
     ctx.rotate(-Math.PI / 2 - forwardAngle);
@@ -107,13 +120,23 @@ export function setupBrakeMap({
         else ctx.lineTo(p.x, p.z);
       }
     };
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.6)";
-    ctx.lineWidth = 16 / zoom;
+    // Road: soft shadow, white edge lines, dark asphalt.
+    const px = size / 256; // stroke widths are tuned for a 256 px canvas
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.45)";
+    ctx.lineWidth = (26 * px) / zoom;
+    traceSection();
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.lineWidth = (20 * px) / zoom;
+    traceSection();
+    ctx.stroke();
+    ctx.strokeStyle = "#2b2f36";
+    ctx.lineWidth = (16 * px) / zoom;
     traceSection();
     ctx.stroke();
 
-    const v = Math.max(state.speed, 0);
-    ctx.lineWidth = 10 / zoom;
+    // Warning line down the middle, green -> yellow -> red.
+    ctx.lineWidth = (6 * px) / zoom;
     for (let k = 0; k < end; k++) {
       const a = centerline[idxs[k]];
       const b = centerline[idxs[k + 1]];
@@ -128,22 +151,27 @@ export function setupBrakeMap({
     for (const car of aiCars) {
       if (!inSection.has(nearestTrackInfo(car.x, car.z).idx)) continue;
       ctx.fillStyle = `#${car.color.toString(16).padStart(6, "0")}`;
-      ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
-      ctx.lineWidth = 2 / zoom;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = (2 * px) / zoom;
       ctx.beginPath();
-      ctx.arc(car.x, car.z, 7 / zoom, 0, Math.PI * 2);
+      ctx.arc(car.x, car.z, (5 * px) / zoom, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
     }
     ctx.restore();
 
-    // Player dot, always at the anchor.
+    // Player arrow, always at the anchor pointing up.
+    const r = size * 0.06;
     ctx.beginPath();
-    ctx.arc(half, anchorY, size * 0.055, 0, Math.PI * 2);
+    ctx.moveTo(half, anchorY - r);
+    ctx.lineTo(half + r * 0.75, anchorY + r * 0.7);
+    ctx.lineTo(half, anchorY + r * 0.35);
+    ctx.lineTo(half - r * 0.75, anchorY + r * 0.7);
+    ctx.closePath();
     ctx.fillStyle = "#ffffff";
     ctx.fill();
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.8)";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
+    ctx.lineWidth = 2 * px;
     ctx.stroke();
 
     // Soft edges instead of a disc or frame.
@@ -155,5 +183,21 @@ export function setupBrakeMap({
     ctx.fillStyle = fade;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.restore();
+
+    // Distance to the braking point, drawn after the fade so it stays sharp.
+    if (brakeDist !== null) {
+      const now = brakeDist < 8;
+      const label = now ? "FRENA" : `${Math.round(brakeDist / 10) * 10} m`;
+      const t = now ? 1 : brakeDist < 60 ? 0.8 : brakeDist < 150 ? 0.5 : 0;
+      ctx.font = `800 ${Math.round(22 * px)}px system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 4 * px;
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
+      ctx.fillStyle = urgencyColor(t);
+      const y = Math.min(anchorY + r * 2.2, canvas.height - 14 * px);
+      ctx.strokeText(label, half, y);
+      ctx.fillText(label, half, y);
+    }
   };
 }
