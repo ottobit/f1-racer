@@ -39,8 +39,10 @@
     <div id="room-view" class="room-view" hidden>
       <div class="room-view-head">
         <div class="room-code-block"><span>Codice stanza</span><strong id="room-code-display"></strong></div>
+        <button id="room-share-btn" type="button" class="room-btn">Condividi link</button>
         <button id="room-leave-btn" type="button" class="room-btn room-btn--ghost">Esci</button>
       </div>
+      <p id="room-share-status" class="room-status" role="status" aria-live="polite"></p>
       <p id="room-connection-status" class="room-status" role="status" aria-live="polite"></p>
       <p id="room-view-status" class="room-status" role="status" aria-live="polite"></p>
 
@@ -79,6 +81,6 @@
     </div>
   </section>
 
-  <script type="module" src="core/client/multiplayer/room.js?v=5"></script>
+  <script type="module" src="core/client/multiplayer/room.js?v=6"></script>
 </body>
 </html>
