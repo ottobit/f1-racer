@@ -43,7 +43,7 @@ html.race.touch body,html.race.touch #touch-controls *{-webkit-user-select:none;
 /* Braking map (#77) sits bottom center on touch, where the tilt steering
    controls were (#83), between the wheel and the pedals. Portrait has no
    room there, so it goes above the controls. */
-html.touch #brake-map{top:auto;right:auto;left:50%;transform:translateX(-50%);width:min(9rem,calc(100vw - 380px));height:auto;aspect-ratio:1;bottom:max(8px,env(safe-area-inset-bottom))}
-@media(max-height:520px){html.touch #brake-map{width:min(7.5rem,calc(100vw - 360px))}}
-@media(orientation:portrait){html.touch #brake-map{width:8rem;bottom:205px}}
+html.touch #brake-map{top:auto;right:auto;left:50%;transform:translateX(-50%);width:min(17rem,calc(100vw - 380px));height:auto;aspect-ratio:16/10;bottom:max(4px,env(safe-area-inset-bottom));filter:none;opacity:.9}
+@media(max-height:520px){html.touch #brake-map{width:min(14rem,calc(100vw - 360px))}}
+@media(orientation:portrait){html.touch #brake-map{width:14rem;bottom:195px}}
 @media(display-mode:standalone) and (orientation:landscape),(display-mode:fullscreen) and (orientation:landscape){html.touch #brake-map{bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}
