@@ -1,7 +1,7 @@
 /* Only the lower driving controls. The upper HUD is deliberately untouched. */
 #motion-controls{position:absolute;bottom:max(8px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;gap:4px;width:min(280px,calc(100vw - 360px));pointer-events:auto}
 #motion-controls button,#motion-controls select{min-height:44px;padding:5px 8px;border:1px solid #a8c6d866;border-radius:6px;background:#102331c9;color:#eef8ff;font:600 11px system-ui;touch-action:manipulation}
-#motion-controls [hidden]{display:none}
+#motion-controls[hidden],#motion-controls [hidden]{display:none}
 #motion-status{width:100%;text-align:center;color:#e2f3ff;font:10px/1.25 system-ui;text-shadow:0 1px 3px #000;pointer-events:none}
 #motion-indicator{position:relative;display:flex;justify-content:space-between;align-items:center;width:100%;height:18px;color:#d3e7f4;font:700 9px system-ui;text-shadow:0 1px 3px #000;pointer-events:none;background:linear-gradient(#b9d5df80,#b9d5df80) center/80% 1px no-repeat}
 #motion-indicator:after{content:'';position:absolute;left:50%;height:10px;width:1px;background:#d9ebf5}
@@ -40,6 +40,10 @@ html.touch #touch-controls{padding:0 max(16px,env(safe-area-inset-right)) max(18
    meant to be selected on touch. */
 html.race.touch body,html.race.touch #touch-controls *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 #wheel-control svg,#wheel-control svg *{pointer-events:none}
-/* Braking map (#77) sits right above the gas pedal on touch. */
-html.touch #brake-map{top:auto;transform:none;right:.25rem;width:9rem;height:9rem;bottom:calc(1rem + 134px + env(safe-area-inset-bottom,0px))}
-@media(max-height:520px){html.touch #brake-map{width:7.5rem;height:7.5rem;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 120px)}}
+/* Braking map (#77) sits bottom center on touch, where the tilt steering
+   controls were (#83), between the wheel and the pedals. Portrait has no
+   room there, so it goes above the controls. */
+html.touch #brake-map{top:auto;right:auto;left:50%;transform:translateX(-50%);width:min(9rem,calc(100vw - 380px));height:auto;aspect-ratio:1;bottom:max(8px,env(safe-area-inset-bottom))}
+@media(max-height:520px){html.touch #brake-map{width:min(7.5rem,calc(100vw - 360px))}}
+@media(orientation:portrait){html.touch #brake-map{width:8rem;bottom:205px}}
+@media(display-mode:standalone) and (orientation:landscape),(display-mode:fullscreen) and (orientation:landscape){html.touch #brake-map{bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}

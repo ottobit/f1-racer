@@ -26,7 +26,7 @@
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="core/client/style.css?v=42" />
-  <link rel="stylesheet" href="core/client/race/race-controls.css?v=42" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=43" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -144,7 +144,9 @@
   </div>
 
   <div id="touch-controls">
-    <div id="motion-controls" aria-label="Sterzo a movimento">
+    <!-- Tilt steering hidden in #83 (the braking map takes its place); the
+         code in race-input.js is kept. -->
+    <div id="motion-controls" aria-label="Sterzo a movimento" hidden>
       <button id="motion-toggle" type="button" aria-pressed="false">Attiva movimento</button>
       <button id="motion-calibrate" type="button" hidden>Centra</button>
       <select id="motion-sensitivity" aria-label="Sensibilità sterzo a movimento" hidden>
