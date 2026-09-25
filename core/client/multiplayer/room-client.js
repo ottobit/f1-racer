@@ -84,6 +84,12 @@ export function createRoomClient() {
       voiceSignalListeners.forEach((cb) => cb(msg.from, msg.data));
       return;
     }
+    if (msg.type === "error" && msg.code === "unknown_type" && !msg.reqId) {
+      // A room server started before voice chat existed rejects its
+      // signaling; tell the voice HUD instead of failing silently (#93).
+      voiceSignalListeners.forEach((cb) => cb(null, { kind: "unsupported" }));
+      return;
+    }
     if (msg.type === "room_closed") {
       saveSession(null);
       session = null;

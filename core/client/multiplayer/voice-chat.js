@@ -18,13 +18,31 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
   let localTrack = null;
   let muted = false;
   let stopped = false;
+  // Diagnostics (#93): why the peer count stays at 0.
+  const failed = new Set(); // peers whose connection failed and was dropped
+  let heardFromPeer = false; // any signal from another participant
+  let serverUnsupported = false; // room server predates voice_signal
+
 
   const isOfferer = (otherId) => myId < otherId;
 
   function report() {
     let connected = 0;
-    for (const peer of peers.values()) if (peer.pc.connectionState === "connected") connected += 1;
-    onStatus({ connected, muted, hasMic: !!localTrack });
+    let connecting = 0;
+    for (const peer of peers.values()) {
+      if (peer.pc.connectionState === "connected") connected += 1;
+      else connecting += 1;
+    }
+    onStatus({
+      connected,
+      connecting,
+      failed: failed.size,
+      expected: otherIds(client.room).length,
+      heardFromPeer,
+      serverUnsupported,
+      muted,
+      hasMic: !!localTrack,
+    });
   }
 
   function otherIds(room) {
@@ -70,8 +88,12 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
     };
     pc.onconnectionstatechange = () => {
       if (peers.get(id) !== peer) return;
-      if (pc.connectionState === "failed") closePeer(id);
-      else report();
+      console.info("[voice-chat]", id, "connection", pc.connectionState, "ice", pc.iceConnectionState);
+      if (pc.connectionState === "connected") failed.delete(id);
+      if (pc.connectionState === "failed") {
+        failed.add(id);
+        closePeer(id);
+      } else report();
     };
     return peer;
   }
@@ -102,6 +124,12 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
 
   async function handleSignal(from, data) {
     if (stopped || !data) return;
+    if (data.kind === "unsupported") {
+      serverUnsupported = true;
+      report();
+      return;
+    }
+    heardFromPeer = true;
     const peer = peers.get(from);
     switch (data.kind) {
       case "hello":
@@ -134,6 +162,7 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
       const queued = current.pendingIce.splice(0);
       for (const candidate of queued) await current.pc.addIceCandidate(candidate).catch(() => {});
     }
+    report();
   }
 
   // Must run inside the user gesture for iOS to show the mic prompt.
@@ -164,6 +193,8 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
     if (stopped) return;
     const present = new Set(otherIds(room));
     for (const id of [...peers.keys()]) if (!present.has(id)) closePeer(id);
+    for (const id of [...failed]) if (!present.has(id)) failed.delete(id);
+    report();
   });
 
   window.addEventListener("pagehide", stop);
@@ -184,8 +215,20 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
   };
 }
 
-// HUD toggle under the lap counter: shows how many peers are heard and
-// mutes/unmutes the local mic. Returns the onStatus callback to wire in.
+// Short reason shown next to the peer count while nobody is connected (#93).
+function voiceDiagnosis({ connected, connecting, failed, expected, heardFromPeer, serverUnsupported }) {
+  if (serverUnsupported) return "server da aggiornare";
+  if (connected > 0) return failed > 0 ? `${connected} · ${failed} falliti` : String(connected);
+  if (failed > 0) return "collegamento fallito";
+  if (connecting > 0) return "collego…";
+  if (expected === 0) return "nessun altro";
+  if (!heardFromPeer) return "nessuna risposta";
+  return "in attesa";
+}
+
+// HUD toggle under the lap counter: shows how many peers are heard (or why
+// none are) and mutes/unmutes the local mic. Returns the onStatus callback
+// to wire in.
 export function mountVoiceToggle(container) {
   const button = document.createElement("button");
   button.type = "button";
@@ -197,9 +240,10 @@ export function mountVoiceToggle(container) {
   button.addEventListener("click", () => voice && voice.toggleMute());
   return {
     attach(v) { voice = v; },
-    onStatus({ connected, muted, hasMic }) {
+    onStatus(status) {
+      const { muted, hasMic } = status;
       const label = !hasMic ? "Solo ascolto" : muted ? "Muto" : "Voce";
-      button.textContent = `${hasMic && !muted ? "🎙" : "🔇"} ${label} · ${connected}`;
+      button.textContent = `${hasMic && !muted ? "🎙" : "🔇"} ${label} · ${voiceDiagnosis(status)}`;
       button.setAttribute("aria-pressed", String(muted));
       button.disabled = !hasMic;
     },

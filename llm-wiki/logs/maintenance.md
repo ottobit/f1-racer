@@ -926,3 +926,18 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   `prevRawProgress` is derived from the actual start point.
 - Version chain: `main.js?v=61`, `race-bootstrap.js?v=20` (race.html).
 - Verified with `node --check` only; to be tested in a real two-player room.
+
+## 2026-09-25 — Voice chat diagnostics (#93)
+
+- Real test (iPhone + desktop on the same LAN): mic granted, HUD stuck on
+  "Voce · 0", no audio. Cause not yet known (stale room server vs. missing
+  TURN).
+- `voice-chat.js`: the HUD label now says why nobody is connected — room
+  server too old for `voice_signal`, no reply from peers, connecting,
+  connection failed (likely NAT, needs TURN) — and logs each WebRTC
+  connection/ICE state to the console.
+- `room-client.js`: an `unknown_type` error without reqId (old server
+  rejecting `voice_signal`) is forwarded to the voice layer.
+- Version chain: `voice-chat.js?v=2`, `race-multiplayer.js?v=3`,
+  `main.js?v=62`, `room-client.js?v=4`, `race-bootstrap.js?v=21`,
+  `room.js?v=5`. Verified with `node --check` only.
