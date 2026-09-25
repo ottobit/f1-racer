@@ -948,3 +948,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `core/server/room-server.mjs`: a socket close is ignored when the participant is already bound to a newer socket (the room.html -> race.html navigation can deliver the old close after the new reconnect, which marked the live participant "grace" and dropped its socket from the relay map).
 - `core/client/multiplayer/voice-chat.js` (`?v=3`): hellos go to every peer that becomes connected, not only those present at start; chain bumped (`race-multiplayer.js?v=4`, `main.js?v=63`, `race-bootstrap.js?v=22`).
 - Root cause is probable, not proven; TURN is still missing for peers behind strict NAT. Verified with `node --check` only.
+
+## 2026-09-25 — Room invite link (#97)
+
+- `room.html` + `core/client/multiplayer/room.js` (`?v=6`): "Condividi link" button builds `room.html?join=CODE` keeping the current `roomServer`; native share sheet on mobile, clipboard fallback, raw link as last resort.
+- Opening an invite prefills the code and shows a hint; the nickname is remembered in `f1racer-room-nickname-v1`. A saved session for a different room is left so the invite wins.
+- Warns when the link cannot work for friends (page on localhost, or no public `roomServer`) — the host must open the game from GitHub Pages with `?roomServer=wss://…` for the link to be usable.
+- Verified with `node --check` only.
