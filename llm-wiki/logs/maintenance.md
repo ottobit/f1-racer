@@ -870,3 +870,15 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   (bottom 205px). Desktop unchanged (right edge).
 - Version bump: `race-controls.css?v=43`.
 - Verified with `git diff --check`; no browser test.
+
+## 2026-09-25 — Wider, see-through touch braking map (#85)
+
+- `core/client/race/race-controls.css`: touch `#brake-map` is now a 16:10 box
+  (up to 17rem landscape, 14rem portrait), no drop shadow, opacity 0.9.
+- `core/client/race/race-brake-map.js`: zoom and stroke widths scale by the
+  short side of the canvas; black road shadow removed; asphalt is punched out
+  and refilled at 35% alpha, edges at 55%; elliptical fade starts at 35% of
+  the radius. Warning line, rival dots, arrow and label stay opaque.
+- Version chain: `race-brake-map.js?v=3`, `main.js?v=58`,
+  `race-bootstrap.js?v=17`, `race-controls.css?v=44`.
+- Verified with `node --check` and `git diff --check` only (no browser test).
