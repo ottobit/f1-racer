@@ -841,3 +841,18 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Version bumps: `player-physics.js?v=4`, `main.js?v=56`,
   `race-bootstrap.js?v=15`.
 - Verified with `node --check` and `git diff --check`; no browser test.
+
+## 2026-09-25 — Braking map restyle (#81)
+
+- `core/client/race/race-brake-map.js`: the section is drawn as a road
+  (shadow, white edge lines, dark asphalt) with a thinner green/yellow/red
+  warning line down the middle; the player is a white arrow; rivals are
+  smaller dots with a white outline.
+- New label under the arrow: distance to the braking point (first sample
+  where the current speed is above the envelope), rounded to 10 m; "FRENA"
+  in red when it is under 8 m. Drawn after the edge fade so it stays sharp.
+- Stroke widths scale with the canvas size (tuned for 256 px).
+- Version bumps: `race-brake-map.js?v=2`, `main.js?v=57`,
+  `race-bootstrap.js?v=16`.
+- Verified with `node --check`, `git diff --check` and a node smoke test
+  with a mock canvas; no browser test.
