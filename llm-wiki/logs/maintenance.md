@@ -968,3 +968,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Scrub now starts only past slip 0.3 (rescaled 0..1 above it): light/medium steering holds speed on the throttle; full lock at top speed still loses some (estimated ~5 km/h/s instead of ~15), so overdriving a corner still costs.
 - Player physics only; AI untouched. Chain bumped (`main.js?v=64`, `race-bootstrap.js?v=24`, `race.html`).
 - Verified with `node --check` only; the numbers are estimates from the formulas, to be confirmed in game.
+
+## 2026-09-25 — Brake no longer goes straight into reverse (#103)
+
+- Real test: holding the brake stopped the car and immediately reversed it — `brakeDecel` (75 m/s²) kept applying below zero down to `reverseMaxSpeed`.
+- `core/client/race/player-physics.js` (`?v=6`): braking clamps at 0; reverse starts only after the brake is held 0.6 s at a standstill, at 9 m/s² instead of full brake force. Releasing the brake resets the hold.
+- Also noted from the same test: a ~244 km/h top speed was probably collision damage (`(1 - damage)` in the speed cap), not a physics regression — the user will check the "Danni" HUD row.
+- Chain bumped (`main.js?v=65`, `race-bootstrap.js?v=25`, `race.html`). Verified with `node --check` only.
