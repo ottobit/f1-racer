@@ -12,6 +12,12 @@ export function setupPlayerPhysics({
   nearestTrackInfo,
   applyTrackBoundary,
 }) {
+  // Brake stops the car; reverse only after holding it at a standstill
+  // (#103) — it used to carry straight through zero at full brake force.
+  const REVERSE_DELAY_S = 0.6;
+  const REVERSE_ACCEL = 9;
+  let stoppedBrakeTime = 0;
+
   function integratePlayerMotion(dt) {
     const preSpeedFactor = Math.min(Math.abs(state.speed) / car.maxSpeed, 1);
     const preLateralDemand = Math.min(
@@ -26,9 +32,16 @@ export function setupPlayerPhysics({
     // Mild traction cut while sliding (#79): a stronger cut acted as an
     // invisible speed limiter whenever the wheel was turned.
     const longitudinalGripBudget = Math.max(0.5, 1 - preLateralDemand * 0.15);
+    if (!input.back) stoppedBrakeTime = 0;
     if (input.back) {
-      const brakeAuthority = longitudinalGripBudget * (1 + brakingLoadTransfer * 0.25);
-      state.speed -= car.brakeDecel * brakeAuthority * dt;
+      if (state.speed > 0) {
+        const brakeAuthority = longitudinalGripBudget * (1 + brakingLoadTransfer * 0.25);
+        state.speed = Math.max(0, state.speed - car.brakeDecel * brakeAuthority * dt);
+        stoppedBrakeTime = 0;
+      } else {
+        stoppedBrakeTime += dt;
+        if (state.speed < 0 || stoppedBrakeTime >= REVERSE_DELAY_S) state.speed -= REVERSE_ACCEL * dt;
+      }
     } else if (throttle) {
       const traction = longitudinalGripBudget * (1 - accelerationLoadTransfer * 0.35);
       // Power fades with speed (aero drag): launch at car.accel, only ~15%
