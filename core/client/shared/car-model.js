@@ -160,12 +160,23 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     box(.16,.065,.035,carbon,[0,0,0],driverSteeringWheel);
     for(const side of [-1,1])box(.058,.115,.042,carbon,[side*.115,0,0],driverSteeringWheel);
     mesh(new THREE.BoxGeometry(.055,.024,.012),stripe,[0,.105,.025],driverSteeringWheel);
+    // Arms bend at the elbow (#89) instead of one straight rod.
     for(const side of [-1,1]){
-      rod([side*.17,.78,-.02],[side*.115,.79,.29],.043,suit);
+      const elbow=[side*.25,.7,.13];
+      rod([side*.2,.78,-.02],elbow,.045,suit);
+      rod(elbow,[side*.115,.79,.27],.04,suit);
+      mesh(new THREE.SphereGeometry(.046,10,7),suit,elbow);
       const glove=mesh(new THREE.SphereGeometry(.052,10,7),black,[side*.115,0,.025],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.78,1.18,.72);
     }
-    const helmet=mesh(new THREE.SphereGeometry(.19,20,12),stripe,[0,.88,.04]);helmet.name="driverHelmet";helmet.scale.y=.9;
-    const visor=mesh(new THREE.SphereGeometry(.195,20,10,0,Math.PI*2,.95,.65),new THREE.MeshPhysicalMaterial({color:0x263e52,metalness:1,roughness:.1}),[0,.88,.04]);visor.name="driverVisor";
+    // HANS collar resting on the shoulders behind the helmet.
+    const hans=mesh(new THREE.TorusGeometry(.13,.03,8,16,Math.PI),carbon,[0,.8,-.02]);hans.name="driverHans";hans.rotation.set(Math.PI/2,0,Math.PI);
+    // Helmet (#89): livery shell, accent centre stripe, front-only visor
+    // slot, chin bar and a small rear spoiler.
+    const helmet=mesh(new THREE.SphereGeometry(.19,detail?28:20,detail?18:12),stripe,[0,.88,.04]);helmet.name="driverHelmet";helmet.scale.set(.95,.9,1.05);
+    const helmetStripe=mesh(new THREE.TorusGeometry(.19,.018,6,detail?32:20,Math.PI),gold,[0,.88,.04]);helmetStripe.name="driverHelmetStripe";helmetStripe.rotation.y=Math.PI/2;helmetStripe.scale.set(1.05,.9,1);
+    const visor=mesh(new THREE.SphereGeometry(.196,detail?24:16,6,Math.PI/2-.95,1.9,1.12,.42),new THREE.MeshPhysicalMaterial({color:0x1d2f40,metalness:1,roughness:.08,clearcoat:1}),[0,.88,.04]);visor.name="driverVisor";visor.scale.set(.95,.9,1.05);
+    const chin=mesh(new THREE.SphereGeometry(.11,12,8),stripe,[0,.8,.17]);chin.name="driverChin";chin.scale.set(1.15,.55,.6);
+    const spoiler=box(.2,.022,.07,gold,[0,1.0,-.1]);spoiler.name="driverHelmetSpoiler";spoiler.rotation.x=.35;
   }
   const haloCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(-.36,.95,-.27),new THREE.Vector3(-.4,1.07,.17),new THREE.Vector3(0,1.07,.57),new THREE.Vector3(.4,1.07,.17),new THREE.Vector3(.36,.95,-.27)]);
   mesh(new THREE.TubeGeometry(haloCurve,detail?40:20,.038,8,false),carbon);
