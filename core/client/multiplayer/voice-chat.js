@@ -22,7 +22,21 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
   const failed = new Set(); // peers whose connection failed and was dropped
   let heardFromPeer = false; // any signal from another participant
   let serverUnsupported = false; // room server predates voice_signal
+  // Peers already greeted; a peer that drops out and comes back (or shows
+  // up after we started) gets a fresh hello (#95).
+  const greeted = new Set();
+  let ready = false; // mic question settled, hellos may go out
 
+  function greetNewPeers(room) {
+    const present = new Set(otherIds(room));
+    for (const id of [...greeted]) if (!present.has(id)) greeted.delete(id);
+    if (!ready) return;
+    for (const id of present) {
+      if (greeted.has(id)) continue;
+      greeted.add(id);
+      client.sendVoiceSignal(id, { kind: "hello" });
+    }
+  }
 
   const isOfferer = (otherId) => myId < otherId;
 
@@ -180,7 +194,8 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
     .catch((err) => console.warn("[voice-chat] no microphone, listen-only", err))
     .then(() => {
       if (stopped) return;
-      for (const id of otherIds(client.room)) client.sendVoiceSignal(id, { kind: "hello" });
+      ready = true;
+      greetNewPeers(client.room);
       report();
     });
   client.onVoiceSignal((from, data) => {
@@ -194,6 +209,7 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
     const present = new Set(otherIds(room));
     for (const id of [...peers.keys()]) if (!present.has(id)) closePeer(id);
     for (const id of [...failed]) if (!present.has(id)) failed.delete(id);
+    greetNewPeers(room);
     report();
   });
 
