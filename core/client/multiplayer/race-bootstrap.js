@@ -6,7 +6,7 @@
 // window property. Solo play (no ?room=) skips straight to importing
 // main.js with no delay.
 
-import { createRoomClient } from "./room-client.js?v=5";
+import { createRoomClient } from "./room-client.js?v=6";
 
 const roomCode = new URLSearchParams(location.search).get("room");
 if (roomCode) {

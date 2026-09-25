@@ -104,6 +104,7 @@ export function createRoom(store, { nickname } = {}) {
     createdAt: Date.now(),
     circuitId: null,
     difficulty: "normale",
+    qualifying: true, // false: straight to the race on a random grid (#107)
     sessionPhase: "lobby", // "lobby" -> "qualifying" -> "racing"
     qualifyingStartedAt: null,
     raceStartedAt: null,
@@ -160,7 +161,7 @@ export function setReady(store, { roomCode, participantId, ready }) {
   return room;
 }
 
-export function setCircuit(store, { roomCode, participantId, circuitId, difficulty }) {
+export function setCircuit(store, { roomCode, participantId, circuitId, difficulty, qualifying }) {
   const room = findRoom(store, roomCode);
   findParticipant(room, participantId);
   if (room.hostParticipantId !== participantId) throw new RoomError("not_host", "Solo l'host può scegliere il circuito.");
@@ -171,6 +172,7 @@ export function setCircuit(store, { roomCode, participantId, circuitId, difficul
   }
   room.circuitId = circuitId;
   if (difficulty !== undefined) room.difficulty = difficulty;
+  if (typeof qualifying === "boolean") room.qualifying = qualifying;
   return room;
 }
 
@@ -189,6 +191,18 @@ export function startRace(store, { roomCode, participantId }) {
   if (!room.circuitId) throw new RoomError("no_circuit", "Scegli prima un circuito.");
   for (const p of room.participants.values()) {
     if (!p.driverId || !p.ready) throw new RoomError("not_ready", "Tutti i partecipanti devono aver scelto un pilota ed essere pronti.");
+  }
+  if (!room.qualifying) {
+    // No qualifying (#107): random grid, race starts right away.
+    const drivers = [...room.participants.values()].filter((p) => p.driverId).map((p) => p.driverId);
+    for (let i = drivers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [drivers[i], drivers[j]] = [drivers[j], drivers[i]];
+    }
+    room.grid = drivers;
+    room.sessionPhase = "racing";
+    room.raceStartedAt = Date.now();
+    return room;
   }
   room.sessionPhase = "qualifying";
   room.qualifyingStartedAt = Date.now();
@@ -312,6 +326,7 @@ export function toPublicRoom(room) {
     createdAt: room.createdAt,
     circuitId: room.circuitId,
     difficulty: room.difficulty,
+    qualifying: room.qualifying,
     sessionPhase: room.sessionPhase,
     qualifyingStartedAt: room.qualifyingStartedAt,
     raceStartedAt: room.raceStartedAt,
