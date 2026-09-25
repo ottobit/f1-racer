@@ -961,3 +961,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `core/client/multiplayer/room-client.js` (`?v=5`): `?roomServer=` maps `https://` to `wss://`, `http://` to `ws://`, and a bare host to `wss://`, so the ngrok URL can be pasted as printed.
 - Invite warning in `room.js` (`?v=7`) now suggests `?roomServer=https://…`; chain bumped (`race-bootstrap.js?v=23`, `race.html`, `room.html`).
 - Verified with `node --check` and a node run of the mapping.
+
+## 2026-09-25 — Cornering no longer feels like braking (#101)
+
+- Real test: steering made the engine note drop. The tyre scrub in `core/client/race/player-physics.js` (`?v=5`) was linear in slip and, near top speed, beat the engine's remaining push even at half lock.
+- Scrub now starts only past slip 0.3 (rescaled 0..1 above it): light/medium steering holds speed on the throttle; full lock at top speed still loses some (estimated ~5 km/h/s instead of ~15), so overdriving a corner still costs.
+- Player physics only; AI untouched. Chain bumped (`main.js?v=64`, `race-bootstrap.js?v=24`, `race.html`).
+- Verified with `node --check` only; the numbers are estimates from the formulas, to be confirmed in game.
