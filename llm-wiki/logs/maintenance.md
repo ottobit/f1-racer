@@ -915,3 +915,14 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   `showroom.js?v=31` -> `garage.js?v=42`; `race-audio.js?v=3`,
   `race-exhaust.js?v=1`, `main.js?v=60`, `race-bootstrap.js?v=19`,
   `style.css?v=43` (race.html). Verified with `node --check` + `git diff --check`.
+
+## 2026-09-25 — Multiplayer livery and qualifying start slot (#91)
+
+- `core/client/race/main.js`: in a room the local car uses the room-reserved
+  driver (livery + cockpit theme) instead of the solo selection, so every
+  participant sees the same colour for the same car.
+- Multiplayer qualifying: each participant starts from its own grid slot
+  (index in the server's participant list) instead of all on pole;
+  `prevRawProgress` is derived from the actual start point.
+- Version chain: `main.js?v=61`, `race-bootstrap.js?v=20` (race.html).
+- Verified with `node --check` only; to be tested in a real two-player room.
