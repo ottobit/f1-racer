@@ -1,4 +1,4 @@
-import { createRoomClient } from "./room-client.js?v=7";
+import { createRoomClient } from "./room-client.js?v=8";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
 import { liveryById } from "../shared/driver-themes.js?v=27";
 import { CIRCUITS } from "../shared/circuits.js?v=38";

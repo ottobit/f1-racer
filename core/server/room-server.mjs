@@ -23,6 +23,8 @@ import {
   startRace,
   finishQualifying,
   reportQualiTime,
+  reportFinish,
+  rematch,
   touch,
   leaveRoom,
   markDisconnected,
@@ -183,6 +185,21 @@ wss.on("connection", (ws) => {
           // clients key their transition off.
           send(ws, { type: "race_start_ack", reqId });
           if (room.sessionPhase === "qualifying") scheduleQualifyingEnd(bound.roomCode);
+          broadcastRoom(bound.roomCode, room);
+          break;
+        }
+        case "report_finish": {
+          requireBound(bound);
+          const room = reportFinish(store, { roomCode: bound.roomCode, participantId: bound.participantId });
+          send(ws, { type: "finish_ack", reqId });
+          broadcastRoom(bound.roomCode, room);
+          break;
+        }
+        case "rematch": {
+          requireBound(bound);
+          const room = rematch(store, { roomCode: bound.roomCode, participantId: bound.participantId });
+          clearQualifyingTimer(bound.roomCode);
+          send(ws, { type: "rematch_ack", reqId });
           broadcastRoom(bound.roomCode, room);
           break;
         }

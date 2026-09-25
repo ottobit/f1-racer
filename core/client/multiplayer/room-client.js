@@ -180,6 +180,8 @@ export function createRoomClient() {
   function setCircuit(circuitId, difficulty, qualifying) { return send("set_circuit", { circuitId, difficulty, qualifying }); }
   function startRace() { return send("start_race"); }
   function reportQualiTime(timeMs) { return send("report_quali_time", { timeMs }); }
+  function reportFinish() { return send("report_finish"); }
+  function rematch() { return send("rematch"); }
 
   // Fire-and-forget, no reqId/ack — called every frame during a
   // multiplayer qualifying/race session (Stage 2, #44), too frequent to pay
@@ -220,6 +222,8 @@ export function createRoomClient() {
     setCircuit,
     startRace,
     reportQualiTime,
+    reportFinish,
+    rematch,
     sendCarState,
     sendVoiceSignal,
     leaveRoom,
