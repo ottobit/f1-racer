@@ -975,3 +975,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `core/client/race/player-physics.js` (`?v=6`): braking clamps at 0; reverse starts only after the brake is held 0.6 s at a standstill, at 9 m/s² instead of full brake force. Releasing the brake resets the hold.
 - Also noted from the same test: a ~244 km/h top speed was probably collision damage (`(1 - damage)` in the speed cap), not a physics regression — the user will check the "Danni" HUD row.
 - Chain bumped (`main.js?v=65`, `race-bootstrap.js?v=25`, `race.html`). Verified with `node --check` only.
+
+## 2026-09-25 — Multiplayer race without qualifying (#107)
+
+- Part of the multiplayer experience list (#105). New room flag `qualifying` (default `true`), set by the host with `set_circuit` via the "Qualifica prima della gara" checkbox in `room.html`.
+- `core/server/rooms.mjs`: with `qualifying: false`, `startRace` shuffles the reserved drivers into `grid` and goes straight to `sessionPhase: "racing"` with `raceStartedAt`; `room-server.mjs` schedules the qualifying timer only when the phase is `qualifying`.
+- Client needs no race-page change: `race.html` already handles a room that is already `racing` through `onGridReady` (the reload-mid-race path).
+- Chain: `room-client.js?v=6`, `room.js?v=8`, `race-bootstrap.js?v=26`. Verified with `node --check` and a node run of `startRace` without qualifying. Requires restarting the room server.
