@@ -90,7 +90,12 @@ export function setupPlayerPhysics({
       maxLateral > 0.001
         ? Math.min(Math.abs(state.lateralSpeed) / maxLateral, 1)
         : 0;
-    const cornerDrag = 1 + slipRatio * (1.8 - grip);
+    // Scrub only past a slip threshold (#101): light and medium steering
+    // must hold speed on the throttle; the old linear scrub beat the engine's
+    // top-end push even at half lock, so every turn felt like braking.
+    const SCRUB_SLIP_THRESHOLD = 0.3;
+    const scrubSlip = Math.max(0, slipRatio - SCRUB_SLIP_THRESHOLD) / (1 - SCRUB_SLIP_THRESHOLD);
+    const cornerDrag = 1 + scrubSlip * (1.8 - grip);
     if (state.speed > 0) {
       // Light tyre scrub only (#79): going in too fast must end off the
       // road, not be slowed down by the game (was 0.9: 185 km/h cap at
