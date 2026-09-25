@@ -1,4 +1,4 @@
-import { createRoomClient } from "./room-client.js?v=4";
+import { createRoomClient } from "./room-client.js?v=5";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
 import { liveryById } from "../shared/driver-themes.js?v=27";
 import { CIRCUITS } from "../shared/circuits.js?v=38";
@@ -178,7 +178,7 @@ function inviteLink(code) {
 function inviteWarning() {
   if (LOCAL_HOSTS.has(location.hostname)) return "Attenzione: il link punta a questo computer (localhost), gli amici non lo aprono. Apri il gioco dal sito pubblico.";
   const roomServer = pageParams.get("roomServer");
-  if (!roomServer || isLocalUrl(roomServer)) return "Attenzione: il server della stanza è locale, gli amici non lo raggiungono. Apri la pagina con ?roomServer=wss://… pubblico.";
+  if (!roomServer || isLocalUrl(roomServer)) return "Attenzione: il server della stanza è locale, gli amici non lo raggiungono. Apri la pagina con ?roomServer=https://… (l'URL di ngrok).";
   return "";
 }
 

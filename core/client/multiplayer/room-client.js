@@ -12,8 +12,15 @@ const DEFAULT_ROOM_SERVER_URL = "ws://localhost:8787";
 const REQUEST_TIMEOUT_MS = 8000;
 const PING_INTERVAL_MS = 15000;
 
+// ?roomServer= accepts what ngrok prints (https://...) or a bare host too
+// (#99): http(s) maps to ws(s), no scheme means wss.
 function serverUrl() {
-  return new URLSearchParams(location.search).get("roomServer") || DEFAULT_ROOM_SERVER_URL;
+  const raw = (new URLSearchParams(location.search).get("roomServer") || "").trim();
+  if (!raw) return DEFAULT_ROOM_SERVER_URL;
+  if (/^https:\/\//i.test(raw)) return raw.replace(/^https:/i, "wss:");
+  if (/^http:\/\//i.test(raw)) return raw.replace(/^http:/i, "ws:");
+  if (/^wss?:\/\//i.test(raw)) return raw;
+  return `wss://${raw}`;
 }
 
 function loadSession() {

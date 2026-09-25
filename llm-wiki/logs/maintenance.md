@@ -955,3 +955,9 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Opening an invite prefills the code and shows a hint; the nickname is remembered in `f1racer-room-nickname-v1`. A saved session for a different room is left so the invite wins.
 - Warns when the link cannot work for friends (page on localhost, or no public `roomServer`) — the host must open the game from GitHub Pages with `?roomServer=wss://…` for the link to be usable.
 - Verified with `node --check` only.
+
+## 2026-09-25 — roomServer accepts https (#99)
+
+- `core/client/multiplayer/room-client.js` (`?v=5`): `?roomServer=` maps `https://` to `wss://`, `http://` to `ws://`, and a bare host to `wss://`, so the ngrok URL can be pasted as printed.
+- Invite warning in `room.js` (`?v=7`) now suggests `?roomServer=https://…`; chain bumped (`race-bootstrap.js?v=23`, `race.html`, `room.html`).
+- Verified with `node --check` and a node run of the mapping.
