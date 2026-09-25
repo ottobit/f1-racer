@@ -897,3 +897,21 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   `player-physics.js`.
 - Version chain: `race-input.js?v=42`, `main.js?v=59`,
   `race-bootstrap.js?v=18`. Verified with `node --check` + `git diff --check`.
+
+## 2026-09-25 — Driver model, exhaust pops, desktop map at bottom (#89)
+
+- `core/client/style.css`: desktop `#brake-map` moved from the right edge to
+  the bottom center (16:10, `min(22rem, 40vw)`, above `#hint`), matching the
+  see-through touch look of #85.
+- `core/client/shared/car-model.js`: driver helmet gets an accent centre
+  stripe, front-only visor slot, chin bar and rear spoiler; HANS collar;
+  arms bend at the elbow. Shared by race and garage showroom.
+- New `core/client/race/race-exhaust.js`: additive flame sprite on the player
+  car's tailpipe, popping 3-6 times on lift-off above 35% top speed and 1-2
+  times on a downshift; back on the gas cancels the queue. Sound comes from
+  `playExhaustPop()` in `race-audio.js` (band-passed noise + low thump).
+  Player car only; AI cars have no pops.
+- Version chains: `car-model.js?v=29` -> `race-car-view.js?v=29`,
+  `showroom.js?v=31` -> `garage.js?v=42`; `race-audio.js?v=3`,
+  `race-exhaust.js?v=1`, `main.js?v=60`, `race-bootstrap.js?v=19`,
+  `style.css?v=43` (race.html). Verified with `node --check` + `git diff --check`.
