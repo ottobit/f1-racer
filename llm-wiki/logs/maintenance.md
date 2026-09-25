@@ -882,3 +882,18 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Version chain: `race-brake-map.js?v=3`, `main.js?v=58`,
   `race-bootstrap.js?v=17`, `race-controls.css?v=44`.
 - Verified with `node --check` and `git diff --check` only (no browser test).
+
+## 2026-09-25 — Stuck touch wheel/pedals (#87)
+
+- User report: while turning, even slowly, the car "loses the road" and then
+  the control stops responding.
+- `core/client/race/race-input.js`: wheel and pedals kept the first pointer id
+  until its release; a lost release left a ghost pointer (steer frozen, new
+  touches ignored). A new touch now takes over when the stored pointer is no
+  longer captured, and window-level `pointerup`/`pointercancel` (capture
+  phase) free any wheel/pedal owned by that pointer.
+- Root cause is probable, not reproduced (no browser tests); if the car still
+  slides at low speed, the next suspect is the lateral-slip model in
+  `player-physics.js`.
+- Version chain: `race-input.js?v=42`, `main.js?v=59`,
+  `race-bootstrap.js?v=18`. Verified with `node --check` + `git diff --check`.
