@@ -20,7 +20,7 @@ import { setupRaceCommands } from "./race-commands.js?v=1";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=1";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=4";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=5";
 
 import { steeringYaw } from "./steering.js?v=1";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
@@ -1488,31 +1488,35 @@ function hideGantry(afterMs) {
   }, afterMs);
 }
 
-function runRaceStartLights(seed, onGo) {
+// anchorMs (optional, Date.now() clock): when the sequence starts, so
+// several browsers can share one timeline (#109). A late start (engine
+// fired up after the anchor) joins the sequence where it already is, and
+// goes at once if the lights are already out. Without it the sequence
+// starts now.
+function runRaceStartLights(seed, onGo, anchorMs = null) {
   const pods = showGantry(5, "");
   const id = startSequenceId;
   const unit = seed == null ? Math.random() : seededUnit(seed);
   const hold = LIGHTS_OUT_MIN_MS + unit * (LIGHTS_OUT_MAX_MS - LIGHTS_OUT_MIN_MS);
-  let lit = 0;
+  const anchor = anchorMs ?? Date.now();
+  const lightAt = (k) => anchor + k * LIGHT_INTERVAL_MS; // k = 1..5
+  const outAt = lightAt(pods.length) + hold;
+  const wait = (at) => Math.max(0, at - Date.now());
   raceAudio.setGridIntensity(0.25);
-  function lightNext() {
-    if (id !== startSequenceId) return;
-    pods[lit].classList.add("is-red");
-    lit++;
-    // The whole field builds revs as the lights come on.
-    raceAudio.setGridIntensity(0.25 + lit * 0.15);
-    if (lit < pods.length) {
-      setTimeout(lightNext, LIGHT_INTERVAL_MS);
-      return;
-    }
+  pods.forEach((pod, i) => {
     setTimeout(() => {
       if (id !== startSequenceId) return;
-      pods.forEach((pod) => pod.classList.remove("is-red"));
-      onGo();
-      hideGantry(900);
-    }, hold);
-  }
-  setTimeout(lightNext, LIGHT_INTERVAL_MS);
+      pod.classList.add("is-red");
+      // The whole field builds revs as the lights come on.
+      raceAudio.setGridIntensity(0.25 + (i + 1) * 0.15);
+    }, wait(lightAt(i + 1)));
+  });
+  setTimeout(() => {
+    if (id !== startSequenceId) return;
+    pods.forEach((pod) => pod.classList.remove("is-red"));
+    onGo();
+    hideGantry(900);
+  }, wait(outAt));
 }
 
 function runPitExitLight(onGo) {
@@ -1536,14 +1540,22 @@ function startQualifyingCountdown() {
   }));
 }
 
+// Multiplayer: the lights start this long after the server's
+// raceStartedAt, on the server clock, the same for every participant —
+// time to load the race page and fire the engine up (#109).
+const MP_START_LEAD_MS = 8000;
+
 function startRaceCountdown(seed = null) {
+  const anchorMs = multiplayer && seed != null
+    ? seed + MP_START_LEAD_MS - (multiplayer.serverNow() - Date.now())
+    : null;
   whenEngineReady(() => runRaceStartLights(seed, () => {
     // state.lapStartTime is reset to the moment the lights go out, not
     // construction time, so the on-screen lap clock doesn't start ticking
     // during the start sequence itself.
     state.lapStartTime = performance.now();
     raceState = "racing";
-  }));
+  }, anchorMs));
 }
 
 function animate() {

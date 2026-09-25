@@ -52,8 +52,10 @@ function socketsFor(roomCode) {
   return map;
 }
 
+// serverNow lets clients map server timestamps (raceStartedAt) onto their
+// own clock, so the start lights go out at the same instant for all (#109).
 function send(ws, payload) {
-  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(payload));
+  if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ ...payload, serverNow: Date.now() }));
 }
 
 function broadcastRoom(roomCode, room) {

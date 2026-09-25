@@ -982,3 +982,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `core/server/rooms.mjs`: with `qualifying: false`, `startRace` shuffles the reserved drivers into `grid` and goes straight to `sessionPhase: "racing"` with `raceStartedAt`; `room-server.mjs` schedules the qualifying timer only when the phase is `qualifying`.
 - Client needs no race-page change: `race.html` already handles a room that is already `racing` through `onGridReady` (the reload-mid-race path).
 - Chain: `room-client.js?v=6`, `room.js?v=8`, `race-bootstrap.js?v=26`. Verified with `node --check` and a node run of `startRace` without qualifying. Requires restarting the room server.
+
+## 2026-09-25 — Synced multiplayer start lights (#109)
+
+- Found in code (part of #105): the lights-out hold was already seeded by `raceStartedAt`, but each browser began the sequence at its own engine fire-up, so whoever tapped first started first.
+- `core/server/room-server.mjs`: every server reply carries `serverNow`; `room-client.js` (`?v=7`) keeps the clock offset and exposes `serverNow()`, surfaced by `race-multiplayer.js` (`?v=5`).
+- `core/client/race/main.js`: `runRaceStartLights` takes an absolute anchor; in multiplayer the sequence starts `MP_START_LEAD_MS` (8 s) after `raceStartedAt` on the server clock. A late engine start joins the sequence in progress, or goes at once if the lights are already out. Solo is unchanged (anchor = now).
+- Clock offset ignores one-way latency (tens of ms). Chain: `room.js?v=9`, `main.js?v=66`, `race-bootstrap.js?v=27`. Verified with `node --check` only; needs the room server restarted.

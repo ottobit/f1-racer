@@ -53,6 +53,9 @@ export function createRoomClient() {
   let lastRoom = null;
   let pingTimer = null;
   let manuallyClosed = false;
+  // Server clock minus local clock, from the serverNow stamped on every
+  // server reply (#109); 0 until the first one (or with an older server).
+  let clockOffsetMs = 0;
 
   function notifyState(room) {
     lastRoom = room;
@@ -81,6 +84,7 @@ export function createRoomClient() {
   function handleMessage(raw) {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
+    if (typeof msg.serverNow === "number") clockOffsetMs = msg.serverNow - Date.now();
     if (msg.type === "car_state") {
       // High-frequency, ephemeral — never touches session/room state or the
       // pending-request map, so it can't collide with a real reqId.
@@ -224,6 +228,7 @@ export function createRoomClient() {
     onCarState,
     onVoiceSignal,
     hasSavedSession: () => !!session,
+    serverNow: () => Date.now() + clockOffsetMs,
     get room() { return lastRoom; },
     get participantId() { return session ? session.participantId : null; },
   };
