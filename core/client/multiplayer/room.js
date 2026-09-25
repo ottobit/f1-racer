@@ -17,6 +17,8 @@ const el = {
   entryStatus: document.getElementById("room-entry-status"),
   codeDisplay: document.getElementById("room-code-display"),
   leaveBtn: document.getElementById("room-leave-btn"),
+  shareBtn: document.getElementById("room-share-btn"),
+  shareStatus: document.getElementById("room-share-status"),
   connectionStatus: document.getElementById("room-connection-status"),
   viewStatus: document.getElementById("room-view-status"),
   participantCount: document.getElementById("room-participant-count"),
@@ -153,6 +155,65 @@ el.raceStarted.addEventListener("click", (e) => {
   if (client.room) goToRace(client.room);
 });
 
+// Invite link (#97): room.html?join=CODE, carrying the room server so a
+// friend lands on the same server without typing anything.
+const NICKNAME_KEY = "f1racer-room-nickname-v1";
+const pageParams = new URLSearchParams(location.search);
+const inviteCode = (pageParams.get("join") || "").trim().toUpperCase();
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+function isLocalUrl(url) {
+  try { return LOCAL_HOSTS.has(new URL(url).hostname); } catch { return false; }
+}
+
+function inviteLink(code) {
+  const url = new URL(location.pathname, location.origin);
+  url.searchParams.set("join", code);
+  const roomServer = pageParams.get("roomServer");
+  if (roomServer) url.searchParams.set("roomServer", roomServer);
+  return url.toString();
+}
+
+// Why a friend could not use this link, or "" when it looks reachable.
+function inviteWarning() {
+  if (LOCAL_HOSTS.has(location.hostname)) return "Attenzione: il link punta a questo computer (localhost), gli amici non lo aprono. Apri il gioco dal sito pubblico.";
+  const roomServer = pageParams.get("roomServer");
+  if (!roomServer || isLocalUrl(roomServer)) return "Attenzione: il server della stanza è locale, gli amici non lo raggiungono. Apri la pagina con ?roomServer=wss://… pubblico.";
+  return "";
+}
+
+try { el.nickname.value = localStorage.getItem(NICKNAME_KEY) || ""; } catch { /* storage unavailable */ }
+function rememberNickname() {
+  try { localStorage.setItem(NICKNAME_KEY, el.nickname.value.trim()); } catch { /* storage unavailable */ }
+}
+
+if (inviteCode) {
+  el.codeInput.value = inviteCode;
+  el.entryStatus.textContent = `Invito alla stanza ${inviteCode}: scrivi il tuo nome e premi Entra.`;
+}
+
+el.shareBtn.addEventListener("click", async () => {
+  const room = client.room;
+  if (!room) return;
+  const link = inviteLink(room.code);
+  const warning = inviteWarning();
+  el.shareStatus.textContent = warning;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "F1 Racer", text: `Entra nella mia stanza ${room.code}`, url: link });
+      return;
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(link);
+    el.shareStatus.textContent = `Link copiato. ${warning}`.trim();
+  } catch {
+    el.shareStatus.textContent = `${link} ${warning}`.trim();
+  }
+});
+
 client.onStateChange(renderRoom);
 client.onConnectionChange((status) => {
   el.connectionStatus.textContent = status === "connected" ? "" : "Connessione al server della stanza persa.";
@@ -162,6 +223,7 @@ el.createBtn.addEventListener("click", async () => {
   el.entryStatus.textContent = "";
   el.createBtn.disabled = true;
   try {
+    rememberNickname();
     await client.createRoom(el.nickname.value);
   } catch (err) {
     el.entryStatus.textContent = err.message;
@@ -179,6 +241,7 @@ el.joinBtn.addEventListener("click", async () => {
   }
   el.joinBtn.disabled = true;
   try {
+    rememberNickname();
     await client.joinRoom(code, el.nickname.value);
   } catch (err) {
     el.entryStatus.textContent = err.message;
@@ -224,4 +287,10 @@ el.startBtn.addEventListener("click", async () => {
 // Resume a session saved from a previous visit (e.g. a reload); a no-op if
 // nothing was saved, so a first-time visitor never opens a connection
 // before choosing to create or join.
-client.tryResume().catch(() => {});
+// An invite to a different room wins over the saved one: leave it so the
+// entry form (code prefilled) shows up.
+client.tryResume()
+  .then((room) => {
+    if (room && inviteCode && room.code !== inviteCode) return client.leaveRoom();
+  })
+  .catch(() => {});
