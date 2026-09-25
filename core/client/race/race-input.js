@@ -185,7 +185,10 @@ export function setupRaceInput({
     const el = document.getElementById(id);
     el.addEventListener("pointerdown", (event) => {
       event.preventDefault();
-      if (pedalPointers.has(action)) return;
+      // A finger whose release was lost (no capture) must not lock the
+      // pedal forever (#87): a new touch takes over.
+      const held = pedalPointers.get(action);
+      if (held !== undefined && el.hasPointerCapture(held)) return;
       pedalPointers.set(action, event.pointerId);
       el.setPointerCapture(event.pointerId);
       input[action] = true;
@@ -209,7 +212,8 @@ export function setupRaceInput({
   wheelEl.addEventListener("pointerdown", (event) => {
     event.preventDefault();
     if (motionActive || motionPending) stopMotion();
-    if (wheelPointer !== null) return;
+    // Same stale-pointer takeover as the pedals (#87).
+    if (wheelPointer !== null && wheelEl.hasPointerCapture(wheelPointer)) return;
     wheelPointer = event.pointerId;
     wheelOrigin = event.clientX;
     touchSteer = 0;
@@ -229,6 +233,20 @@ export function setupRaceInput({
   };
   for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
     wheelEl.addEventListener(type, releaseWheel);
+  }
+
+  // Fallback (#87): a release delivered elsewhere (capture never taken,
+  // fullscreen switch) still frees the wheel or pedal it belonged to.
+  for (const type of ["pointerup", "pointercancel"]) {
+    window.addEventListener(type, (event) => {
+      releaseWheel(event);
+      for (const [action, pointerId] of pedalPointers) {
+        if (pointerId !== event.pointerId) continue;
+        pedalPointers.delete(action);
+        input[action] = false;
+        document.getElementById(action === "forward" ? gasId : brakeId)?.classList.remove("is-held");
+      }
+    }, true);
   }
 
   function setPadPedal(action, down) {
