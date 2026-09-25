@@ -6,7 +6,7 @@
 // window property. Solo play (no ?room=) skips straight to importing
 // main.js with no delay.
 
-import { createRoomClient } from "./room-client.js?v=7";
+import { createRoomClient } from "./room-client.js?v=8";
 
 const roomCode = new URLSearchParams(location.search).get("room");
 if (roomCode) {
@@ -24,4 +24,4 @@ if (roomCode) {
   if (client.room) window.__mpClient = client;
 }
 
-import("../race/main.js?v=67");
+import("../race/main.js?v=68");

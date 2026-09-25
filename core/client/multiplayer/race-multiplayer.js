@@ -91,6 +91,15 @@ export function setupMultiplayer() {
       client.sendCarState(data);
     },
 
+    get isHost() { return latestRoom.hostParticipantId === client.participantId; },
+
+    // Shared results (#113): every room update, after this is set.
+    onRoomUpdate(cb) {
+      client.onStateChange((room) => { if (room) cb(room); });
+    },
+    reportFinish() { client.reportFinish().catch(() => {}); },
+    rematch() { return client.rematch(); },
+
     reportQualiTime(timeMs) {
       client.reportQualiTime(timeMs).catch(() => {});
     },

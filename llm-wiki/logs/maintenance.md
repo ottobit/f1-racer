@@ -995,3 +995,9 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Part of #105. `updateRemoteCar` chased the last `car_state` (~12/s); at 300 km/h samples are ~7 m apart, so the car eased towards a point it had already passed and stuttered.
 - `race-multiplayer.js` (`?v=6`) stamps each sample with `receivedAt`; `core/client/race/main.js` now chases the sample projected forward along its heading by `speed × age` (age capped at 250 ms, so a stalled stream stops the car quickly).
 - Chain: `main.js?v=67`, `race-bootstrap.js?v=28`. Verified with `node --check` only.
+
+## 2026-09-25 — Shared multiplayer results and rematch (#113)
+
+- Part of #105. `core/server/rooms.mjs`: participants carry `finishedAt`; `reportFinish` records the first finish report (server arrival order is the result); `rematch` (host only) puts the room back in `lobby`, keeping drivers and circuit, clearing ready flags, grid, quali times and finishes. `room-server.mjs` handles `report_finish` / `rematch`.
+- `core/client/race/main.js`: in multiplayer `finishRace` reports the finish and shows the room's shared order (finished by `finishedAt`, then "(in gara)" in running order, "N/M arrivati"), re-rendered on every room update. The host's primary button is "Rivincita"; any room back in `lobby` sends every race page to `room.html` (keeping `roomServer`). The old per-browser multiplayer order and "Torna alla home" branch is gone; solo results are unchanged.
+- Chain: `room-client.js?v=8`, `race-multiplayer.js?v=7`, `main.js?v=68`, `race-bootstrap.js?v=29`, `room.js?v=10`. Verified with `node --check` and a node run of finish + rematch in `rooms.mjs`; needs the room server restarted.

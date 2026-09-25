@@ -85,6 +85,7 @@ function newParticipant(nickname) {
       driverId: null,
       ready: false,
       qualiBestTime: null,
+      finishedAt: null, // server time the race finish was reported (#113)
       connectionState: "connected",
       graceTimer: null,
       connectedAt: Date.now(),
@@ -239,6 +240,35 @@ export function reportQualiTime(store, { roomCode, participantId, timeMs }) {
   return room;
 }
 
+// Race finish (#113): first report wins, so the shared result is the order
+// finishes reached the server.
+export function reportFinish(store, { roomCode, participantId }) {
+  const room = findRoom(store, roomCode);
+  const participant = findParticipant(room, participantId);
+  if (room.sessionPhase !== "racing") throw new RoomError("not_racing", "La gara non è in corso.");
+  if (participant.finishedAt === null) participant.finishedAt = Date.now();
+  return room;
+}
+
+// Rematch (#113): host sends the room back to the lobby, keeping drivers
+// and circuit; ready flags and session results start over.
+export function rematch(store, { roomCode, participantId }) {
+  const room = findRoom(store, roomCode);
+  findParticipant(room, participantId);
+  if (room.hostParticipantId !== participantId) throw new RoomError("not_host", "Solo l'host può avviare la rivincita.");
+  if (room.sessionPhase === "lobby") return room;
+  room.sessionPhase = "lobby";
+  room.qualifyingStartedAt = null;
+  room.raceStartedAt = null;
+  room.grid = null;
+  for (const p of room.participants.values()) {
+    p.ready = false;
+    p.qualiBestTime = null;
+    p.finishedAt = null;
+  }
+  return room;
+}
+
 export function touch(store, { roomCode, participantId }) {
   const room = findRoom(store, roomCode);
   const participant = findParticipant(room, participantId);
@@ -338,6 +368,7 @@ export function toPublicRoom(room) {
       driverId: p.driverId,
       ready: p.ready,
       qualiBestTime: p.qualiBestTime,
+      finishedAt: p.finishedAt,
       connectionState: p.connectionState,
     })),
   };

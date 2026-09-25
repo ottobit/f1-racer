@@ -20,7 +20,7 @@ import { setupRaceCommands } from "./race-commands.js?v=1";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=1";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=6";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=7";
 
 import { steeringYaw } from "./steering.js?v=1";
 import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
@@ -1035,9 +1035,65 @@ function driverName(driverId) {
   return displayDriverName(driverId);
 }
 
+// Multiplayer results (#113): the server's finish order, the same for
+// everyone, then whoever is still racing in their current running order.
+// Re-rendered on every room update until the host calls a rematch, which
+// sends everyone back to the lobby.
+function renderMultiplayerResults(room) {
+  if (room.sessionPhase === "lobby") return; // leaving for the lobby, below
+  const localKey = (driverId) => (driverId === MY_ROOM_DRIVER_ID ? "player" : driverId);
+  const racers = room.participants.filter((p) => p.driverId);
+  const finished = racers.filter((p) => p.finishedAt).sort((a, b) => a.finishedAt - b.finishedAt);
+  const finishedKeys = new Set(finished.map((p) => localKey(p.driverId)));
+  const racerKeys = new Set(racers.map((p) => localKey(p.driverId)));
+  const stillRacing = currentRaceOrder()
+    .map((o) => o.driverId)
+    .filter((key) => racerKeys.has(key) && !finishedKeys.has(key));
+  const rows = [
+    ...finished.map((p) => ({ key: localKey(p.driverId), done: true })),
+    ...stillRacing.map((key) => ({ key, done: false })),
+  ];
+  const position = finished.findIndex((p) => localKey(p.driverId) === "player") + 1;
+  document.getElementById("results-title").textContent =
+    position === 1 ? "Vittoria!" : position > 0 ? `Arrivato ${position}°` : "Gara finita";
+  document.getElementById("results-order").innerHTML = rows
+    .map(({ key, done }, i) => `<li class="${key === "player" ? "is-player" : ""}"><span>${done ? `${i + 1}.` : "…"} ${driverName(key)}${done ? "" : " (in gara)"}</span></li>`)
+    .join("");
+  document.getElementById("results-points").textContent = `${finished.length}/${racers.length} arrivati`;
+  const nextLink = document.getElementById("results-next");
+  nextLink.textContent = multiplayer.isHost ? "Rivincita" : "In attesa della rivincita…";
+}
+
+// A rematch (#113) puts the room back in the lobby: everyone still on the
+// race page, finished or not, follows it there.
+if (multiplayer) {
+  multiplayer.onRoomUpdate((room) => {
+    if (room.sessionPhase !== "lobby") return;
+    const params = new URLSearchParams();
+    const roomServer = new URLSearchParams(location.search).get("roomServer");
+    if (roomServer) params.set("roomServer", roomServer);
+    location.href = `room.html${params.toString() ? `?${params}` : ""}`;
+  });
+}
+
 function finishRace() {
   raceState = "finished";
   raceAudio.coolDown();
+  if (multiplayer) {
+    multiplayer.reportFinish();
+    const nextLink = document.getElementById("results-next");
+    nextLink.href = "#";
+    nextLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (!multiplayer.isHost) return;
+      nextLink.textContent = "Rivincita…";
+      multiplayer.rematch().catch((err) => { nextLink.textContent = err.message; });
+    });
+    multiplayer.onRoomUpdate(renderMultiplayerResults);
+    renderMultiplayerResults(multiplayer.room);
+    document.getElementById("results-overlay").hidden = false;
+    return;
+  }
   const order = currentRaceOrder().map((o) => o.driverId);
   const position = order.indexOf("player") + 1;
 
@@ -1053,28 +1109,18 @@ function finishRace() {
     .join("");
 
   const nextLink = document.getElementById("results-next");
-  if (multiplayer) {
-    // Multiplayer (#44) deliberately never touches the solo championship —
-    // these results are the room's own, not a campaign result, so no
-    // points/next-unraced-circuit chain here. There's no "back to the same
-    // room to race again" flow yet either (Stage 2 stops at one race); the
-    // room itself is likely gone by now (its code isn't reusable once a
-    // room's race started — see rooms.mjs).
-    document.getElementById("results-points").textContent = "";
-    nextLink.href = "index.html";
-    nextLink.textContent = "Torna alla home";
+  // Solo only: multiplayer returned above with the room's shared results,
+  // which never touch the solo championship.
+  const state2 = recordRaceResult(circuit.id, order);
+  const points = POINTS_BY_POSITION[position - 1] || 0;
+  document.getElementById("results-points").textContent = `+${points} punti`;
+  const nextCircuitId = getNextUnracedCircuitId(state2);
+  if (nextCircuitId) {
+    nextLink.href = `race.html?circuit=${nextCircuitId}`;
+    nextLink.textContent = "Prossimo circuito";
   } else {
-    const state2 = recordRaceResult(circuit.id, order);
-    const points = POINTS_BY_POSITION[position - 1] || 0;
-    document.getElementById("results-points").textContent = `+${points} punti`;
-    const nextCircuitId = getNextUnracedCircuitId(state2);
-    if (nextCircuitId) {
-      nextLink.href = `race.html?circuit=${nextCircuitId}`;
-      nextLink.textContent = "Prossimo circuito";
-    } else {
-      nextLink.href = "index.html";
-      nextLink.textContent = "Vedi classifica finale";
-    }
+    nextLink.href = "index.html";
+    nextLink.textContent = "Vedi classifica finale";
   }
 
   document.getElementById("results-overlay").hidden = false;
