@@ -49,10 +49,11 @@ export function setupBrakeMap({
       canvas.width = cssW;
       canvas.height = cssH;
     }
-    const size = canvas.width;
-    const half = size / 2;
+    // The box may be wider than tall (#85): scale by the short side.
+    const size = Math.min(canvas.width, canvas.height);
+    const half = canvas.width / 2;
     const anchorY = canvas.height * 0.72; // more road ahead than behind
-    const zoom = half / VIEW_RADIUS_M;
+    const zoom = size / 2 / VIEW_RADIUS_M;
 
     // Samples from a little behind the player to well past the section, so
     // a corner just beyond 300 m still paints its braking zone inside it.
@@ -120,18 +121,20 @@ export function setupBrakeMap({
         else ctx.lineTo(p.x, p.z);
       }
     };
-    // Road: soft shadow, white edge lines, dark asphalt.
+    // Road: see-through edge lines and asphalt so the track behind the
+    // map stays visible (#85).
     const px = size / 256; // stroke widths are tuned for a 256 px canvas
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.45)";
-    ctx.lineWidth = (26 * px) / zoom;
-    traceSection();
-    ctx.stroke();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
     ctx.lineWidth = (20 * px) / zoom;
     traceSection();
     ctx.stroke();
-    ctx.strokeStyle = "#2b2f36";
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.strokeStyle = "#000000";
     ctx.lineWidth = (16 * px) / zoom;
+    traceSection();
+    ctx.stroke();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = "rgba(20, 24, 30, 0.35)";
     traceSection();
     ctx.stroke();
 
@@ -174,14 +177,18 @@ export function setupBrakeMap({
     ctx.lineWidth = 2 * px;
     ctx.stroke();
 
-    // Soft edges instead of a disc or frame.
+    // Soft elliptical edges instead of a disc or frame; the fade starts
+    // early so the map melts into the scene (#85).
     ctx.save();
     ctx.globalCompositeOperation = "destination-in";
-    const fade = ctx.createRadialGradient(half, half, half * 0.62, half, half, half);
+    const halfH = canvas.height / 2;
+    ctx.translate(half, halfH);
+    ctx.scale(1, halfH / half);
+    const fade = ctx.createRadialGradient(0, 0, half * 0.35, 0, 0, half);
     fade.addColorStop(0, "rgba(0, 0, 0, 1)");
     fade.addColorStop(1, "rgba(0, 0, 0, 0)");
     ctx.fillStyle = fade;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(-half, -half, canvas.width, canvas.width);
     ctx.restore();
 
     // Distance to the braking point, drawn after the fade so it stays sharp.
