@@ -253,8 +253,12 @@ wss.on("connection", (ws) => {
 
   ws.on("close", () => {
     if (!bound) return;
+    // A page navigation (room.html -> race.html) can deliver the old
+    // socket's close after the new socket's reconnect: that participant is
+    // already live on the new socket, so this close must not touch it (#95).
     const map = socketsByRoom.get(bound.roomCode);
-    if (map) map.delete(bound.participantId);
+    if (!map || map.get(bound.participantId) !== ws) return;
+    map.delete(bound.participantId);
     try {
       const room = markDisconnected(store, {
         roomCode: bound.roomCode,

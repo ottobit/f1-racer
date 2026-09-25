@@ -941,3 +941,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Version chain: `voice-chat.js?v=2`, `race-multiplayer.js?v=3`,
   `main.js?v=62`, `room-client.js?v=4`, `race-bootstrap.js?v=21`,
   `room.js?v=5`. Verified with `node --check` only.
+
+## 2026-09-25 — Voice: stale socket close and late hellos (#95)
+
+- Real test: joiner showed "Voce · nessun altro", creator "Solo ascolto · nessuna risposta" — the joiner saw the creator as not connected.
+- `core/server/room-server.mjs`: a socket close is ignored when the participant is already bound to a newer socket (the room.html -> race.html navigation can deliver the old close after the new reconnect, which marked the live participant "grace" and dropped its socket from the relay map).
+- `core/client/multiplayer/voice-chat.js` (`?v=3`): hellos go to every peer that becomes connected, not only those present at start; chain bumped (`race-multiplayer.js?v=4`, `main.js?v=63`, `race-bootstrap.js?v=22`).
+- Root cause is probable, not proven; TURN is still missing for peers behind strict NAT. Verified with `node --check` only.

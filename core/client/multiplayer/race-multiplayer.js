@@ -10,7 +10,7 @@
 // module hands those broadcasts to main.js and relays main.js's own local
 // state back out. No physics happen here.
 
-import { startVoiceChat, mountVoiceToggle } from "./voice-chat.js?v=2";
+import { startVoiceChat, mountVoiceToggle } from "./voice-chat.js?v=3";
 
 const BROADCAST_INTERVAL_MS = 80; // ~12/s — plenty smooth at N<=10, trivial bandwidth
 
