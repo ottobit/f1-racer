@@ -7,6 +7,7 @@ export function setupPlayerPhysics({
   ersSpeedMultiplier,
   grassLimit,
   tireGripFactor,
+  tyreSpeedFactor,
   cautionSpeedMultiplier,
   steeringYaw,
   nearestTrackInfo,
@@ -59,6 +60,7 @@ export function setupPlayerPhysics({
     const playerMaxSpeed =
       car.maxSpeed *
       (1 - state.damage) *
+      tyreSpeedFactor(state) *
       (state.drsActive ? drsSpeedMultiplier : 1) *
       (state.ersActive ? ersSpeedMultiplier : 1) *
       cautionSpeedMultiplier();

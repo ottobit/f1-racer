@@ -16,6 +16,7 @@ export function setupRaceAi({
   applyTrackBoundary,
   advanceProgress,
   tireGripFactor,
+  tyreSpeedFactor,
   drsSpeedMultiplier,
   ersSpeedMultiplier,
   cautionSpeedMultiplier,
@@ -119,6 +120,7 @@ export function setupRaceAi({
       baseTargetSpeed *
       tacticalBoost *
       (1 - car.damage) *
+      tyreSpeedFactor(car) *
       (car.drsActive ? drsSpeedMultiplier : 1) *
       (car.ersActive ? ersSpeedMultiplier : 1) *
       cautionSpeedMultiplier();

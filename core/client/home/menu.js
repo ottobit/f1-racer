@@ -1,4 +1,4 @@
-import { CIRCUITS, LAPS_PER_RACE } from "../shared/circuits.js?v=38";
+import { CIRCUITS, LAPS_PER_RACE } from "../shared/circuits.js?v=39";
 import { computeStandings, resetChampionship } from "../shared/championship.js?v=1";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
 import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=1";
