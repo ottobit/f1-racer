@@ -13,7 +13,10 @@
 
 const PACE_MIN = 0.5;
 const PACE_MAX = 1;
-const DEFAULT_TARGETS = { pace: 0.86, line: 0, ers: false, tyre: null };
+const DEFAULT_TARGETS = { pace: 0.86, line: 0, ers: false, tyre: null, station: null };
+const STATION_GAIN = 0.8; // m/s of correction per metre off station (#182)
+const STATION_MAX_CATCH_UP = 25;
+const STATION_MAX_DROP_BACK = 15;
 const TYRES = new Set(["soft", "medium", "hard"]);
 const RADIO_MAX_CHARS = 80;
 
@@ -28,7 +31,10 @@ function wrapAngle(a) {
 // Same corner preview and outside-inside line as the AI rivals
 // (race-ai.js), turned into pedal/steer inputs for the player physics
 // instead of moving the car directly.
-export function createAutopilotProvider({ centerline, headingOf, sideNormal, nearestTrackInfo, maxSpeed }) {
+// Station keeping (#182): with targets.station = {car, gap, side} it holds a
+// spot relative to another car (gap metres, + ahead / - behind; side -1..1)
+// by speed and line alone — never by moving the car directly.
+export function createAutopilotProvider({ centerline, headingOf, sideNormal, nearestTrackInfo, maxSpeed, findCar, trackLength }) {
   const LOOKAHEAD = 10;
   const CORNER_LOOKAHEAD = 22;
   const STEER_GAIN = 3; // matches driveFinishCoast in main.js
@@ -57,11 +63,21 @@ export function createAutopilotProvider({ centerline, headingOf, sideNormal, nea
       const lookahead = Math.max(6, LOOKAHEAD + Math.round(speedRatio * 10) - Math.round(profile.severity * 5));
       const target = centerline[(info.idx + lookahead) % centerline.length];
       const lateral = sideNormal(centerline[info.idx]);
-      const lineOffset = -Math.sign(profile.turn || 1) * (0.3 + profile.severity * 0.9) + targets.line * 2;
+      const station = targets.station;
+      const ref = station && findCar ? findCar(station.car) : null;
+      const lineOffset = ref
+        ? station.side * 2.5
+        : -Math.sign(profile.turn || 1) * (0.3 + profile.severity * 0.9) + targets.line * 2;
       const aimX = target.x + lateral.x * lineOffset;
       const aimZ = target.z + lateral.z * lineOffset;
       const err = wrapAngle(Math.atan2(aimX - car.x, aimZ - car.z) - car.heading);
-      const targetSpeed = maxSpeed * (1 - profile.severity * 0.48) * targets.pace;
+      const cornerSpeed = maxSpeed * (1 - profile.severity * 0.48);
+      let targetSpeed = cornerSpeed * targets.pace;
+      if (ref) {
+        const offStation = (ref.totalProgress - car.totalProgress) * trackLength + station.gap;
+        const correction = clamp(offStation * STATION_GAIN, -STATION_MAX_DROP_BACK, STATION_MAX_CATCH_UP);
+        targetSpeed = clamp((ref.speed || 0) + correction, 0, cornerSpeed);
+      }
       return {
         steer: clamp(-err * STEER_GAIN, -1, 1),
         throttle: car.speed < targetSpeed ? 1 : 0,
@@ -86,6 +102,14 @@ export function createLayeredProvider({ fast }) {
     if (typeof update.ers === "boolean") targets.ers = update.ers;
     if (update.pit === true) pending.pit = true;
     if (TYRES.has(update.tyre)) targets.tyre = update.tyre; // fitted at the next stop
+    if (update.station === null) targets.station = null;
+    else if (update.station && typeof update.station.car === "string") {
+      targets.station = {
+        car: update.station.car,
+        gap: Number.isFinite(update.station.gap) ? clamp(update.station.gap, -500, 500) : 0,
+        side: Number.isFinite(update.station.side) ? clamp(update.station.side, -1, 1) : 0,
+      };
+    }
     if (typeof update.radio === "string" && update.radio.trim()) {
       pending.radio = update.radio.trim().slice(0, RADIO_MAX_CHARS);
     }
