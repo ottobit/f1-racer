@@ -1123,3 +1123,8 @@ html{scroll-behavior:smooth}
 .room-ready-toggle{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.85rem}
 .room-ready-toggle input{width:20px;height:20px}
 @media(max-width:700px){.room-lobby{width:calc(100% - 1.2rem)}.room-entry-actions{flex-direction:column;align-items:stretch}.room-join-row{width:100%}.room-join-row input{flex:1;width:auto}.room-driver-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Team colours in home (#151): two-tone livery stripe, team name, active border. */
+.setup-choice .driver-option{padding-left:14px}.setup-choice .driver-option::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(var(--team) 0 62%,var(--team2) 62%)}
+.driver-option>strong small{display:block;margin-top:2px;color:#7f8795;font-size:.52rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.setup-choice .driver-option.active{background:linear-gradient(145deg,color-mix(in srgb,var(--team) 24%,#10131a),#141820);border-color:var(--team);box-shadow:none}.driver-option.active>span{color:var(--team)}.driver-option.active>strong small{color:#c7cbd3}
+.team-name{display:inline-flex;align-items:center;gap:8px}.team-name::before{content:"";width:3px;height:1.05em;border-radius:1px;background:linear-gradient(var(--team) 0 62%,var(--team2) 62%)}
