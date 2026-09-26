@@ -49,8 +49,10 @@ html.touch #brake-map{top:auto;right:auto;left:50%;transform:translateX(-50%);wi
 @media(display-mode:standalone) and (orientation:landscape),(display-mode:fullscreen) and (orientation:landscape){html.touch #brake-map{bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}
 /* Right thumb rests well inside the edge in landscape: keep brake/gas off the rim (#119). */
 @media(orientation:landscape){#touch-controls .touch-group--throttle{margin-right:clamp(28px,6vw,64px);margin-bottom:10px}}
-/* Phone shortcuts (#131): camera and ERS, small, top center, touch only. */
-#touch-actions{display:none}
-html.touch #touch-actions{display:flex;position:fixed;z-index:120;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);gap:8px}
-.touch-action{min-width:64px;min-height:36px;padding:4px 10px;border:1px solid #a8c6d866;border-radius:6px;background:#102331c9;color:#eef8ff;font:600 11px system-ui;letter-spacing:.08em;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-.touch-action:active{background:#284a61;border-color:#c0e8ff}
+/* Phone shortcuts (#133): tap the ERS readout to toggle it; VIEW sits right
+   of the speedo, see-through like the ERS/DRS badges. Touch only. */
+#ers-indicator,#view-toggle{margin:0;border:0;font-family:inherit;line-height:inherit;-webkit-appearance:none;appearance:none}
+#view-toggle{display:none}
+html.touch #view-toggle{display:block;flex:0 0 auto;padding:.1em .4em;border-radius:4px;font-size:.7rem;font-weight:800;letter-spacing:.04em;color:rgba(255,255,255,.75);background:rgba(255,255,255,.08)}
+html.touch #hud-bottomright [data-key]{min-height:28px;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html.touch #view-toggle:active{background:rgba(255,255,255,.22)}

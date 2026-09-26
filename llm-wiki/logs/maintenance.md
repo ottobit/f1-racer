@@ -1065,3 +1065,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race-controls.css`: small 36px buttons under the start lights' z-index; pit stop deliberately left off the phone (accidental taps).
 - `modes.html`: phone card lists the two new buttons. Versions: race-controls.css v46, race-input v43, main v69, race-bootstrap v30.
 - Verified with `node --check` and `git diff --check` only; to be tested on the phone.
+
+## 2026-09-26 — Phone ERS/VIEW in the speedo cluster (#133)
+
+- The #131 top bar covered the speedo (`#hud-bottomright` sits top center); removed.
+- `race.html`: `#ers-indicator` is now a button (tap toggles ERS on touch); new `#view-toggle` "VIEW" right of the speedo, touch only.
+- `race-input.js`: buttons under `#hud-bottomright [data-key]` replay `KeyE`/`KeyC`, same path as the pad.
+- `race-controls.css`: button reset, see-through badge style like ERS/DRS, 28px min height, pointer events only on touch.
+- `modes.html` phone rows updated. Versions: race-controls.css v47, race-input v44, main v70, race-bootstrap v31. Syntax checks only.
