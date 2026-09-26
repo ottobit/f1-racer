@@ -26,7 +26,7 @@
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="core/client/style.css?v=49" />
-  <link rel="stylesheet" href="core/client/race/race-controls.css?v=52" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=53" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -122,7 +122,6 @@
     </div>
     <div id="hud-shortcuts">
       <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
-      <button type="button" id="pit-toggle" data-key="KeyP" tabindex="-1" aria-label="Chiama il box">BOX</button>
       <button type="button" class="pit-tyre" data-key="Digit1" tabindex="-1" aria-label="Gomme morbide">S</button>
       <button type="button" class="pit-tyre" data-key="Digit2" tabindex="-1" aria-label="Gomme medie">M</button>
       <button type="button" class="pit-tyre" data-key="Digit3" tabindex="-1" aria-label="Gomme dure">H</button>
@@ -182,7 +181,12 @@
     </div>
     <div class="touch-group touch-group--throttle">
       <button id="btn-brake" class="touch-btn" aria-label="Freno">FRENO</button>
-      <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">GAS</button>
+      <!-- BOX sits right above the throttle on touch (#155): the HUD row
+           was too small a target mid-race. -->
+      <div class="gas-stack">
+        <button type="button" id="pit-toggle" data-key="KeyP" tabindex="-1" aria-label="Chiama il box">BOX</button>
+        <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">GAS</button>
+      </div>
     </div>
   </div>
 
