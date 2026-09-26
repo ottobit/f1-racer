@@ -1201,3 +1201,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `home/menu.js` + `style.css`: driver picker and standings carry the team livery (`TEAM_LIVERIES` primary/secondary) as a two-tone stripe, team name under each driver, active border in the team colour.
 - Known limit: faster straights move braking points; brake hint recomputes from `CAR.maxSpeed`. `race-audio.js` still normalises by 84 (audio only).
 - Verified with `node --check` and `git diff --check` only; no browser tests.
+
+## 2026-09-26 — Touch steering: missed touches and sensitivity (#153)
+
+- `race-input.js`: touch wheel is now absolute (finger offset from the wheel centre, 8 px dead band, full lock at 42% of the width) instead of relative to the first contact; full left lock no longer drags the finger into the screen edge, where Android/iOS system gestures cancel the touch.
+- `race-input.js`: landscape auto-fullscreen fires only on a `touchend` with no fingers left, so lifting the throttle no longer resizes the page and drops the finger held on the wheel (Android).
+- `race-controls.css`: landscape wheel gets a 14–40 px left margin, away from edge gestures.
+- `steering.js`: high-speed authority floor 0.22 -> 0.30 (~48% vs ~42% at top speed); the brake hint follows automatically.
+- Verified with `node --check` only; feel to be judged in game (iPhone + Android).

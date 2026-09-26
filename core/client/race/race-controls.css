@@ -48,7 +48,9 @@ html.touch #brake-map{top:auto;right:auto;left:50%;transform:translateX(-50%);wi
 @media(orientation:portrait){html.touch #brake-map{width:14rem;bottom:195px}}
 @media(display-mode:standalone) and (orientation:landscape),(display-mode:fullscreen) and (orientation:landscape){html.touch #brake-map{bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}
 /* Right thumb rests well inside the edge in landscape: keep brake/gas off the rim (#119). */
-@media(orientation:landscape){#touch-controls .touch-group--throttle{margin-right:clamp(28px,6vw,64px);margin-bottom:10px}}
+@media(orientation:landscape){#touch-controls .touch-group--throttle{margin-right:clamp(28px,6vw,64px);margin-bottom:10px}
+  /* Keep the wheel clear of the left-edge system gestures (#153). */
+  #touch-controls .touch-group--steer{margin-left:clamp(14px,4vw,40px)}}
 /* Phone shortcuts (#133, #135): tap the ERS readout to toggle it; VIEW and
    BOX sit under the speedo, see-through like the ERS/DRS badges, and S/M/H
    show only during the pit stop. Touch only. */
