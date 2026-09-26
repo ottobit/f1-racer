@@ -124,18 +124,28 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
       box(.05,.034,.004,carbon,[side*.06,.004,.02],parent).name="wheelPaddle";
     }
   }
-  // Elliptical cross-sections yield continuous, sculpted bodywork instead of boxes.
+  // Superelliptic cross-sections (#188): [z, w, y, h, p = 2, wb = w]. p = 2 is
+  // an ellipse; higher p flattens the sides into F1-like slab bodywork with
+  // rounded corners, and wb narrows the lower half (sidepod undercut).
   function shell(stations,mat,x=0){
-    const vertices=[],indices=[],n=detail?32:16;
-    stations.forEach(([z,w,y,h])=>{for(let j=0;j<n;j++){const a=j/n*Math.PI*2;vertices.push(x+Math.cos(a)*w,y+Math.sin(a)*h,z);}});
+    const vertices=[],indices=[],n=detail?40:20;
+    const curve=(v,p)=>Math.sign(v)*Math.abs(v)**(2/p);
+    stations.forEach(([z,w,y,h,p=2,wb=w])=>{for(let j=0;j<n;j++){const a=j/n*Math.PI*2,s=Math.sin(a);vertices.push(x+curve(Math.cos(a),p)*(s<0?wb:w),y+curve(s,p)*h,z);}});
     for(let i=0;i<stations.length-1;i++)for(let j=0;j<n;j++){const a=i*n+j,b=i*n+(j+1)%n,c=a+n,d=b+n;indices.push(a,b,c,b,d,c);}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();return mesh(g,mat);
   }
-  shell([[-1.75,.02,.4,.02],[-1.4,.25,.48,.16],[-.9,.43,.52,.26],[0,.43,.52,.25],[.55,.32,.49,.2],[1.2,.23,.43,.14],[1.9,.13,.32,.09],[2.35,.08,.29,.055],[2.43,.005,.29,.01]],paint);
-  shell([[-1.65,.01,.53,.01],[-1.25,.13,.63,.17],[-.8,.23,.78,.34],[-.42,.22,.85,.39],[-.27,.05,.79,.2]],paint);
-  box(1.66,.055,2.75,carbon,[0,.16,-.15]).name = "floorPanel";
+  shell([[-1.75,.02,.4,.02,3],[-1.4,.24,.47,.15,3],[-.9,.4,.52,.25,3.4],[0,.42,.52,.25,3.6],[.55,.31,.5,.2,3.6],[1.2,.21,.43,.14,3.4],[1.9,.13,.32,.09,3],[2.35,.085,.3,.055,2.6],[2.45,.005,.29,.01,2.4]],paint);
+  shell([[-1.65,.01,.53,.01],[-1.25,.12,.63,.17,2.6],[-.8,.2,.78,.34,2.6],[-.42,.2,.86,.4,2.8],[-.26,.04,.8,.22,2.4]],paint);
+  const fin=shell([[-1.45,.008,.84,.005],[-1.25,.012,.87,.07],[-.75,.012,1.02,.1],[-.5,.008,1.12,.04]],paint);fin.name="sharkFin";
+  // Floor in plan view (#188): narrow at the front, full width alongside
+  // the sidepods, tapering into the diffuser.
+  const floorPlan=new THREE.Shape();
+  [[.34,1.22],[.62,.95],[.83,.55],[.83,-1.05],[.7,-1.35],[.62,-1.52]].forEach(([x,z],i)=>i?floorPlan.lineTo(x,z):floorPlan.moveTo(x,z));
+  [[-.62,-1.52],[-.7,-1.35],[-.83,-1.05],[-.83,.55],[-.62,.95],[-.34,1.22]].forEach(([x,z])=>floorPlan.lineTo(x,z));
+  const floorGeometry=new THREE.ExtrudeGeometry(floorPlan,{depth:.055,bevelEnabled:false});floorGeometry.rotateX(Math.PI/2);
+  mesh(floorGeometry,carbon,[0,.16+.0275,0]).name="floorPanel";
   for(const side of [-1,1]){
-    shell([[-1.45,.015,.31,.01],[-1.1,.19,.38,.14],[-.5,.31,.44,.22],[.1,.32,.48,.2],[.45,.24,.48,.14],[.48,.20,.48,.1]],paint,side*.55);
+    shell([[-1.35,.2,.21,.012,4],[-1.1,.22,.3,.08,4,.16],[-.5,.3,.43,.21,4,.2],[.1,.32,.47,.2,4.4,.2],[.42,.27,.49,.14,4,.18],[.47,.22,.49,.1,3]],paint,side*.55);
     const inlet=mesh(new THREE.SphereGeometry(.2,16,8),black,[side*.55,.5,.475]);inlet.scale.set(1,.5,.15);
     box(.035,.1,2.5,carbon,[side*.84,.22,-.15]);
     box(.028,.022,1.15,stripe,[side*.85,.29,-.38]);
@@ -218,9 +228,42 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   rod([0,.62,.56],[0,1.07,.57],.032).name="haloPillar";
   const intake=mesh(new THREE.SphereGeometry(.145,16,12),black,[0,1.12,-.33]);intake.scale.set(.8,.7,.5);
   const noseSponsor=mesh(new THREE.PlaneGeometry(.22,.56),sponsorMaterial(livery,"nose"),[0,.565,1.28]);noseSponsor.name="teamSponsorNose";noseSponsor.rotation.x=-Math.PI/2;noseSponsor.renderOrder=2;noseSponsor.castShadow=false;noseSponsor.receiveShadow=false;
-  function wing(name,z,y,width){const wing=new THREE.Group();wing.name=name;wing.position.set(0,y,z);group.add(wing);for(let i=0;i<3;i++){const blade=box(width-i*.08,.035,.16,i===2?paint:carbon,[0,i*.06,-i*.13],wing);blade.rotation.x=-.12;}for(const s of [-1,1]){box(.035,.28,.5,paint,[s*width/2,.07,-.1],wing);box(.03,.024,.46,stripe,[s*(width/2+.02),.19,-.1],wing);}return wing;}
-  wing('frontWing',2.22,.21,1.94);wing('rearWing',-1.62,.95,1.72);
-  const rearSponsor=mesh(new THREE.PlaneGeometry(1.08,.11),sponsorMaterial(livery,"rear"),[0,1.075,-1.965]);rearSponsor.name="teamSponsorRear";rearSponsor.renderOrder=2;rearSponsor.castShadow=false;rearSponsor.receiveShadow=false;
+  // Airfoil wings (#188): cambered profiles extruded across the car, with
+  // flaps stepping up and back at a steeper angle, and sculpted endplates.
+  function extrudeX(shape,width){
+    const g=new THREE.ExtrudeGeometry(shape,{depth:width,bevelEnabled:false,curveSegments:detail?8:4});
+    g.rotateY(Math.PI/2);g.translate(-width/2,0,0);return g;
+  }
+  function airfoil(chord,thickness){
+    const shape=new THREE.Shape(),steps=detail?12:6;
+    shape.moveTo(0,0);
+    // Inverted camber (downforce): flat top, bulging underside.
+    for(let i=1;i<=steps;i++){const u=i/steps;shape.lineTo(u*chord,thickness*.5*Math.sqrt(u)*(1-u)+u*thickness*.2);}
+    for(let i=steps-1;i>=1;i--){const u=i/steps;shape.lineTo(u*chord,-thickness*2.6*Math.sqrt(u)*(1-u));}
+    shape.closePath();return shape;
+  }
+  function endplate(length,height){
+    const r=.06,shape=new THREE.Shape();
+    shape.moveTo(0,0);shape.lineTo(length-r,0);shape.quadraticCurveTo(length,0,length,r);
+    shape.lineTo(length,height*.7);shape.quadraticCurveTo(length,height,length-r*2,height);
+    shape.lineTo(r,height*.82);shape.quadraticCurveTo(0,height*.8,0,height*.6);shape.closePath();
+    return shape;
+  }
+  function wing(name,z,y,width,elements,plateLength,plateHeight){
+    const wing=new THREE.Group();wing.name=name;wing.position.set(0,y,z);group.add(wing);
+    elements.forEach(([chord,dy,dz,angle,w],i)=>{
+      const blade=mesh(extrudeX(airfoil(chord,chord*.1),width*w),i===elements.length-1?paint:carbon,[0,dy,dz+chord/2],wing);
+      blade.rotation.x=angle;
+    });
+    for(const s of [-1,1]){
+      mesh(extrudeX(endplate(plateLength,plateHeight),.03),paint,[s*width/2,-.07,-.1+plateLength/2],wing);
+      box(.03,.024,plateLength*.8,stripe,[s*(width/2+.02),plateHeight*.62-.07,-.1],wing);
+    }
+    return wing;
+  }
+  wing('frontWing',2.22,.14,1.94,[[.26,0,.08,.05,1],[.18,.05,-.1,.25,.94],[.13,.1,-.22,.45,.88]],.5,.28);
+  wing('rearWing',-1.62,.9,1.72,[[.32,0,0,.1,1],[.2,.12,-.24,.45,1]],.62,.38);
+  const rearSponsor=mesh(new THREE.PlaneGeometry(1.08,.11),sponsorMaterial(livery,"rear"),[0,1.075,-1.965]);rearSponsor.name="teamSponsorRear";rearSponsor.rotation.y=Math.PI;rearSponsor.renderOrder=2;rearSponsor.castShadow=false;rearSponsor.receiveShadow=false;
   for(const s of [-1,1]){rod([s*.3,.4,-1.4],[s*.3,.96,-1.62],.035);rod([s*.13,.35,2.05],[s*.25,.2,2.2],.025);}
   const exhaust=mesh(new THREE.CylinderGeometry(.085,.1,.25,12,1,true),alloy,[0,.51,-1.76]);exhaust.rotation.x=Math.PI/2;
   box(.13,.08,.025,new THREE.MeshStandardMaterial({color:0xff220a,emissive:0xff1600,emissiveIntensity:2}),[0,.3,-1.78]);
@@ -230,7 +273,9 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     const wheel=new THREE.Group();pivot.add(wheel);
     if(index<2)steeringPivots.push(pivot);
     if(detail){const caliper=box(.085,.22,.11,new THREE.MeshStandardMaterial({color:0xb69050,metalness:.65,roughness:.35}),[x-Math.sign(x)*.18,y,z+.14]);caliper.name='setupCaliper';}
-    const tire=mesh(new THREE.CylinderGeometry(.4,.4,.32,detail?48:20),black,[0,0,0],wheel);tire.rotation.z=Math.PI/2;
+    // Lathed tyre (#188): flat tread with rounded shoulders instead of a plain cylinder.
+    const tyreProfile=[[.3,-.16],[.36,-.16],[.39,-.145],[.4,-.12],[.4,.12],[.39,.145],[.36,.16],[.3,.16]].map(([r,y])=>new THREE.Vector2(r,y));
+    const tire=mesh(new THREE.LatheGeometry(tyreProfile,detail?48:20),black,[0,0,0],wheel);tire.rotation.z=Math.PI/2;
     for(const s of [-1,1]){
       const ring=mesh(new THREE.TorusGeometry(.31,.065,8,detail?48:20),black,[s*.145,0,0],wheel);ring.rotation.y=Math.PI/2;
       const rim=mesh(new THREE.CylinderGeometry(.23,.23,.025,detail?32:16),carbon,[s*.17,0,0],wheel);rim.rotation.z=Math.PI/2;
