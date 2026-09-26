@@ -36,13 +36,16 @@ Serve `https`/`wss` anche se siete tutti in casa: la pagina su GitHub Pages è
 
    ```sh
    git clone https://github.com/ottobit/f1-racer.git
-   cd f1-racer/core
+   cd f1-racer
    npm install
    ```
 
+   Il `package.json` della cartella principale installa anche le dipendenze di
+   `core/`: tutti i comandi si lanciano da `f1-racer/`.
+
 ### Ogni sessione di gioco
 
-1. Avvia il server (dentro `core/`) e lascia il terminale aperto:
+1. Avvia il server (da `f1-racer/`) e lascia il terminale aperto:
 
    ```sh
    npm run start:room-server
