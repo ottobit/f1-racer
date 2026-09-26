@@ -19,7 +19,11 @@ function isCompactLandscapeViewport() {
 // tyres all sit where they are on the car the other drivers see.
 // Eye raised above the helmet line (#141). The halo stays but is see-through
 // (#143): solid, its bars covered most of the road on a phone.
-const COCKPIT_EYE = new THREE.Vector3(0, 1.02, 0.1);
+// #169: eye pulled back and the view pitched ~12° down so the top of the
+// wheel and the gloves sit in the lower frame (it was ~50° below the old
+// near-level gaze), with the road still filling the upper two thirds.
+const COCKPIT_EYE = new THREE.Vector3(0, 1.0, -0.02);
+const COCKPIT_PITCH_DROP = Math.tan(THREE.MathUtils.degToRad(12));
 const COCKPIT_HIDDEN_PARTS = ["driverHelmet", "driverVisor", "driverHelmetStripe", "driverChin", "driverHelmetSpoiler", "driverHans"];
 const COCKPIT_GLASS_PARTS = ["halo", "haloPillar"];
 
@@ -135,10 +139,10 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
     cockpitView.updateMatrixWorld(true);
     cockpitView.localToWorld(eye.copy(COCKPIT_EYE));
     camera.position.copy(eye);
-    // Look slightly down the road so the nose and wheel stay in frame.
+    // Look down the road, pitched so the wheel and gloves stay in frame.
     lookTarget.set(
       eye.x + Math.sin(state.heading) * 20,
-      eye.y - 0.9,
+      eye.y - 20 * COCKPIT_PITCH_DROP,
       eye.z + Math.cos(state.heading) * 20
     );
     camera.lookAt(lookTarget);

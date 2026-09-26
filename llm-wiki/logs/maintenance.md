@@ -1278,3 +1278,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Desktop unchanged (`high` with >= 8 cores, else `medium`). Auto choice is
   not persisted, so existing players move on next load; `?gfx=` overrides stay.
 - Open: `high` as phone default not chosen — one device is not enough data.
+
+## 2026-09-26 — VIEW above the brake, cockpit camera pitched down (#169)
+
+- `race.html` / `race-controls.css`: the touch VIEW button leaves the HUD row under the speedo and sits above FRENO in a `.gas-stack`, mirroring BOX above GAS. It is still hidden while the car is in the pit box.
+- `race-camera.js`: `COCKPIT_EYE` is now (0, 1.0, −0.02), with a ~12° downward pitch (`COCKPIT_PITCH_DROP`). The old gaze was almost level and left the wheel ~50° below the eye, outside the 58° FOV, so the wheel top and gloves were never in frame; now they are.
+- Version chain: css v54, race-input v50 (comment only), race-camera v33, main v88, race-bootstrap v49.
+- Verification: `node --check` and `git diff --check` only; not yet tried in game. If the wheel covers too much road, lower `COCKPIT_PITCH_DROP`.
