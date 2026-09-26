@@ -1256,3 +1256,13 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `?vNN` chain bumped up to `race.html` and `garage.html`; `node --check` only.
 - User-reported ~33.4 ms/frame (30 fps) on phone is still open: steady 30
   suggests an OS cap (e.g. iOS Low Power Mode) rather than GPU load.
+
+## 2026-09-26 — Precise steering values back (#165)
+
+- `race-input.js`: touch travel back to 0.38 of the wheel width (#153).
+- `steering.js`: `speedLimit` floor back to .30 (#155); user prefers the
+  precision over the softer #161 values and will adapt.
+- Kept from #161: tyre-grip yaw ceiling (5.5 g, knee .75) and speed-dependent
+  wheel rate; at full lock the .30 floor adds little past ~60 m/s because the
+  ceiling caps it (5.45 vs 5.38 g at 60 m/s).
+- `?vNN` chain bumped up to `race.html`; `node --check` only.
