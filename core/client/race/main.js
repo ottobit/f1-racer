@@ -19,7 +19,7 @@ import { setupRaceProgress } from "./race-progress.js?v=27";
 import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
-import { setupAgentApi } from "./agent-api.js?v=2";
+import { setupAgentApi } from "./agent-api.js?v=3";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=2";
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=9";
 
@@ -1250,7 +1250,9 @@ function synthesizeAiQualiTime() {
 // bookkeeping for a remote car is derived the same deterministic way as
 // everyone else's, not trusted from the sender's own claimed values.
 const REMOTE_SMOOTH_FACTOR = 0.35;
-const REMOTE_MAX_EXTRAPOLATION_S = 0.25; // a stalled stream stops the car soon
+// Long enough to ride out a burst-delayed stream (the room bot's samples
+// cross an egress proxy, #186), short enough that a stalled one still stops.
+const REMOTE_MAX_EXTRAPOLATION_S = 0.6;
 function updateRemoteCar(car, dt) {
   const sample = multiplayer.getRemoteSample(car.participantId);
   if (!sample) return; // no broadcast received yet — stays at its grid slot
@@ -1459,6 +1461,7 @@ function update(dt) {
       }
     }
     state.lastLapPenaltyMs = penaltyMs;
+    state.lastLapTime = lapTime; // Agent API state (#186)
     state.trackLimitViolationsThisLap = 0;
     state.lapStartTime = now;
     if (penaltyMs > 0) hud.showPenaltyNotice(penaltyMs);
@@ -1771,6 +1774,10 @@ if (isBotSession) {
     getSessionPhase: () => sessionPhase,
     getRaceState: () => raceState,
     getQualiState: () => qualiState,
+    isCautionActive: () => cautionState === "active",
+    isRaining,
+    circuitName: circuit.name,
+    nameOf: displayDriverName,
   });
   humanInputListeners.push(agentApi.onHumanInput);
   if (botDriver) {

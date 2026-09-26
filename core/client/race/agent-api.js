@@ -40,6 +40,10 @@ export function setupAgentApi({
   getSessionPhase,
   getRaceState,
   getQualiState,
+  isCautionActive = () => false,
+  isRaining = false,
+  circuitName = "",
+  nameOf = (id) => id,
 }) {
   const KMH_PER_UNIT = 3.6; // matches race-hud.js's own speed readout
   const DEFAULT_STEP_MS = 500;
@@ -107,6 +111,12 @@ export function setupAgentApi({
       .slice(0, NEARBY_CARS_LIMIT);
   }
 
+  // Seconds to cover a gap at the follower's pace; null when either side is
+  // too slow for the estimate to mean anything (#186).
+  function gapSeconds(meters, speed) {
+    return speed > 5 ? round1(meters / speed) : null;
+  }
+
   function getState() {
     const info = nearestTrackInfo(state.x, state.z);
     const order = currentRaceOrder();
@@ -135,6 +145,28 @@ export function setupAgentApi({
       drsActive: !!state.drsActive,
       nextCorner: nextCornerInfo(info.idx),
       nearbyCars: nearbyCars(),
+      // Richer race picture for strategy agents (#186).
+      circuit: circuitName,
+      weather: isRaining ? "rain" : "dry",
+      safetyCar: isCautionActive(),
+      lapTimes: {
+        currentMs: Math.round(state.currentLapTime || 0),
+        lastMs: state.lastLapTime ? Math.round(state.lastLapTime) : null,
+        bestMs: state.bestLapTime ? Math.round(state.bestLapTime) : null,
+      },
+      ers: { chargePct: Math.round(state.ersCharge ?? 0), active: !!state.ersActive },
+      pit: { state: state.pitState, requested: !!state.pitRequested },
+      gapAheadS: position > 1 ? gapSeconds((order[position - 2].totalProgress - state.totalProgress) * trackLength, state.speed) : null,
+      gapBehindS: position && position < order.length
+        ? gapSeconds((state.totalProgress - order[position].totalProgress) * trackLength, aiCars.find((c) => c.driverId === order[position].driverId)?.speed || 0)
+        : null,
+      standings: order.map((entry, index) => ({
+        position: index + 1,
+        id: entry.driverId,
+        name: entry.driverId === "player" ? "TU" : nameOf(entry.driverId),
+        lap: Math.floor(entry.totalProgress) + 1,
+        gapToLeaderMeters: round1((order[0].totalProgress - entry.totalProgress) * trackLength),
+      })),
       finished,
       raceResult: finished
         ? order.map((entry) => ({ id: entry.driverId, position: entry.finishPosition }))
