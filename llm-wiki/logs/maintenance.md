@@ -1300,3 +1300,9 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race-camera.js`: each frame the cockpit copy re-aims the named `driverForearm` rods at the grips, so the arms follow the wheel. It also doubles the wheel rotation (`COCKPIT_WHEEL_GAIN`, ~63° at full lock).
 - Version chain: car-model v31, race-car-view v33, race-camera v34, main v91, race-bootstrap v52, showroom v36, garage v48.
 - Verification: `node --check`, plus a node smoke test against local three. Forearm ends meet the wrists exactly at steer 0 and ±1; both gloves are in frame at centre, and at full lock the outer glove leaves the frame. Not yet tried in the browser.
+
+## 2026-09-26 — Livery-coloured gloves (#175)
+
+- `car-model.js`: gloves and thumb now use the livery's secondary colour (`stripe`, role `secondary`) instead of `black`, on every car, detailed or not. Team colours are kept, and the gloves stand out against the carbon wheel.
+- Version chain: car-model v32, race-car-view v34, main v92, race-bootstrap v53, showroom v37, garage v49.
+- Verification: `node --check` and `git diff --check` only.

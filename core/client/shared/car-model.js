@@ -191,15 +191,16 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     for(const side of [-1,1]){
       const elbow=[side*.25,.7,.13];
       rod([side*.2,.78,-.02],elbow,.045,suit);
-      // Detailed wheels hold the gloves round the outer grips (#173); the
+      // Gloves in the livery's secondary colour (#175). Detailed wheels hold
+      // the gloves round the outer grips (#173); the
       // cockpit camera re-aims the forearm at them as the wheel turns.
       const forearm=rod(elbow,detail?[side*.135,.775,.25]:[side*.115,.79,.27],.04,suit);forearm.name="driverForearm";forearm.userData.side=side;
       mesh(new THREE.SphereGeometry(.046,10,7),suit,elbow);
       if(detail){
-        const glove=mesh(new THREE.SphereGeometry(.045,12,8),black,[side*.135,-.005,-.008],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.95,1.25,.95);
-        mesh(new THREE.SphereGeometry(.016,8,6),black,[side*.112,.03,-.022],driverSteeringWheel).name="driverThumb";
+        const glove=mesh(new THREE.SphereGeometry(.045,12,8),stripe,[side*.135,-.005,-.008],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.95,1.25,.95);
+        mesh(new THREE.SphereGeometry(.016,8,6),stripe,[side*.112,.03,-.022],driverSteeringWheel).name="driverThumb";
       }else{
-        const glove=mesh(new THREE.SphereGeometry(.052,10,7),black,[side*.115,0,.025],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.78,1.18,.72);
+        const glove=mesh(new THREE.SphereGeometry(.052,10,7),stripe,[side*.115,0,.025],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.78,1.18,.72);
       }
     }
     // HANS collar resting on the shoulders behind the helmet.

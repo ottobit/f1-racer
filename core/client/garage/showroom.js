@@ -1,5 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { buildCar, createStudioEnvironment } from '../shared/car-model.js?v=31';
+import { buildCar, createStudioEnvironment } from '../shared/car-model.js?v=32';
 import { createFrameLimiter } from '../shared/graphics-profiles.js?v=4';
 
 const SHOWROOM_VIEWS={
