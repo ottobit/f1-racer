@@ -1247,3 +1247,12 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   standstill -> 0.4 s flat out, centring 2x faster. Simulated: 0->95% lock
   0.30 s at rest, 0.33 s flat out — mild, only bites on fast flicks.
 - Verified with `node --check` and node simulations; feel to be judged in game.
+
+## 2026-09-26 — Antialiasing back on the low profile (#163)
+
+- `core/client/shared/graphics-profiles.js`: `low.antialias` true again; the
+  user found the jagged edges hurt enjoyment more than the cost justified.
+- Other #159 mobile savings (60 fps cap, hard PCF shadows on touch) unchanged.
+- `?vNN` chain bumped up to `race.html` and `garage.html`; `node --check` only.
+- User-reported ~33.4 ms/frame (30 fps) on phone is still open: steady 30
+  suggests an OS cap (e.g. iOS Low Power Mode) rather than GPU load.
