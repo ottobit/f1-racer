@@ -222,8 +222,41 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   rod([0,.62,.56],[0,1.07,.57],.032).name="haloPillar";
   const intake=mesh(new THREE.SphereGeometry(.145,16,12),black,[0,1.12,-.33]);intake.scale.set(.8,.7,.5);
   const noseSponsor=mesh(new THREE.PlaneGeometry(.22,.56),sponsorMaterial(livery,"nose"),[0,.565,1.28]);noseSponsor.name="teamSponsorNose";noseSponsor.rotation.x=-Math.PI/2;noseSponsor.renderOrder=2;noseSponsor.castShadow=false;noseSponsor.receiveShadow=false;
-  function wing(name,z,y,width){const wing=new THREE.Group();wing.name=name;wing.position.set(0,y,z);group.add(wing);for(let i=0;i<3;i++){const blade=box(width-i*.08,.035,.16,i===2?paint:carbon,[0,i*.06,-i*.13],wing);blade.rotation.x=-.12;}for(const s of [-1,1]){box(.035,.28,.5,paint,[s*width/2,.07,-.1],wing);box(.03,.024,.46,stripe,[s*(width/2+.02),.19,-.1],wing);}return wing;}
-  wing('frontWing',2.22,.21,1.94);wing('rearWing',-1.62,.95,1.72);
+  // Airfoil wings (#188): cambered profiles extruded across the car, with
+  // flaps stepping up and back at a steeper angle, and sculpted endplates.
+  function extrudeX(shape,width){
+    const g=new THREE.ExtrudeGeometry(shape,{depth:width,bevelEnabled:false,curveSegments:detail?8:4});
+    g.rotateY(Math.PI/2);g.translate(-width/2,0,0);return g;
+  }
+  function airfoil(chord,thickness){
+    const shape=new THREE.Shape(),steps=detail?12:6;
+    shape.moveTo(0,0);
+    // Inverted camber (downforce): flat top, bulging underside.
+    for(let i=1;i<=steps;i++){const u=i/steps;shape.lineTo(u*chord,thickness*.5*Math.sqrt(u)*(1-u)+u*thickness*.2);}
+    for(let i=steps-1;i>=1;i--){const u=i/steps;shape.lineTo(u*chord,-thickness*2.6*Math.sqrt(u)*(1-u));}
+    shape.closePath();return shape;
+  }
+  function endplate(length,height){
+    const r=.06,shape=new THREE.Shape();
+    shape.moveTo(0,0);shape.lineTo(length-r,0);shape.quadraticCurveTo(length,0,length,r);
+    shape.lineTo(length,height*.7);shape.quadraticCurveTo(length,height,length-r*2,height);
+    shape.lineTo(r,height*.82);shape.quadraticCurveTo(0,height*.8,0,height*.6);shape.closePath();
+    return shape;
+  }
+  function wing(name,z,y,width,elements,plateLength,plateHeight){
+    const wing=new THREE.Group();wing.name=name;wing.position.set(0,y,z);group.add(wing);
+    elements.forEach(([chord,dy,dz,angle,w],i)=>{
+      const blade=mesh(extrudeX(airfoil(chord,chord*.1),width*w),i===elements.length-1?paint:carbon,[0,dy,dz+chord/2],wing);
+      blade.rotation.x=angle;
+    });
+    for(const s of [-1,1]){
+      mesh(extrudeX(endplate(plateLength,plateHeight),.03),paint,[s*width/2,-.07,-.1+plateLength/2],wing);
+      box(.03,.024,plateLength*.8,stripe,[s*(width/2+.02),plateHeight*.62-.07,-.1],wing);
+    }
+    return wing;
+  }
+  wing('frontWing',2.22,.14,1.94,[[.26,0,.08,.05,1],[.18,.05,-.1,.25,.94],[.13,.1,-.22,.45,.88]],.5,.28);
+  wing('rearWing',-1.62,.9,1.72,[[.32,0,0,.1,1],[.2,.12,-.24,.45,1]],.62,.38);
   const rearSponsor=mesh(new THREE.PlaneGeometry(1.08,.11),sponsorMaterial(livery,"rear"),[0,1.075,-1.965]);rearSponsor.name="teamSponsorRear";rearSponsor.renderOrder=2;rearSponsor.castShadow=false;rearSponsor.receiveShadow=false;
   for(const s of [-1,1]){rod([s*.3,.4,-1.4],[s*.3,.96,-1.62],.035);rod([s*.13,.35,2.05],[s*.25,.2,2.2],.025);}
   const exhaust=mesh(new THREE.CylinderGeometry(.085,.1,.25,12,1,true),alloy,[0,.51,-1.76]);exhaust.rotation.x=Math.PI/2;
