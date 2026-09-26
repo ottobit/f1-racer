@@ -1209,3 +1209,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race-controls.css`: landscape wheel gets a 14–40 px left margin, away from edge gestures.
 - `steering.js`: high-speed authority floor 0.22 -> 0.30 (~48% vs ~42% at top speed); the brake hint follows automatically.
 - Verified with `node --check` only; feel to be judged in game (iPhone + Android).
+
+## 2026-09-26 — Relative steering back, BOX above throttle, driver lock (#155)
+
+- `race-input.js`: absolute touch steering from #153 reverted (thumb placement jerked the car); relative drag is back with shorter travel (38% of the wheel width, ~70px to full lock). #153's edge margin, fullscreen fix and steering floor stay.
+- `race.html` / `race-controls.css`: touch BOX button moved from the HUD row to a `.gas-stack` above the throttle (44px tall, pedal width); `race-input.js` binds `[data-key]` in `#touch-controls` too. Armed/servicing/not-racing states keep their existing selectors.
+- `menu.js` / `index.html`: driver picker locked (other drivers disabled, note "Bloccato fino a fine campionato") from the first recorded result until all circuits are raced or the championship is reset.
+- Verified with `node --check` only.
