@@ -1,3 +1,6 @@
+const PIT_LIMITER_LEAD = 0.03;
+const PIT_LIMITER_DECEL = 45;
+
 export function setupRaceSystems({
   state,
   input,
@@ -51,6 +54,16 @@ export function setupRaceSystems({
     }
   }
 
+  // Pit limiter (#145): with the call armed, the car slows itself to the
+  // pit speed just before and inside the pit zone, so the stop always fires.
+  function applyPitLimiter(dt) {
+    if (!state.pitRequested || state.pitState !== "none" || getRaceState() !== "racing") return;
+    const fraction = state.totalProgress - Math.floor(state.totalProgress);
+    const approaching = fraction >= pitZoneStart - PIT_LIMITER_LEAD || fraction <= pitZoneEnd;
+    if (!approaching || state.speed <= pitSpeedLimit) return;
+    state.speed = Math.max(pitSpeedLimit, state.speed - PIT_LIMITER_DECEL * dt);
+  }
+
   function startPitStop() {
     if (getRaceState() !== "racing" || state.pitState !== "none") {
       state.pitRequested = false;
@@ -81,5 +94,5 @@ export function setupRaceSystems({
     return false;
   }
 
-  return { startPitStop, updateEnergyRecovery, updatePitStop };
+  return { applyPitLimiter, startPitStop, updateEnergyRecovery, updatePitStop };
 }

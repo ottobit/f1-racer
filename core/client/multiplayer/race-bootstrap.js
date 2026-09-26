@@ -24,4 +24,4 @@ if (roomCode) {
   if (client.room) window.__mpClient = client;
 }
 
-import("../race/main.js?v=74");
+import("../race/main.js?v=75");

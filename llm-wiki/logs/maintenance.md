@@ -1130,3 +1130,19 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   User preference: keep the realistic reference, just don't block the road.
 - Version chain: `main.js` v74 via `race-bootstrap` v35, `race.html`.
 - Verified with `node --check` and `git diff --check` only.
+
+## 2026-09-26 — Pit limiter, wheel direction, list behind controls (#145)
+
+- `race-systems.js` (v29): new `applyPitLimiter(dt)`, called in `main.js`
+  right after `integratePlayerMotion`. With `pitRequested` armed, from 3% of
+  a lap before the pit zone to its end, speed is pulled down to the pit
+  limit at 45 units/s², so `startPitStop` always fires. User found the
+  "cross the line under 65 km/h" rule impossible to discover.
+- `race-car-view.js` (v32): steering wheel `rotation.z` sign flipped to
+  `+steer * 0.55`; it turned opposite to the front tyres (pivots go to -x
+  for positive steer; +rotation.z tips the rim's top to -x). Also affects
+  the chase-view car; the cockpit copy mirrors it.
+- `race-controls.css` (v51): `html.touch #touch-controls{z-index:120}`,
+  above the driver list (115).
+- `modes.html`: P/BOX rows describe the automatic slow-down.
+- Verified with `node --check` and `git diff --check` only.

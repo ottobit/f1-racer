@@ -41,7 +41,9 @@ export function applyCarToMesh(
       pivot.rotation.y = -steer * frontWheelSteerAngle;
     });
   }
+  // The rim's top moves the way the front tyres point (#145): pivots turn
+  // toward -x for positive steer, and +rotation.z tips the top toward -x.
   if (model.driverSteeringWheel) {
-    model.driverSteeringWheel.rotation.z = -steer * 0.55;
+    model.driverSteeringWheel.rotation.z = steer * 0.55;
   }
 }

@@ -7,14 +7,14 @@ import { liveryById } from "../shared/driver-themes.js?v=27";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=29";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=30";
-import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=31";
+import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=32";
 import { setupRaceInput } from "./race-input.js?v=45";
 import { setupRaceHud } from "./race-hud.js?v=38";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=31";
 import { setupPlayerPhysics } from "./player-physics.js?v=6";
 import { setupRaceAi } from "./race-ai.js?v=28";
-import { setupRaceSystems } from "./race-systems.js?v=28";
+import { setupRaceSystems } from "./race-systems.js?v=29";
 import { setupRaceProgress } from "./race-progress.js?v=27";
 import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
@@ -1291,6 +1291,7 @@ function updateQualifying(dt) {
   }
 
   const info = integratePlayerMotion(dt);
+  raceSystems.applyPitLimiter(dt);
   applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
   brakeMap();
 
