@@ -47,17 +47,17 @@ export const GRAPHICS_PROFILES = {
 
 // Cheap, synchronous-only heuristic — no benchmarking pass, just signals
 // already on `navigator`/`window`. A coarse pointer (touch) is the primary
-// mobile signal; core count and a very high DPR (common on phones with a
-// coarse pointer, rare on desktops) refine it toward "low" for the
-// weakest likely devices instead of lumping every phone together.
+// mobile signal. Phones start on "medium" and drop to "low" only on real
+// weak-device signals: little RAM (`deviceMemory`, Chromium only) or few
+// cores. DPR is not used (#167): every recent iPhone has DPR 3 and an
+// iPhone 17 holds the 60 fps cap even on "high".
 const IS_COARSE_POINTER = matchMedia("(pointer: coarse)").matches;
 
 function detectDefaultProfileId() {
-  const isCoarsePointer = IS_COARSE_POINTER;
   const cores = navigator.hardwareConcurrency || 4;
-  const dpr = window.devicePixelRatio || 1;
-  if (!isCoarsePointer && cores >= 8) return "high";
-  if (isCoarsePointer && (cores <= 4 || dpr >= 3)) return "low";
+  if (!IS_COARSE_POINTER) return cores >= 8 ? "high" : "medium";
+  const memoryGb = navigator.deviceMemory;
+  if ((memoryGb && memoryGb <= 4) || cores < 4) return "low";
   return "medium";
 }
 
