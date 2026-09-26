@@ -17,15 +17,24 @@ function isCompactLandscapeViewport() {
 // driver's helmet can be hidden) seen from inside the helmet. The halo,
 // its centre pillar, the steering wheel with gloves, the nose and the front
 // tyres all sit where they are on the car the other drivers see.
-// Eye raised above the helmet line and the halo hidden (#141): on a phone
-// its bars covered most of the road.
+// Eye raised above the helmet line (#141). The halo stays but is see-through
+// (#143): solid, its bars covered most of the road on a phone.
 const COCKPIT_EYE = new THREE.Vector3(0, 1.02, 0.1);
-const COCKPIT_HIDDEN_PARTS = ["driverHelmet", "driverVisor", "driverHelmetStripe", "driverChin", "driverHelmetSpoiler", "driverHans", "halo", "haloPillar"];
+const COCKPIT_HIDDEN_PARTS = ["driverHelmet", "driverVisor", "driverHelmetStripe", "driverChin", "driverHelmetSpoiler", "driverHans"];
+const COCKPIT_GLASS_PARTS = ["halo", "haloPillar"];
 
 function prepareCockpitCar(model) {
   for (const name of COCKPIT_HIDDEN_PARTS) {
     const part = model.group.getObjectByName(name);
     if (part) part.visible = false;
+  }
+  for (const name of COCKPIT_GLASS_PARTS) {
+    const part = model.group.getObjectByName(name);
+    if (!part) continue;
+    part.material = part.material.clone();
+    part.material.transparent = true;
+    part.material.opacity = 0.28;
+    part.material.depthWrite = false;
   }
   model.group.traverse((object) => {
     if (object.isMesh) object.castShadow = false;
