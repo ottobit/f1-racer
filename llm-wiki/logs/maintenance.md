@@ -1333,3 +1333,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Waveform: each peer gets an `AnalyserNode`, not routed to the speakers. `readWaveform()` returns the loudest peer, and the canvas line appears only above an RMS of 0.015.
 - Version chain: race-hud v39, voice-chat v4, race-multiplayer v9, main v95, race-bootstrap v56, race-controls.css v56.
 - Verification: `node --check` and `git diff --check` only.
+
+## 2026-09-26 — Bot station keeping (#182)
+
+- `driver-providers.js`: new strategy target `station: {car, gap, side}`, cleared with `station: null`. The speed target is the reference car's speed plus 0.8 m/s per metre off the spot, clamped to -15/+25 and capped at the corner speed. The line goes to `side * 2.5`.
+- `main.js`: the autopilot gets `findCar(driverId)`, which searches `aiCars` (remote cars included), and `TRACK_LENGTH`. Versions: driver-providers v2, main v96, race-bootstrap v57.
+- Teleporting was rejected: writing x/z directly would break the sync, lap counting and collisions.
+- Verification: `node --check`. A headless solo run held station correctly in qualifying, where the reference AI car is parked. Race-phase behaviour is still to verify with the user, because headless qualifying is too slow to reach the race.
