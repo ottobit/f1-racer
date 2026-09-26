@@ -1,5 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { buildCar, createStudioEnvironment } from '../shared/car-model.js?v=30';
+import { createFrameLimiter } from '../shared/graphics-profiles.js?v=2';
 
 const SHOWROOM_VIEWS={
   hero:[.72,.34,10.4],
@@ -20,12 +21,13 @@ export function createShowroom(host, { livery, graphicsProfile, onFrame } = {}) 
   const compact=matchMedia('(max-width: 760px)').matches;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const profile=graphicsProfile || { dprCap: compact?1.5:2, shadowsEnabled: true, shadowMapSize: compact?1024:2048 };
-  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+  const renderer=new THREE.WebGLRenderer({antialias:profile.antialias!==false,alpha:false});
   renderer.setPixelRatio(Math.min(devicePixelRatio,profile.dprCap));
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
-  renderer.shadowMap.enabled=profile.shadowsEnabled;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled=profile.shadowsEnabled;renderer.shadowMap.type=profile.softShadows===false?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
   host.appendChild(renderer.domElement);
+  const frameGate=createFrameLimiter(profile.frameCapFps);
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x080d14);scene.fog=new THREE.FogExp2(0x080d14,.035);
   const camera=new THREE.PerspectiveCamera(36,1,.1,80);
   const env=createStudioEnvironment(renderer);scene.environment=env.texture;
@@ -62,7 +64,7 @@ export function createShowroom(host, { livery, graphicsProfile, onFrame } = {}) 
   document.getElementById('garage-orbit').addEventListener('click',e=>{auto=!auto;e.currentTarget.setAttribute('aria-pressed',String(auto));});
   const observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();});observer.observe(host);
   let previous=0;
-  renderer.setAnimationLoop(time=>{const dt=Math.min((time-previous)/1000,.05);previous=time;if(document.hidden)return;if(auto&&pointer===null&&!reduced.matches)azimuth+=dt*.18;updateCamera();renderer.render(scene,camera);if(onFrame)onFrame(dt);});
+  renderer.setAnimationLoop(time=>{if(!frameGate(time))return;const dt=Math.min((time-previous)/1000,.05);previous=time;if(document.hidden)return;if(auto&&pointer===null&&!reduced.matches)azimuth+=dt*.18;updateCamera();renderer.render(scene,camera);if(onFrame)onFrame(dt);});
   function focusPart(part) {
     const views={frontWing:[.48,.36,8.8],rearWing:[Math.PI,.34,6.65],floor:[2.4,.22,7.4],brakes:[1.25,.28,8.6],suspension:[.6,.62,8.6]};
     [azimuth,elevation,distance]=views[part];auto=false;
