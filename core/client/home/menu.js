@@ -124,7 +124,14 @@ document.getElementById("difficulty-select").addEventListener("click", (e) => {
   render();
 });
 
+// The driver is locked while a championship is under way (#155): from the
+// first result until the last race, or until the reset.
+let driverLocked = false;
+
 function renderDriverSelect() {
+  document.getElementById("driver-lock-note").textContent = driverLocked
+    ? "Bloccato fino a fine campionato"
+    : "Identità in gara";
   const html = SELECTABLE_DRIVER_IDS.map((driverId, index) => {
     const driver = DRIVER_ROSTER.find((entry) => entry.id === driverId);
     return `
@@ -135,6 +142,7 @@ function renderDriverSelect() {
         role="radio"
         aria-checked="${driverId === selectedDriverId}"
         style="${teamStyle(driver.team)}"
+        ${driverLocked && driverId !== selectedDriverId ? "disabled" : ""}
       ><span>${String(index + 1).padStart(2, "0")}</span><strong>${driver.name}<small>${liveryById(driver.team).label}</small></strong></button>
     `;
   }).join("");
@@ -143,7 +151,7 @@ function renderDriverSelect() {
 
 document.getElementById("driver-select").addEventListener("click", (e) => {
   const btn = e.target.closest("[data-driver-id]");
-  if (!btn) return;
+  if (!btn || driverLocked) return;
   selectedDriverId = btn.dataset.driverId;
   saveSelectedDriverId(selectedDriverId);
   render();
@@ -151,8 +159,9 @@ document.getElementById("driver-select").addEventListener("click", (e) => {
 
 function render() {
   renderDifficulty();
-  renderDriverSelect();
   const { standings, allRaced, state } = computeStandings(CIRCUITS);
+  driverLocked = !allRaced && CIRCUITS.some((circuit) => state.raceResults[circuit.id]);
+  renderDriverSelect();
 
   if (!circuitSelectionInitialized) {
     // Back from the garage (#151): keep the stored pick while it's still

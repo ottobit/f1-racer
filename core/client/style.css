@@ -1128,3 +1128,5 @@ html{scroll-behavior:smooth}
 .driver-option>strong small{display:block;margin-top:2px;color:#7f8795;font-size:.52rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
 .setup-choice .driver-option.active{background:linear-gradient(145deg,color-mix(in srgb,var(--team) 24%,#10131a),#141820);border-color:var(--team);box-shadow:none}.driver-option.active>span{color:var(--team)}.driver-option.active>strong small{color:#c7cbd3}
 .team-name{display:inline-flex;align-items:center;gap:8px}.team-name::before{content:"";width:3px;height:1.05em;border-radius:1px;background:linear-gradient(var(--team) 0 62%,var(--team2) 62%)}
+/* Driver locked during a championship (#155). */
+.setup-choice .driver-option:disabled{opacity:.35;cursor:not-allowed;filter:saturate(.4)}
