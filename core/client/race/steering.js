@@ -4,9 +4,15 @@ export function shapeSteering(raw) {
   if (magnitude < .035) return 0;
   return Math.sign(raw) * Math.pow((magnitude - .035) / .965, 1.22);
 }
-export function smoothSteering(current, target, dt) {
+// speedRatio (0..1 of top speed) sets the virtual wheel's max rate (#161):
+// lock to lock in ~0.2 s at a standstill, ~0.4 s flat out, so a flicked
+// thumb can't snap the car sideways; returning to centre is twice as fast.
+export function smoothSteering(current, target, dt, speedRatio = 0) {
   const returning = target === 0 || target * current < 0;
-  return current + (target - current) * (1 - Math.exp(-(returning ? 15 : 10) * dt));
+  const next = current + (target - current) * (1 - Math.exp(-(returning ? 15 : 10) * dt));
+  const lockToLockSeconds = .2 + .2 * Math.min(Math.max(speedRatio, 0), 1);
+  const maxStep = (returning ? 2 : 1) * 2 * dt / lockToLockSeconds;
+  return current + Math.max(-maxStep, Math.min(maxStep, next - current));
 }
 export function steeringYaw(steer, speed, authority, grip, load = 1) {
   const velocity = Math.abs(speed);
