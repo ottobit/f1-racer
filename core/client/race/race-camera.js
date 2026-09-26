@@ -54,7 +54,7 @@ function mirrorCar(source, target) {
   }
 }
 
-export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, cockpitCar, nearestTrackInfo, trackWidth }) {
+export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, cockpitCar, nearestTrackInfo, trackWidth, pitCamera = null }) {
   let cameraMode = "chase";
   let chaseCameraReady = false;
   let cameraHeading = 0;
@@ -94,7 +94,8 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
 
     let desiredX = state.x - Math.sin(cameraHeading) * camDistance;
     let desiredZ = state.z - Math.cos(cameraHeading) * camDistance;
-    if (nearestTrackInfo && trackWidth) {
+    // In the pit lane (#147) the car is legitimately off the track.
+    if (nearestTrackInfo && trackWidth && state.pitState === "none") {
       const track = nearestTrackInfo(desiredX, desiredZ);
       const safeOffset = trackWidth / 2 + CHASE_CAM_TRACK_MARGIN;
       if (track.dist > safeOffset) {
@@ -143,7 +144,24 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
     camera.lookAt(lookTarget);
   }
 
+  // TV shot of the box while the crew works (#147), then back to the
+  // chosen view.
+  function updatePitCamera() {
+    chaseCameraReady = false;
+    playerCar.group.visible = true;
+    if (cockpitView) cockpitView.visible = false;
+    camera.near = 0.1;
+    camera.position.copy(pitCamera.position);
+    camera.lookAt(pitCamera.target);
+  }
+
   function updateCamera(dt) {
+    if (pitCamera && state.pitState === "servicing") {
+      updatePitCamera();
+      return;
+    }
+    playerCar.group.visible = cameraMode !== "cockpit";
+    camera.near = cameraMode === "cockpit" ? 0.03 : 0.1;
     if (cameraMode === "cockpit") updateCockpitCamera();
     else updateChaseCamera(dt);
   }
