@@ -25,8 +25,8 @@
   <meta name="twitter:description" content="Time trial 3D su circuito misto, su una griglia da 10 auto. Giocabile subito nel browser." />
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="stylesheet" href="core/client/style.css?v=47" />
-  <link rel="stylesheet" href="core/client/race/race-controls.css?v=49" />
+  <link rel="stylesheet" href="core/client/style.css?v=48" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=50" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -101,6 +101,7 @@
 
     <canvas id="brake-map" width="256" height="256" aria-hidden="true"></canvas>
 
+    <div id="hud-cluster">
     <div id="hud-bottomright" class="hud-panel">
       <div id="shift-lights" aria-hidden="true">
         <span class="shift-led"></span><span class="shift-led"></span>
@@ -118,13 +119,14 @@
         <span id="speed-value">0</span>
         <span class="speedo-unit">km/h</span>
       </div>
-      <div id="hud-shortcuts">
-        <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
-        <button type="button" id="pit-toggle" data-key="KeyP" tabindex="-1" aria-label="Chiama il box">BOX</button>
-        <button type="button" class="pit-tyre" data-key="Digit1" tabindex="-1" aria-label="Gomme morbide">S</button>
-        <button type="button" class="pit-tyre" data-key="Digit2" tabindex="-1" aria-label="Gomme medie">M</button>
-        <button type="button" class="pit-tyre" data-key="Digit3" tabindex="-1" aria-label="Gomme dure">H</button>
-      </div>
+    </div>
+    <div id="hud-shortcuts">
+      <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
+      <button type="button" id="pit-toggle" data-key="KeyP" tabindex="-1" aria-label="Chiama il box">BOX</button>
+      <button type="button" class="pit-tyre" data-key="Digit1" tabindex="-1" aria-label="Gomme morbide">S</button>
+      <button type="button" class="pit-tyre" data-key="Digit2" tabindex="-1" aria-label="Gomme medie">M</button>
+      <button type="button" class="pit-tyre" data-key="Digit3" tabindex="-1" aria-label="Gomme dure">H</button>
+    </div>
     </div>
   </div>
 
@@ -208,6 +210,6 @@
       window.addEventListener("scroll", pin);
     })();
   </script>
-  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=32"></script>
+  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=33"></script>
 </body>
 </html>
