@@ -8,10 +8,10 @@
   <meta name="theme-color" content="#05060a" />
   <title>Come si gioca — F1 Racer</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>" />
-  <meta name="description" content="F1 Racer — come si gioca: singolo, multiplayer online con ngrok o in rete locale; tastiera, pad PlayStation, telefono." />
+  <meta name="description" content="F1 Racer — come si gioca: singolo, multiplayer online con ngrok; tastiera, pad PlayStation, telefono." />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="core/client/style.css?v=44" />
-  <link rel="stylesheet" href="core/client/home/modes.css?v=2" />
+  <link rel="stylesheet" href="core/client/home/modes.css?v=3" />
 </head>
 <body class="f1-home modes-page">
   <header class="modes-hero">
@@ -27,7 +27,7 @@
 
   <!-- 01 · Game types -->
   <section id="tipi" class="f1-home-section modes-block">
-    <div class="f1-home-section-head"><span>01</span><div><h2>Tipi di partita</h2><p>Tre modi di correre. Tocca una scheda per le istruzioni.</p></div></div>
+    <div class="f1-home-section-head"><span>01</span><div><h2>Tipi di partita</h2><p>Da solo o con gli amici. Tocca una scheda per le istruzioni.</p></div></div>
 
     <div class="mode-picker">
       <a class="mode-tile" href="#singolo">
@@ -45,23 +45,11 @@
         <span class="mode-badge">Consigliato</span>
         <span class="mode-tile-icon" aria-hidden="true">🌍</span>
         <strong>Multiplayer online</strong>
-        <span class="mode-tile-sub">Con gli amici, anche da lontano, tramite ngrok</span>
+        <span class="mode-tile-sub">Con gli amici, in casa o da lontano, tramite ngrok</span>
         <dl class="mode-facts">
           <div><dt>Giocatori</dt><dd>2 – 10</dd></div>
           <div><dt>Serve</dt><dd>Un PC host con Node.js e ngrok</dd></div>
           <div><dt>Voce</dt><dd>Sì</dd></div>
-        </dl>
-        <span class="mode-tile-cta">Istruzioni ↓</span>
-      </a>
-      <a class="mode-tile" href="#lan">
-        <span class="mode-badge mode-badge--muted">Avanzato</span>
-        <span class="mode-tile-icon" aria-hidden="true">🏠</span>
-        <strong>Rete locale</strong>
-        <span class="mode-tile-sub">Stessa Wi-Fi, senza ngrok</span>
-        <dl class="mode-facts">
-          <div><dt>Giocatori</dt><dd>2 – 10</dd></div>
-          <div><dt>Serve</dt><dd>Un PC host con Node.js e Python</dd></div>
-          <div><dt>Voce</dt><dd>Solo ascolto</dd></div>
         </dl>
         <span class="mode-tile-cta">Istruzioni ↓</span>
       </a>
@@ -121,21 +109,6 @@ npm install</code></pre></li>
       </ul>
     </article>
 
-    <article id="lan" class="modes-card">
-      <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">🏠</span><div><h3>Multiplayer in rete locale</h3><p>Tutti sulla stessa Wi-Fi, senza ngrok.</p></div></header>
-      <p class="modes-warn"><strong>Anche in casa conviene ngrok.</strong> Il gioco online è su <code>https://</code> e il browser gli impedisce di collegarsi a un server di casa non cifrato (<code>ws://192.168…</code>). Senza ngrok bisogna far servire <em>anche il gioco</em> dal PC dell'host, in <code>http://</code>. Si perdono il microfono (si può solo ascoltare) e, su iPhone, lo sterzo a movimento.</p>
-      <ol class="modes-steps">
-        <li><strong>Server delle stanze</strong>, dalla cartella <code>core</code>:
-          <pre class="modes-code"><code>npm run start:room-server</code></pre></li>
-        <li><strong>Server del gioco</strong>, in un secondo terminale, dalla cartella principale <code>f1-racer</code>:
-          <pre class="modes-code"><code>python3 -m http.server 8080</code></pre></li>
-        <li><strong>IP del PC</strong> nella rete di casa, es. <code>192.168.1.20</code> (Windows: <code>ipconfig</code>; Mac/Linux: impostazioni Wi-Fi).</li>
-        <li><strong>Tutti aprono</strong>, host compreso, sostituendo l'IP:
-          <pre class="modes-code"><code>http://192.168.1.20:8080/room.html?roomServer=http://192.168.1.20:8787</code></pre></li>
-        <li><strong>Da qui è come online:</strong> crea la stanza, condividi il link, scegli il pilota, via.</li>
-      </ol>
-      <p class="modes-note">Nessuno si collega? Di solito è il firewall del PC: consenti le connessioni in ingresso sulle porte 8080 e 8787.</p>
-    </article>
   </section>
 
   <!-- 02 · Controls -->
@@ -143,50 +116,76 @@ npm install</code></pre></li>
     <div class="f1-home-section-head"><span>02</span><div><h2>Controlli</h2><p>Puoi mescolarli: il gioco li legge tutti insieme.</p></div></div>
 
     <div class="controls-grid">
-      <article class="modes-card control-card">
-        <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">⌨️</span><div><h3>Tastiera</h3><p>Su computer, nessuna configurazione.</p></div></header>
-        <div class="kb-cluster" aria-hidden="true">
-          <div class="kb-row"><kbd class="kb-hot">W</kbd></div>
-          <div class="kb-row"><kbd class="kb-hot">A</kbd><kbd class="kb-hot">S</kbd><kbd class="kb-hot">D</kbd></div>
+      <article class="modes-card control-card" data-controls>
+        <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">⌨️</span><div><h3>Tastiera</h3><p>Su computer, nessuna configurazione. Tocca un tasto per sapere cosa fa.</p></div></header>
+        <div class="ctl-visual kb-visual">
+          <div class="kb-group">
+            <div class="kb-row"><button type="button" class="kb kb-hot" data-bind="gas">W</button></div>
+            <div class="kb-row"><button type="button" class="kb kb-hot" data-bind="steer">A</button><button type="button" class="kb kb-hot" data-bind="brake">S</button><button type="button" class="kb kb-hot" data-bind="steer">D</button></div>
+          </div>
+          <div class="kb-group">
+            <div class="kb-row"><button type="button" class="kb" data-bind="tyres">1</button><button type="button" class="kb" data-bind="tyres">2</button><button type="button" class="kb" data-bind="tyres">3</button></div>
+            <div class="kb-row"><button type="button" class="kb" data-bind="ers">E</button><button type="button" class="kb" data-bind="pit">P</button><button type="button" class="kb" data-bind="cam">C</button></div>
+          </div>
         </div>
         <ul class="bind-list">
-          <li><span><kbd>W</kbd><kbd>↑</kbd></span>Accelera</li>
-          <li><span><kbd>S</kbd><kbd>↓</kbd></span>Frena; tenuto premuto da fermo va in retro</li>
-          <li><span><kbd>A</kbd><kbd>D</kbd></span>Sterza (anche <kbd>←</kbd><kbd>→</kbd>)</li>
-          <li><span><kbd>C</kbd></span>Visuale esterna / cockpit</li>
-          <li><span><kbd>E</kbd></span>ERS on/off: spinta elettrica</li>
-          <li><span><kbd>P</kbd></span>Chiedi il pit stop</li>
-          <li><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span>Gomme morbide / medie / dure (prima del via o ai box)</li>
+          <li data-bind="gas"><span><kbd>W</kbd><kbd>↑</kbd></span><p>Accelera</p></li>
+          <li data-bind="brake"><span><kbd>S</kbd><kbd>↓</kbd></span><p>Frena. Tenuto premuto da fermo, va in retromarcia</p></li>
+          <li data-bind="steer"><span><kbd>A</kbd><kbd>D</kbd><kbd>←</kbd><kbd>→</kbd></span><p>Sterza</p></li>
+          <li data-bind="cam"><span><kbd>C</kbd></span><p>Visuale esterna o cockpit</p></li>
+          <li data-bind="ers"><span><kbd>E</kbd></span><p>ERS acceso/spento: spinta elettrica extra</p></li>
+          <li data-bind="pit"><span><kbd>P</kbd></span><p>Chiedi il pit stop</p></li>
+          <li data-bind="tyres"><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span><p>Gomme morbide, medie, dure. Si cambiano prima del via o durante la sosta ai box</p></li>
         </ul>
       </article>
 
-      <article class="modes-card control-card">
-        <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">🎮</span><div><h3>Pad PlayStation</h3><p>DualShock 4 o DualSense, via USB o Bluetooth.</p></div></header>
-        <div class="pad-face" aria-hidden="true">
-          <span class="pad-btn pad-tri">△</span><span class="pad-btn pad-sq">□</span><span class="pad-btn pad-ci">○</span><span class="pad-btn pad-x">✕</span>
+      <article class="modes-card control-card" data-controls>
+        <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">🎮</span><div><h3>Pad PlayStation</h3><p>DualShock 4 o DualSense, via USB o Bluetooth. Tocca un tasto.</p></div></header>
+        <div class="ctl-visual pad-visual">
+          <div class="pad-shoulders">
+            <button type="button" class="kb pad-sh" data-bind="pbrake">L2</button>
+            <button type="button" class="kb pad-sh" data-bind="pers">R1</button>
+            <button type="button" class="kb pad-sh pad-sh--hot" data-bind="pgas">R2</button>
+          </div>
+          <div class="pad-body">
+            <button type="button" class="pad-stick" data-bind="psteer" aria-label="Levetta sinistra">L</button>
+            <div class="pad-face">
+              <button type="button" class="pad-btn pad-tri" data-bind="pcam" aria-label="Triangolo">△</button>
+              <button type="button" class="pad-btn pad-sq" data-bind="ppit" aria-label="Quadrato">□</button>
+              <span class="pad-btn pad-ci" aria-hidden="true">○</span>
+              <button type="button" class="pad-btn pad-x" data-bind="pstart" aria-label="Croce">✕</button>
+            </div>
+          </div>
         </div>
         <ul class="bind-list">
-          <li><span><kbd>R2</kbd></span>Accelera</li>
-          <li><span><kbd>L2</kbd></span>Frena / retromarcia</li>
-          <li><span><kbd>L</kbd></span>Levetta sinistra: sterza</li>
-          <li><span><kbd class="pad-x">✕</kbd></span>Accendi il motore prima del via</li>
-          <li><span><kbd class="pad-tri">△</kbd></span>Cambia visuale</li>
-          <li><span><kbd class="pad-sq">□</kbd></span>Chiedi il pit stop</li>
-          <li><span><kbd>R1</kbd></span>ERS on/off</li>
+          <li data-bind="pgas"><span><kbd>R2</kbd></span><p>Accelera</p></li>
+          <li data-bind="pbrake"><span><kbd>L2</kbd></span><p>Frena, poi retromarcia</p></li>
+          <li data-bind="psteer"><span><kbd>L</kbd></span><p>Levetta sinistra: sterza</p></li>
+          <li data-bind="pstart"><span><kbd class="pad-x">✕</kbd></span><p>Accende il motore prima del via</p></li>
+          <li data-bind="pcam"><span><kbd class="pad-tri">△</kbd></span><p>Cambia visuale</p></li>
+          <li data-bind="ppit"><span><kbd class="pad-sq">□</kbd></span><p>Chiedi il pit stop</p></li>
+          <li data-bind="pers"><span><kbd>R1</kbd></span><p>ERS acceso/spento</p></li>
         </ul>
-        <p class="modes-note"><strong>Non risponde?</strong> Il browser vede il pad solo dopo che hai premuto un tasto a pagina aperta. Le gomme si scelgono da tastiera. Funzionano anche altri pad “standard”, ad esempio Xbox.</p>
+        <p class="modes-note"><strong>Non risponde?</strong> Il browser vede il pad solo dopo che hai premuto un suo tasto a pagina aperta. Le gomme si scelgono da tastiera. Funzionano anche altri pad “standard”, ad esempio Xbox.</p>
       </article>
 
-      <article class="modes-card control-card">
-        <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">📱</span><div><h3>Telefono</h3><p>In orizzontale, a due pollici.</p></div></header>
-        <div class="phone-sketch" aria-hidden="true">
-          <span class="phone-wheel">◎</span>
-          <span class="phone-pedals"><i>FRENO</i><i class="phone-gas">GAS</i></span>
+      <article class="modes-card control-card" data-controls>
+        <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">📱</span><div><h3>Telefono</h3><p>In orizzontale, a due pollici. Tocca un comando.</p></div></header>
+        <div class="ctl-visual phone-visual">
+          <div class="phone-frame">
+            <button type="button" class="phone-wheel" data-bind="twheel" aria-label="Volante">◎</button>
+            <button type="button" class="phone-motion" data-bind="tmotion">Attiva movimento</button>
+            <span class="phone-pedals">
+              <button type="button" class="phone-pedal" data-bind="tbrake">FRENO</button>
+              <button type="button" class="phone-pedal phone-gas" data-bind="tgas">GAS</button>
+            </span>
+          </div>
         </div>
         <ul class="bind-list">
-          <li><span><kbd>◎</kbd></span>Volante: tieni premuto e trascina</li>
-          <li><span><kbd>GAS</kbd></span>Tieni premuto; puoi tenere anche il freno</li>
-          <li><span><kbd>📐</kbd></span>“Attiva movimento”: sterzi inclinando il telefono. “Centra” fissa il dritto; il menu regola la sensibilità</li>
+          <li data-bind="twheel"><span><kbd>◎</kbd></span><p>Volante: tieni premuto e trascina a destra o sinistra</p></li>
+          <li data-bind="tgas"><span><kbd>GAS</kbd></span><p>Accelera finché lo tieni premuto</p></li>
+          <li data-bind="tbrake"><span><kbd>FRENO</kbd></span><p>Frena; puoi tenerlo insieme al gas</p></li>
+          <li data-bind="tmotion"><span><kbd>📐</kbd></span><p>Sterzi inclinando il telefono. “Centra” fissa il dritto, il menu regola la sensibilità</p></li>
         </ul>
         <p class="modes-note"><strong>iPhone a schermo intero:</strong> Condividi → “Aggiungi alla schermata Home” e apri dall'icona. Lo sterzo a movimento chiede un permesso; se lo neghi resta il volante.</p>
       </article>
@@ -214,6 +213,24 @@ npm install</code></pre></li>
         setTimeout(() => { button.textContent = "Copia"; }, 1600);
       });
       pre.appendChild(button);
+    });
+
+    // Tap a drawn key/button: light it and its explanation rows (#125).
+    document.querySelectorAll("[data-controls]").forEach((card) => {
+      const light = (bind) => {
+        card.querySelectorAll("[data-bind]").forEach((el) => {
+          el.classList.toggle("is-lit", el.dataset.bind === bind);
+        });
+      };
+      card.addEventListener("click", (event) => {
+        const target = event.target.closest("[data-bind]");
+        if (!target) return;
+        const already = target.classList.contains("is-lit");
+        light(already ? null : target.dataset.bind);
+        if (!already && target.tagName === "BUTTON") {
+          card.querySelector(`li[data-bind="${target.dataset.bind}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+      });
     });
   </script>
 </body>

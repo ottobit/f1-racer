@@ -1036,3 +1036,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Pad ✕ described as "start the engine" (it only fires the pre-start engine gate in `main.js`), not a generic start.
 - Home: the full-width guide strip is gone; a small round "?" (`.home-help`) sits in the hero corner. `style.css` bumped on all pages (index/modes `v=44`, garage `v=29`, race `v=46`, room `v=42`); `modes.css?v=2`.
 - Verified with `git diff --check`, HTML parse and `node --check` of the inline copy script.
+
+## 2026-09-26 — Guide: no LAN mode, interactive controls (#125)
+
+- `modes.html`: local-network mode removed (tile + card) at the user's request, it repeated the ngrok flow; the picker is now two tiles.
+- Keyboard rows no longer wrap a parenthesis onto its own line: explanations are plain sentences in their own `<p>` cell, keys in a fixed 6.4rem column.
+- Drawn controls (keyboard keys, pad shoulders/stick/face buttons, phone wheel/pedals/motion) are buttons: a tap lights the key and its explanation row (`data-bind`, inline script); tapping a row lights it too. `modes.css?v=3`.
+- Verified with `git diff --check`, HTML parse, `node --check` of the inline script and a check that every `data-bind` has both a drawn key and a row.
