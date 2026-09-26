@@ -124,18 +124,22 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
       box(.05,.034,.004,carbon,[side*.06,.004,.02],parent).name="wheelPaddle";
     }
   }
-  // Elliptical cross-sections yield continuous, sculpted bodywork instead of boxes.
+  // Superelliptic cross-sections (#188): [z, w, y, h, p = 2, wb = w]. p = 2 is
+  // an ellipse; higher p flattens the sides into F1-like slab bodywork with
+  // rounded corners, and wb narrows the lower half (sidepod undercut).
   function shell(stations,mat,x=0){
-    const vertices=[],indices=[],n=detail?32:16;
-    stations.forEach(([z,w,y,h])=>{for(let j=0;j<n;j++){const a=j/n*Math.PI*2;vertices.push(x+Math.cos(a)*w,y+Math.sin(a)*h,z);}});
+    const vertices=[],indices=[],n=detail?40:20;
+    const curve=(v,p)=>Math.sign(v)*Math.abs(v)**(2/p);
+    stations.forEach(([z,w,y,h,p=2,wb=w])=>{for(let j=0;j<n;j++){const a=j/n*Math.PI*2,s=Math.sin(a);vertices.push(x+curve(Math.cos(a),p)*(s<0?wb:w),y+curve(s,p)*h,z);}});
     for(let i=0;i<stations.length-1;i++)for(let j=0;j<n;j++){const a=i*n+j,b=i*n+(j+1)%n,c=a+n,d=b+n;indices.push(a,b,c,b,d,c);}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setIndex(indices);g.computeVertexNormals();return mesh(g,mat);
   }
-  shell([[-1.75,.02,.4,.02],[-1.4,.25,.48,.16],[-.9,.43,.52,.26],[0,.43,.52,.25],[.55,.32,.49,.2],[1.2,.23,.43,.14],[1.9,.13,.32,.09],[2.35,.08,.29,.055],[2.43,.005,.29,.01]],paint);
-  shell([[-1.65,.01,.53,.01],[-1.25,.13,.63,.17],[-.8,.23,.78,.34],[-.42,.22,.85,.39],[-.27,.05,.79,.2]],paint);
+  shell([[-1.75,.02,.4,.02,3],[-1.4,.24,.47,.15,3],[-.9,.4,.52,.25,3.4],[0,.42,.52,.25,3.6],[.55,.31,.5,.2,3.6],[1.2,.21,.43,.14,3.4],[1.9,.13,.32,.09,3],[2.35,.085,.3,.055,2.6],[2.45,.005,.29,.01,2.4]],paint);
+  shell([[-1.65,.01,.53,.01],[-1.25,.12,.63,.17,2.6],[-.8,.2,.78,.34,2.6],[-.42,.2,.86,.4,2.8],[-.26,.04,.8,.22,2.4]],paint);
+  const fin=shell([[-1.45,.008,.84,.005],[-1.25,.012,.87,.07],[-.75,.012,1.02,.1],[-.5,.008,1.12,.04]],paint);fin.name="sharkFin";
   box(1.66,.055,2.75,carbon,[0,.16,-.15]).name = "floorPanel";
   for(const side of [-1,1]){
-    shell([[-1.45,.015,.31,.01],[-1.1,.19,.38,.14],[-.5,.31,.44,.22],[.1,.32,.48,.2],[.45,.24,.48,.14],[.48,.20,.48,.1]],paint,side*.55);
+    shell([[-1.45,.015,.3,.01,3],[-1.1,.17,.36,.12,3.4,.12],[-.5,.3,.43,.21,4,.2],[.1,.32,.47,.2,4.4,.2],[.42,.27,.49,.14,4,.18],[.47,.22,.49,.1,3]],paint,side*.55);
     const inlet=mesh(new THREE.SphereGeometry(.2,16,8),black,[side*.55,.5,.475]);inlet.scale.set(1,.5,.15);
     box(.035,.1,2.5,carbon,[side*.84,.22,-.15]);
     box(.028,.022,1.15,stripe,[side*.85,.29,-.38]);
