@@ -66,3 +66,11 @@ html.touch #ers-indicator{padding:.25em .6em}
 html.touch #hud-shortcuts button:active{background:rgba(255,255,255,.3)}
 /* ERS and BOX only work in the race: dimmed during qualifying and the grid. */
 html.touch.hud-not-racing #ers-indicator,html.touch.hud-not-racing #pit-toggle{opacity:.35}
+/* Phone landscape (#137): the driver list sits over the touch wheel, so rows
+   from P5 down fade out; the player's own row always stays solid. */
+@media(orientation:landscape) and (max-height:520px){
+  html.touch .qualifying-timing li:nth-child(5){opacity:.55}
+  html.touch .qualifying-timing li:nth-child(6){opacity:.3}
+  html.touch .qualifying-timing li:nth-child(n+7){opacity:.14}
+  html.touch .qualifying-timing li.is-player{opacity:1}
+}

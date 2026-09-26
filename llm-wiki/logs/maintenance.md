@@ -1089,3 +1089,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   gloves/forearms, nose and front wing. Wheel spin sign unverified in game.
 - Why ERS "did nothing" on the phone: ERS is race-only by design, and the
   user was likely in qualifying. Verified with `node --check` only.
+
+## 2026-09-26 — Phone landscape driver list fade (#137)
+
+- `race-controls.css` (v49): under landscape + max-height 520px on touch,
+  `.qualifying-timing` rows fade from P5 (.55, .3, then .14 from P7);
+  `li.is-player` stays at full opacity. The list covered the touch wheel.
+- CSS only, no JS; verified with `git diff --check`.
