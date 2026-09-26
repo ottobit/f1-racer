@@ -1223,3 +1223,14 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Audio: `getPhase()` reports "driving" while finished, so the engine follows the off-throttle deceleration; `raceAudio.coolDown()` moved from the flag to the moment the results appear.
 - `showResultsOverlay()`: results (solo and multiplayer) appear 2.6 s after the flag and fade in over 0.9 s (`#results-overlay.is-visible` in `style.css`). The championship result is still recorded at the flag.
 - Verified with `node --check` only.
+
+## 2026-09-26 — Mobile render cost: 60 fps cap, AA and shadow type (#159)
+
+- `shared/graphics-profiles.js`: new `antialias` per profile (off on `low`),
+  plus touch-only extras `softShadows: false` and `frameCapFps: 60`;
+  new `createFrameLimiter(fps)` with carry-over so 90/120 Hz screens average 60.
+- `race/main.js` and `garage/showroom.js` use the limiter, the profile's
+  antialias flag and `PCFShadowMap` on touch; physics `dt` unchanged.
+- Verified: `node --check`, limiter simulated at 60/90/120/144 Hz. No FPS
+  data from real phones yet — adaptive profile and Lambert materials on
+  `low` are deferred until `?diag=1` numbers come in.
