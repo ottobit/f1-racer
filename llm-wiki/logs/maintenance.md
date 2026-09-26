@@ -1021,3 +1021,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `core/client/race/race-controls.css`: in landscape the throttle group gets `margin-right: clamp(28px, 6vw, 64px)` and is raised 10px, so the right thumb reaches it without bending (user report). The steering group is unchanged.
 - Bumped `race-controls.css?v=45` in `race.html`.
 - Verified with a syntax check only; the user tests on the phone.
+
+## 2026-09-26 — Game modes guide page (#121)
+
+- New `modes.html` (root, with `core/client/home/modes.css?v=1`): controls for keyboard, PlayStation pad (Gamepad API mapping from `race-input.js`) and touch/motion; game types: solo championship, multiplayer via ngrok (recommended), multiplayer on a local network.
+- LAN section states the real limit: the https GitHub Pages site cannot open `ws://<LAN IP>` (mixed content), so LAN without ngrok needs the game served over http from the host (`python3 -m http.server`), which loses mic (voice send) and iOS motion steering (secure-context only).
+- Linked from the home command center as a full-width strip; `style.css` bumped on all pages (index/modes `v=43`, garage `v=28`, race `v=45`, room `v=41`).
+- Known gap: tyre compound has no pad button (keyboard 1/2/3 only).
+- Verified with `git diff --check` and an HTML parse only.
