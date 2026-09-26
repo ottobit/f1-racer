@@ -145,7 +145,7 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   const floorGeometry=new THREE.ExtrudeGeometry(floorPlan,{depth:.055,bevelEnabled:false});floorGeometry.rotateX(Math.PI/2);
   mesh(floorGeometry,carbon,[0,.16+.0275,0]).name="floorPanel";
   for(const side of [-1,1]){
-    shell([[-1.45,.015,.3,.01,3],[-1.1,.17,.36,.12,3.4,.12],[-.5,.3,.43,.21,4,.2],[.1,.32,.47,.2,4.4,.2],[.42,.27,.49,.14,4,.18],[.47,.22,.49,.1,3]],paint,side*.55);
+    shell([[-1.35,.2,.21,.012,4],[-1.1,.22,.3,.08,4,.16],[-.5,.3,.43,.21,4,.2],[.1,.32,.47,.2,4.4,.2],[.42,.27,.49,.14,4,.18],[.47,.22,.49,.1,3]],paint,side*.55);
     const inlet=mesh(new THREE.SphereGeometry(.2,16,8),black,[side*.55,.5,.475]);inlet.scale.set(1,.5,.15);
     box(.035,.1,2.5,carbon,[side*.84,.22,-.15]);
     box(.028,.022,1.15,stripe,[side*.85,.29,-.38]);
@@ -263,7 +263,7 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   }
   wing('frontWing',2.22,.14,1.94,[[.26,0,.08,.05,1],[.18,.05,-.1,.25,.94],[.13,.1,-.22,.45,.88]],.5,.28);
   wing('rearWing',-1.62,.9,1.72,[[.32,0,0,.1,1],[.2,.12,-.24,.45,1]],.62,.38);
-  const rearSponsor=mesh(new THREE.PlaneGeometry(1.08,.11),sponsorMaterial(livery,"rear"),[0,1.075,-1.965]);rearSponsor.name="teamSponsorRear";rearSponsor.renderOrder=2;rearSponsor.castShadow=false;rearSponsor.receiveShadow=false;
+  const rearSponsor=mesh(new THREE.PlaneGeometry(1.08,.11),sponsorMaterial(livery,"rear"),[0,1.075,-1.965]);rearSponsor.name="teamSponsorRear";rearSponsor.rotation.y=Math.PI;rearSponsor.renderOrder=2;rearSponsor.castShadow=false;rearSponsor.receiveShadow=false;
   for(const s of [-1,1]){rod([s*.3,.4,-1.4],[s*.3,.96,-1.62],.035);rod([s*.13,.35,2.05],[s*.25,.2,2.2],.025);}
   const exhaust=mesh(new THREE.CylinderGeometry(.085,.1,.25,12,1,true),alloy,[0,.51,-1.76]);exhaust.rotation.x=Math.PI/2;
   box(.13,.08,.025,new THREE.MeshStandardMaterial({color:0xff220a,emissive:0xff1600,emissiveIntensity:2}),[0,.3,-1.78]);
