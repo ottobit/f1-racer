@@ -2,9 +2,10 @@ import { buildCar as buildCarModel } from "../shared/car-model.js?v=29";
 
 const DEFAULT_FRONT_WHEEL_STEER_ANGLE = 0.55;
 
-export function buildRaceCar(color, { scale, environmentTexture, envMapIntensity = 0.65 } = {}) {
+export function buildRaceCar(color, { scale, environmentTexture, envMapIntensity = 0.65, detail = false } = {}) {
   const model = buildCarModel(color, {
     scale,
+    detail,
     secondaryColor: typeof color === "object" ? color.secondary : undefined,
     accentColor: typeof color === "object" ? color.secondary : undefined,
   });

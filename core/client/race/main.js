@@ -3,15 +3,15 @@ import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "../shared/circuits.js?v=38"
 import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=1";
 import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=1";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
-import { cockpitThemeForDriver, liveryById } from "../shared/driver-themes.js?v=27";
+import { liveryById } from "../shared/driver-themes.js?v=27";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=29";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=29";
-import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=29";
+import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=30";
 import { setupRaceInput } from "./race-input.js?v=45";
 import { setupRaceHud } from "./race-hud.js?v=38";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
-import { setupRaceCamera } from "./race-camera.js?v=28";
+import { setupRaceCamera } from "./race-camera.js?v=29";
 import { setupPlayerPhysics } from "./player-physics.js?v=6";
 import { setupRaceAi } from "./race-ai.js?v=28";
 import { setupRaceSystems } from "./race-systems.js?v=28";
@@ -56,7 +56,6 @@ const MY_ROOM_DRIVER_ID = multiplayer
   : null;
 const SELECTED_DRIVER_ID = MY_ROOM_DRIVER_ID || loadSelectedDriverId();
 const PLAYER_LIVERY = playerLivery(SELECTED_DRIVER_ID);
-const PLAYER_COCKPIT_THEME = cockpitThemeForDriver(SELECTED_DRIVER_ID);
 
 /*
  * F1 Racer — championship mode: a fixed-lap race against two AI rivals on
@@ -552,11 +551,12 @@ function addGridBoxMarking(slot, number) {
 }
 
 // Shared visual model; race physics and collision dimensions remain independent.
-function buildCar(color) {
+function buildCar(color, { detail = false } = {}) {
   return buildRaceCar(color, {
     scale: CAR_SCALE,
     environmentTexture: carEnvironment.texture,
     envMapIntensity: 0.65,
+    detail,
   });
 }
 
@@ -566,6 +566,12 @@ const playerCar = buildCar(PLAYER_LIVERY);
 // shared car geometry, wheel metadata, physics or collision dimensions.
 playerCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
 scene.add(playerCar.group);
+// Cockpit view (#139): an unbatched copy of the player's car, seen from
+// inside the helmet; race-camera.js mirrors the player car onto it.
+const cockpitCar = buildCar(PLAYER_LIVERY, { detail: true });
+cockpitCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
+cockpitCar.group.visible = false;
+scene.add(cockpitCar.group);
 
 // Nine AI rivals in five colour pairs (teammates share a livery, like real
 // F1 teams) plus the player makes a full ten-car grid. Colors matched to
@@ -1139,10 +1145,9 @@ const raceCamera = setupRaceCamera({
   state,
   playerCar,
   carMaxSpeed: CAR.maxSpeed,
-  cockpitTheme: PLAYER_COCKPIT_THEME,
+  cockpitCar,
   nearestTrackInfo,
   trackWidth: TRACK_WIDTH,
-  getSteer: () => steering.value,
 });
 const raceNameplates = setupRaceNameplates({
   camera,
