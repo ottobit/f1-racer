@@ -776,6 +776,68 @@ html.touch #touch-controls {
   font-weight: 600;
 }
 
+/* Phones in landscape have ~350px of height: stacked, the ten-row list
+   squeezes to nothing and the buttons sit at the bottom edge (or under the
+   home indicator with viewport-fit=cover). Side by side instead: standings
+   scroll on the left, title/points/actions stay on the right. */
+@media (orientation: landscape) and (max-height: 560px) {
+  #results-overlay {
+    padding:
+      max(8px, env(safe-area-inset-top, 0px))
+      max(12px, env(safe-area-inset-right, 0px))
+      max(8px, env(safe-area-inset-bottom, 0px))
+      max(12px, env(safe-area-inset-left, 0px));
+  }
+
+  .results-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr auto;
+    column-gap: 1.25rem;
+    max-width: 46rem;
+    height: 100%;
+    max-height: 22rem;
+    padding: 0.75rem 1rem;
+  }
+
+  #results-order {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    font-size: 0.85rem;
+  }
+
+  #results-order li {
+    padding: 0.25rem;
+  }
+
+  .results-card h2 {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0.25rem 0 0.5rem;
+    font-size: 1.2rem;
+  }
+
+  #results-points {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0 0 0.5rem;
+  }
+
+  .results-actions {
+    grid-column: 2;
+    grid-row: 4;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .results-btn {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 /* --- Circuit menu (index.html) ------------------------------------------- */
 
 .difficulty-select {
