@@ -1051,3 +1051,9 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `room.html`: `<details>` "?" in the hero corner (reuses `.home-help`) with a 5-step how-to for invited players and links to controls/README. No JS.
 - `style.css` bumped on all pages (index/modes `v=45`, garage `v=30`, race `v=47`, room `v=43`).
 - Verified with `git diff --check`, HTML parse and `node --check` of the inline script.
+
+## 2026-09-26 — Guide no longer mentions tilt steering (#129)
+
+- `modes.html`/`modes.css?v=5`: removed the "Attiva movimento" phone button, its row and the iPhone permission note — the motion panel has been hidden in `race.html` since #83, so the guide described a control players cannot reach.
+- The tilt code in `race-input.js` is untouched (still dead code behind the hidden panel).
+- Verified with `git diff --check` and a grep for leftover "movimento"/"motion" in the guide, room page and README.
