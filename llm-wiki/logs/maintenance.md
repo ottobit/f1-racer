@@ -1325,3 +1325,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Radio: `race-multiplayer.js` sends `{kind:"radio"}` over the existing `voice_signal` relay, with no server change, and it shows in `#radio-banner` (`style.css`).
 - New `core/tools/room-bot.mjs` (Playwright): it reads `strategy.json` and writes `state.json`. Behind the sandbox proxy it relays the WebSocket locally, because Chromium's handshake returned 426, and serves three.js from `core/node_modules`, because jsdelivr is blocked.
 - Verification: `node --check`, plus a headless solo autopilot run that stayed on track in every sample (Vallechiara 20/20, Altomare 15/15). Version chain: style v52, race-multiplayer v8, main v93, race-bootstrap v54. Multiplayer play with the user is still pending.
+
+## 2026-09-26 — Race gaps and voice status icon (#180)
+
+- `race-hud.js`: the race timing tower shows the gap to the leader instead of each car's lap. There are 50 timing loops per lap; a car's gap is its crossing time minus the first crossing of the same loop. A lapped car shows "+N G", the leader keeps "G<lap>", and times freeze at the flag.
+- `voice-chat.js`: the text toggle becomes a mic icon, with `data-tone` set to ok/pending/fail/idle and styled in `race-controls.css`. The diagnosis (#93) moves to `aria-label`/`title`; a muted mic shows a slash.
+- Waveform: each peer gets an `AnalyserNode`, not routed to the speakers. `readWaveform()` returns the loudest peer, and the canvas line appears only above an RMS of 0.015.
+- Version chain: race-hud v39, voice-chat v4, race-multiplayer v9, main v95, race-bootstrap v56, race-controls.css v56.
+- Verification: `node --check` and `git diff --check` only.

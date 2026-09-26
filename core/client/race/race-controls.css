@@ -31,9 +31,17 @@ html.touch #touch-controls{padding:0 max(16px,env(safe-area-inset-right)) max(18
 @media(display-mode:standalone),(display-mode:fullscreen){html.touch #touch-controls{padding-bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}
 @media(display-mode:standalone) and (orientation:landscape),(display-mode:fullscreen) and (orientation:landscape){#motion-controls{bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}
 /* Race voice chat toggle (#1), under the lap counter. */
-.voice-toggle{display:block;margin-top:6px;min-height:36px;padding:4px 10px;border:1px solid #a8c6d866;border-radius:6px;background:#102331c9;color:#eef8ff;font:600 12px system-ui;pointer-events:auto;touch-action:manipulation}
-.voice-toggle[aria-pressed="true"]{border-color:#f7948599;color:#f7c9c2}
-.voice-toggle:disabled{opacity:.6}
+/* Voice icon (#180): colour = connection outcome, waveform only while audio comes in. */
+.voice-toggle{--tone:#9fb3c1;position:relative;display:grid;place-items:center;width:40px;height:36px;margin-top:6px;padding:0;border:1px solid color-mix(in srgb,var(--tone) 55%,transparent);border-radius:8px;background:#102331c9;color:var(--tone);pointer-events:auto;touch-action:manipulation}
+.voice-toggle[data-tone="ok"]{--tone:#3ddc84}
+.voice-toggle[data-tone="pending"]{--tone:#f5c451}
+.voice-toggle[data-tone="fail"]{--tone:#ff6b5b}
+.voice-toggle svg{width:20px;height:20px;fill:currentColor;stroke:currentColor;stroke-width:2;stroke-linecap:round;transition:opacity .15s}
+.voice-toggle__slash{display:none}
+.voice-toggle[aria-pressed="true"] .voice-toggle__slash{display:inline}
+.voice-toggle__wave{position:absolute;inset:6px 4px;width:calc(100% - 8px);height:calc(100% - 12px);pointer-events:none}
+.voice-toggle.is-receiving svg{opacity:.25}
+.voice-toggle:disabled{opacity:.7}
 /* iOS: a long press on control labels (the wheel's SVG "OB" text, "STERZO",
    pedal captions) started a text selection/callout and cancelled the touch,
    so the upper part of the controls felt dead. Nothing on the race page is
