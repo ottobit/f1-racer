@@ -5,6 +5,14 @@ export function formatTime(ms) {
   return `${minutes}:${seconds}`;
 }
 
+// Race gaps (#180): like TV timing loops, the gap is how long after the
+// leader a car crossed the same point of the lap.
+const TIMING_LOOPS_PER_LAP = 50;
+
+function formatGap(ms) {
+  return `+${(ms / 1000).toFixed(1)}`;
+}
+
 export function setupRaceHud({
   circuitLabel,
   lapsPerRace,
@@ -64,10 +72,15 @@ export function setupRaceHud({
   circuitNameEl.textContent = circuitLabel();
   hintEl.textContent = "Giro di qualifica: fai il miglior tempo per partire davanti in griglia";
 
+  const firstAtLoop = new Map(); // loop index -> first crossing time
+  const carLoops = new Map(); // driverId -> { loop, at }
+
   function setRaceLabel() {
     circuitNameEl.textContent = circuitLabel();
     hintEl.textContent = raceHintText;
     lastRaceTowerSignature = "";
+    firstAtLoop.clear();
+    carLoops.clear();
     updateRaceTiming(currentRaceOrder());
   }
 
@@ -93,9 +106,37 @@ export function setupRaceHud({
     return playerPosition;
   }
 
+  // Called every frame: a car's crossing is stamped the frame it reaches a
+  // new loop; its time stops at the flag (lapsPerRace laps).
+  function recordTimingLoops(order) {
+    if (getRaceState() !== "racing" && getRaceState() !== "finished") return;
+    const now = performance.now();
+    for (const entry of order) {
+      const progress = Math.min(entry.totalProgress, lapsPerRace);
+      const loop = Math.floor(progress * TIMING_LOOPS_PER_LAP);
+      const previous = carLoops.get(entry.driverId);
+      if (previous && previous.loop >= loop) continue;
+      carLoops.set(entry.driverId, { loop, at: now });
+      if (!firstAtLoop.has(loop)) firstAtLoop.set(loop, now);
+    }
+  }
+
+  function gapLabel(entry, index, leader) {
+    if (index === 0) return `G${Math.min(Math.floor(entry.totalProgress) + 1, lapsPerRace)}`;
+    const own = carLoops.get(entry.driverId);
+    const lead = carLoops.get(leader.driverId);
+    if (!own || !lead) return "";
+    const lapsDown = Math.floor((lead.loop - own.loop) / TIMING_LOOPS_PER_LAP);
+    if (lapsDown >= 1) return `+${lapsDown} G`;
+    const first = firstAtLoop.get(own.loop);
+    return first === undefined ? "" : formatGap(own.at - first);
+  }
+
   function updateRaceTiming(order) {
+    recordTimingLoops(order);
+    const gaps = order.map((entry, index) => gapLabel(entry, index, order[0]));
     const signature = order
-      .map((entry) => `${entry.driverId}:${Math.floor(entry.totalProgress)}:${isDisconnected(entry.driverId)}`)
+      .map((entry, index) => `${entry.driverId}:${gaps[index]}:${isDisconnected(entry.driverId)}`)
       .join("|");
     if (signature === lastRaceTowerSignature) return;
     lastRaceTowerSignature = signature;
@@ -105,7 +146,7 @@ export function setupRaceHud({
         <li class="${entry.driverId === "player" ? "is-player" : ""}${entry.driverId !== "player" && isDisconnected(entry.driverId) ? " is-disconnected" : ""}">
           <span class="qualifying-timing__position">${index + 1}</span>
           <span class="qualifying-timing__name">${entry.driverId === "player" ? "TU" : nameOf(entry.driverId)}</span>
-          <strong>G${Math.min(Math.floor(entry.totalProgress) + 1, lapsPerRace)}</strong>
+          <strong>${gaps[index]}</strong>
         </li>`).join("")}</ol>`;
     qualifyingTimingEl.hidden = false;
   }
