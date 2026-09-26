@@ -209,9 +209,9 @@ export function setupRaceInput({
   bindHoldButton(gasId, "forward");
   bindHoldButton(brakeId, "back");
 
-  // Phone shortcuts (#131, #133): the ERS readout and VIEW next to the
-  // speedo replay the ERS/camera keys, like the pad does.
-  document.querySelectorAll("#hud-bottomright [data-key]").forEach((el) => {
+  // Phone shortcuts (#131, #133, #139): the ERS readout on the speedo and
+  // the VIEW/BOX row below it replay the keys, like the pad does.
+  document.querySelectorAll("#hud-cluster [data-key]").forEach((el) => {
     el.addEventListener("click", () => {
       window.dispatchEvent(new KeyboardEvent("keydown", { code: el.dataset.key }));
     });

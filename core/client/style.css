@@ -238,12 +238,21 @@ html.race #app canvas {
 
 /* Top-center instrument cluster: shift lights, DRS/ERS, speed bar and
    gear/speed readout stay in the driver's forward sight line and away
-   from the touch controls at the bottom corners. */
-#hud-bottomright {
+   from the touch controls at the bottom corners. The phone shortcuts
+   (VIEW/BOX, #139) sit in a row just below the panel. */
+#hud-cluster {
   position: absolute;
   top: 0.7rem;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+
+#hud-bottomright {
   display: flex;
   align-items: center;
   gap: 0.6rem;

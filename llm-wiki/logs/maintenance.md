@@ -1096,3 +1096,18 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   `.qualifying-timing` rows fade from P5 (.55, .3, then .14 from P7);
   `li.is-player` stays at full opacity. The list covered the touch wheel.
 - CSS only, no JS; verified with `git diff --check`.
+
+## 2026-09-26 — VIEW/BOX below the speedo, real-model cockpit (#139)
+
+- `race.html`, `core/client/style.css`: new `#hud-cluster` wrapper holds the
+  top-center position; the speedo panel and the phone shortcut row
+  (VIEW/BOX, S/M/H while servicing) stack in it, the row below the panel.
+- `race-controls.css`, `race-input.js`: selectors moved to `#hud-cluster`.
+- `race-camera.js`: the #135 primitive cockpit (built at a different scale
+  than the car, eye above the halo) is replaced by an unbatched copy of the
+  player's car (`buildCar(..., { detail: true })` in `main.js`) seen from
+  inside the helmet (helmet parts hidden). Pose, wheel roll, front-wheel
+  steer and steering wheel are mirrored from the visible player car; near
+  plane is 0.03 in cockpit. `cockpitThemeForDriver` is no longer used here.
+- Verified with `node --check` and `git diff --check` only; eye position
+  (model 0, 0.9, 0.1) and look-down need an in-game check.
