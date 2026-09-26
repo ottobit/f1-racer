@@ -1,4 +1,4 @@
-import { shapeSteering, smoothSteering } from "./steering.js?v=2";
+import { shapeSteering, smoothSteering } from "./steering.js?v=3";
 
 const KEY_MAP = {
   ArrowUp: "forward",
@@ -234,7 +234,7 @@ export function setupRaceInput({
     // Relative drag from where the finger lands (#155, absolute steering
     // from #153 jerked the car on thumb placement); ~70px to full lock
     // keeps the finger away from the screen-edge gestures.
-    const travel = Math.max(45, wheelEl.clientWidth * 0.38);
+    const travel = Math.max(45, wheelEl.clientWidth * 0.48);
     touchSteer = shapeSteering((event.clientX - wheelOrigin) / travel);
   });
   const releaseWheel = (event) => {
@@ -333,7 +333,7 @@ export function setupRaceInput({
     if (document.hidden) suspendInput();
   });
 
-  function updateSteeringInput(dt) {
+  function updateSteeringInput(dt, speedRatio = 0) {
     pollGamepad();
     if (externalSteer !== null) {
       // Agent-driven step in progress: skip human smoothing/sourcing
@@ -345,7 +345,8 @@ export function setupRaceInput({
       steering.value = smoothSteering(
         steering.value,
         wheelPointer !== null ? touchSteer : keyboard || padSteer || (motionActive ? motionValue : 0),
-        dt
+        dt,
+        speedRatio
       );
     }
     wheelEl.style.setProperty("--steer-angle", `${steering.value * 65}deg`);

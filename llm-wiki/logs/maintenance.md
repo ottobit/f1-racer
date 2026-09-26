@@ -1234,3 +1234,16 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Verified: `node --check`, limiter simulated at 60/90/120/144 Hz. No FPS
   data from real phones yet — adaptive profile and Lambert materials on
   `low` are deferred until `?diag=1` numbers come in.
+
+## 2026-09-26 — Steering feel: revert, grip ceiling, wheel rate (#161)
+
+- Reverted #153/#155 sensitivity (touch travel 0.38 -> 0.48, high-speed
+  authority floor .30 -> .22): together they gave ~45% more yaw per thumb
+  movement at top speed and made the car twitchy.
+- `steering.js` `gripLimitYaw`: soft ceiling at 5.5 g x tyre grip (knee at
+  75%); full-lock lateral accel unchanged up to ~30 m/s, 7.5 g -> 5.5 g at
+  top speed. Brake hint follows since it calls `steeringYaw`. AI untouched.
+- `smoothSteering(…, speedRatio)`: max wheel rate, lock-to-lock 0.2 s
+  standstill -> 0.4 s flat out, centring 2x faster. Simulated: 0->95% lock
+  0.30 s at rest, 0.33 s flat out — mild, only bites on fast flicks.
+- Verified with `node --check` and node simulations; feel to be judged in game.
