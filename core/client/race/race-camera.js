@@ -43,7 +43,41 @@ function prepareCockpitCar(model) {
   model.group.traverse((object) => {
     if (object.isMesh) object.castShadow = false;
   });
+  // Forearms (#173): remember each elbow so the arm can be re-aimed at the
+  // glove every frame; built as static rods, they stayed put while the
+  // wheel turned.
+  model.forearms = [];
+  model.group.traverse((object) => {
+    if (object.name !== "driverForearm") return;
+    const length = object.geometry.parameters.height;
+    const axis = new THREE.Vector3(0, 1, 0).applyQuaternion(object.quaternion);
+    const elbow = object.position.clone().addScaledVector(axis, -length / 2);
+    model.forearms.push({ mesh: object, elbow, length, side: object.userData.side });
+  });
   return model;
+}
+
+// Real F1 wheels turn roughly ±90° at full lock; the shared car model only
+// tilts ~30° (readable from the chase view), so the cockpit copy doubles it.
+const COCKPIT_WHEEL_GAIN = 2;
+// Wrist point on the grip, in steering-wheel space (car-model.js f1Wheel).
+const WRIST_ON_GRIP = [0.135, -0.01, -0.04];
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const wrist = new THREE.Vector3();
+const forearmDir = new THREE.Vector3();
+
+function aimForearms(model) {
+  const wheel = model.driverSteeringWheel;
+  if (!wheel) return;
+  for (const arm of model.forearms) {
+    wheel.localToWorld(wrist.set(WRIST_ON_GRIP[0] * arm.side, WRIST_ON_GRIP[1], WRIST_ON_GRIP[2]));
+    model.group.worldToLocal(wrist);
+    forearmDir.subVectors(wrist, arm.elbow);
+    const length = forearmDir.length();
+    arm.mesh.position.copy(arm.elbow).addScaledVector(forearmDir, 0.5);
+    arm.mesh.quaternion.setFromUnitVectors(Y_AXIS, forearmDir.normalize());
+    arm.mesh.scale.y = length / arm.length;
+  }
 }
 
 // Copy the visible car's pose, wheel roll and steering onto the cockpit copy
@@ -54,7 +88,7 @@ function mirrorCar(source, target) {
   source.wheels.forEach((wheel, index) => target.wheels[index]?.rotation.copy(wheel.rotation));
   source.steeringPivots?.forEach((pivot, index) => target.steeringPivots[index]?.rotation.copy(pivot.rotation));
   if (source.driverSteeringWheel && target.driverSteeringWheel) {
-    target.driverSteeringWheel.rotation.z = source.driverSteeringWheel.rotation.z;
+    target.driverSteeringWheel.rotation.z = source.driverSteeringWheel.rotation.z * COCKPIT_WHEEL_GAIN;
   }
 }
 
@@ -137,6 +171,7 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
     cockpitView.visible = true;
     mirrorCar(playerCar, cockpitCar);
     cockpitView.updateMatrixWorld(true);
+    aimForearms(cockpitCar);
     cockpitView.localToWorld(eye.copy(COCKPIT_EYE));
     camera.position.copy(eye);
     // Look down the road, pitched so the wheel and gloves stay in frame.
