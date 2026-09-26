@@ -1073,3 +1073,19 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race-input.js`: buttons under `#hud-bottomright [data-key]` replay `KeyE`/`KeyC`, same path as the pad.
 - `race-controls.css`: button reset, see-through badge style like ERS/DRS, 28px min height, pointer events only on touch.
 - `modes.html` phone rows updated. Versions: race-controls.css v47, race-input v44, main v70, race-bootstrap v31. Syntax checks only.
+
+## 2026-09-26 — Phone BOX/tyres, ERS dimming, cockpit wheel (#135)
+
+- `race.html`, `race-controls.css`: `#hud-shortcuts` row under the speedo
+  (touch only) with VIEW, BOX and S/M/H; S/M/H replace VIEW/BOX while
+  `html.pit-servicing`. ERS/BOX dim under `html.hud-not-racing`.
+- `race-hud.js` (new `getRaceState` option) toggles those root classes and
+  `#pit-toggle.pit-armed`.
+- `race-commands.js`/`race-systems.js`: KeyP toggles an armed pit call that
+  waits until the car is inside the pit zone below the pit speed limit
+  (18 units ≈ 65 km/h) instead of being discarded.
+- `race-camera.js`: cockpit rebuilt — team badge removed (it covered the
+  road), steering wheel turning with `steering.value` (new `getSteer`),
+  gloves/forearms, nose and front wing. Wheel spin sign unverified in game.
+- Why ERS "did nothing" on the phone: ERS is race-only by design, and the
+  user was likely in qualifying. Verified with `node --check` only.
