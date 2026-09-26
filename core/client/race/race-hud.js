@@ -22,6 +22,7 @@ export function setupRaceHud({
   qualifyingRivals,
   getQualifyingRivals,
   isDisconnected = () => false,
+  getRaceState = () => "racing",
 }) {
   // Solo play passes a static qualifyingRivals array (synthesized once);
   // multiplayer (#44) passes getQualifyingRivals instead, since live
@@ -43,6 +44,8 @@ export function setupRaceHud({
   const gearValueEl = document.getElementById("gear-value");
   const drsIndicatorEl = document.getElementById("drs-indicator");
   const ersIndicatorEl = document.getElementById("ers-indicator");
+  const pitToggleEl = document.getElementById("pit-toggle");
+  const rootClasses = document.documentElement.classList;
   const tyreCompoundEl = document.getElementById("tyre-compound");
   const slipValueEl = document.getElementById("slip-value");
   const lateralValueEl = document.getElementById("lateral-value");
@@ -131,6 +134,11 @@ export function setupRaceHud({
       ersIndicatorEl.textContent = `ERS ${Math.round(state.ersCharge)}%`;
       ersIndicatorEl.classList.toggle("ers-active", state.ersActive);
     }
+    // Phone shortcuts (#135): ERS/BOX dim outside the race, BOX lights up
+    // while the call is armed, S/M/H show during the stop.
+    rootClasses.toggle("hud-not-racing", getRaceState() !== "racing");
+    rootClasses.toggle("pit-servicing", state.pitState === "servicing");
+    pitToggleEl?.classList.toggle("pit-armed", state.pitRequested);
     if (tyreCompoundEl) {
       tyreCompoundEl.textContent = tyreCompounds[state.tyreCompound].label;
       tyreCompoundEl.dataset.compound = state.tyreCompound;

@@ -9,8 +9,9 @@ export function setupRaceCommands({ state, tyreCompounds, getRaceState }) {
     if (event.code === "KeyE" && getRaceState() === "racing" && state.pitState === "none") {
       state.ersActive = !state.ersActive;
     }
-    if (event.code === "KeyP" && getRaceState() === "racing") {
-      state.pitRequested = true;
+    // Arms a "box this lap" call; a second press cancels it (#135).
+    if (event.code === "KeyP" && getRaceState() === "racing" && state.pitState === "none") {
+      state.pitRequested = !state.pitRequested;
     }
     if (event.code === "Digit1") setTyreCompound("soft");
     if (event.code === "Digit2") setTyreCompound("medium");
