@@ -210,7 +210,7 @@ export function setupRaceInput({
   bindHoldButton(brakeId, "back");
 
   // Phone shortcuts (#131, #133, #139): the ERS readout on the speedo, the
-  // VIEW row below it and BOX above the throttle (#155) replay the keys,
+  // VIEW above the brake (#169) and BOX above the throttle (#155) replay the keys,
   // like the pad does.
   document.querySelectorAll("#hud-cluster [data-key], #touch-controls [data-key]").forEach((el) => {
     el.addEventListener("click", () => {
