@@ -26,7 +26,7 @@
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="core/client/style.css?v=47" />
-  <link rel="stylesheet" href="core/client/race/race-controls.css?v=46" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=47" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -109,7 +109,7 @@
         <span class="shift-led"></span><span class="shift-led"></span>
       </div>
       <span id="drs-indicator" aria-hidden="true">DRS</span>
-      <span id="ers-indicator" aria-hidden="true">ERS 100%</span>
+      <button type="button" id="ers-indicator" data-key="KeyE" tabindex="-1" aria-label="ERS acceso/spento">ERS 100%</button>
       <div id="speed-track" aria-hidden="true">
         <div id="speed-fill"></div>
       </div>
@@ -118,6 +118,7 @@
         <span id="speed-value">0</span>
         <span class="speedo-unit">km/h</span>
       </div>
+      <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
     </div>
   </div>
 
@@ -141,11 +142,6 @@
       <strong>Avvia il motore</strong>
       <small>Premi un tasto o tocca lo schermo</small>
     </div>
-  </div>
-
-  <div id="touch-actions" aria-label="Comandi rapidi">
-    <button type="button" class="touch-action" data-key="KeyC">VISUALE</button>
-    <button type="button" class="touch-action" data-key="KeyE">ERS</button>
   </div>
 
   <div id="touch-controls">
@@ -206,6 +202,6 @@
       window.addEventListener("scroll", pin);
     })();
   </script>
-  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=30"></script>
+  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=31"></script>
 </body>
 </html>
