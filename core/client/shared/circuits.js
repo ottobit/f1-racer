@@ -5,7 +5,11 @@
 // non-adjacent centerline separation against this same data. Tight corners
 // can make the road ribbon or the wall-bounce collision behave oddly.
 
-export const LAPS_PER_RACE = 3;
+export const LAPS_PER_RACE = 5;
+// Tyre life is fixed, not tied to race length (#149): a set is fully worn
+// after this many laps, so a car that never boxes runs the last laps of a
+// race on dead tyres.
+export const TYRE_LIFE_LAPS = 3;
 
 export const CIRCUITS = [
   {

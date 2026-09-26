@@ -1,5 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { CIRCUITS, getCircuit, LAPS_PER_RACE } from "../shared/circuits.js?v=38";
+import { CIRCUITS, getCircuit, LAPS_PER_RACE, TYRE_LIFE_LAPS } from "../shared/circuits.js?v=39";
 import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=1";
 import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=1";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
@@ -12,14 +12,14 @@ import { setupRaceInput } from "./race-input.js?v=45";
 import { setupRaceHud } from "./race-hud.js?v=38";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=32";
-import { setupPlayerPhysics } from "./player-physics.js?v=6";
-import { setupRaceAi } from "./race-ai.js?v=28";
+import { setupPlayerPhysics } from "./player-physics.js?v=7";
+import { setupRaceAi } from "./race-ai.js?v=29";
 import { setupRaceSystems } from "./race-systems.js?v=30";
 import { setupRaceProgress } from "./race-progress.js?v=27";
 import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
-import { setupAgentApi } from "./agent-api.js?v=1";
+import { setupAgentApi } from "./agent-api.js?v=2";
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=7";
 
 import { steeringYaw } from "./steering.js?v=1";
@@ -154,12 +154,25 @@ const ERS_RECHARGE_PER_SECOND = 7;
 const PIT_SPEED_LIMIT = 18;
 const PIT_SERVICE_MS = 2200;
 
+// Worn tyres also cost top speed (#149), for the player and the AI alike:
+// about 1 s a lap at full wear on a medium set.
+const TIRE_WEAR_MAX_SPEED_PENALTY = 0.05;
+
+function tyreWear(totalProgress, car) {
+  const distance = car?.tyreProgress ?? totalProgress;
+  return Math.min(Math.max(distance / TYRE_LIFE_LAPS, 0), 1);
+}
+
 function tireGripFactor(totalProgress, car = null) {
   const tyre = TYRE_COMPOUNDS[car?.tyreCompound] || TYRE_COMPOUNDS.medium;
-  const distance = car?.tyreProgress ?? totalProgress;
-  const wear = Math.min(Math.max(distance / LAPS_PER_RACE, 0), 1);
+  const wear = tyreWear(totalProgress, car);
   const wetGrip = isRaining ? 0.82 : 1;
   return tyre.grip * (1 - TIRE_WEAR_MAX_TURN_PENALTY * wear * tyre.wearRate) * wetGrip;
+}
+
+function tyreSpeedFactor(car) {
+  const tyre = TYRE_COMPOUNDS[car.tyreCompound] || TYRE_COMPOUNDS.medium;
+  return 1 - TIRE_WEAR_MAX_SPEED_PENALTY * tyreWear(car.totalProgress, car) * tyre.wearRate;
 }
 
 // Collisions: running wide costs grip (grass), hitting the wall costs most
@@ -1035,6 +1048,7 @@ const { updateAiCar } = setupRaceAi({
   applyTrackBoundary,
   advanceProgress,
   tireGripFactor,
+  tyreSpeedFactor,
   drsSpeedMultiplier: DRS_SPEED_MULTIPLIER,
   ersSpeedMultiplier: ERS_SPEED_MULTIPLIER,
   cautionSpeedMultiplier,
@@ -1175,6 +1189,7 @@ const { integratePlayerMotion } = setupPlayerPhysics({
   ersSpeedMultiplier: ERS_SPEED_MULTIPLIER,
   grassLimit: GRASS_LIMIT,
   tireGripFactor,
+  tyreSpeedFactor,
   cautionSpeedMultiplier,
   steeringYaw,
   nearestTrackInfo,
@@ -1658,6 +1673,7 @@ if (isAgentSession) {
     trackLength: TRACK_LENGTH,
     grassLimit: GRASS_LIMIT,
     lapsPerRace: LAPS_PER_RACE,
+    tyreLifeLaps: TYRE_LIFE_LAPS,
     getSessionPhase: () => sessionPhase,
     getRaceState: () => raceState,
     getQualiState: () => qualiState,
