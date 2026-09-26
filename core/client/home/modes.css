@@ -65,7 +65,6 @@ kbd{display:inline-grid;place-items:center;min-width:1.9em;height:1.9em;padding:
 .phone-visual{padding:10px}
 .phone-frame{position:relative;width:100%;max-width:300px;height:118px;border:2px solid rgba(255,255,255,.22);border-radius:18px;background:linear-gradient(180deg,#141821,#0d1016)}
 .phone-wheel{position:absolute;left:16px;bottom:14px;width:58px;height:58px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:#161a22;color:#fff;font-size:1.7rem;line-height:1}
-.phone-motion{position:absolute;left:50%;top:10px;transform:translateX(-50%);padding:.3rem .6rem;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:#161a22;color:#fff;font-size:.62rem;font-weight:700;white-space:nowrap}
 .phone-pedals{position:absolute;right:16px;bottom:14px;display:flex;gap:6px;align-items:flex-end}
 .phone-pedal{width:48px;height:40px;padding:0;border:1px solid rgba(255,255,255,.2);border-radius:9px;background:#2a303c;color:#fff;font-size:.56rem;font-weight:900;letter-spacing:.05em}
 .phone-pedal.phone-gas{height:58px;background:#8f0400}
