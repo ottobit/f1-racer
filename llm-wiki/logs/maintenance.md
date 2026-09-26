@@ -1348,3 +1348,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `core/tools/room-bot.mjs`: every new page resends `strategy.json`, so a Rivincita no longer starts without targets. The one-shot `pit` and `radio` are stripped from that resend.
 - The live race also confirmed that radio banners arrive, station keeping works (1.9 m alongside, 10 m ahead) and the auto box call fitted softs at 2.5 laps.
 - Verification: `node --check` and `git diff --check`. Smoothness still needs the next race with the user.
+
+## 2026-09-26 — Bot smoothness via extrapolation, richer agent state (#186)
+
+- The user still saw the bot's car jerk, while friends' cars were smooth. A local headless measurement showed a steady 60 fps (12–17 ms frames) and no speed sawtooth. The likely cause is burst delivery of the bot's `car_state` through the sandbox proxy and relay.
+- `main.js`: `REMOTE_MAX_EXTRAPOLATION_S` goes from 0.25 to 0.6 s, so late samples no longer stop the car. `room-bot.mjs`: `setNoDelay(true)` on the tunnel socket.
+- `agent-api.js`: `getState()` adds `circuit`, `weather`, `safetyCar`, `lapTimes {currentMs,lastMs,bestMs}`, `ers {chargePct,active}`, `pit {state,requested}`, `gapAheadS`, `gapBehindS` and `standings[]` (position, id, name, lap, gap to the leader in metres). `main.js` now records `state.lastLapTime`.
+- Versions: agent-api v3, main v98, race-bootstrap v59.
+- Verification: `node --check`, plus a headless solo read of the new fields. Smoothness is still to be confirmed with the user.
