@@ -1,9 +1,18 @@
 import { CIRCUITS, LAPS_PER_RACE } from "../shared/circuits.js?v=39";
 import { computeStandings, resetChampionship } from "../shared/championship.js?v=1";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
+import { liveryById } from "../shared/driver-themes.js?v=27";
 import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=1";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
+
+// Team colours as CSS custom properties (#151): the livery's two colours
+// drive a thin stripe on the driver picker and the standings.
+function teamStyle(teamId) {
+  const livery = liveryById(teamId);
+  const hex = (value) => `#${value.toString(16).padStart(6, "0")}`;
+  return `--team:${hex(livery.primary)};--team2:${hex(livery.secondary)}`;
+}
 
 function positionLabel(order) {
   const idx = order.indexOf("player");
@@ -125,7 +134,8 @@ function renderDriverSelect() {
         data-driver-id="${driverId}"
         role="radio"
         aria-checked="${driverId === selectedDriverId}"
-      ><span>${String(index + 1).padStart(2, "0")}</span><strong>${driver.name}</strong></button>
+        style="${teamStyle(driver.team)}"
+      ><span>${String(index + 1).padStart(2, "0")}</span><strong>${driver.name}<small>${liveryById(driver.team).label}</small></strong></button>
     `;
   }).join("");
   document.getElementById("driver-select").innerHTML = html;
@@ -145,8 +155,17 @@ function render() {
   const { standings, allRaced, state } = computeStandings(CIRCUITS);
 
   if (!circuitSelectionInitialized) {
-    const nextRace = CIRCUITS.findIndex((circuit) => !state.raceResults[circuit.id]);
-    selectedCircuitIndex = nextRace >= 0 ? nextRace : 0;
+    // Back from the garage (#151): keep the stored pick while it's still
+    // unraced, otherwise move on to the next unraced circuit after it.
+    let stored = null;
+    try { stored = localStorage.getItem(SELECTED_CIRCUIT_KEY); } catch (e) {}
+    const storedIndex = Math.max(0, CIRCUITS.findIndex((circuit) => circuit.id === stored));
+    let nextRace = -1;
+    for (let step = 0; step < CIRCUITS.length && nextRace < 0; step++) {
+      const index = (storedIndex + step) % CIRCUITS.length;
+      if (!state.raceResults[CIRCUITS[index].id]) nextRace = index;
+    }
+    selectedCircuitIndex = nextRace >= 0 ? nextRace : storedIndex;
     circuitSelectionInitialized = true;
   }
 
@@ -167,7 +186,7 @@ function render() {
       (d, i) => `
         <tr>
           <td>${i + 1}</td>
-          <td>${displayDriverName(d.id)}</td>
+          <td><span class="team-name" style="${teamStyle(d.team)}">${displayDriverName(d.id)}</span></td>
           <td>${d.points}</td>
         </tr>
       `
