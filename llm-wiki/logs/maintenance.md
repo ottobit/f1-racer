@@ -1356,3 +1356,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `agent-api.js`: `getState()` adds `circuit`, `weather`, `safetyCar`, `lapTimes {currentMs,lastMs,bestMs}`, `ers {chargePct,active}`, `pit {state,requested}`, `gapAheadS`, `gapBehindS` and `standings[]` (position, id, name, lap, gap to the leader in metres). `main.js` now records `state.lastLapTime`.
 - Versions: agent-api v3, main v98, race-bootstrap v59.
 - Verification: `node --check`, plus a headless solo read of the new fields. Smoothness is still to be confirmed with the user.
+
+## 2026-09-26 — Car silhouette (#188)
+
+- `core/client/shared/car-model.js`: `shell()` now takes superelliptic sections `[z, w, y, h, p, wb]` (flat sides, rounded corners, narrower lower half); monocoque, engine cover and sidepods redrawn with them, sidepod tails ramp into the floor, new shark fin.
+- Wings are extruded inverted-camber airfoils with stepped flaps and sculpted endplates (`extrudeX`, `airfoil`, `endplate`); the floor is an extruded plan shape; tyres are `LatheGeometry` with rounded shoulders.
+- Still fully procedural: livery roles, sponsor decals and the non-detail batching are unchanged; rear sponsor plane rotated so it reads correctly from behind.
+- `car-model.js` v33, chain bumped up to `race.html` and `garage.html`.
+- Verified with `node --check` and a one-off headless render (rear/side/front) compared with `master`.
