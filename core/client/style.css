@@ -1066,6 +1066,11 @@ html{scroll-behavior:smooth}
    page's dark theme and button/grid idioms rather than inventing new ones. */
 .room-hero .f1-home-kicker a{color:inherit;text-decoration:none}
 .room-hero .f1-home-kicker a:hover{text-decoration:underline}
+/* Room help (#127): round "?" in the hero corner opens a short how-to. */
+.room-help>summary{list-style:none;cursor:pointer}.room-help>summary::-webkit-details-marker{display:none}.room-help[open]>summary{border-color:#e10600;background:rgba(225,6,0,.25)}
+.room-help-panel{max-width:40rem;margin-top:.4rem;padding:1rem 1.2rem;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.04);font-size:.9rem;line-height:1.5}
+.room-help-panel h2{margin:0 0 .6rem;font-size:1rem;text-transform:uppercase;letter-spacing:.05em}
+.room-help-panel ol{margin:0 0 .7rem;padding-left:1.2rem}.room-help-panel li{margin:.3rem 0}.room-help-panel p{margin:0;color:var(--text-dim,#9aa1b0)}.room-help-panel a{color:#ff6b61}
 .room-lobby{width:min(46rem,calc(100% - 2rem));margin:0 auto 3rem}
 .room-field{display:flex;flex-direction:column;gap:6px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9aa1ad;margin-bottom:16px}
 .room-field input,.room-field select{font:inherit;text-transform:none;letter-spacing:normal;padding:11px 13px;border-radius:8px;border:1px solid #303541;background:#10131a;color:#fff}
