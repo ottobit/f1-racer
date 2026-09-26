@@ -1009,6 +1009,8 @@ html{scroll-behavior:smooth}
 .home-command::before{content:"";position:absolute;z-index:-1;inset:0;opacity:.85}
 .home-command--garage{border-color:rgba(225,6,0,.7)}.home-command--garage::before{background:radial-gradient(circle at 82% 40%,rgba(255,73,53,.3),transparent 31%),linear-gradient(125deg,#3a0b0d,#120d12 70%)}
 .home-command--multiplayer::before{background:radial-gradient(circle at 80% 30%,rgba(62,185,220,.14),transparent 35%),linear-gradient(125deg,#151923,#0c0e13)}
+/* Game modes guide link (#121): full-width, lower strip under the two main actions. */
+.home-command--modes{grid-column:1/-1;min-height:0;padding:16px 24px}.home-command--modes::before{background:linear-gradient(125deg,#12151c,#0b0c10)}.home-command--modes .home-command-index{color:#9aa1b0}.home-command--modes .home-command-copy strong{font-size:1.1rem}.home-command--modes .home-command-arrow{width:38px;height:38px;background:#252b36}
 .home-command:hover{transform:translateY(-2px);border-color:#fff}.home-command:focus-visible{outline:2px solid #fff;outline-offset:4px}
 .home-command-index{grid-column:1/-1;font-size:.65rem;font-weight:900;letter-spacing:.16em;color:#d5a5a7}.home-command--multiplayer .home-command-index{color:#91a3b9}
 .home-command-copy{align-self:end;display:flex;flex-direction:column;gap:5px}.home-command-copy strong{font-size:clamp(1.35rem,3vw,2rem);letter-spacing:-.035em}.home-command-copy small{color:#afb5c0;font-size:.75rem}
