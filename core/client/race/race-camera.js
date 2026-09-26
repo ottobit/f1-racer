@@ -17,8 +17,10 @@ function isCompactLandscapeViewport() {
 // driver's helmet can be hidden) seen from inside the helmet. The halo,
 // its centre pillar, the steering wheel with gloves, the nose and the front
 // tyres all sit where they are on the car the other drivers see.
-const COCKPIT_EYE = new THREE.Vector3(0, 0.9, 0.1);
-const COCKPIT_HIDDEN_PARTS = ["driverHelmet", "driverVisor", "driverHelmetStripe", "driverChin", "driverHelmetSpoiler", "driverHans"];
+// Eye raised above the helmet line and the halo hidden (#141): on a phone
+// its bars covered most of the road.
+const COCKPIT_EYE = new THREE.Vector3(0, 1.02, 0.1);
+const COCKPIT_HIDDEN_PARTS = ["driverHelmet", "driverVisor", "driverHelmetStripe", "driverChin", "driverHelmetSpoiler", "driverHans", "halo", "haloPillar"];
 
 function prepareCockpitCar(model) {
   for (const name of COCKPIT_HIDDEN_PARTS) {

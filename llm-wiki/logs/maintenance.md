@@ -1111,3 +1111,14 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   plane is 0.03 in cockpit. `cockpitThemeForDriver` is no longer used here.
 - Verified with `node --check` and `git diff --check` only; eye position
   (model 0, 0.9, 0.1) and look-down need an in-game check.
+
+## 2026-09-26 — Cockpit: halo hidden, eye raised (#141)
+
+- `car-model.js` (v30): the halo tube and its centre pillar are named
+  `halo`/`haloPillar` (no visual change; batched cars ignore names).
+- `race-camera.js` (v30): both are added to `COCKPIT_HIDDEN_PARTS`, so only
+  the cockpit copy loses them; eye moved from model y 0.9 to 1.02. On the
+  phone the black halo bars covered most of the road.
+- Version chain bumped for race (`race-car-view`, `main`, `race-bootstrap`,
+  `race.html`) and garage (`showroom`, `garage.js`, `garage.html`).
+- Verified with `node --check` and `git diff --check` only.
