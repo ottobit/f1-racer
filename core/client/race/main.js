@@ -1694,7 +1694,9 @@ function animate(now = performance.now()) {
   updateWeather(dt); // sparks, rain and cloud drift; always runs regardless of session phase
   sun.position.set(state.x + 30, 55, state.z + 25);
   sun.target.position.set(state.x, 0, state.z);
-  renderer.render(scene, camera);
+  // Nobody watches a room bot's screen (#184): skipping the software-GL
+  // render keeps its simulation and broadcasts at full frame rate.
+  if (!botDriver) renderer.render(scene, camera);
   diagnostics.update(dt);
 }
 
