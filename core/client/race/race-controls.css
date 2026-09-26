@@ -60,6 +60,8 @@ html.touch #hud-shortcuts .pit-tyre{display:none;min-width:40px}
 html.touch.pit-servicing #hud-shortcuts .pit-tyre{display:block}
 html.touch.pit-servicing #view-toggle,html.touch.pit-servicing #pit-toggle{display:none}
 html.touch #pit-toggle.pit-armed{color:#05060a;background:#facc15;box-shadow:0 0 6px 1px rgba(250,204,21,.55)}
+/* Above the driver list (z-index 115), so the list never eats a tap (#145). */
+html.touch #touch-controls{z-index:120}
 html.touch #hud-cluster [data-key]{min-height:30px;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 html.touch #ers-indicator{padding:.25em .6em}
 html.touch #hud-shortcuts button:active{background:rgba(255,255,255,.3)}
