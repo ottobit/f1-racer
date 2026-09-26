@@ -19,6 +19,7 @@ export const GRAPHICS_PROFILES = {
   low: {
     label: "Basso",
     dprCap: 1,
+    antialias: false,
     shadowsEnabled: false,
     shadowMapSize: 512,
     rainParticleMultiplier: 0.35,
@@ -27,6 +28,7 @@ export const GRAPHICS_PROFILES = {
   medium: {
     label: "Medio",
     dprCap: 1.5,
+    antialias: true,
     shadowsEnabled: true,
     shadowMapSize: 1024,
     rainParticleMultiplier: 0.7,
@@ -35,6 +37,7 @@ export const GRAPHICS_PROFILES = {
   high: {
     label: "Alto",
     dprCap: 2,
+    antialias: true,
     shadowsEnabled: true,
     shadowMapSize: 2048,
     rainParticleMultiplier: 1,
@@ -47,13 +50,37 @@ export const GRAPHICS_PROFILES = {
 // mobile signal; core count and a very high DPR (common on phones with a
 // coarse pointer, rare on desktops) refine it toward "low" for the
 // weakest likely devices instead of lumping every phone together.
+const IS_COARSE_POINTER = matchMedia("(pointer: coarse)").matches;
+
 function detectDefaultProfileId() {
-  const isCoarsePointer = matchMedia("(pointer: coarse)").matches;
+  const isCoarsePointer = IS_COARSE_POINTER;
   const cores = navigator.hardwareConcurrency || 4;
   const dpr = window.devicePixelRatio || 1;
   if (!isCoarsePointer && cores >= 8) return "high";
   if (isCoarsePointer && (cores <= 4 || dpr >= 3)) return "low";
   return "medium";
+}
+
+// Touch-device extras applied on top of any profile (#159): hard-edged PCF
+// shadows instead of the soft variant, and a 60 fps cap so 90/120 Hz phone
+// screens don't render (and heat up) twice as often for no gameplay gain.
+function withDeviceExtras(profile) {
+  return { ...profile, softShadows: !IS_COARSE_POINTER, frameCapFps: IS_COARSE_POINTER ? 60 : 0 };
+}
+
+// Returns a `(now) => boolean` gate for a requestAnimationFrame loop: true
+// when this frame should run. Carries the leftover time forward so a 90 Hz
+// screen still averages 60 fps, and tolerates 60 Hz vsync jitter.
+export function createFrameLimiter(fps) {
+  if (!fps) return () => true;
+  const frameMs = 1000 / fps;
+  let last = -Infinity;
+  return (now) => {
+    const elapsed = now - last;
+    if (elapsed < frameMs - 2) return false;
+    last = elapsed > frameMs * 2 ? now : now - Math.max(0, elapsed - frameMs);
+    return true;
+  };
 }
 
 export function loadGraphicsProfile() {
@@ -65,7 +92,7 @@ export function loadGraphicsProfile() {
       // storage unavailable (private mode, disabled) — override still
       // applies for this session, just doesn't persist.
     }
-    return { id: override, ...GRAPHICS_PROFILES[override] };
+    return withDeviceExtras({ id: override, ...GRAPHICS_PROFILES[override] });
   }
 
   let stored = null;
@@ -75,9 +102,9 @@ export function loadGraphicsProfile() {
     // storage unavailable — fall through to auto-detection.
   }
   if (stored && GRAPHICS_PROFILES[stored]) {
-    return { id: stored, ...GRAPHICS_PROFILES[stored] };
+    return withDeviceExtras({ id: stored, ...GRAPHICS_PROFILES[stored] });
   }
 
   const id = detectDefaultProfileId();
-  return { id, ...GRAPHICS_PROFILES[id] };
+  return withDeviceExtras({ id, ...GRAPHICS_PROFILES[id] });
 }

@@ -29,7 +29,7 @@ import { setupPitCrew } from "./pit-crew.js?v=2";
 import { gearInfo, setupRaceAudio } from "./race-audio.js?v=3";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
-import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=1";
+import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=2";
 import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=1";
 import {
   sampleCenterline,
@@ -362,12 +362,12 @@ const camera = new THREE.PerspectiveCamera(
   1000
 );
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: graphicsProfile.antialias });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = isRaining ? 1.05 : 1.15;
 renderer.shadowMap.enabled = graphicsProfile.shadowsEnabled;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = graphicsProfile.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
 const carEnvironment = createStudioEnvironment(renderer);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, graphicsProfile.dprCap));
@@ -1675,7 +1675,11 @@ function startRaceCountdown(seed = null) {
   }, anchorMs));
 }
 
-function animate() {
+const frameGate = createFrameLimiter(graphicsProfile.frameCapFps);
+
+function animate(now = performance.now()) {
+  requestAnimationFrame(animate);
+  if (!frameGate(now)) return;
   const dt = Math.min(clock.getDelta(), 0.1);
   updateSteeringInput(dt);
   update(dt);
@@ -1686,7 +1690,6 @@ function animate() {
   sun.target.position.set(state.x, 0, state.z);
   renderer.render(scene, camera);
   diagnostics.update(dt);
-  requestAnimationFrame(animate);
 }
 
 // Agent API (#176): opt-in only, via ?agent=1, so normal play is untouched.
