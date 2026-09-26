@@ -234,7 +234,7 @@ export function setupRaceInput({
     // Relative drag from where the finger lands (#155, absolute steering
     // from #153 jerked the car on thumb placement); ~70px to full lock
     // keeps the finger away from the screen-edge gestures.
-    const travel = Math.max(45, wheelEl.clientWidth * 0.38);
+    const travel = Math.max(45, wheelEl.clientWidth * 0.48);
     touchSteer = shapeSteering((event.clientX - wheelOrigin) / travel);
   });
   const releaseWheel = (event) => {

@@ -12,7 +12,7 @@ export function steeringYaw(steer, speed, authority, grip, load = 1) {
   const velocity = Math.abs(speed);
   // No rotation while stationary; keep high-speed steering controlled without
   // making the car feel numb once it reaches real racing pace.
-  // #153: floor .22 -> .30 (about 48% instead of 42% at top speed).
-  const speedLimit = .3 + .7 / (1 + Math.pow(velocity / 42, 1.45));
+  // #161: back to the pre-#153 .22 floor; #153's .30 made it twitchy.
+  const speedLimit = .22 + .78 / (1 + Math.pow(velocity / 42, 1.45));
   return -steer * authority * speedLimit * Math.min(velocity / 7, 1) * grip * load * Math.sign(speed);
 }
