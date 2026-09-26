@@ -1009,3 +1009,9 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race.html`: an inline script pins the document scroll at 0,0 on resize, rotation and scroll.
 - Known limit: in portrait the top HUD can now sit under the status bar; the existing CSS already honours the left, right and bottom safe-area insets.
 - Verified by syntax check only; needs a test on the device from the home screen.
+
+## 2026-09-26 — Results overlay in landscape (#117)
+
+- `core/client/style.css`: under `(orientation: landscape) and (max-height: 560px)` the results card becomes a two-column grid: the standings scroll on the left, while the title, points and actions (stacked, 44px tall) sit on the right. The overlay padding follows the safe-area insets, which matters now that `viewport-fit=cover` is set (#115).
+- `style.css?v` bumped on all four HTML pages.
+- Portrait layout is unchanged. Verified with a syntax check only; the user tests on the phone.
