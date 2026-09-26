@@ -5,7 +5,7 @@ import {
   saveGarageSetup,
   setupEffects,
 } from "../shared/garage-setup.js?v=29";
-import { createShowroom } from "./showroom.js?v=31";
+import { createShowroom } from "./showroom.js?v=32";
 import { getCircuit } from "../shared/circuits.js?v=38";
 import { loadSelectedDriverId } from "../shared/driver-selection.js?v=1";
 import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=1";

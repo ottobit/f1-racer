@@ -179,8 +179,8 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     const spoiler=box(.2,.022,.07,gold,[0,1.0,-.1]);spoiler.name="driverHelmetSpoiler";spoiler.rotation.x=.35;
   }
   const haloCurve=new THREE.CatmullRomCurve3([new THREE.Vector3(-.36,.95,-.27),new THREE.Vector3(-.4,1.07,.17),new THREE.Vector3(0,1.07,.57),new THREE.Vector3(.4,1.07,.17),new THREE.Vector3(.36,.95,-.27)]);
-  mesh(new THREE.TubeGeometry(haloCurve,detail?40:20,.038,8,false),carbon);
-  rod([0,.62,.56],[0,1.07,.57],.032);
+  mesh(new THREE.TubeGeometry(haloCurve,detail?40:20,.038,8,false),carbon).name="halo";
+  rod([0,.62,.56],[0,1.07,.57],.032).name="haloPillar";
   const intake=mesh(new THREE.SphereGeometry(.145,16,12),black,[0,1.12,-.33]);intake.scale.set(.8,.7,.5);
   const noseSponsor=mesh(new THREE.PlaneGeometry(.22,.56),sponsorMaterial(livery,"nose"),[0,.565,1.28]);noseSponsor.name="teamSponsorNose";noseSponsor.rotation.x=-Math.PI/2;noseSponsor.renderOrder=2;noseSponsor.castShadow=false;noseSponsor.receiveShadow=false;
   function wing(name,z,y,width){const wing=new THREE.Group();wing.name=name;wing.position.set(0,y,z);group.add(wing);for(let i=0;i<3;i++){const blade=box(width-i*.08,.035,.16,i===2?paint:carbon,[0,i*.06,-i*.13],wing);blade.rotation.x=-.12;}for(const s of [-1,1]){box(.035,.28,.5,paint,[s*width/2,.07,-.1],wing);box(.03,.024,.46,stripe,[s*(width/2+.02),.19,-.1],wing);}return wing;}
