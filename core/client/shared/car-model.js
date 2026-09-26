@@ -101,6 +101,29 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   }
   const box=(w,h,d,mat,pos,parent)=>mesh(new THREE.BoxGeometry(w,h,d),mat,pos,parent);
   function rod(a,b,r=.022,mat=carbon,parent=group){const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),v=end.clone().sub(start);const m=mesh(new THREE.CylinderGeometry(r,r,v.length(),detail?10:6),mat,start.add(end).multiplyScalar(.5).toArray(),parent);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());return m;}
+  // Detailed F1 wheel (#173): flat-bottomed butterfly body, rubber grips,
+  // display, shift lights, rotaries and buttons on the driver's face (-z).
+  function f1Wheel(parent){
+    const rubber=new THREE.MeshStandardMaterial({color:0x15181c,roughness:.95});
+    const glow=(color,intensity=1)=>new THREE.MeshStandardMaterial({color:0x0b0f14,emissive:color,emissiveIntensity:intensity,roughness:.3});
+    const outline=new THREE.Shape();
+    outline.moveTo(-.09,-.068);outline.lineTo(.09,-.068);outline.lineTo(.118,-.03);outline.lineTo(.118,.042);
+    outline.quadraticCurveTo(.1,.066,.07,.066);outline.lineTo(-.07,.066);outline.quadraticCurveTo(-.1,.066,-.118,.042);outline.lineTo(-.118,-.03);outline.closePath();
+    const bodyGeometry=new THREE.ExtrudeGeometry(outline,{depth:.026,bevelEnabled:true,bevelThickness:.004,bevelSize:.004,bevelSegments:2,curveSegments:6});bodyGeometry.translate(0,0,-.013);
+    mesh(bodyGeometry,carbon,[0,0,0],parent).name="wheelBody";
+    for(const side of [-1,1]){const grip=mesh(new THREE.CylinderGeometry(.022,.025,.15,12),rubber,[side*.135,-.005,0],parent);grip.name="wheelGrip";grip.rotation.z=side*.1;}
+    box(.09,.048,.006,glow(0x3fd4ff,1.4),[0,.012,-.018],parent).name="wheelDisplay";
+    // Shift lights: green in the middle, then red, blue at the ends.
+    const leds=[glow(0x22e05a),glow(0xff2b2b),glow(0x3b6bff)];
+    for(let i=0;i<10;i++){const fromCentre=Math.floor(Math.abs(i-4.5));box(.007,.006,.004,leds[fromCentre<2?0:fromCentre<4?1:2],[(i-4.5)*.011,.054,-.017],parent);}
+    const red=glow(0xe23a3a,.6),blue=glow(0x2f7de1,.6);
+    for(const side of [-1,1]){
+      for(const [x,y,cap] of [[.05,-.044,gold],[.088,-.022,stripe]]){const knob=mesh(new THREE.CylinderGeometry(.011,.012,.012,10),cap,[side*x,y,-.019],parent);knob.rotation.x=Math.PI/2;}
+      mesh(new THREE.SphereGeometry(.0075,8,5),side<0?red:blue,[side*.072,.036,-.016],parent);
+      mesh(new THREE.SphereGeometry(.0075,8,5),side<0?blue:red,[side*.072,.012,-.016],parent);
+      box(.05,.034,.004,carbon,[side*.06,.004,.02],parent).name="wheelPaddle";
+    }
+  }
   // Elliptical cross-sections yield continuous, sculpted bodywork instead of boxes.
   function shell(stations,mat,x=0){
     const vertices=[],indices=[],n=detail?32:16;
@@ -143,11 +166,12 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   const buckle=mesh(new THREE.BoxGeometry(.1,.045,.09),gold,[0,.67,.03],cockpitInterior);
   const dash=mesh(new THREE.BoxGeometry(.48,.12,.12),carbon,[0,.76,.38],cockpitInterior);dash.rotation.x=-.08;
   const display=mesh(new THREE.BoxGeometry(.25,.075,.018),screenMaterial,[0,.775,.448],cockpitInterior);display.name="cockpitDisplay";
-  const steeringWheel=new THREE.Group();steeringWheel.name="cockpitSteeringWheel";steeringWheel.position.set(0,.79,.29);steeringWheel.rotation.x=-.18;cockpitInterior.add(steeringWheel);
-  const wheelRim=mesh(new THREE.TorusGeometry(.135,.024,8,24),carbon,[0,0,0],steeringWheel);wheelRim.scale.y=.72;
-  box(.16,.075,.035,carbon,[0,0,0],steeringWheel);
-  for(const side of [-1,1]) box(.065,.12,.045,carbon,[side*.12,0,0],steeringWheel);
-  for(const x of [-.055,0,.055]) mesh(new THREE.SphereGeometry(.012,6,4),x===0?gold:stripe,[x,.012,.026],steeringWheel);
+  // Empty seat only (#173): with a driver, their turning wheel takes this
+  // place — a second, static copy here used to swallow the gloves.
+  if(!showDriver){
+    const steeringWheel=new THREE.Group();steeringWheel.name="cockpitSteeringWheel";steeringWheel.position.set(0,.79,.29);steeringWheel.rotation.x=-.18;cockpitInterior.add(steeringWheel);
+    f1Wheel(steeringWheel);
+  }
   const cockpitRim=mesh(new THREE.TorusGeometry(.36,.025,8,32),carbon,[0,.76,.02]);cockpitRim.name="cockpitRim";cockpitRim.rotation.x=Math.PI/2;cockpitRim.scale.y=1.45;
   }
   let driverSteeringWheel=null;
@@ -156,17 +180,27 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     const shoulders=mesh(new THREE.SphereGeometry(.2,14,8),suit,[0,.77,-.02]);shoulders.name="driverShoulders";shoulders.scale.set(1.35,.42,.62);
     const neck=mesh(new THREE.CylinderGeometry(.075,.085,.1,10),black,[0,.81,.015]);
     driverSteeringWheel=new THREE.Group();driverSteeringWheel.name="driverSteeringWheel";driverSteeringWheel.position.set(0,.79,.29);driverSteeringWheel.rotation.x=-.18;group.add(driverSteeringWheel);
-    const driverWheelRim=mesh(new THREE.TorusGeometry(.135,.024,8,20),carbon,[0,0,0],driverSteeringWheel);driverWheelRim.scale.y=.72;
-    box(.16,.065,.035,carbon,[0,0,0],driverSteeringWheel);
-    for(const side of [-1,1])box(.058,.115,.042,carbon,[side*.115,0,0],driverSteeringWheel);
-    mesh(new THREE.BoxGeometry(.055,.024,.012),stripe,[0,.105,.025],driverSteeringWheel);
+    if(detail)f1Wheel(driverSteeringWheel);
+    else{
+      const driverWheelRim=mesh(new THREE.TorusGeometry(.135,.024,8,20),carbon,[0,0,0],driverSteeringWheel);driverWheelRim.scale.y=.72;
+      box(.16,.065,.035,carbon,[0,0,0],driverSteeringWheel);
+      for(const side of [-1,1])box(.058,.115,.042,carbon,[side*.115,0,0],driverSteeringWheel);
+      mesh(new THREE.BoxGeometry(.055,.024,.012),stripe,[0,.105,.025],driverSteeringWheel);
+    }
     // Arms bend at the elbow (#89) instead of one straight rod.
     for(const side of [-1,1]){
       const elbow=[side*.25,.7,.13];
       rod([side*.2,.78,-.02],elbow,.045,suit);
-      rod(elbow,[side*.115,.79,.27],.04,suit);
+      // Detailed wheels hold the gloves round the outer grips (#173); the
+      // cockpit camera re-aims the forearm at them as the wheel turns.
+      const forearm=rod(elbow,detail?[side*.135,.775,.25]:[side*.115,.79,.27],.04,suit);forearm.name="driverForearm";forearm.userData.side=side;
       mesh(new THREE.SphereGeometry(.046,10,7),suit,elbow);
-      const glove=mesh(new THREE.SphereGeometry(.052,10,7),black,[side*.115,0,.025],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.78,1.18,.72);
+      if(detail){
+        const glove=mesh(new THREE.SphereGeometry(.045,12,8),black,[side*.135,-.005,-.008],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.95,1.25,.95);
+        mesh(new THREE.SphereGeometry(.016,8,6),black,[side*.112,.03,-.022],driverSteeringWheel).name="driverThumb";
+      }else{
+        const glove=mesh(new THREE.SphereGeometry(.052,10,7),black,[side*.115,0,.025],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.78,1.18,.72);
+      }
     }
     // HANS collar resting on the shoulders behind the helmet.
     const hans=mesh(new THREE.TorusGeometry(.13,.03,8,16,Math.PI),carbon,[0,.8,-.02]);hans.name="driverHans";hans.rotation.set(Math.PI/2,0,Math.PI);
