@@ -1193,3 +1193,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   raise the malus or shorten the stop. Verified with `node --check`,
   `git diff --check` and `npm run validate:circuits` (new garage clearance
   check); no browser test.
+
+## 2026-09-26 — Top speed recalibration, circuit pick after garage, team colours in home (#151)
+
+- `race/main.js`: player base top speed 84 → 88 m/s (~317 km/h), AI 71 → 74.4 (same ratio); DRS multiplier 1.15 → 1.08, closer to real DRS. ERS unchanged (1.05). A low-drag setup with ERS now reaches ~340 km/h on long straights.
+- `home/menu.js`: on load, restore the stored circuit pick if unraced, else the next unraced circuit after it (previously always the first unraced one, so a detour through the garage lost the pick).
+- `home/menu.js` + `style.css`: driver picker and standings carry the team livery (`TEAM_LIVERIES` primary/secondary) as a two-tone stripe, team name under each driver, active border in the team colour.
+- Known limit: faster straights move braking points; brake hint recomputes from `CAR.maxSpeed`. `race-audio.js` still normalises by 84 (audio only).
+- Verified with `node --check` and `git diff --check` only; no browser tests.
