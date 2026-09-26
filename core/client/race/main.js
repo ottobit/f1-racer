@@ -912,7 +912,9 @@ setupRaceCommands({
 const raceAudio = setupRaceAudio({
   getPhase: () => {
     if (sessionPhase === "qualifying") return qualiState === "running" ? "driving" : "grid";
-    if (raceState === "racing") return "driving";
+    // The cool-down run past the flag (#157) keeps the in-gear, off-throttle
+    // sound until the results fade in and coolDown() takes over.
+    if (raceState === "racing" || raceState === "finished") return "driving";
     if (raceState === "countdown") return "grid";
     return "idle";
   },
@@ -1101,9 +1103,37 @@ if (multiplayer) {
   });
 }
 
+// Past the chequered flag (#157) the car keeps rolling: the autopilot
+// below lifts, brakes to a cruise and follows the track while the results
+// wait, then fade in.
+const FINISH_RESULTS_DELAY_MS = 2600;
+const FINISH_COAST_SPEED = 25; // m/s (~90 km/h) before it only coasts
+const FINISH_COAST_LOOKAHEAD = 12; // centerline samples ahead
+
+function showResultsOverlay() {
+  setTimeout(() => {
+    raceAudio.coolDown();
+    const overlay = document.getElementById("results-overlay");
+    overlay.hidden = false;
+    requestAnimationFrame(() => overlay.classList.add("is-visible"));
+  }, FINISH_RESULTS_DELAY_MS);
+}
+
+function driveFinishCoast() {
+  const { idx } = nearestTrackInfo(state.x, state.z);
+  const aim = centerline[(idx + FINISH_COAST_LOOKAHEAD) % centerline.length];
+  let err = Math.atan2(aim.x - state.x, aim.z - state.z) - state.heading;
+  while (err > Math.PI) err -= Math.PI * 2;
+  while (err < -Math.PI) err += Math.PI * 2;
+  const steer = Math.max(-1, Math.min(1, -err * 3));
+  setExternalSteer(steer);
+  steering.value = steer;
+  input.forward = false;
+  input.back = state.speed > FINISH_COAST_SPEED;
+}
+
 function finishRace() {
   raceState = "finished";
-  raceAudio.coolDown();
   if (multiplayer) {
     multiplayer.reportFinish();
     const nextLink = document.getElementById("results-next");
@@ -1116,7 +1146,7 @@ function finishRace() {
     });
     multiplayer.onRoomUpdate(renderMultiplayerResults);
     renderMultiplayerResults(multiplayer.room);
-    document.getElementById("results-overlay").hidden = false;
+    showResultsOverlay();
     return;
   }
   const order = currentRaceOrder().map((o) => o.driverId);
@@ -1148,7 +1178,7 @@ function finishRace() {
     nextLink.textContent = "Vedi classifica finale";
   }
 
-  document.getElementById("results-overlay").hidden = false;
+  showResultsOverlay();
 }
 
 function getNextUnracedCircuitId(champState) {
@@ -1365,8 +1395,6 @@ function update(dt) {
     return;
   }
 
-  if (raceState === "finished") return;
-
   if (raceState === "countdown") {
     // Cars sit frozen on the grid until the lights go out.
     applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
@@ -1377,7 +1405,8 @@ function update(dt) {
   }
 
   const now = performance.now();
-  if (state.pitRequested) raceSystems.startPitStop();
+  if (raceState === "finished") driveFinishCoast();
+  else if (state.pitRequested) raceSystems.startPitStop();
 
   updateDrsEligibility([state, ...aiCars]);
   raceSystems.updateEnergyRecovery([state, ...aiCars], dt);

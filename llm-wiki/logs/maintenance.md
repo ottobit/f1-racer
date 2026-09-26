@@ -1216,3 +1216,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race.html` / `race-controls.css`: touch BOX button moved from the HUD row to a `.gas-stack` above the throttle (44px tall, pedal width); `race-input.js` binds `[data-key]` in `#touch-controls` too. Armed/servicing/not-racing states keep their existing selectors.
 - `menu.js` / `index.html`: driver picker locked (other drivers disabled, note "Bloccato fino a fine campionato") from the first recorded result until all circuits are raced or the championship is reset.
 - Verified with `node --check` only.
+
+## 2026-09-26 — Finish: roll past the flag, results fade in (#157)
+
+- `main.js`: `update()` no longer freezes the scene when `raceState === "finished"`; `driveFinishCoast()` steers the player toward the centerline 12 samples ahead (via `setExternalSteer`), lifts, and brakes down to 25 m/s, then coasts. AI, collisions, camera and multiplayer broadcast keep running; pit requests are ignored after the flag.
+- Audio: `getPhase()` reports "driving" while finished, so the engine follows the off-throttle deceleration; `raceAudio.coolDown()` moved from the flag to the moment the results appear.
+- `showResultsOverlay()`: results (solo and multiplayer) appear 2.6 s after the flag and fade in over 0.9 s (`#results-overlay.is-visible` in `style.css`). The championship result is still recorded at the flag.
+- Verified with `node --check` only.
