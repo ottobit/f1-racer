@@ -1,21 +1,98 @@
-/* Game modes guide page (#121). Builds on the .f1-home layout in style.css. */
-.modes-toc { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1rem; }
-.modes-toc a { padding: 0.35rem 0.7rem; border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; color: inherit; text-decoration: none; font-size: 0.8rem; }
-.modes-toc a:hover, .modes-toc a:focus-visible { border-color: #e10600; }
-.modes-card { margin-top: 1rem; padding: 1rem 1.1rem; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; background: rgba(255,255,255,0.03); scroll-margin-top: 1rem; }
-.modes-card h3 { margin: 0 0 0.5rem; font-size: 1.05rem; }
-.modes-card h4 { margin: 1rem 0 0.3rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim, #9aa1b0); }
-.modes-card p, .modes-card li { line-height: 1.5; font-size: 0.92rem; }
-.modes-card a { color: #ff5a4f; }
-.modes-keys { width: 100%; border-collapse: collapse; margin: 0.6rem 0; font-size: 0.9rem; }
-.modes-keys th, .modes-keys td { padding: 0.45rem 0.4rem; border-top: 1px solid rgba(255,255,255,0.08); text-align: left; vertical-align: top; }
-.modes-keys th { width: 38%; font-weight: 600; white-space: normal; }
-kbd { display: inline-block; min-width: 1.4em; padding: 0.05rem 0.35rem; border: 1px solid rgba(255,255,255,0.3); border-bottom-width: 2px; border-radius: 4px; font: 600 0.8rem/1.3 ui-monospace, monospace; text-align: center; }
-.modes-steps, .modes-list { padding-left: 1.3rem; margin: 0.4rem 0; }
-.modes-steps li, .modes-list li { margin: 0.35rem 0; }
-.modes-card pre { margin: 0.4rem 0; padding: 0.6rem 0.7rem; overflow-x: auto; border-radius: 6px; background: rgba(0,0,0,0.45); font-size: 0.8rem; }
-.modes-card code { font-family: ui-monospace, monospace; font-size: 0.85em; word-break: break-all; }
-.modes-card pre code { word-break: normal; white-space: pre; }
-.modes-note { color: var(--text-dim, #9aa1b0); font-size: 0.85rem; }
-.modes-warn { padding: 0.6rem 0.8rem; border-left: 3px solid #ffb400; background: rgba(255,180,0,0.08); border-radius: 4px; }
-@media (max-width: 560px) { .modes-keys th { width: 45%; } }
+/* Game modes guide page (#121, redesigned in #123). Builds on .f1-home in style.css. */
+.modes-page{--mz-line:rgba(255,255,255,.1);--mz-card:rgba(255,255,255,.035);--mz-dim:var(--text-dim,#9aa1b0);--mz-red:#e10600}
+html{scroll-padding-top:1rem}
+
+/* Hero */
+.modes-hero{max-width:68rem;margin:0 auto;padding:max(1.2rem,env(safe-area-inset-top)) 1.25rem 1.8rem}
+.modes-back{display:inline-block;margin-bottom:2.2rem;color:var(--mz-dim);font-size:.8rem;font-weight:700;letter-spacing:.08em;text-decoration:none;text-transform:uppercase}
+.modes-back:hover{color:#fff}
+.modes-title{margin:0;font-size:clamp(2.6rem,8vw,5rem);line-height:.9;letter-spacing:-.05em}
+.modes-lead{margin:.9rem 0 1.4rem;color:var(--mz-dim);font-size:clamp(1rem,2.4vw,1.25rem)}
+.modes-lead em{color:#fff;font-style:normal;font-weight:700}
+.modes-tabs{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--mz-line);border-radius:999px;background:rgba(255,255,255,.03)}
+.modes-tabs a{padding:.5rem 1rem;border-radius:999px;color:#fff;font-size:.82rem;font-weight:700;text-decoration:none}
+.modes-tabs a:hover,.modes-tabs a:focus-visible{background:var(--mz-red);outline:none}
+.modes-block{margin-bottom:3rem}
+
+/* Mode picker tiles */
+.mode-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:1.4rem}
+.mode-tile{position:relative;display:flex;flex-direction:column;gap:.35rem;padding:1.2rem 1.1rem 1rem;border:1px solid rgba(255,255,255,.14);border-radius:16px;color:#fff;text-decoration:none;background:linear-gradient(150deg,#151923,#0b0c11);transition:transform .15s,border-color .15s}
+.mode-tile:hover,.mode-tile:focus-visible{transform:translateY(-2px);border-color:#fff;outline:none}
+.mode-tile--hot{border-color:rgba(225,6,0,.7);background:radial-gradient(circle at 85% 15%,rgba(255,73,53,.25),transparent 40%),linear-gradient(150deg,#3a0b0d,#120d12 75%)}
+.mode-tile-icon{font-size:1.8rem;line-height:1}
+.mode-tile strong{font-size:1.2rem;letter-spacing:-.01em}
+.mode-tile-sub{color:var(--mz-dim);font-size:.85rem;min-height:2.4em}
+.mode-badge{position:absolute;top:.9rem;right:.9rem;padding:.2rem .55rem;border-radius:999px;background:var(--mz-red);font-size:.62rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.mode-badge--muted{background:#2a303c;color:#c9cfdb}
+.mode-facts{margin:.5rem 0 .6rem;border-top:1px solid var(--mz-line)}
+.mode-facts div{display:flex;justify-content:space-between;gap:.8rem;padding:.4rem 0;border-bottom:1px solid var(--mz-line);font-size:.8rem}
+.mode-facts dt{color:var(--mz-dim)}
+.mode-facts dd{margin:0;text-align:right;font-weight:700}
+.mode-tile-cta{margin-top:auto;color:#ff6b61;font-size:.8rem;font-weight:800}
+
+/* Detail cards */
+.modes-card{margin-top:1rem;padding:1.3rem 1.3rem 1.1rem;border:1px solid var(--mz-line);border-radius:16px;background:var(--mz-card)}
+.modes-card--hot{border-color:rgba(225,6,0,.45)}
+.modes-card-head{display:flex;gap:.9rem;align-items:center;margin-bottom:1rem}
+.modes-card-icon{display:grid;place-items:center;flex:none;width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.06);font-size:1.4rem}
+.modes-card-head h3{margin:0;font-size:1.15rem}
+.modes-card-head p{margin:.15rem 0 0;color:var(--mz-dim);font-size:.85rem;line-height:1.4}
+.modes-card h4{margin:1.4rem 0 .6rem;color:var(--mz-dim);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase}
+.modes-card p,.modes-card li{font-size:.92rem;line-height:1.55}
+.modes-card a{color:#ff6b61}
+.modes-card code{padding:.05rem .3rem;border-radius:4px;background:rgba(255,255,255,.07);font:500 .82em ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}
+
+.modes-explain{display:grid;gap:.8rem;padding:1rem;border-radius:12px;background:rgba(0,0,0,.25)}
+.modes-explain p{margin:0}
+.modes-flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;font-size:.8rem;font-weight:700}
+.modes-flow span{padding:.45rem .7rem;border:1px solid rgba(255,255,255,.18);border-radius:10px;background:#10131a}
+.modes-flow small{display:block;color:var(--mz-dim);font-weight:500;font-size:.7rem}
+.modes-flow i{color:var(--mz-red);font-style:normal;font-size:1.1rem}
+
+/* Numbered steps with a rail */
+.modes-steps{counter-reset:step;list-style:none;margin:0;padding:0}
+.modes-steps>li{counter-increment:step;position:relative;padding:0 0 1rem 2.6rem}
+.modes-steps>li::before{content:counter(step);position:absolute;left:0;top:0;display:grid;place-items:center;width:1.75rem;height:1.75rem;border-radius:50%;background:var(--mz-red);font-size:.8rem;font-weight:900}
+.modes-steps>li:not(:last-child)::after{content:"";position:absolute;left:calc(.875rem - 1px);top:1.9rem;bottom:.2rem;width:2px;background:rgba(225,6,0,.3)}
+
+/* Terminal-style command blocks */
+.modes-code{position:relative;margin:.55rem 0;padding:.8rem 5.2rem .8rem .9rem;overflow-x:auto;border:1px solid var(--mz-line);border-radius:10px;background:#07080b;font-size:.8rem;line-height:1.5}
+.modes-code code{padding:0;background:none;white-space:pre;word-break:normal;color:#e8ecf3}
+.modes-copy{position:absolute;top:.45rem;right:.45rem;padding:.3rem .6rem;border:1px solid rgba(255,255,255,.2);border-radius:6px;background:#1a1e27;color:#fff;font-size:.7rem;font-weight:700;cursor:pointer}
+.modes-copy:hover{border-color:var(--mz-red)}
+
+.modes-tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:8px;list-style:none;margin:.6rem 0 0;padding:0}
+.modes-tips li{display:flex;gap:.6rem;padding:.7rem .8rem;border-radius:10px;background:rgba(255,255,255,.04);font-size:.85rem;line-height:1.45}
+.modes-tips b{flex:none}
+.modes-note{color:var(--mz-dim);font-size:.85rem}
+.modes-warn{margin:0 0 1.2rem;padding:.8rem 1rem;border-left:3px solid #ffb400;border-radius:8px;background:rgba(255,180,0,.08)}
+
+/* Controls */
+.controls-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.control-card{display:flex;flex-direction:column;margin-top:0}
+.control-card .modes-note{margin:auto 0 0;padding-top:.8rem}
+kbd{display:inline-grid;place-items:center;min-width:1.9em;height:1.9em;padding:0 .4rem;border:1px solid rgba(255,255,255,.28);border-bottom-width:3px;border-radius:6px;background:#161a22;color:#fff;font:700 .78rem/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.bind-list{list-style:none;margin:0;padding:0}
+.bind-list li{display:grid;grid-template-columns:5.6rem 1fr;gap:.7rem;align-items:center;padding:.5rem 0;border-top:1px solid var(--mz-line);font-size:.86rem;line-height:1.35}
+.bind-list li>span{display:flex;flex-wrap:wrap;gap:4px}
+
+.kb-cluster,.pad-face,.phone-sketch{display:grid;place-items:center;height:118px;margin-bottom:.9rem;border-radius:12px;background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.06),transparent 70%),#0b0d12}
+.kb-cluster{align-content:center;gap:6px}
+.kb-row{display:flex;gap:6px;justify-content:center}
+.kb-cluster kbd{width:44px;height:44px;font-size:1rem}
+.kb-cluster .kb-hot{border-color:rgba(225,6,0,.8);box-shadow:0 0 18px rgba(225,6,0,.25)}
+
+.pad-face{grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:2px;place-content:center}
+.pad-btn{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#161a22;border:1px solid rgba(255,255,255,.18);font-size:1.05rem;font-weight:900}
+.pad-tri{grid-area:1/2}.pad-sq{grid-area:2/1}.pad-ci{grid-area:2/3}.pad-face .pad-x{grid-area:3/2}
+.pad-tri{color:#3ad1a0}.pad-sq{color:#e57ad8}.pad-ci{color:#ff5a64}.pad-x{color:#6ea8ff}
+
+.phone-sketch{position:relative;width:100%;place-items:stretch}
+.phone-sketch::before{content:"";position:absolute;inset:14px 18px;border:2px solid rgba(255,255,255,.2);border-radius:16px}
+.phone-wheel{position:absolute;left:34px;top:50%;transform:translateY(-50%);color:#fff;font-size:2.6rem;line-height:1}
+.phone-pedals{position:absolute;right:40px;top:50%;transform:translateY(-50%);display:flex;gap:6px;align-items:flex-end}
+.phone-pedals i{display:grid;place-items:center;width:44px;height:38px;border-radius:8px;background:#2a303c;font-style:normal;font-size:.55rem;font-weight:900;letter-spacing:.06em}
+.phone-pedals .phone-gas{height:54px;background:var(--mz-red)}
+
+@media(max-width:860px){.mode-picker,.controls-grid{grid-template-columns:1fr}.mode-tile-sub{min-height:0}}
+@media(max-width:560px){.modes-card{padding:1.1rem 1rem 1rem}.modes-code{padding-right:.9rem;padding-top:2.3rem}.bind-list li{grid-template-columns:4.8rem 1fr}}

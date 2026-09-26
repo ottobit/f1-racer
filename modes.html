@@ -6,159 +6,215 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="assets/images/app-icon-180.png" />
   <meta name="theme-color" content="#05060a" />
-  <title>Modalità di gioco — F1 Racer</title>
+  <title>Come si gioca — F1 Racer</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>" />
-  <meta name="description" content="F1 Racer — come si gioca: tastiera, pad PlayStation, touch; giocatore singolo e multiplayer (ngrok o rete locale)." />
+  <meta name="description" content="F1 Racer — come si gioca: singolo, multiplayer online con ngrok o in rete locale; tastiera, pad PlayStation, telefono." />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="stylesheet" href="core/client/style.css?v=43" />
-  <link rel="stylesheet" href="core/client/home/modes.css?v=1" />
+  <link rel="stylesheet" href="core/client/style.css?v=44" />
+  <link rel="stylesheet" href="core/client/home/modes.css?v=2" />
 </head>
 <body class="f1-home modes-page">
-  <header class="f1-home-hero">
-    <p class="f1-home-kicker"><a href="./">← TORNA A F1 RACER</a></p>
-    <h1 class="wordmark">Modalità di gioco</h1>
-    <p class="f1-home-lead">Con cosa guidi e con chi corri. Leggi la parte che ti serve.</p>
-    <nav class="modes-toc" aria-label="Indice">
-      <a href="#tastiera">Tastiera</a>
-      <a href="#pad">Pad PlayStation</a>
-      <a href="#touch">Telefono</a>
-      <a href="#singolo">Giocatore singolo</a>
-      <a href="#ngrok">Multiplayer online (ngrok)</a>
-      <a href="#lan">Multiplayer in rete locale</a>
+  <header class="modes-hero">
+    <a class="modes-back" href="./">← F1 Racer</a>
+    <p class="f1-home-kicker">GUIDA</p>
+    <h1 class="modes-title">Come si gioca</h1>
+    <p class="modes-lead">Prima scegli <em>con chi</em> correre, poi <em>con cosa</em> guidare.</p>
+    <nav class="modes-tabs" aria-label="Sezioni">
+      <a href="#tipi">Tipi di partita</a>
+      <a href="#controlli">Controlli</a>
     </nav>
   </header>
 
-  <section class="f1-home-section">
-    <div class="f1-home-section-head"><span>01</span><div><h2>Controlli</h2><p>Tre modi di guidare. Puoi anche mescolarli: il gioco li legge tutti insieme.</p></div></div>
+  <!-- 01 · Game types -->
+  <section id="tipi" class="f1-home-section modes-block">
+    <div class="f1-home-section-head"><span>01</span><div><h2>Tipi di partita</h2><p>Tre modi di correre. Tocca una scheda per le istruzioni.</p></div></div>
 
-    <article id="tastiera" class="modes-card">
-      <h3>⌨️ Tastiera</h3>
-      <p>La scelta più semplice su computer. Nessuna configurazione.</p>
-      <table class="modes-keys">
-        <tbody>
-          <tr><th><kbd>W</kbd> o <kbd>↑</kbd></th><td>Accelera</td></tr>
-          <tr><th><kbd>S</kbd> o <kbd>↓</kbd></th><td>Frena (da fermo, tenendolo premuto, va in retromarcia)</td></tr>
-          <tr><th><kbd>A</kbd> <kbd>D</kbd> o <kbd>←</kbd> <kbd>→</kbd></th><td>Sterza</td></tr>
-          <tr><th><kbd>C</kbd></th><td>Cambia visuale (esterna / cockpit)</td></tr>
-          <tr><th><kbd>E</kbd></th><td>Attiva o disattiva l'ERS (spinta elettrica extra finché la batteria dura)</td></tr>
-          <tr><th><kbd>P</kbd></th><td>Chiedi il pit stop</td></tr>
-          <tr><th><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></th><td>Gomme morbide / medie / dure — prima del via, oppure in gara solo durante la sosta ai box</td></tr>
-        </tbody>
-      </table>
-      <p class="modes-note">Il DRS non ha un tasto: si apre da solo nelle zone DRS quando sei vicino all'auto davanti.</p>
-    </article>
-
-    <article id="pad" class="modes-card">
-      <h3>🎮 Pad PlayStation (DualShock 4 / DualSense)</h3>
-      <p>Funziona nel browser del computer, senza programmi da installare.</p>
-      <ol class="modes-steps">
-        <li>Collega il pad al computer con il cavo USB oppure in Bluetooth.</li>
-        <li>Apri la gara e <strong>premi un tasto qualsiasi del pad</strong>: per motivi di sicurezza il browser non “vede” il controller finché non lo tocchi.</li>
-        <li>Guida. Se non risponde, scollega e ricollega il pad e premi di nuovo un tasto.</li>
-      </ol>
-      <table class="modes-keys">
-        <tbody>
-          <tr><th>Levetta sinistra</th><td>Sterza (con una piccola zona morta al centro)</td></tr>
-          <tr><th><kbd>R2</kbd></th><td>Accelera</td></tr>
-          <tr><th><kbd>L2</kbd></th><td>Frena / retromarcia</td></tr>
-          <tr><th><kbd>✕</kbd> Croce</th><td>Avvia (conferma il via, come un tasto qualsiasi)</td></tr>
-          <tr><th><kbd>△</kbd> Triangolo</th><td>Cambia visuale</td></tr>
-          <tr><th><kbd>□</kbd> Quadrato</th><td>Chiedi il pit stop</td></tr>
-          <tr><th><kbd>R1</kbd></th><td>ERS acceso / spento</td></tr>
-        </tbody>
-      </table>
-      <p class="modes-note">Le gomme non hanno un tasto sul pad: scegli la mescola da tastiera (1 / 2 / 3). Anche altri pad “standard” (es. Xbox) funzionano, con gli stessi pulsanti nella stessa posizione. Su telefono il pad Bluetooth può funzionare, ma non è stato provato.</p>
-    </article>
-
-    <article id="touch" class="modes-card">
-      <h3>📱 Telefono (touch)</h3>
-      <p>Gira il telefono in orizzontale. Per giocare a schermo intero su iPhone: Condividi → “Aggiungi alla schermata Home”, poi apri il gioco dall'icona.</p>
-      <table class="modes-keys">
-        <tbody>
-          <tr><th>Volante a sinistra</th><td>Tieni premuto e trascina a destra o a sinistra per sterzare</td></tr>
-          <tr><th>GAS / FRENO a destra</th><td>Tieni premuto; puoi tenere entrambi insieme</td></tr>
-          <tr><th>“Attiva movimento”</th><td>Sterzi inclinando il telefono come un volante. Tieni il telefono dritto e tocca “Centra” per fissare la posizione neutra; il menu accanto regola la sensibilità</td></tr>
-        </tbody>
-      </table>
-      <p class="modes-note">Su iPhone lo sterzo a movimento chiede un permesso: se lo neghi, resta il volante touch.</p>
-    </article>
-  </section>
-
-  <section class="f1-home-section">
-    <div class="f1-home-section-head"><span>02</span><div><h2>Tipi di partita</h2><p>Da solo contro l'IA, oppure con gli amici.</p></div></div>
+    <div class="mode-picker">
+      <a class="mode-tile" href="#singolo">
+        <span class="mode-tile-icon" aria-hidden="true">🏁</span>
+        <strong>Giocatore singolo</strong>
+        <span class="mode-tile-sub">Campionato contro 9 piloti IA</span>
+        <dl class="mode-facts">
+          <div><dt>Giocatori</dt><dd>1</dd></div>
+          <div><dt>Serve</dt><dd>Solo il browser</dd></div>
+          <div><dt>Voce</dt><dd>—</dd></div>
+        </dl>
+        <span class="mode-tile-cta">Istruzioni ↓</span>
+      </a>
+      <a class="mode-tile mode-tile--hot" href="#ngrok">
+        <span class="mode-badge">Consigliato</span>
+        <span class="mode-tile-icon" aria-hidden="true">🌍</span>
+        <strong>Multiplayer online</strong>
+        <span class="mode-tile-sub">Con gli amici, anche da lontano, tramite ngrok</span>
+        <dl class="mode-facts">
+          <div><dt>Giocatori</dt><dd>2 – 10</dd></div>
+          <div><dt>Serve</dt><dd>Un PC host con Node.js e ngrok</dd></div>
+          <div><dt>Voce</dt><dd>Sì</dd></div>
+        </dl>
+        <span class="mode-tile-cta">Istruzioni ↓</span>
+      </a>
+      <a class="mode-tile" href="#lan">
+        <span class="mode-badge mode-badge--muted">Avanzato</span>
+        <span class="mode-tile-icon" aria-hidden="true">🏠</span>
+        <strong>Rete locale</strong>
+        <span class="mode-tile-sub">Stessa Wi-Fi, senza ngrok</span>
+        <dl class="mode-facts">
+          <div><dt>Giocatori</dt><dd>2 – 10</dd></div>
+          <div><dt>Serve</dt><dd>Un PC host con Node.js e Python</dd></div>
+          <div><dt>Voce</dt><dd>Solo ascolto</dd></div>
+        </dl>
+        <span class="mode-tile-cta">Istruzioni ↓</span>
+      </a>
+    </div>
 
     <article id="singolo" class="modes-card">
-      <h3>🏁 Giocatore singolo — campionato contro l'IA</h3>
-      <p>Non serve nient'altro che il browser: apri il gioco e corri.</p>
+      <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">🏁</span><div><h3>Giocatore singolo</h3><p>Nient'altro che il browser: apri il gioco e corri.</p></div></header>
       <ol class="modes-steps">
-        <li>Nella home scegli la <strong>difficoltà</strong> (quanto vanno forte gli avversari) e il <strong>pilota</strong> che vuoi essere.</li>
-        <li>Facoltativo: passa dal <a href="garage.html">garage</a> per livrea, aerodinamica, freni e sospensioni.</li>
-        <li>Scegli il circuito e parti: <strong>qualifica</strong> (decide la tua posizione in griglia), poi <strong>gara di 3 giri contro 9 rivali</strong>.</li>
-        <li>A fine gara prendi i punti; la classifica del campionato resta salvata in questo browser (si azzera dalla home).</li>
+        <li><strong>Difficoltà e pilota.</strong> Nella home scegli quanto vanno forte gli avversari e chi vuoi essere.</li>
+        <li><strong>Garage (facoltativo).</strong> Nel <a href="garage.html">garage</a> regoli livrea, aerodinamica, freni e sospensioni.</li>
+        <li><strong>Qualifica.</strong> Scegli il circuito: il giro di qualifica decide la tua posizione in griglia.</li>
+        <li><strong>Gara.</strong> 3 giri contro 9 rivali. I punti vanno in classifica, salvata in questo browser (si azzera dalla home).</li>
       </ol>
     </article>
 
-    <article id="ngrok" class="modes-card">
-      <h3>🌍 Multiplayer online con ngrok — il modo consigliato</h3>
-      <p>Fino a <strong>10 giocatori</strong>, ognuno dal suo dispositivo, anche in città diverse. Si corre solo tra persone: nel multiplayer non ci sono auto guidate dall'IA. Ci si parla anche a voce durante la gara.</p>
-      <p><strong>Perché serve:</strong> il gioco è un sito statico e non ha un server sempre acceso. Per giocare insieme, <em>uno di voi</em> (l'host) fa girare sul proprio computer un piccolo server delle stanze, e <a href="https://ngrok.com/" rel="noopener">ngrok</a> lo rende raggiungibile da internet con un indirizzo sicuro <code>https://</code>.</p>
+    <article id="ngrok" class="modes-card modes-card--hot">
+      <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">🌍</span><div><h3>Multiplayer online con ngrok</h3><p>Fino a 10 persone, ognuna dal suo dispositivo. Solo piloti umani, niente IA, e chat vocale in gara.</p></div></header>
 
-      <h4>Una volta sola (sul computer dell'host)</h4>
+      <div class="modes-explain">
+        <p><strong>Come funziona.</strong> Il gioco non ha un server sempre acceso. Uno di voi, <em>l'host</em>, avvia sul suo computer un piccolo server delle stanze; <a href="https://ngrok.com/" rel="noopener">ngrok</a> lo rende raggiungibile da internet con un indirizzo sicuro <code>https://</code>. Gli altri non installano niente.</p>
+        <div class="modes-flow" aria-hidden="true">
+          <span>📱 Amici</span><i>→</i><span>ngrok <small>https</small></span><i>→</i><span>💻 PC host <small>porta 8787</small></span>
+        </div>
+      </div>
+
+      <h4>Preparazione (una volta sola, sul PC dell'host)</h4>
       <ol class="modes-steps">
-        <li>Installa <a href="https://nodejs.org/" rel="noopener">Node.js</a> e <a href="https://ngrok.com/download" rel="noopener">ngrok</a> (account gratuito; segui le istruzioni di ngrok per collegare il tuo token).</li>
-        <li>Scarica il progetto e installa le dipendenze del server:
-          <pre><code>git clone https://github.com/ottobit/f1-racer.git
+        <li>Installa <a href="https://nodejs.org/" rel="noopener">Node.js</a> e <a href="https://ngrok.com/download" rel="noopener">ngrok</a>. Per ngrok serve un account gratuito: segui le sue istruzioni per collegare il token.</li>
+        <li>Scarica il progetto e installa il server:
+          <pre class="modes-code"><code>git clone https://github.com/ottobit/f1-racer.git
 cd f1-racer/core
-npm install</code></pre>
-        </li>
+npm install</code></pre></li>
       </ol>
 
-      <h4>Ogni volta che volete giocare</h4>
+      <h4>Ogni volta che giocate</h4>
       <ol class="modes-steps">
-        <li>Avvia il server delle stanze (dentro la cartella <code>core</code>) e lascia aperto il terminale:
-          <pre><code>npm run start:room-server</code></pre>
+        <li><strong>Avvia il server</strong> dalla cartella <code>core</code> e lascia il terminale aperto:
+          <pre class="modes-code"><code>npm run start:room-server</code></pre>
           Deve comparire <code>listening on ws://localhost:8787</code>.</li>
-        <li>In un <em>secondo</em> terminale apri il tunnel:
-          <pre><code>ngrok http 8787</code></pre>
-          ngrok stampa un indirizzo tipo <code>https://abcd-1234.ngrok-free.app</code>: copialo.</li>
-        <li>Apri il gioco aggiungendo quell'indirizzo in fondo:
-          <pre><code>https://ottobit.github.io/f1-racer/room.html?roomServer=https://abcd-1234.ngrok-free.app</code></pre></li>
-        <li>Scrivi il tuo nome, tocca <strong>Crea una stanza</strong> e manda agli amici il <strong>link di invito</strong> che compare: contiene già il codice stanza e l'indirizzo del server, loro devono solo aprirlo.</li>
-        <li>Ognuno sceglie un pilota libero e si mette “pronto”. L'host sceglie circuito, difficoltà e se fare la qualifica (senza qualifica la griglia è casuale), poi avvia.</li>
-        <li>Al via ognuno tocca per partire: in quel momento il browser chiede il <strong>microfono</strong> per la chat vocale. Se lo neghi, senti gli altri ma loro non sentono te.</li>
-        <li>A fine gara la classifica è la stessa per tutti e l'host può lanciare la <strong>rivincita</strong>.</li>
+        <li><strong>Apri il tunnel</strong> in un <em>secondo</em> terminale:
+          <pre class="modes-code"><code>ngrok http 8787</code></pre>
+          Copia l'indirizzo che stampa, tipo <code>https://abcd-1234.ngrok-free.app</code>.</li>
+        <li><strong>Apri la stanza</strong> aggiungendo quell'indirizzo in fondo al link:
+          <pre class="modes-code"><code>https://ottobit.github.io/f1-racer/room.html?roomServer=https://abcd-1234.ngrok-free.app</code></pre></li>
+        <li><strong>Invita.</strong> Scrivi il nome, tocca <em>Crea una stanza</em> e manda agli amici il link di invito: contiene già codice e server, devono solo aprirlo.</li>
+        <li><strong>Prepara la griglia.</strong> Ognuno sceglie un pilota libero e si mette “pronto”. L'host sceglie circuito, difficoltà e se fare la qualifica (senza, la griglia è casuale), poi avvia.</li>
+        <li><strong>Via!</strong> Prima del via ognuno tocca lo schermo per accendere il motore: in quel momento il browser chiede il microfono. Se lo neghi, senti gli altri ma loro non sentono te.</li>
+        <li><strong>Fine gara.</strong> Classifica uguale per tutti; l'host può lanciare la rivincita.</li>
       </ol>
 
-      <h4>Cose da sapere</h4>
-      <ul class="modes-list">
-        <li>Il computer dell'host deve restare acceso con <em>entrambi</em> i terminali aperti per tutta la partita. Se lo chiudi, le stanze spariscono.</li>
-        <li>Con ngrok gratuito l'indirizzo cambia a ogni avvio: ogni sessione va mandato un nuovo link di invito.</li>
-        <li>Se la pagina avvisa “il server della stanza è locale”, hai aperto <code>room.html</code> senza <code>?roomServer=…</code>: gli amici non ti raggiungeranno.</li>
-        <li>Chi perde la connessione ha 30 secondi per rientrare con lo stesso pilota.</li>
-        <li>La voce passa direttamente tra i dispositivi (non dal server). Su alcune reti aziendali o 4G molto chiuse può non collegarsi: la gara funziona lo stesso.</li>
+      <ul class="modes-tips">
+        <li><b>💻</b> Il PC dell'host resta acceso con <em>entrambi</em> i terminali aperti. Se lo chiudi, le stanze spariscono.</li>
+        <li><b>🔗</b> Con ngrok gratuito l'indirizzo cambia a ogni avvio: ogni volta serve un nuovo link di invito.</li>
+        <li><b>⚠️</b> Se la pagina dice “il server della stanza è locale”, manca <code>?roomServer=…</code> nel link.</li>
+        <li><b>⏱️</b> Chi perde la connessione ha 30 secondi per rientrare con lo stesso pilota.</li>
+        <li><b>🎙️</b> La voce passa direttamente tra i dispositivi. Su reti molto chiuse (aziendali, alcuni 4G) può non collegarsi, ma la gara funziona lo stesso.</li>
       </ul>
     </article>
 
     <article id="lan" class="modes-card">
-      <h3>🏠 Multiplayer in rete locale (stessa Wi-Fi)</h3>
-      <p class="modes-warn"><strong>Attenzione:</strong> anche se siete tutti nella stessa casa, <strong>conviene comunque usare ngrok</strong> (sezione sopra). Il gioco online è su <code>https://</code>, e per sicurezza il browser non gli permette di collegarsi a un server di casa non cifrato (<code>ws://192.168…</code>): la connessione viene bloccata senza spiegazioni.</p>
-      <p>Senza ngrok si può fare solo servendo <em>anche il gioco</em> dal computer dell'host, in <code>http://</code>. Funziona, ma con due limiti: <strong>niente chat vocale</strong> in uscita (i browser danno il microfono solo alle pagine sicure) e <strong>niente sterzo a movimento</strong> su iPhone.</p>
+      <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">🏠</span><div><h3>Multiplayer in rete locale</h3><p>Tutti sulla stessa Wi-Fi, senza ngrok.</p></div></header>
+      <p class="modes-warn"><strong>Anche in casa conviene ngrok.</strong> Il gioco online è su <code>https://</code> e il browser gli impedisce di collegarsi a un server di casa non cifrato (<code>ws://192.168…</code>). Senza ngrok bisogna far servire <em>anche il gioco</em> dal PC dell'host, in <code>http://</code>. Si perdono il microfono (si può solo ascoltare) e, su iPhone, lo sterzo a movimento.</p>
       <ol class="modes-steps">
-        <li>Sul computer dell'host, nella cartella <code>core</code>, avvia il server delle stanze:
-          <pre><code>npm run start:room-server</code></pre></li>
-        <li>In un secondo terminale, dalla cartella principale <code>f1-racer</code>, servi il gioco:
-          <pre><code>python3 -m http.server 8080</code></pre></li>
-        <li>Trova l'indirizzo IP del computer nella rete di casa (es. <code>192.168.1.20</code>: su Windows <code>ipconfig</code>, su Mac/Linux nelle impostazioni Wi-Fi).</li>
-        <li>Tutti, host compreso, aprono (sostituendo l'IP):
-          <pre><code>http://192.168.1.20:8080/room.html?roomServer=http://192.168.1.20:8787</code></pre></li>
-        <li>Da qui è uguale al multiplayer online: crea la stanza, condividi il link, scegli il pilota, via.</li>
+        <li><strong>Server delle stanze</strong>, dalla cartella <code>core</code>:
+          <pre class="modes-code"><code>npm run start:room-server</code></pre></li>
+        <li><strong>Server del gioco</strong>, in un secondo terminale, dalla cartella principale <code>f1-racer</code>:
+          <pre class="modes-code"><code>python3 -m http.server 8080</code></pre></li>
+        <li><strong>IP del PC</strong> nella rete di casa, es. <code>192.168.1.20</code> (Windows: <code>ipconfig</code>; Mac/Linux: impostazioni Wi-Fi).</li>
+        <li><strong>Tutti aprono</strong>, host compreso, sostituendo l'IP:
+          <pre class="modes-code"><code>http://192.168.1.20:8080/room.html?roomServer=http://192.168.1.20:8787</code></pre></li>
+        <li><strong>Da qui è come online:</strong> crea la stanza, condividi il link, scegli il pilota, via.</li>
       </ol>
-      <p class="modes-note">Se gli altri non si collegano, di solito è il firewall del computer: consenti le connessioni in ingresso sulle porte 8080 e 8787.</p>
+      <p class="modes-note">Nessuno si collega? Di solito è il firewall del PC: consenti le connessioni in ingresso sulle porte 8080 e 8787.</p>
     </article>
+  </section>
+
+  <!-- 02 · Controls -->
+  <section id="controlli" class="f1-home-section modes-block">
+    <div class="f1-home-section-head"><span>02</span><div><h2>Controlli</h2><p>Puoi mescolarli: il gioco li legge tutti insieme.</p></div></div>
+
+    <div class="controls-grid">
+      <article class="modes-card control-card">
+        <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">⌨️</span><div><h3>Tastiera</h3><p>Su computer, nessuna configurazione.</p></div></header>
+        <div class="kb-cluster" aria-hidden="true">
+          <div class="kb-row"><kbd class="kb-hot">W</kbd></div>
+          <div class="kb-row"><kbd class="kb-hot">A</kbd><kbd class="kb-hot">S</kbd><kbd class="kb-hot">D</kbd></div>
+        </div>
+        <ul class="bind-list">
+          <li><span><kbd>W</kbd><kbd>↑</kbd></span>Accelera</li>
+          <li><span><kbd>S</kbd><kbd>↓</kbd></span>Frena; tenuto premuto da fermo va in retro</li>
+          <li><span><kbd>A</kbd><kbd>D</kbd></span>Sterza (anche <kbd>←</kbd><kbd>→</kbd>)</li>
+          <li><span><kbd>C</kbd></span>Visuale esterna / cockpit</li>
+          <li><span><kbd>E</kbd></span>ERS on/off: spinta elettrica</li>
+          <li><span><kbd>P</kbd></span>Chiedi il pit stop</li>
+          <li><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></span>Gomme morbide / medie / dure (prima del via o ai box)</li>
+        </ul>
+      </article>
+
+      <article class="modes-card control-card">
+        <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">🎮</span><div><h3>Pad PlayStation</h3><p>DualShock 4 o DualSense, via USB o Bluetooth.</p></div></header>
+        <div class="pad-face" aria-hidden="true">
+          <span class="pad-btn pad-tri">△</span><span class="pad-btn pad-sq">□</span><span class="pad-btn pad-ci">○</span><span class="pad-btn pad-x">✕</span>
+        </div>
+        <ul class="bind-list">
+          <li><span><kbd>R2</kbd></span>Accelera</li>
+          <li><span><kbd>L2</kbd></span>Frena / retromarcia</li>
+          <li><span><kbd>L</kbd></span>Levetta sinistra: sterza</li>
+          <li><span><kbd class="pad-x">✕</kbd></span>Accendi il motore prima del via</li>
+          <li><span><kbd class="pad-tri">△</kbd></span>Cambia visuale</li>
+          <li><span><kbd class="pad-sq">□</kbd></span>Chiedi il pit stop</li>
+          <li><span><kbd>R1</kbd></span>ERS on/off</li>
+        </ul>
+        <p class="modes-note"><strong>Non risponde?</strong> Il browser vede il pad solo dopo che hai premuto un tasto a pagina aperta. Le gomme si scelgono da tastiera. Funzionano anche altri pad “standard”, ad esempio Xbox.</p>
+      </article>
+
+      <article class="modes-card control-card">
+        <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">📱</span><div><h3>Telefono</h3><p>In orizzontale, a due pollici.</p></div></header>
+        <div class="phone-sketch" aria-hidden="true">
+          <span class="phone-wheel">◎</span>
+          <span class="phone-pedals"><i>FRENO</i><i class="phone-gas">GAS</i></span>
+        </div>
+        <ul class="bind-list">
+          <li><span><kbd>◎</kbd></span>Volante: tieni premuto e trascina</li>
+          <li><span><kbd>GAS</kbd></span>Tieni premuto; puoi tenere anche il freno</li>
+          <li><span><kbd>📐</kbd></span>“Attiva movimento”: sterzi inclinando il telefono. “Centra” fissa il dritto; il menu regola la sensibilità</li>
+        </ul>
+        <p class="modes-note"><strong>iPhone a schermo intero:</strong> Condividi → “Aggiungi alla schermata Home” e apri dall'icona. Lo sterzo a movimento chiede un permesso; se lo neghi resta il volante.</p>
+      </article>
+    </div>
   </section>
 
   <footer>
     <a href="./">← F1 Racer</a>
   </footer>
+
+  <script>
+    // Copy buttons on command blocks (#123).
+    document.querySelectorAll(".modes-code").forEach((pre) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "modes-copy";
+      button.textContent = "Copia";
+      button.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(pre.querySelector("code").innerText.trim());
+          button.textContent = "Copiato";
+        } catch {
+          button.textContent = "Seleziona e copia";
+        }
+        setTimeout(() => { button.textContent = "Copia"; }, 1600);
+      });
+      pre.appendChild(button);
+    });
+  </script>
 </body>
 </html>

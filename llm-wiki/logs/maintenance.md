@@ -1029,3 +1029,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Linked from the home command center as a full-width strip; `style.css` bumped on all pages (index/modes `v=43`, garage `v=28`, race `v=45`, room `v=41`).
 - Known gap: tyre compound has no pad button (keyboard 1/2/3 only).
 - Verified with `git diff --check` and an HTML parse only.
+
+## 2026-09-26 — Game modes guide redesign, "?" entry (#123)
+
+- `modes.html` rewritten: game types first (three picker tiles with players/requirements/voice, then step-by-step cards with numbered rail and copy buttons on commands), controls second (keyboard cluster, PS face buttons, phone sketch, binding lists).
+- Pad ✕ described as "start the engine" (it only fires the pre-start engine gate in `main.js`), not a generic start.
+- Home: the full-width guide strip is gone; a small round "?" (`.home-help`) sits in the hero corner. `style.css` bumped on all pages (index/modes `v=44`, garage `v=29`, race `v=46`, room `v=42`); `modes.css?v=2`.
+- Verified with `git diff --check`, HTML parse and `node --check` of the inline copy script.
