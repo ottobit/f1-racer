@@ -1174,3 +1174,22 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Verified with `node --check`, `git diff --check`, `npm run
   validate:circuits` and a Node simulation of the autopilot on every
   circuit; no browser test.
+
+## 2026-09-26 — Five-lap races, tyre wear for all, pit scenery rework (#149)
+
+- `circuits.js` (v39): `LAPS_PER_RACE` 3 → 5; new `TYRE_LIFE_LAPS = 3`, so
+  wear no longer scales with race length and a car that never boxes runs
+  laps 4-5 on dead tyres. `agent-api.js` (v2) reports wear against it.
+- `main.js` (v77): `tyreSpeedFactor` cuts top speed by up to 5% at full
+  wear (× compound wear rate), applied in `player-physics.js` (v7) and
+  `race-ai.js` (v29) — about 1 s a lap, for player and AI alike.
+- `track-art.js` (v41): pit lane asphalt stops past the kerb toe (wedge
+  ramps, UVs, road material); pit wall and a garage row are single meshes
+  swept along the lane curve; the old straight pit building at the start
+  is dropped when a pit lane exists; palms keep 6 units off the lane.
+- `pit-crew.js` (v2): capsule-built mechanics (legs, torso, arms, visor
+  helmet, wheel guns, jacks) that walk, turn and crouch.
+- Open: at ~1 s/lap the wear malus still does not repay a 7-12 s stop;
+  raise the malus or shorten the stop. Verified with `node --check`,
+  `git diff --check` and `npm run validate:circuits` (new garage clearance
+  check); no browser test.
