@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { buildCar, createStudioEnvironment } from '../shared/car-model.js?v=30';
-import { createFrameLimiter } from '../shared/graphics-profiles.js?v=2';
+import { createFrameLimiter } from '../shared/graphics-profiles.js?v=3';
 
 const SHOWROOM_VIEWS={
   hero:[.72,.34,10.4],

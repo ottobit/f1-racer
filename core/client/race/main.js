@@ -29,7 +29,7 @@ import { setupPitCrew } from "./pit-crew.js?v=2";
 import { gearInfo, setupRaceAudio } from "./race-audio.js?v=3";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
-import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=2";
+import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=3";
 import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=1";
 import {
   sampleCenterline,

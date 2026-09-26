@@ -19,7 +19,7 @@ export const GRAPHICS_PROFILES = {
   low: {
     label: "Basso",
     dprCap: 1,
-    antialias: false,
+    antialias: true,
     shadowsEnabled: false,
     shadowMapSize: 512,
     rainParticleMultiplier: 0.35,
