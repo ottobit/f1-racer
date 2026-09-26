@@ -20,7 +20,8 @@ import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=2";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=7";
+import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=1";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=8";
 
 import { steeringYaw } from "./steering.js?v=4";
 import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=41";
@@ -898,7 +899,7 @@ const humanInputListeners = [];
 const { input, steering, updateSteeringInput, setExternalSteer } = setupRaceInput({
   onHumanInput: () => humanInputListeners.forEach((fn) => fn()),
 });
-setupRaceCommands({
+const raceCommands = setupRaceCommands({
   state,
   tyreCompounds: TYRE_COMPOUNDS,
   getRaceState: () => raceState,
@@ -1517,10 +1518,14 @@ function update(dt) {
 // the player fires the engine up (any key or tap). ?agent=1 skips the gate:
 // an external agent has no gesture to give and doesn't need sound.
 const isAgentSession = new URLSearchParams(location.search).get("agent") === "1";
+// Room bot (#7): ?driver=autopilot or ?driver=layered drives the car with
+// no human at the page, so it skips the engine gate like ?agent=1.
+const driverMode = new URLSearchParams(location.search).get("driver");
+const isBotSession = isAgentSession || driverMode === "autopilot" || driverMode === "layered";
 const engineGateEl = document.getElementById("engine-gate");
 const ENGINE_FIREUP_MS = 1200; // let the fire-up be heard before the lights
 let engineArmed = false;
-let engineReady = isAgentSession;
+let engineReady = isBotSession;
 const engineReadyQueue = [];
 
 function whenEngineReady(fn) {
@@ -1547,7 +1552,7 @@ function armEngine() {
   }, ENGINE_FIREUP_MS);
 }
 
-if (!isAgentSession) {
+if (!isBotSession) {
   engineGateEl.hidden = false;
   window.addEventListener("keydown", armEngine);
   window.addEventListener("pointerdown", armEngine);
@@ -1681,6 +1686,7 @@ function animate(now = performance.now()) {
   requestAnimationFrame(animate);
   if (!frameGate(now)) return;
   const dt = Math.min(clock.getDelta(), 0.1);
+  if (botDriver) driveWithProvider(botDriver, dt);
   updateSteeringInput(dt, Math.abs(state.speed) / CAR.maxSpeed);
   update(dt);
   updateExhaust(dt);
@@ -1692,8 +1698,58 @@ function animate(now = performance.now()) {
   diagnostics.update(dt);
 }
 
+// Radio messages (#7): the room bot's calls, shown to everyone in the room
+// as a short banner (its voice can't leave the container, see issue #7).
+const radioBannerEl = document.getElementById("radio-banner");
+let radioHideTimer = 0;
+function showRadio(from, text) {
+  radioBannerEl.textContent = `📻 ${from}: ${text}`;
+  radioBannerEl.hidden = false;
+  clearTimeout(radioHideTimer);
+  radioHideTimer = setTimeout(() => { radioBannerEl.hidden = true; }, 6000);
+}
+if (multiplayer) multiplayer.onRadio(showRadio);
+
+// Room bot driver (#7): the provider's inputs replace the human's, through
+// the same controls (no second physics path). The pit lane keeps its own
+// autopilot (#147); the provider only calls the stop and picks the tyre.
+let botErs = false;
+function driveWithProvider(provider, dt) {
+  const driving = sessionPhase === "race" ? raceState === "racing" : qualiState === "running";
+  if (!driving) return;
+  const out = provider.decide(state, dt);
+  if (out.radio) {
+    showRadio("Tu", out.radio);
+    if (multiplayer) multiplayer.sendRadio(out.radio);
+  }
+  if (state.pitState === "servicing" && out.tyre) raceCommands.setTyreCompound(out.tyre);
+  if (state.pitState !== "none") return;
+  setExternalSteer(out.steer);
+  input.forward = out.throttle > 0 && !(out.brake > 0);
+  input.back = out.brake > 0;
+  if (sessionPhase !== "race") return;
+  if (out.pit) state.pitRequested = true;
+  if (!!out.ers !== botErs) {
+    botErs = !!out.ers;
+    state.ersActive = botErs;
+  }
+}
+
+let botDriver = null;
+if (isBotSession && driverMode) {
+  const autopilot = createAutopilotProvider({
+    centerline,
+    headingOf,
+    sideNormal,
+    nearestTrackInfo,
+    maxSpeed: CAR.maxSpeed,
+  });
+  botDriver = driverMode === "layered" ? createLayeredProvider({ fast: autopilot }) : autopilot;
+}
+
 // Agent API (#176): opt-in only, via ?agent=1, so normal play is untouched.
-if (isAgentSession) {
+// A room bot (#7) gets it too, for getState().
+if (isBotSession) {
   const agentApi = setupAgentApi({
     state,
     aiCars,
@@ -1713,6 +1769,14 @@ if (isAgentSession) {
     getQualiState: () => qualiState,
   });
   humanInputListeners.push(agentApi.onHumanInput);
+  if (botDriver) {
+    window._DRIVER_ = {
+      mode: driverMode,
+      getState: window._ENVIRONMENT_.getState,
+      setStrategy: botDriver.setStrategy || (() => false),
+      getTargets: botDriver.getTargets || (() => null),
+    };
+  }
 }
 
 startQualifyingCountdown();

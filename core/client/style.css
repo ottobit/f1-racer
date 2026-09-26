@@ -221,6 +221,29 @@ html.race #app canvas {
   display: none;
 }
 
+/* Room bot radio calls (#7): same slot style, below the caution bar. */
+#radio-banner {
+  position: fixed;
+  top: 7rem;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  background: rgba(20, 24, 32, 0.88);
+  border: 1px solid #b2c8d566;
+  color: #eef4f8;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+}
+
+#radio-banner[hidden] {
+  display: none;
+}
+
 /* Braking map (#77): heading-up section of the next 300 m, wide and
    see-through at the bottom center, above the controls hint (#89). Touch
    layouts size it between the pedals (race-controls.css). */

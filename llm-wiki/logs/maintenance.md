@@ -1314,3 +1314,14 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `.gitignore`: root `node_modules/` and `package-lock.json` are ignored, since the root package has no dependencies.
 - README: install and start now run from `f1-racer/` (`npm install`, then `npm run start:room-server`).
 - Verification: clean copy of the tracked files. Root `npm install` installed `three` and `ws` into `core/node_modules`, and `npm run start:room-server` printed `listening on ws://localhost:8787`.
+
+## 2026-09-26 — Room bot: driver providers and radio banner (#7)
+
+- Preliminary test from the cloud sandbox, rooms GF7W and BQGN: the bot joins, reserves a driver, readies up and races as a normal participant, with no protocol change. Its WebRTC voice fails ("collegamento fallito"): the sandbox only has HTTPS egress through a proxy, with no UDP or STUN. The user picked on-screen radio messages and rejected running the bot on their PC.
+- New `core/client/race/driver-providers.js`. Every provider shares `decide(car, dt)`, so a single fast model can later replace both layers.
+  - `AutopilotProvider` uses the AI line from `race-ai.js`, turned into player inputs.
+  - `LayeredProvider` adds strategy targets (pace, line, ERS, tyre) and one-shot commands (pit, radio), validated field by field.
+- `main.js`: `?driver=autopilot|layered` skips the engine gate and enables the Agent API state. It drives through `setExternalSteer` and `input.forward/back`, and exposes `window._DRIVER_`. The pit lane keeps its own autopilot.
+- Radio: `race-multiplayer.js` sends `{kind:"radio"}` over the existing `voice_signal` relay, with no server change, and it shows in `#radio-banner` (`style.css`).
+- New `core/tools/room-bot.mjs` (Playwright): it reads `strategy.json` and writes `state.json`. Behind the sandbox proxy it relays the WebSocket locally, because Chromium's handshake returned 426, and serves three.js from `core/node_modules`, because jsdelivr is blocked.
+- Verification: `node --check`, plus a headless solo autopilot run that stayed on track in every sample (Vallechiara 20/20, Altomare 15/15). Version chain: style v52, race-multiplayer v8, main v93, race-bootstrap v54. Multiplayer play with the user is still pending.

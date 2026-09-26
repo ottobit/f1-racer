@@ -93,6 +93,22 @@ export function setupMultiplayer() {
 
     get isHost() { return latestRoom.hostParticipantId === client.participantId; },
 
+    // Radio messages (#7): short text from the room bot, relayed peer by
+    // peer over the existing voice_signal channel (the server forwards it
+    // untouched, so no protocol change); voice-chat.js ignores the kind.
+    sendRadio(text) {
+      for (const p of latestRoom.participants) {
+        if (p.participantId !== client.participantId) client.sendVoiceSignal(p.participantId, { kind: "radio", text });
+      }
+    },
+    onRadio(cb) {
+      client.onVoiceSignal((from, data) => {
+        if (data?.kind !== "radio" || typeof data.text !== "string") return;
+        const sender = latestRoom.participants.find((p) => p.participantId === from);
+        cb(sender?.nickname || "Radio", data.text.slice(0, 80));
+      });
+    },
+
     // Shared results (#113): every room update, after this is set.
     onRoomUpdate(cb) {
       client.onStateChange((room) => { if (room) cb(room); });
