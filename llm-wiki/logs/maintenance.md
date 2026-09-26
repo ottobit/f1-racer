@@ -1306,3 +1306,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `car-model.js`: gloves and thumb now use the livery's secondary colour (`stripe`, role `secondary`) instead of `black`, on every car, detailed or not. Team colours are kept, and the gloves stand out against the carbon wheel.
 - Version chain: car-model v32, race-car-view v34, main v92, race-bootstrap v53, showroom v37, garage v49.
 - Verification: `node --check` and `git diff --check` only.
+
+## 2026-09-26 — Root package.json for the room server (#177)
+
+- On the user's Windows PC, `npm --prefix core run start:room-server` failed from the repo root with no root `package.json`. Here (npm 10.9.7) it works, so the cause is local; the shortcut makes both work.
+- New root `package.json`: `postinstall` runs `npm --prefix core install`, and `start:room-server` / `validate:circuits` delegate to `core/`. The static site does not read it.
+- `.gitignore`: root `node_modules/` and `package-lock.json` are ignored, since the root package has no dependencies.
+- README: install and start now run from `f1-racer/` (`npm install`, then `npm run start:room-server`).
+- Verification: clean copy of the tracked files. Root `npm install` installed `three` and `ws` into `core/node_modules`, and `npm run start:room-server` printed `listening on ws://localhost:8787`.
