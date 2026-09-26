@@ -1122,3 +1122,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Version chain bumped for race (`race-car-view`, `main`, `race-bootstrap`,
   `race.html`) and garage (`showroom`, `garage.js`, `garage.html`).
 - Verified with `node --check` and `git diff --check` only.
+
+## 2026-09-26 — Cockpit halo see-through (#143)
+
+- `race-camera.js` (v31): the cockpit copy keeps `halo`/`haloPillar`
+  (hidden in #141) with a cloned material at opacity 0.28, no depth write.
+  User preference: keep the realistic reference, just don't block the road.
+- Version chain: `main.js` v74 via `race-bootstrap` v35, `race.html`.
+- Verified with `node --check` and `git diff --check` only.
