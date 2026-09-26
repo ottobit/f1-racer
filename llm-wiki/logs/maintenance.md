@@ -1057,3 +1057,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `modes.html`/`modes.css?v=5`: removed the "Attiva movimento" phone button, its row and the iPhone permission note — the motion panel has been hidden in `race.html` since #83, so the guide described a control players cannot reach.
 - The tilt code in `race-input.js` is untouched (still dead code behind the hidden panel).
 - Verified with `git diff --check` and a grep for leftover "movimento"/"motion" in the guide, room page and README.
+
+## 2026-09-26 — Phone camera and ERS buttons (#131)
+
+- `race.html`: new `#touch-actions` bar (VISUALE, ERS), top center, shown only on `html.touch`.
+- `race-input.js`: the buttons replay `KeyC`/`KeyE` keydown events, same path as the pad, so camera and ERS logic is untouched.
+- `race-controls.css`: small 36px buttons under the start lights' z-index; pit stop deliberately left off the phone (accidental taps).
+- `modes.html`: phone card lists the two new buttons. Versions: race-controls.css v46, race-input v43, main v69, race-bootstrap v30.
+- Verified with `node --check` and `git diff --check` only; to be tested on the phone.
