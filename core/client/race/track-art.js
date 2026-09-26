@@ -192,7 +192,7 @@ export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points
     for(let i=0;i<N;i+=30){
       const p=points[i],n=normal(p),r=Math.atan2(p.tx,p.tz),side=i%60===0?1:-1;
       const d=half+7.5,x=p.x+n.x*d*side,z=p.z+n.z*d*side;
-      if(pitClear(x,z,2)){trunks.push({p:[x,2.6,z],s:[.28,5.2,.28]});crowns.push({p:[x,5.5,z],s:[2.6,.75,2.6],r:i});}
+      if(pitClear(x,z,6)){trunks.push({p:[x,2.6,z],s:[.28,5.2,.28]});crowns.push({p:[x,5.5,z],s:[2.6,.75,2.6],r:i});}
       poles.push({p:[p.x-n.x*(half+5.7),3.1,p.z-n.z*(half+5.7)],s:[.16,6.2,.16]});
       const next=points[(i+30)%N],nn=normal(next);
       wirePositions.push(p.x-n.x*(half+5.7),6.05,p.z-n.z*(half+5.7),next.x-nn.x*(half+5.7),6.05,next.z-nn.z*(half+5.7));
@@ -257,7 +257,7 @@ export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points
     box(9,.25,28,5.4,dark);
     for(const dx of [-4,4])for(const dz of [-13,13])box(.15,1.2,.15,4.8,silver,dx,dz);
   }
-  structure(0,1);structure(Math.floor(N*.38),-1);
+  if(!pitLane)structure(0,1);structure(Math.floor(N*.38),-1);
   // Start gantry and braking boards are visual only, never collision objects.
   const p=points[0],n=normal(p),heading=Math.atan2(p.tx,p.tz),gantry=new THREE.Group();gantry.position.set(p.x,0,p.z);gantry.rotation.y=heading;scene.add(gantry);
   const gantryMat=material(0x243645,.5);
@@ -269,43 +269,74 @@ export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points
 // Pit lane (#147): asphalt, lane lines, a pit wall along the flat stretch,
 // the painted service box and its garage canopy.
 export function dressPitLane(scene,lane,renderer,wet){
-  const path=lane.path,w=PIT_LANE.halfWidth,side=lane.side;
+  const path=lane.path,w=PIT_LANE.halfWidth,side=lane.side,half=lane.half;
   const across=(p,d)=>({x:p.x+Math.cos(p.heading)*d*side,z:p.z-Math.sin(p.heading)*d*side});
   const flat=path.filter(p=>p.flat);
+  // The lane asphalt never reaches over the kerb or the track: its inner
+  // edge stops just past the kerb toe, so on the ramps it opens as a wedge
+  // from the runoff instead of a grey patch laid across the circuit.
+  const innerEdge=p=>Math.max(-w,half+1-p.d);
   function strip(points,from,to,y,mat){
-    const V=[],I=[];
-    points.forEach((p,k)=>{const a=across(p,from),b=across(p,to);V.push(a.x,y,a.z,b.x,y,b.z);
-      if(k>0){const i=k*2;I.push(i-2,i-1,i,i-1,i+1,i);}});
-    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(V,3));g.setIndex(I);g.computeVertexNormals();
+    const V=[],U=[],I=[];let k=0;
+    for(const p of points){const f=from(p),t=to(p);if(t-f<.02&&k===0)continue;
+      const a=across(p,f),b=across(p,Math.max(f,t));V.push(a.x,y,a.z,b.x,y,b.z);
+      U.push((p.d+f)/(2*half),p.dist/12,(p.d+t)/(2*half),p.dist/12);
+      if(k>0){const i=k*2;I.push(i-2,i-1,i,i-1,i+1,i);}k++;}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(V,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);g.computeVertexNormals();
     const m=new THREE.Mesh(g,mat);m.receiveShadow=true;scene.add(m);return m;
   }
-  const asphalt=new THREE.MeshStandardMaterial({color:0x8a8c90,map:surfaceTexture('asphalt',renderer),roughness:wet?.35:.9,metalness:wet?.2:.03,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
-  strip(path,-w,w,.014,asphalt);
-  const white=new THREE.MeshStandardMaterial({color:0xebe7d9,roughness:.8,side:THREE.DoubleSide});
-  for(const d of [-(w-.2),w-.2])strip(flat,d-.07,d+.07,.024,white);
+  // A solid band swept along the lane (cross-section from..to, y0..y1):
+  // one seamless mesh, so curved walls and roofs have no gaps or steps.
+  function sweep(points,from,to,y0,y1,mat,cast=true){
+    const V=[],I=[],corners=[[from,y0],[from,y1],[to,y1],[to,y0]];
+    for(let f=0;f<4;f++){const c0=corners[f],c1=corners[(f+1)%4],base=V.length/3;
+      points.forEach((p,k)=>{const a=across(p,c0[0]),b=across(p,c1[0]);V.push(a.x,c0[1],a.z,b.x,c1[1],b.z);
+        if(k>0){const i=base+k*2;I.push(i-2,i-1,i,i-1,i+1,i);}});}
+    for(const p of [points[0],points[points.length-1]]){const base=V.length/3;
+      for(const [d,y] of corners){const a=across(p,d);V.push(a.x,y,a.z);}I.push(base,base+1,base+2,base,base+2,base+3);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(V,3));g.setIndex(I);g.computeVertexNormals();
+    const m=new THREE.Mesh(g,mat);m.castShadow=cast;m.receiveShadow=true;scene.add(m);return m;
+  }
+  const asphalt=new THREE.MeshStandardMaterial({color:0x999b9e,map:surfaceTexture('asphalt',renderer),roughness:wet?.32:.91,metalness:wet?.25:.03,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  strip(path,innerEdge,()=>w,.018,asphalt);
+  const white=new THREE.MeshStandardMaterial({color:0xebe7d9,roughness:.8,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3});
+  // Both edge lines collapse to nothing where the ramp wedge is too narrow,
+  // so no paint lands on the kerb.
+  strip(path,p=>innerEdge(p)+.15,p=>Math.min(innerEdge(p)+.29,w-.3),.026,white);
+  strip(path,p=>Math.max(w-.3,innerEdge(p)+.3),()=>w-.16,.026,white);
+  const wallMat=new THREE.MeshStandardMaterial({color:0xd9dcd8,roughness:.7,side:THREE.DoubleSide});
+  const trim=new THREE.MeshStandardMaterial({color:0xc64037,roughness:.6,side:THREE.DoubleSide});
   // Pit wall between the track and the lane, on the flat stretch only.
-  const wallMat=new THREE.MeshStandardMaterial({color:0xd9dcd8,roughness:.7}),temp=new THREE.Object3D();
-  const segments=flat.slice(1);
-  const wall=new THREE.InstancedMesh(new THREE.BoxGeometry(.3,.95,1),wallMat,segments.length);
-  segments.forEach((p,k)=>{const q=flat[k],a=across(p,-(w+.7)),b=across(q,-(w+.7));
-    temp.position.set((a.x+b.x)/2,.475,(a.z+b.z)/2);temp.rotation.set(0,Math.atan2(a.x-b.x,a.z-b.z),0);
-    temp.scale.set(1,1,Math.hypot(a.x-b.x,a.z-b.z)+.05);temp.updateMatrix();wall.setMatrixAt(k,temp.matrix);});
-  wall.castShadow=true;wall.receiveShadow=true;scene.add(wall);
-  // Service box: yellow frame and a garage canopy on the outer side.
+  sweep(flat,-(w+.85),-(w+.55),0,.9,wallMat);sweep(flat,-(w+.88),-(w+.52),.9,1.02,trim);
+  // Garage row along the whole flat stretch, following the lane's curve:
+  // floor, back wall, roof and a fascia, with pillars between the bays.
+  const concrete=new THREE.MeshStandardMaterial({color:0x7d8285,roughness:.95,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  const panel=new THREE.MeshStandardMaterial({color:0x1d2c3a,roughness:.6,side:THREE.DoubleSide});
+  const steel=new THREE.MeshStandardMaterial({color:0xaab4b9,roughness:.5,side:THREE.DoubleSide});
+  const inside=new THREE.MeshStandardMaterial({color:0x3a4650,roughness:.8,side:THREE.DoubleSide});
+  const depth=w+5;
+  strip(flat,()=>w,()=>depth,.02,concrete);
+  sweep(flat,depth,depth+.3,0,3.4,inside);
+  sweep(flat,w+.1,depth+.3,3.4,3.7,steel);
+  sweep(flat,w+.1,w+.25,2.7,3.4,panel);
+  for(const p of [flat[0],flat[flat.length-1]])sweep([p,path[Math.min(path.length-1,path.indexOf(p)+1)]],w+.1,depth+.3,0,3.4,panel);
+  const pillarGeo=new THREE.BoxGeometry(.22,2.7,.22),temp=new THREE.Object3D(),pillars=[];
+  for(let d=flat[0].dist;d<=flat[flat.length-1].dist;d+=5)pillars.push(d);
+  const pillarMesh=new THREE.InstancedMesh(pillarGeo,steel,pillars.length);
+  pillars.forEach((d,k)=>{const p=flat.reduce((a,b)=>Math.abs(b.dist-d)<Math.abs(a.dist-d)?b:a),q=across(p,w+.2);
+    temp.position.set(q.x,1.35,q.z);temp.rotation.set(0,p.heading,0);temp.updateMatrix();pillarMesh.setMatrixAt(k,temp.matrix);});
+  pillarMesh.castShadow=true;scene.add(pillarMesh);
+  // Service box: yellow frame on the lane and the team sign on the fascia.
   const box=path[lane.boxIndex],group=new THREE.Group();
   group.position.set(box.x,0,box.z);group.rotation.y=box.heading;scene.add(group);
-  const yellow=new THREE.MeshStandardMaterial({color:0xf2c230,roughness:.7});
-  for(const [x,z,sx,sz] of [[-1.3,0,.14,5.6],[1.3,0,.14,5.6],[0,2.8,2.74,.14],[0,-2.8,2.74,.14]]){
-    const m=new THREE.Mesh(new THREE.BoxGeometry(sx,.02,sz),yellow);m.position.set(x,.03,z);group.add(m);
-  }
-  const panel=new THREE.MeshStandardMaterial({color:0x1d2c3a,roughness:.6}),steel=new THREE.MeshStandardMaterial({color:0xaab4b9,roughness:.5});
   const out=side; // group local +x points along across(), away from the track
-  const wallBack=new THREE.Mesh(new THREE.BoxGeometry(.25,3.2,7.5),panel);wallBack.position.set(out*(w+3.4),1.6,0);group.add(wallBack);
-  const roof=new THREE.Mesh(new THREE.BoxGeometry(3.8,.2,7.5),steel);roof.position.set(out*(w+1.6),3.25,0);group.add(roof);
-  for(const z of [-3.6,3.6]){const post=new THREE.Mesh(new THREE.BoxGeometry(.15,3.2,.15),steel);post.position.set(out*(w-.1),1.6,z);group.add(post);}
+  const yellow=new THREE.MeshStandardMaterial({color:0xf2c230,roughness:.7,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
+  for(const [x,z,sx,sz] of [[-1.3,0,.14,5.6],[1.3,0,.14,5.6],[0,2.8,2.74,.14],[0,-2.8,2.74,.14]]){
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(sx,sz),yellow);m.rotation.x=-Math.PI/2;m.position.set(x,.03,z);group.add(m);
+  }
   const c=document.createElement('canvas');c.width=256;c.height=64;const ctx=c.getContext('2d');ctx.fillStyle='#f2c230';ctx.fillRect(0,0,256,64);ctx.fillStyle='#14202b';ctx.font='bold 44px sans-serif';ctx.textAlign='center';ctx.fillText('BOX',128,48);
   const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
-  const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.4,.6),new THREE.MeshBasicMaterial({map:tex}));sign.position.set(out*(w+3.26),2.6,0);sign.rotation.y=-out*Math.PI/2;group.add(sign);
-  for(const m of [wallBack,roof]){m.castShadow=true;m.receiveShadow=true;}
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.4,.6),new THREE.MeshBasicMaterial({map:tex}));sign.position.set(out*(w+.05),3.05,0);sign.rotation.y=-out*Math.PI/2;group.add(sign);
+  const lamp=new THREE.Mesh(new THREE.PlaneGeometry(4.4,.12),new THREE.MeshBasicMaterial({color:0xfff4d6}));lamp.position.set(out*(w+2.5),3.38,0);lamp.rotation.x=Math.PI/2;group.add(lamp);
   return group;
 }

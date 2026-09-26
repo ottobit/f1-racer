@@ -23,9 +23,9 @@ import { setupAgentApi } from "./agent-api.js?v=2";
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=7";
 
 import { steeringYaw } from "./steering.js?v=1";
-import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=40";
+import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=41";
 import { buildPitLane } from "../shared/pit-lane.js?v=1";
-import { setupPitCrew } from "./pit-crew.js?v=1";
+import { setupPitCrew } from "./pit-crew.js?v=2";
 import { gearInfo, setupRaceAudio } from "./race-audio.js?v=3";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
