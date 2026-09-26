@@ -6,114 +6,24 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="assets/images/app-icon-180.png" />
   <meta name="theme-color" content="#05060a" />
-  <title>Come si gioca — F1 Racer</title>
+  <title>Comandi — F1 Racer</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>" />
-  <meta name="description" content="F1 Racer — come si gioca: singolo, multiplayer online con ngrok; tastiera, pad PlayStation, telefono." />
+  <meta name="description" content="F1 Racer — comandi: tastiera, pad PlayStation, telefono." />
   <link rel="stylesheet" href="assets/css/style.css" />
-  <link rel="stylesheet" href="core/client/style.css?v=44" />
-  <link rel="stylesheet" href="core/client/home/modes.css?v=3" />
+  <link rel="stylesheet" href="core/client/style.css?v=45" />
+  <link rel="stylesheet" href="core/client/home/modes.css?v=4" />
 </head>
 <body class="f1-home modes-page">
   <header class="modes-hero">
     <a class="modes-back" href="./">← F1 Racer</a>
     <p class="f1-home-kicker">GUIDA</p>
-    <h1 class="modes-title">Come si gioca</h1>
-    <p class="modes-lead">Prima scegli <em>con chi</em> correre, poi <em>con cosa</em> guidare.</p>
-    <nav class="modes-tabs" aria-label="Sezioni">
-      <a href="#tipi">Tipi di partita</a>
-      <a href="#controlli">Controlli</a>
-    </nav>
+    <h1 class="modes-title">Comandi</h1>
+    <p class="modes-lead">Tastiera, pad o telefono: tocca un tasto per sapere cosa fa.</p>
   </header>
 
-  <!-- 01 · Game types -->
-  <section id="tipi" class="f1-home-section modes-block">
-    <div class="f1-home-section-head"><span>01</span><div><h2>Tipi di partita</h2><p>Da solo o con gli amici. Tocca una scheda per le istruzioni.</p></div></div>
-
-    <div class="mode-picker">
-      <a class="mode-tile" href="#singolo">
-        <span class="mode-tile-icon" aria-hidden="true">🏁</span>
-        <strong>Giocatore singolo</strong>
-        <span class="mode-tile-sub">Campionato contro 9 piloti IA</span>
-        <dl class="mode-facts">
-          <div><dt>Giocatori</dt><dd>1</dd></div>
-          <div><dt>Serve</dt><dd>Solo il browser</dd></div>
-          <div><dt>Voce</dt><dd>—</dd></div>
-        </dl>
-        <span class="mode-tile-cta">Istruzioni ↓</span>
-      </a>
-      <a class="mode-tile mode-tile--hot" href="#ngrok">
-        <span class="mode-badge">Consigliato</span>
-        <span class="mode-tile-icon" aria-hidden="true">🌍</span>
-        <strong>Multiplayer online</strong>
-        <span class="mode-tile-sub">Con gli amici, in casa o da lontano, tramite ngrok</span>
-        <dl class="mode-facts">
-          <div><dt>Giocatori</dt><dd>2 – 10</dd></div>
-          <div><dt>Serve</dt><dd>Un PC host con Node.js e ngrok</dd></div>
-          <div><dt>Voce</dt><dd>Sì</dd></div>
-        </dl>
-        <span class="mode-tile-cta">Istruzioni ↓</span>
-      </a>
-    </div>
-
-    <article id="singolo" class="modes-card">
-      <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">🏁</span><div><h3>Giocatore singolo</h3><p>Nient'altro che il browser: apri il gioco e corri.</p></div></header>
-      <ol class="modes-steps">
-        <li><strong>Difficoltà e pilota.</strong> Nella home scegli quanto vanno forte gli avversari e chi vuoi essere.</li>
-        <li><strong>Garage (facoltativo).</strong> Nel <a href="garage.html">garage</a> regoli livrea, aerodinamica, freni e sospensioni.</li>
-        <li><strong>Qualifica.</strong> Scegli il circuito: il giro di qualifica decide la tua posizione in griglia.</li>
-        <li><strong>Gara.</strong> 3 giri contro 9 rivali. I punti vanno in classifica, salvata in questo browser (si azzera dalla home).</li>
-      </ol>
-    </article>
-
-    <article id="ngrok" class="modes-card modes-card--hot">
-      <header class="modes-card-head"><span class="modes-card-icon" aria-hidden="true">🌍</span><div><h3>Multiplayer online con ngrok</h3><p>Fino a 10 persone, ognuna dal suo dispositivo. Solo piloti umani, niente IA, e chat vocale in gara.</p></div></header>
-
-      <div class="modes-explain">
-        <p><strong>Come funziona.</strong> Il gioco non ha un server sempre acceso. Uno di voi, <em>l'host</em>, avvia sul suo computer un piccolo server delle stanze; <a href="https://ngrok.com/" rel="noopener">ngrok</a> lo rende raggiungibile da internet con un indirizzo sicuro <code>https://</code>. Gli altri non installano niente.</p>
-        <div class="modes-flow" aria-hidden="true">
-          <span>📱 Amici</span><i>→</i><span>ngrok <small>https</small></span><i>→</i><span>💻 PC host <small>porta 8787</small></span>
-        </div>
-      </div>
-
-      <h4>Preparazione (una volta sola, sul PC dell'host)</h4>
-      <ol class="modes-steps">
-        <li>Installa <a href="https://nodejs.org/" rel="noopener">Node.js</a> e <a href="https://ngrok.com/download" rel="noopener">ngrok</a>. Per ngrok serve un account gratuito: segui le sue istruzioni per collegare il token.</li>
-        <li>Scarica il progetto e installa il server:
-          <pre class="modes-code"><code>git clone https://github.com/ottobit/f1-racer.git
-cd f1-racer/core
-npm install</code></pre></li>
-      </ol>
-
-      <h4>Ogni volta che giocate</h4>
-      <ol class="modes-steps">
-        <li><strong>Avvia il server</strong> dalla cartella <code>core</code> e lascia il terminale aperto:
-          <pre class="modes-code"><code>npm run start:room-server</code></pre>
-          Deve comparire <code>listening on ws://localhost:8787</code>.</li>
-        <li><strong>Apri il tunnel</strong> in un <em>secondo</em> terminale:
-          <pre class="modes-code"><code>ngrok http 8787</code></pre>
-          Copia l'indirizzo che stampa, tipo <code>https://abcd-1234.ngrok-free.app</code>.</li>
-        <li><strong>Apri la stanza</strong> aggiungendo quell'indirizzo in fondo al link:
-          <pre class="modes-code"><code>https://ottobit.github.io/f1-racer/room.html?roomServer=https://abcd-1234.ngrok-free.app</code></pre></li>
-        <li><strong>Invita.</strong> Scrivi il nome, tocca <em>Crea una stanza</em> e manda agli amici il link di invito: contiene già codice e server, devono solo aprirlo.</li>
-        <li><strong>Prepara la griglia.</strong> Ognuno sceglie un pilota libero e si mette “pronto”. L'host sceglie circuito, difficoltà e se fare la qualifica (senza, la griglia è casuale), poi avvia.</li>
-        <li><strong>Via!</strong> Prima del via ognuno tocca lo schermo per accendere il motore: in quel momento il browser chiede il microfono. Se lo neghi, senti gli altri ma loro non sentono te.</li>
-        <li><strong>Fine gara.</strong> Classifica uguale per tutti; l'host può lanciare la rivincita.</li>
-      </ol>
-
-      <ul class="modes-tips">
-        <li><b>💻</b> Il PC dell'host resta acceso con <em>entrambi</em> i terminali aperti. Se lo chiudi, le stanze spariscono.</li>
-        <li><b>🔗</b> Con ngrok gratuito l'indirizzo cambia a ogni avvio: ogni volta serve un nuovo link di invito.</li>
-        <li><b>⚠️</b> Se la pagina dice “il server della stanza è locale”, manca <code>?roomServer=…</code> nel link.</li>
-        <li><b>⏱️</b> Chi perde la connessione ha 30 secondi per rientrare con lo stesso pilota.</li>
-        <li><b>🎙️</b> La voce passa direttamente tra i dispositivi. Su reti molto chiuse (aziendali, alcuni 4G) può non collegarsi, ma la gara funziona lo stesso.</li>
-      </ul>
-    </article>
-
-  </section>
-
-  <!-- 02 · Controls -->
+  <!-- Controls -->
   <section id="controlli" class="f1-home-section modes-block">
-    <div class="f1-home-section-head"><span>02</span><div><h2>Controlli</h2><p>Puoi mescolarli: il gioco li legge tutti insieme.</p></div></div>
+    <div class="f1-home-section-head"><span>01</span><div><h2>Controlli</h2><p>Puoi mescolarli: il gioco li legge tutti insieme.</p></div></div>
 
     <div class="controls-grid">
       <article class="modes-card control-card" data-controls>
@@ -192,29 +102,21 @@ npm install</code></pre></li>
     </div>
   </section>
 
+  <section class="f1-home-section modes-block">
+    <div class="f1-home-section-head"><span>02</span><div><h2>Con gli amici</h2><p>Stessi comandi, in una stanza multiplayer.</p></div></div>
+    <a class="modes-friends" href="room.html">
+      <span class="modes-card-icon" aria-hidden="true">🏁</span>
+      <span><strong>Hai ricevuto un link di invito?</strong> Aprilo e sei già nella stanza: scegli un pilota libero, mettiti pronto e aspetta il via dell'host. Il “?” nella stanza spiega il resto.</span>
+      <span class="modes-friends-arrow" aria-hidden="true">→</span>
+    </a>
+    <p class="modes-note">Vuoi ospitare tu la stanza? Serve avviare un piccolo server sul tuo computer: istruzioni nel <a href="https://github.com/ottobit/f1-racer#multiplayer-avviare-il-server-delle-stanze" rel="noopener">README del progetto</a>.</p>
+  </section>
+
   <footer>
     <a href="./">← F1 Racer</a>
   </footer>
 
   <script>
-    // Copy buttons on command blocks (#123).
-    document.querySelectorAll(".modes-code").forEach((pre) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "modes-copy";
-      button.textContent = "Copia";
-      button.addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText(pre.querySelector("code").innerText.trim());
-          button.textContent = "Copiato";
-        } catch {
-          button.textContent = "Seleziona e copia";
-        }
-        setTimeout(() => { button.textContent = "Copia"; }, 1600);
-      });
-      pre.appendChild(button);
-    });
-
     // Tap a drawn key/button: light it and its explanation rows (#125).
     document.querySelectorAll("[data-controls]").forEach((card) => {
       const light = (bind) => {

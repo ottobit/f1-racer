@@ -1043,3 +1043,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Keyboard rows no longer wrap a parenthesis onto its own line: explanations are plain sentences in their own `<p>` cell, keys in a fixed 6.4rem column.
 - Drawn controls (keyboard keys, pad shoulders/stick/face buttons, phone wheel/pedals/motion) are buttons: a tap lights the key and its explanation row (`data-bind`, inline script); tapping a row lights it too. `modes.css?v=3`.
 - Verified with `git diff --check`, HTML parse, `node --check` of the inline script and a check that every `data-bind` has both a drawn key and a row.
+
+## 2026-09-26 — Multiplayer setup to README, guide is controls-only, room "?" (#127)
+
+- User's call: hosting (Node, room server, ngrok) is infrastructure, so it moved to `README.md` ("Multiplayer: avviare il server delle stanze"); README structure block also updated to the `core/` layout.
+- `modes.html` is now "Comandi": interactive controls plus a short "Con gli amici" box pointing to `room.html` and the README; game-type tiles, step cards and copy script removed (`modes.css?v=4`, unused rules pruned).
+- `room.html`: `<details>` "?" in the hero corner (reuses `.home-help`) with a 5-step how-to for invited players and links to controls/README. No JS.
+- `style.css` bumped on all pages (index/modes `v=45`, garage `v=30`, race `v=47`, room `v=43`).
+- Verified with `git diff --check`, HTML parse and `node --check` of the inline script.
