@@ -46,9 +46,11 @@ function startRelay(target) {
   const ca = process.env.NODE_EXTRA_CA_CERTS ? fs.readFileSync(process.env.NODE_EXTRA_CA_CERTS) : undefined;
   const tunnel = () => new Promise((resolve, reject) => {
     const req = http.request({ host: proxy.hostname, port: proxy.port, method: "CONNECT", path: `${host}:443` });
-    req.on("connect", (res, sock) => res.statusCode === 200
-      ? resolve(tls.connect({ socket: sock, servername: host, ca, ALPNProtocols: ["http/1.1"] }))
-      : reject(new Error(`CONNECT ${res.statusCode}`)));
+    req.on("connect", (res, sock) => {
+      if (res.statusCode !== 200) return reject(new Error(`CONNECT ${res.statusCode}`));
+      sock.setNoDelay(true); // no Nagle batching of the ~12/s car_state frames (#186)
+      resolve(tls.connect({ socket: sock, servername: host, ca, ALPNProtocols: ["http/1.1"] }));
+    });
     req.on("error", reject);
     req.end();
   });
