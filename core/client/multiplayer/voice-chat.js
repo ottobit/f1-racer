@@ -26,6 +26,24 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
   // up after we started) gets a fresh hello (#95).
   const greeted = new Set();
   let ready = false; // mic question settled, hellos may go out
+  // Incoming level meter (#180): one analyser per peer, never routed to the
+  // speakers (the <audio> element already plays it).
+  let meterCtx = null;
+  let meterScratch = null;
+
+  function attachMeter(peer, stream) {
+    try {
+      meterCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+      if (meterCtx.state === "suspended") meterCtx.resume().catch(() => {});
+      const source = meterCtx.createMediaStreamSource(stream);
+      const analyser = meterCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      peer.meter = { source, analyser };
+    } catch (err) {
+      console.warn("[voice-chat] no level meter", err);
+    }
+  }
 
   function greetNewPeers(room) {
     const present = new Set(otherIds(room));
@@ -70,6 +88,7 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
     const peer = peers.get(id);
     if (!peer) return;
     peers.delete(id);
+    if (peer.meter) peer.meter.source.disconnect();
     peer.pc.close();
     peer.audio.srcObject = null;
     peer.audio.remove();
@@ -92,6 +111,7 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
     };
     pc.ontrack = (e) => {
       audio.srcObject = e.streams[0] || new MediaStream([e.track]);
+      if (!peer.meter) attachMeter(peer, audio.srcObject);
       audio.play().catch(() => {
         // Autoplay refused (no mic granted, so no capture exemption): retry
         // on the next tap or key.
@@ -222,6 +242,24 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
   }
 
   return {
+    // Fills `out` (Float32Array, 128 samples) with the loudest peer's
+    // waveform and returns its RMS level; 0 when nothing is coming in.
+    readWaveform(out) {
+      let best = 0;
+      for (const peer of peers.values()) {
+        if (!peer.meter || peer.pc.connectionState !== "connected") continue;
+        meterScratch ||= new Float32Array(peer.meter.analyser.fftSize);
+        peer.meter.analyser.getFloatTimeDomainData(meterScratch);
+        let sum = 0;
+        for (const v of meterScratch) sum += v * v;
+        const rms = Math.sqrt(sum / meterScratch.length);
+        if (rms > best) {
+          best = rms;
+          for (let i = 0; i < out.length; i++) out[i] = meterScratch[Math.floor((i * meterScratch.length) / out.length)];
+        }
+      }
+      return best;
+    },
     toggleMute() {
       muted = !muted;
       if (localTrack) localTrack.enabled = !muted;
@@ -242,25 +280,65 @@ function voiceDiagnosis({ connected, connecting, failed, expected, heardFromPeer
   return "in attesa";
 }
 
-// HUD toggle under the lap counter: shows how many peers are heard (or why
-// none are) and mutes/unmutes the local mic. Returns the onStatus callback
-// to wire in.
+// Connection outcome shown as the icon colour (#180).
+function voiceTone({ connected, connecting, failed, expected, heardFromPeer, serverUnsupported }) {
+  if (connected > 0) return "ok";
+  if (serverUnsupported || failed > 0) return "fail";
+  if (connecting > 0 || (expected > 0 && !heardFromPeer)) return "pending";
+  return "idle";
+}
+
+const RECEIVING_RMS = 0.015; // below this the line stays hidden (silence)
+const MIC_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" fill="none"/><path class="voice-toggle__slash" d="M4 4l16 16" fill="none"/></svg>`;
+
+// HUD icon under the lap counter: coloured by the connection outcome, with
+// a waveform line only while audio is actually coming in; a tap mutes or
+// unmutes the local mic. The text diagnosis (#93) lives in its label.
+// Returns the onStatus callback to wire in.
 export function mountVoiceToggle(container) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "voice-toggle";
-  button.textContent = "Voce…";
+  button.dataset.tone = "pending";
+  button.innerHTML = `${MIC_ICON}<canvas class="voice-toggle__wave" width="64" height="24"></canvas>`;
   button.setAttribute("aria-pressed", "false");
+  button.setAttribute("aria-label", "Voce: collego…");
   container.appendChild(button);
+  const canvas = button.querySelector("canvas");
+  const g = canvas.getContext("2d");
+  const wave = new Float32Array(64);
   let voice = null;
   button.addEventListener("click", () => voice && voice.toggleMute());
+
+  function drawWave() {
+    requestAnimationFrame(drawWave);
+    const level = voice ? voice.readWaveform(wave) : 0;
+    const receiving = level > RECEIVING_RMS;
+    button.classList.toggle("is-receiving", receiving);
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    if (!receiving) return;
+    const gain = Math.min(8, 0.35 / level);
+    g.beginPath();
+    for (let i = 0; i < wave.length; i++) {
+      const y = canvas.height / 2 - wave[i] * gain * (canvas.height / 2);
+      if (i === 0) g.moveTo(0, y);
+      else g.lineTo((i / (wave.length - 1)) * canvas.width, y);
+    }
+    g.strokeStyle = getComputedStyle(button).color;
+    g.lineWidth = 2;
+    g.stroke();
+  }
+  requestAnimationFrame(drawWave);
+
   return {
     attach(v) { voice = v; },
     onStatus(status) {
       const { muted, hasMic } = status;
-      const label = !hasMic ? "Solo ascolto" : muted ? "Muto" : "Voce";
-      button.textContent = `${hasMic && !muted ? "🎙" : "🔇"} ${label} · ${voiceDiagnosis(status)}`;
-      button.setAttribute("aria-pressed", String(muted));
+      const label = !hasMic ? "solo ascolto" : muted ? "muto" : "microfono attivo";
+      button.dataset.tone = voiceTone(status);
+      button.setAttribute("aria-label", `Voce: ${voiceDiagnosis(status)} · ${label}`);
+      button.title = button.getAttribute("aria-label");
+      button.setAttribute("aria-pressed", String(muted || !hasMic));
       button.disabled = !hasMic;
     },
   };
