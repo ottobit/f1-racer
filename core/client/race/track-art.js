@@ -1,5 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { offsetEdge } from '../shared/track-geometry.js?v=39';
+import { PIT_LANE, nearPitLane } from '../shared/pit-lane.js?v=1';
 
 function random(seed=17){return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
 export function surfaceTexture(kind,renderer){
@@ -122,8 +123,10 @@ function sweptRails(points,offset,railClear,mat){
 // `points` places scenery (its spacing is tuned per sample); `detail` is a
 // denser sampling of the same curve for the road-hugging strips, so tight
 // hairpins render smooth instead of faceted.
-export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points){
+export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points,pitLane=null){
   const half=width/2, N=points.length, D=detail.length;
+  // Scenery and rails keep off the pit lane (#147).
+  const pitClear=(x,z,margin)=>!pitLane||!nearPitLane(pitLane,x,z,margin);
   const coastal=theme==='marzamemi';
   const material=(color,roughness=.8)=>new THREE.MeshStandardMaterial({color,roughness});
   const kerbMaterial=kerbPaintMaterial(renderer);
@@ -167,7 +170,7 @@ export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points
       for(const side of [-1,1]){
         const wallDistance=half+4.8,x=p.x+n.x*wallDistance*side,z=p.z+n.z*wallDistance*side;
         const safe=points.every((q,j)=>Math.abs(j-i)<8||Math.abs(j-i)>N-8||Math.hypot(q.x-x,q.z-z)>half+2.4);
-        if(safe){
+        if(safe&&pitClear(x,z,1.5)){
           walls.push({p:[x,.48,z],r,s:[1,1,1]});
           if(i%36===0)gates.push({p:[x,.78,z],r});
         }
@@ -177,7 +180,7 @@ export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points
       const p=points[i],n=normal(p),r=Math.atan2(p.tx,p.tz),side=(Math.floor(i/24)%2?1:-1);
       const distance=half+12.5,x=p.x+n.x*distance*side,z=p.z+n.z*distance*side;
       const safe=points.every((q,j)=>Math.abs(j-i)<10||Math.abs(j-i)>N-10||Math.hypot(q.x-x,q.z-z)>half+7);
-      if(!safe||occupied.some(([ox,oz])=>Math.hypot(ox-x,oz-z)<13))continue;
+      if(!safe||!pitClear(x,z,6)||occupied.some(([ox,oz])=>Math.hypot(ox-x,oz-z)<13))continue;
       occupied.push([x,z]);
       const h=2.8+(i%48===0?1.2:0);
       (i%48===0?warmHomes:homes).push({p:[x,h/2,z],r,s:[7.5,h,6]});
@@ -189,7 +192,7 @@ export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points
     for(let i=0;i<N;i+=30){
       const p=points[i],n=normal(p),r=Math.atan2(p.tx,p.tz),side=i%60===0?1:-1;
       const d=half+7.5,x=p.x+n.x*d*side,z=p.z+n.z*d*side;
-      trunks.push({p:[x,2.6,z],s:[.28,5.2,.28]});crowns.push({p:[x,5.5,z],s:[2.6,.75,2.6],r:i});
+      if(pitClear(x,z,2)){trunks.push({p:[x,2.6,z],s:[.28,5.2,.28]});crowns.push({p:[x,5.5,z],s:[2.6,.75,2.6],r:i});}
       poles.push({p:[p.x-n.x*(half+5.7),3.1,p.z-n.z*(half+5.7)],s:[.16,6.2,.16]});
       const next=points[(i+30)%N],nn=normal(next);
       wirePositions.push(p.x-n.x*(half+5.7),6.05,p.z-n.z*(half+5.7),next.x-nn.x*(half+5.7),6.05,next.z-nn.z*(half+5.7));
@@ -222,7 +225,7 @@ export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points
   // and cross that leg's own rail. This also drops the inside of bends
   // tighter than the rail offset, where the swept section would fold.
   const railOffset=half+8.5;
-  const railClear=(p,side)=>{const n=normal(p),x=p.x+n.x*railOffset*side,z=p.z+n.z*railOffset*side;return points.every(q=>Math.hypot(q.x-x,q.z-z)>railOffset-.6);};
+  const railClear=(p,side)=>{const n=normal(p),x=p.x+n.x*railOffset*side,z=p.z+n.z*railOffset*side;return pitClear(x,z,1.5)&&points.every(q=>Math.hypot(q.x-x,q.z-z)>railOffset-.6);};
   scene.add(sweptRails(detail,railOffset,railClear,material(0xb4bfc0,.48)));
   const posts=[];
   for(let i=0;i<N;i+=12)for(const side of [-1,1]){
@@ -261,4 +264,48 @@ export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points
   for(const side of [-1,1]){const m=new THREE.Mesh(new THREE.BoxGeometry(.35,6,.45),gantryMat);m.position.set(side*(half+2),3,5);gantry.add(m);}
   const c=document.createElement('canvas');c.width=1024;c.height=128;const ctx=c.getContext('2d');ctx.fillStyle='#142333';ctx.fillRect(0,0,1024,128);ctx.fillStyle='#deeee9';ctx.font='bold 48px sans-serif';ctx.textAlign='center';ctx.fillText('OTTOBIT   /   RACING',512,80);const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
   const banner=new THREE.Mesh(new THREE.BoxGeometry(width+4,1,.35),new THREE.MeshBasicMaterial({map:texture}));banner.position.set(0,5.5,5);gantry.add(banner);
+}
+
+// Pit lane (#147): asphalt, lane lines, a pit wall along the flat stretch,
+// the painted service box and its garage canopy.
+export function dressPitLane(scene,lane,renderer,wet){
+  const path=lane.path,w=PIT_LANE.halfWidth,side=lane.side;
+  const across=(p,d)=>({x:p.x+Math.cos(p.heading)*d*side,z:p.z-Math.sin(p.heading)*d*side});
+  const flat=path.filter(p=>p.flat);
+  function strip(points,from,to,y,mat){
+    const V=[],I=[];
+    points.forEach((p,k)=>{const a=across(p,from),b=across(p,to);V.push(a.x,y,a.z,b.x,y,b.z);
+      if(k>0){const i=k*2;I.push(i-2,i-1,i,i-1,i+1,i);}});
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(V,3));g.setIndex(I);g.computeVertexNormals();
+    const m=new THREE.Mesh(g,mat);m.receiveShadow=true;scene.add(m);return m;
+  }
+  const asphalt=new THREE.MeshStandardMaterial({color:0x8a8c90,map:surfaceTexture('asphalt',renderer),roughness:wet?.35:.9,metalness:wet?.2:.03,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+  strip(path,-w,w,.014,asphalt);
+  const white=new THREE.MeshStandardMaterial({color:0xebe7d9,roughness:.8,side:THREE.DoubleSide});
+  for(const d of [-(w-.2),w-.2])strip(flat,d-.07,d+.07,.024,white);
+  // Pit wall between the track and the lane, on the flat stretch only.
+  const wallMat=new THREE.MeshStandardMaterial({color:0xd9dcd8,roughness:.7}),temp=new THREE.Object3D();
+  const segments=flat.slice(1);
+  const wall=new THREE.InstancedMesh(new THREE.BoxGeometry(.3,.95,1),wallMat,segments.length);
+  segments.forEach((p,k)=>{const q=flat[k],a=across(p,-(w+.7)),b=across(q,-(w+.7));
+    temp.position.set((a.x+b.x)/2,.475,(a.z+b.z)/2);temp.rotation.set(0,Math.atan2(a.x-b.x,a.z-b.z),0);
+    temp.scale.set(1,1,Math.hypot(a.x-b.x,a.z-b.z)+.05);temp.updateMatrix();wall.setMatrixAt(k,temp.matrix);});
+  wall.castShadow=true;wall.receiveShadow=true;scene.add(wall);
+  // Service box: yellow frame and a garage canopy on the outer side.
+  const box=path[lane.boxIndex],group=new THREE.Group();
+  group.position.set(box.x,0,box.z);group.rotation.y=box.heading;scene.add(group);
+  const yellow=new THREE.MeshStandardMaterial({color:0xf2c230,roughness:.7});
+  for(const [x,z,sx,sz] of [[-1.3,0,.14,5.6],[1.3,0,.14,5.6],[0,2.8,2.74,.14],[0,-2.8,2.74,.14]]){
+    const m=new THREE.Mesh(new THREE.BoxGeometry(sx,.02,sz),yellow);m.position.set(x,.03,z);group.add(m);
+  }
+  const panel=new THREE.MeshStandardMaterial({color:0x1d2c3a,roughness:.6}),steel=new THREE.MeshStandardMaterial({color:0xaab4b9,roughness:.5});
+  const out=side; // group local +x points along across(), away from the track
+  const wallBack=new THREE.Mesh(new THREE.BoxGeometry(.25,3.2,7.5),panel);wallBack.position.set(out*(w+3.4),1.6,0);group.add(wallBack);
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(3.8,.2,7.5),steel);roof.position.set(out*(w+1.6),3.25,0);group.add(roof);
+  for(const z of [-3.6,3.6]){const post=new THREE.Mesh(new THREE.BoxGeometry(.15,3.2,.15),steel);post.position.set(out*(w-.1),1.6,z);group.add(post);}
+  const c=document.createElement('canvas');c.width=256;c.height=64;const ctx=c.getContext('2d');ctx.fillStyle='#f2c230';ctx.fillRect(0,0,256,64);ctx.fillStyle='#14202b';ctx.font='bold 44px sans-serif';ctx.textAlign='center';ctx.fillText('BOX',128,48);
+  const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.4,.6),new THREE.MeshBasicMaterial({map:tex}));sign.position.set(out*(w+3.26),2.6,0);sign.rotation.y=-out*Math.PI/2;group.add(sign);
+  for(const m of [wallBack,roof]){m.castShadow=true;m.receiveShadow=true;}
+  return group;
 }

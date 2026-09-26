@@ -11,10 +11,10 @@ import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=32";
 import { setupRaceInput } from "./race-input.js?v=45";
 import { setupRaceHud } from "./race-hud.js?v=38";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
-import { setupRaceCamera } from "./race-camera.js?v=31";
+import { setupRaceCamera } from "./race-camera.js?v=32";
 import { setupPlayerPhysics } from "./player-physics.js?v=6";
 import { setupRaceAi } from "./race-ai.js?v=28";
-import { setupRaceSystems } from "./race-systems.js?v=29";
+import { setupRaceSystems } from "./race-systems.js?v=30";
 import { setupRaceProgress } from "./race-progress.js?v=27";
 import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
@@ -23,7 +23,9 @@ import { setupAgentApi } from "./agent-api.js?v=1";
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=7";
 
 import { steeringYaw } from "./steering.js?v=1";
-import { dressCircuit, surfaceTexture } from "./track-art.js?v=39";
+import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=40";
+import { buildPitLane } from "../shared/pit-lane.js?v=1";
+import { setupPitCrew } from "./pit-crew.js?v=1";
 import { gearInfo, setupRaceAudio } from "./race-audio.js?v=3";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
@@ -135,8 +137,7 @@ const AI = {
 
 // Tire wear degrades grip gradually over the race distance for both player
 // and AI, cutting into cornering rate rather than straight-line pace. The
-// player can request service in the pit zone; AI cars stay out until a real
-// pit lane can replace their old invisible stop on the racing surface.
+// player can box in the real pit lane (#147); AI cars stay out.
 const TIRE_WEAR_MAX_TURN_PENALTY = 0.22; // steering authority lost at full wear
 
 // Lightweight race compounds. The race remains browser-friendly, but tyre
@@ -150,8 +151,6 @@ const TYRE_ORDER = ["soft", "medium", "hard"];
 const ERS_SPEED_MULTIPLIER = 1.05;
 const ERS_DRAIN_PER_SECOND = 24;
 const ERS_RECHARGE_PER_SECOND = 7;
-const PIT_ZONE_START = 0.94;
-const PIT_ZONE_END = 0.06;
 const PIT_SPEED_LIMIT = 18;
 const PIT_SERVICE_MS = 2200;
 
@@ -444,7 +443,11 @@ scene.add(buildRoadMesh());
 // asphalt edge instead — the actual off-track boundary (grass drag, then
 // the invisible wall) still sits further out, unchanged; this is purely
 // the visual marker real curbs are.
-dressCircuit(scene, centerline, TRACK_WIDTH, renderer, isRaining, circuit.theme, visualCenterline);
+// Pit lane (#147): beside the start/finish line, on the side of the pit
+// building (track-art.js structure(0, 1)).
+const pitLane = buildPitLane(visualCenterline, TRACK_WIDTH, 1);
+dressCircuit(scene, centerline, TRACK_WIDTH, renderer, isRaining, circuit.theme, visualCenterline, pitLane);
+dressPitLane(scene, pitLane, renderer, isRaining);
 
 // Start/finish line: a group so the flattening rotation (local X) and the
 // heading rotation (group Y) don't get tangled up in Euler order.
@@ -1016,8 +1019,7 @@ const raceSystems = setupRaceSystems({
   aiMaxSpeed: AI.maxSpeed,
   getRaceState: () => raceState,
   isCautionActive: () => cautionState === "active",
-  pitZoneStart: PIT_ZONE_START,
-  pitZoneEnd: PIT_ZONE_END,
+  pitLane,
   pitSpeedLimit: PIT_SPEED_LIMIT,
   pitServiceMs: PIT_SERVICE_MS,
   ersDrainPerSecond: ERS_DRAIN_PER_SECOND,
@@ -1139,6 +1141,13 @@ function getNextUnracedCircuitId(champState) {
   return next ? next.id : null;
 }
 
+const pitCrew = setupPitCrew({
+  scene,
+  pitLane,
+  playerCar,
+  suitColor: PLAYER_LIVERY.primary,
+  serviceMs: PIT_SERVICE_MS,
+});
 const raceCamera = setupRaceCamera({
   scene,
   camera,
@@ -1148,6 +1157,7 @@ const raceCamera = setupRaceCamera({
   cockpitCar,
   nearestTrackInfo,
   trackWidth: TRACK_WIDTH,
+  pitCamera: { position: pitCrew.tvCamera, target: pitCrew.tvTarget },
 });
 const raceNameplates = setupRaceNameplates({
   camera,
@@ -1291,7 +1301,6 @@ function updateQualifying(dt) {
   }
 
   const info = integratePlayerMotion(dt);
-  raceSystems.applyPitLimiter(dt);
   applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
   brakeMap();
 
@@ -1352,18 +1361,17 @@ function update(dt) {
 
   const now = performance.now();
   if (state.pitRequested) raceSystems.startPitStop();
-  if (raceSystems.updatePitStop(now)) {
-    applyCarToMesh(playerCar, state.x, state.z, state.heading, 0, dt, steering.value);
-    raceCamera.updateCamera(dt);
-    raceCamera.updateSpeedFov(dt);
-    hud.updateHud();
-    return;
-  }
 
   updateDrsEligibility([state, ...aiCars]);
   raceSystems.updateEnergyRecovery([state, ...aiCars], dt);
 
-  const info = integratePlayerMotion(dt);
+  // In the pit lane (#147) the autopilot drives the player and the rest of
+  // the field keeps racing; no player physics, grass drag or contact.
+  const inPit = raceSystems.updatePitStop(now, dt);
+  const info = inPit ? nearestTrackInfo(state.x, state.z) : integratePlayerMotion(dt);
+  // Pit limiter (#145): it used to sit in the qualifying loop only, where
+  // the race-state guard made it a no-op.
+  if (!inPit) raceSystems.applyPitLimiter(dt);
   const allCars = [state, ...aiCars];
   // Multiplayer (#44): remote cars are driven by the latest network sample
   // (updateRemoteCar), never by updateAiCar() — see race-multiplayer.js.
@@ -1377,9 +1385,10 @@ function update(dt) {
       lap: state.lap, totalProgress: state.totalProgress,
     });
   }
-  carCollisions.resolve(allCars, now);
+  carCollisions.resolve(inPit ? aiCars : allCars, now);
 
-  applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
+  applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, inPit ? 0 : steering.value);
+  pitCrew.update(state, now);
   brakeMap();
   for (const car of aiCars) applyCarToMesh(car, car.x, car.z, car.heading, car.speed, dt);
 

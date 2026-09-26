@@ -1146,3 +1146,31 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   above the driver list (115).
 - `modes.html`: P/BOX rows describe the automatic slow-down.
 - Verified with `node --check` and `git diff --check` only.
+
+## 2026-09-26 — Real pit lane with visible tyre change (#147)
+
+- New `core/client/shared/pit-lane.js` (v1): lane path offset `half+6`
+  from the centerline, from 64 units before to 56 after the line (capped at
+  14%/13% of a lap), smoothstep ramps, box 8 units past the line, side +1
+  (the pit building's). Start/finish is never straight (29–85° within ±6%),
+  so the lane follows the curve. `validate-circuits.mjs` checks it: clear of
+  every leg on the flat stretch, nearest centerline sample only moving
+  forward; all 9 circuits pass.
+- `race-systems.js` (v30): `pitState` none → entering → servicing →
+  exiting. Autopilot drives the lane at `PIT_SPEED_LIMIT`, blends the car
+  onto the lane, stops in the box, services, releases at the lane end.
+  `PIT_ZONE_START/END` removed. Entry distance uses `prevRawProgress`
+  (`totalProgress` is offset by the grid start).
+- `main.js` (v76): the race no longer freezes during a stop; in the pit the
+  player skips physics, grass drag and car contact. Fix: `applyPitLimiter`
+  had been wired into the qualifying loop only (a no-op) since #145.
+- `track-art.js` (v40): `dressPitLane` (asphalt, lines, pit wall, yellow
+  box, BOX canopy); rails and Marzamemi scenery skip the lane.
+  `pit-crew.js` (v1): six mechanics, jack lift, wheels off/on.
+  `race-camera.js` (v32): fixed TV shot while servicing; chase clamp off in
+  the pit.
+- Known limits: AI never pits; the stop is local in multiplayer; the pit
+  wall is visual only.
+- Verified with `node --check`, `git diff --check`, `npm run
+  validate:circuits` and a Node simulation of the autopilot on every
+  circuit; no browser test.
