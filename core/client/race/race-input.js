@@ -1,4 +1,4 @@
-import { shapeSteering, smoothSteering } from "./steering.js?v=1";
+import { shapeSteering, smoothSteering } from "./steering.js?v=2";
 
 const KEY_MAP = {
   ArrowUp: "forward",
