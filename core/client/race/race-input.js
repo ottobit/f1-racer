@@ -21,6 +21,8 @@ const PAD_BUTTON_L2 = 6;
 const PAD_BUTTON_R2 = 7;
 const PAD_DEADZONE = 0.12;
 const PAD_TRIGGER_THRESHOLD = 0.25;
+// Touch wheel dead band around its centre, in CSS px (#153).
+const WHEEL_CENTRE_BAND = 8;
 
 export function setupRaceInput({
   wheelId = "wheel-control",
@@ -44,7 +46,6 @@ export function setupRaceInput({
   const padHeld = { forward: false, back: false };
   const padButtonsDown = new Set();
   let wheelPointer = null;
-  let wheelOrigin = 0;
   const wheelEl = document.getElementById(wheelId);
   const motionButton = document.getElementById("motion-toggle");
   const calibrateButton = document.getElementById("motion-calibrate");
@@ -223,15 +224,23 @@ export function setupRaceInput({
     // Same stale-pointer takeover as the pedals (#87).
     if (wheelPointer !== null && wheelEl.hasPointerCapture(wheelPointer)) return;
     wheelPointer = event.pointerId;
-    wheelOrigin = event.clientX;
-    touchSteer = 0;
     wheelEl.setPointerCapture(event.pointerId);
+    wheelSteerFrom(event);
     onHumanInput();
   });
+  // Absolute steering (#153): the finger's offset from the wheel centre is
+  // the steering angle, so touching one side steers at once and full lock
+  // never drags the finger into the screen edge (system back gestures
+  // there cancel the touch). A small centre band absorbs thumb placement.
+  function wheelSteerFrom(event) {
+    const rect = wheelEl.getBoundingClientRect();
+    const offset = event.clientX - (rect.left + rect.width / 2);
+    const travel = Math.max(45, rect.width * 0.42);
+    const magnitude = Math.max(0, Math.abs(offset) - WHEEL_CENTRE_BAND) / (travel - WHEEL_CENTRE_BAND);
+    touchSteer = shapeSteering(Math.sign(offset) * magnitude);
+  }
   wheelEl.addEventListener("pointermove", (event) => {
-    if (event.pointerId !== wheelPointer) return;
-    const travel = Math.max(45, wheelEl.clientWidth * 0.48);
-    touchSteer = shapeSteering((event.clientX - wheelOrigin) / travel);
+    if (event.pointerId === wheelPointer) wheelSteerFrom(event);
   });
   const releaseWheel = (event) => {
     if (event.pointerId === wheelPointer) {
@@ -367,8 +376,10 @@ function setupLandscapeFullscreen() {
   if (window.matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches) return;
   const landscape = window.matchMedia("(orientation: landscape)");
   const fullscreenElement = () => document.fullscreenElement ?? document.webkitFullscreenElement;
-  window.addEventListener("touchend", () => {
-    if (!landscape.matches || fullscreenElement()) return;
+  window.addEventListener("touchend", (event) => {
+    // Only with every finger lifted (#153): the resize would otherwise
+    // cancel the touch still held on the wheel or a pedal.
+    if (event.touches.length || !landscape.matches || fullscreenElement()) return;
     try {
       Promise.resolve(request.call(root, { navigationUI: "hide" })).catch(() => {});
     } catch {}
