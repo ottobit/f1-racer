@@ -1292,3 +1292,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Comments updated in `race-controls.css` and `race-input.js`, plus the `modes.html` copy.
 - Version chain: css v55, race-input v51, main v89, race-bootstrap v50.
 - Verification: `node --check` and `git diff --check` only. The throttle column now holds VIEW, BOX and GAS, about 220 px on short landscape screens.
+
+## 2026-09-26 — Cockpit wheel and moving hands (#173)
+
+- Root cause of the "still hands": `detail` cars carried two wheels at the same spot. The static `cockpitSteeringWheel` had grips bigger than the gloves and hid them while `driverSteeringWheel` turned. The static wheel is now built only when there is no driver (empty seat).
+- `car-model.js` `f1Wheel()`: `detail` cars (cockpit copy, garage) get a realistic F1 wheel: flat-bottomed butterfly body, rubber grips, display, shift LEDs, rotaries, buttons and paddles on the driver's face (-z). Gloves wrap the outer grips and there is a thumb. Low-detail AI and chase cars are unchanged (41 meshes).
+- `race-camera.js`: each frame the cockpit copy re-aims the named `driverForearm` rods at the grips, so the arms follow the wheel. It also doubles the wheel rotation (`COCKPIT_WHEEL_GAIN`, ~63° at full lock).
+- Version chain: car-model v31, race-car-view v33, race-camera v34, main v91, race-bootstrap v52, showroom v36, garage v48.
+- Verification: `node --check`, plus a node smoke test against local three. Forearm ends meet the wrists exactly at steer 0 and ±1; both gloves are in frame at centre, and at full lock the outer glove leaves the frame. Not yet tried in the browser.
