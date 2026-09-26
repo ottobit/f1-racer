@@ -91,10 +91,16 @@ if (proxy) {
 }
 const page = await ctx.newPage();
 page.on("pageerror", (err) => log("pageerror", err.message));
+let lastStrategy = "";
+let freshPage = false;
 page.on("framenavigated", (frame) => {
   if (frame !== page.mainFrame()) return;
   const url = new URL(frame.url());
   log("page", url.pathname);
+  // A new page starts without targets: resend them, minus the one-shot
+  // box call and radio message that belonged to the previous race (#184).
+  lastStrategy = "";
+  freshPage = true;
   // The room page sends everyone to race.html; the bot needs its driver.
   if (url.pathname.endsWith("race.html") && !url.searchParams.has("driver")) {
     url.searchParams.set("driver", "layered");
@@ -106,7 +112,6 @@ await page.goto(`http://localhost:8080/room.html?join=${code}&roomServer=${encod
 await page.fill("#room-nickname", NAME);
 
 let lastJoinTry = 0;
-let lastStrategy = "";
 let lastStateAt = 0;
 let lastStatus = "";
 for (;;) {
@@ -133,6 +138,8 @@ for (;;) {
         lastStrategy = raw;
         try {
           const update = JSON.parse(raw);
+          if (freshPage) { delete update.pit; delete update.radio; }
+          freshPage = false;
           await page.evaluate((u) => window._DRIVER_.setStrategy(u), update);
           log("strategy", raw.trim());
         } catch (err) { log("bad strategy.json", err.message); }
