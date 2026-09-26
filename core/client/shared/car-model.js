@@ -137,7 +137,13 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   shell([[-1.75,.02,.4,.02,3],[-1.4,.24,.47,.15,3],[-.9,.4,.52,.25,3.4],[0,.42,.52,.25,3.6],[.55,.31,.5,.2,3.6],[1.2,.21,.43,.14,3.4],[1.9,.13,.32,.09,3],[2.35,.085,.3,.055,2.6],[2.45,.005,.29,.01,2.4]],paint);
   shell([[-1.65,.01,.53,.01],[-1.25,.12,.63,.17,2.6],[-.8,.2,.78,.34,2.6],[-.42,.2,.86,.4,2.8],[-.26,.04,.8,.22,2.4]],paint);
   const fin=shell([[-1.45,.008,.84,.005],[-1.25,.012,.87,.07],[-.75,.012,1.02,.1],[-.5,.008,1.12,.04]],paint);fin.name="sharkFin";
-  box(1.66,.055,2.75,carbon,[0,.16,-.15]).name = "floorPanel";
+  // Floor in plan view (#188): narrow at the front, full width alongside
+  // the sidepods, tapering into the diffuser.
+  const floorPlan=new THREE.Shape();
+  [[.34,1.22],[.62,.95],[.83,.55],[.83,-1.05],[.7,-1.35],[.62,-1.52]].forEach(([x,z],i)=>i?floorPlan.lineTo(x,z):floorPlan.moveTo(x,z));
+  [[-.62,-1.52],[-.7,-1.35],[-.83,-1.05],[-.83,.55],[-.62,.95],[-.34,1.22]].forEach(([x,z])=>floorPlan.lineTo(x,z));
+  const floorGeometry=new THREE.ExtrudeGeometry(floorPlan,{depth:.055,bevelEnabled:false});floorGeometry.rotateX(Math.PI/2);
+  mesh(floorGeometry,carbon,[0,.16+.0275,0]).name="floorPanel";
   for(const side of [-1,1]){
     shell([[-1.45,.015,.3,.01,3],[-1.1,.17,.36,.12,3.4,.12],[-.5,.3,.43,.21,4,.2],[.1,.32,.47,.2,4.4,.2],[.42,.27,.49,.14,4,.18],[.47,.22,.49,.1,3]],paint,side*.55);
     const inlet=mesh(new THREE.SphereGeometry(.2,16,8),black,[side*.55,.5,.475]);inlet.scale.set(1,.5,.15);
@@ -267,7 +273,9 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     const wheel=new THREE.Group();pivot.add(wheel);
     if(index<2)steeringPivots.push(pivot);
     if(detail){const caliper=box(.085,.22,.11,new THREE.MeshStandardMaterial({color:0xb69050,metalness:.65,roughness:.35}),[x-Math.sign(x)*.18,y,z+.14]);caliper.name='setupCaliper';}
-    const tire=mesh(new THREE.CylinderGeometry(.4,.4,.32,detail?48:20),black,[0,0,0],wheel);tire.rotation.z=Math.PI/2;
+    // Lathed tyre (#188): flat tread with rounded shoulders instead of a plain cylinder.
+    const tyreProfile=[[.3,-.16],[.36,-.16],[.39,-.145],[.4,-.12],[.4,.12],[.39,.145],[.36,.16],[.3,.16]].map(([r,y])=>new THREE.Vector2(r,y));
+    const tire=mesh(new THREE.LatheGeometry(tyreProfile,detail?48:20),black,[0,0,0],wheel);tire.rotation.z=Math.PI/2;
     for(const s of [-1,1]){
       const ring=mesh(new THREE.TorusGeometry(.31,.065,8,detail?48:20),black,[s*.145,0,0],wheel);ring.rotation.y=Math.PI/2;
       const rim=mesh(new THREE.CylinderGeometry(.23,.23,.025,detail?32:16),carbon,[s*.17,0,0],wheel);rim.rotation.z=Math.PI/2;
