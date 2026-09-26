@@ -1,2 +1,4 @@
 core/node_modules/
 core/tools/out/
+node_modules/
+package-lock.json

@@ -1,0 +1,10 @@
+{
+  "name": "f1-racer",
+  "private": true,
+  "description": "Root shortcuts (#177): the tooling and the room server live in core/. The static game does not read this file.",
+  "scripts": {
+    "postinstall": "npm --prefix core install",
+    "start:room-server": "npm --prefix core run start:room-server",
+    "validate:circuits": "npm --prefix core run validate:circuits"
+  }
+}
