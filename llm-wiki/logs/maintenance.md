@@ -1015,3 +1015,9 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `core/client/style.css`: under `(orientation: landscape) and (max-height: 560px)` the results card becomes a two-column grid: the standings scroll on the left, while the title, points and actions (stacked, 44px tall) sit on the right. The overlay padding follows the safe-area insets, which matters now that `viewport-fit=cover` is set (#115).
 - `style.css?v` bumped on all four HTML pages.
 - Portrait layout is unchanged. Verified with a syntax check only; the user tests on the phone.
+
+## 2026-09-26 — Brake/gas inset from the right edge (#119)
+
+- `core/client/race/race-controls.css`: in landscape the throttle group gets `margin-right: clamp(28px, 6vw, 64px)` and is raised 10px, so the right thumb reaches it without bending (user report). The steering group is unchanged.
+- Bumped `race-controls.css?v=45` in `race.html`.
+- Verified with a syntax check only; the user tests on the phone.

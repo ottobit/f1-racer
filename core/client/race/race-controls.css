@@ -47,3 +47,5 @@ html.touch #brake-map{top:auto;right:auto;left:50%;transform:translateX(-50%);wi
 @media(max-height:520px){html.touch #brake-map{width:min(14rem,calc(100vw - 360px))}}
 @media(orientation:portrait){html.touch #brake-map{width:14rem;bottom:195px}}
 @media(display-mode:standalone) and (orientation:landscape),(display-mode:fullscreen) and (orientation:landscape){html.touch #brake-map{bottom:max(34px,calc(env(safe-area-inset-bottom) + 16px))}}
+/* Right thumb rests well inside the edge in landscape: keep brake/gas off the rim (#119). */
+@media(orientation:landscape){#touch-controls .touch-group--throttle{margin-right:clamp(28px,6vw,64px);margin-bottom:10px}}
