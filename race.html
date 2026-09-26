@@ -26,7 +26,7 @@
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="core/client/style.css?v=47" />
-  <link rel="stylesheet" href="core/client/race/race-controls.css?v=47" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=48" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -118,7 +118,13 @@
         <span id="speed-value">0</span>
         <span class="speedo-unit">km/h</span>
       </div>
-      <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
+      <div id="hud-shortcuts">
+        <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
+        <button type="button" id="pit-toggle" data-key="KeyP" tabindex="-1" aria-label="Chiama il box">BOX</button>
+        <button type="button" class="pit-tyre" data-key="Digit1" tabindex="-1" aria-label="Gomme morbide">S</button>
+        <button type="button" class="pit-tyre" data-key="Digit2" tabindex="-1" aria-label="Gomme medie">M</button>
+        <button type="button" class="pit-tyre" data-key="Digit3" tabindex="-1" aria-label="Gomme dure">H</button>
+      </div>
     </div>
   </div>
 
@@ -202,6 +208,6 @@
       window.addEventListener("scroll", pin);
     })();
   </script>
-  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=31"></script>
+  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=32"></script>
 </body>
 </html>

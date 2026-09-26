@@ -9,14 +9,14 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 import { createStudioEnvironment } from "../shared/car-model.js?v=29";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=29";
 import { setupRaceInput } from "./race-input.js?v=44";
-import { setupRaceHud } from "./race-hud.js?v=37";
+import { setupRaceHud } from "./race-hud.js?v=38";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
-import { setupRaceCamera } from "./race-camera.js?v=27";
+import { setupRaceCamera } from "./race-camera.js?v=28";
 import { setupPlayerPhysics } from "./player-physics.js?v=6";
 import { setupRaceAi } from "./race-ai.js?v=28";
-import { setupRaceSystems } from "./race-systems.js?v=27";
+import { setupRaceSystems } from "./race-systems.js?v=28";
 import { setupRaceProgress } from "./race-progress.js?v=27";
-import { setupRaceCommands } from "./race-commands.js?v=1";
+import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=1";
@@ -963,6 +963,7 @@ const hud = setupRaceHud({
   qualifyingRivals: AI_QUALIFYING_RESULTS,
   getQualifyingRivals: multiplayer ? multiplayerQualifyingRivals : undefined,
   isDisconnected: isDriverDisconnected,
+  getRaceState: () => raceState,
 });
 
 // --- Main loop -------------------------------------------------------------
@@ -1141,6 +1142,7 @@ const raceCamera = setupRaceCamera({
   cockpitTheme: PLAYER_COCKPIT_THEME,
   nearestTrackInfo,
   trackWidth: TRACK_WIDTH,
+  getSteer: () => steering.value,
 });
 const raceNameplates = setupRaceNameplates({
   camera,

@@ -13,54 +13,59 @@ function isCompactLandscapeViewport() {
   return window.innerWidth > window.innerHeight && window.innerHeight <= 520;
 }
 
+// Driver's-eye cockpit (#135): the eye sits at y 1.0, 0.3 ahead of the car
+// origin; everything here stays below that line so the road stays in view.
+// No team badge in front of the eyes any more — it covered the track.
 function buildCockpitView(theme) {
   const group = new THREE.Group();
   group.visible = false;
   const primary = new THREE.MeshStandardMaterial({ color: theme.primary, metalness: 0.45, roughness: 0.28 });
   const secondary = new THREE.MeshStandardMaterial({ color: theme.secondary, metalness: 0.3, roughness: 0.32 });
   const carbon = new THREE.MeshStandardMaterial({ color: 0x070b10, metalness: 0.35, roughness: 0.62 });
-  const glow = new THREE.MeshBasicMaterial({ color: theme.glow, transparent: true, opacity: 0.75 });
-  const mesh = (geometry, material, position) => {
+  const glove = new THREE.MeshStandardMaterial({ color: theme.secondary, metalness: 0.05, roughness: 0.8 });
+  const glow = new THREE.MeshBasicMaterial({ color: theme.glow, transparent: true, opacity: 0.85 });
+  const mesh = (geometry, material, position, parent = group) => {
     const object = new THREE.Mesh(geometry, material);
     object.position.set(...position);
-    group.add(object);
+    parent.add(object);
     return object;
   };
-  mesh(new THREE.BoxGeometry(0.82, 0.11, 0.2), carbon, [0, 0.72, 0.78]);
-  mesh(new THREE.BoxGeometry(0.48, 0.035, 0.045), glow, [0, 0.8, 0.68]);
-  mesh(new THREE.BoxGeometry(0.09, 0.09, 1.18), primary, [-0.46, 0.64, 0.96]).rotation.z = -0.18;
-  mesh(new THREE.BoxGeometry(0.09, 0.09, 1.18), primary, [0.46, 0.64, 0.96]).rotation.z = 0.18;
-  mesh(new THREE.BoxGeometry(0.62, 0.035, 0.12), secondary, [0, 0.58, 1.12]);
 
-  const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 160;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#060a10";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = `#${theme.primary.toString(16).padStart(6, "0")}`;
-  ctx.fillRect(0, 0, canvas.width, 14);
-  ctx.fillStyle = `#${theme.secondary.toString(16).padStart(6, "0")}`;
-  ctx.fillRect(0, 146, canvas.width, 14);
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#f5f8fb";
-  ctx.font = "700 44px sans-serif";
-  ctx.fillText(theme.label.toUpperCase(), 256, 70);
-  ctx.fillStyle = "#9fb4c5";
-  ctx.font = "700 34px monospace";
-  ctx.fillText(theme.motto, 256, 118);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const badge = mesh(
-    new THREE.PlaneGeometry(0.62, 0.2),
-    new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }),
-    [0, 0.88, 0.9]
-  );
-  badge.rotation.x = -0.1;
+  // Nose and front wing, far enough ahead to read as "the car" low in view.
+  mesh(new THREE.BoxGeometry(0.34, 0.14, 1.6), primary, [0, 0.5, 2.1]);
+  mesh(new THREE.BoxGeometry(0.22, 0.1, 0.9), primary, [0, 0.4, 3.3]);
+  mesh(new THREE.BoxGeometry(1.7, 0.04, 0.32), carbon, [0, 0.18, 3.75]);
+  mesh(new THREE.BoxGeometry(0.05, 0.16, 0.34), secondary, [-0.85, 0.24, 3.75]);
+  mesh(new THREE.BoxGeometry(0.05, 0.16, 0.34), secondary, [0.85, 0.24, 3.75]);
+  // Cockpit rim: two side walls and the cowl beyond the wheel.
+  mesh(new THREE.BoxGeometry(0.1, 0.12, 1.2), primary, [-0.42, 0.66, 0.9]).rotation.z = -0.15;
+  mesh(new THREE.BoxGeometry(0.1, 0.12, 1.2), primary, [0.42, 0.66, 0.9]).rotation.z = 0.15;
+  mesh(new THREE.BoxGeometry(0.72, 0.08, 0.3), carbon, [0, 0.64, 1.35]);
+  mesh(new THREE.BoxGeometry(0.4, 0.02, 0.04), secondary, [0, 0.69, 1.22]);
+
+  // Steering wheel with gloves and forearms; the whole wheel turns with steer.
+  const wheel = new THREE.Group();
+  wheel.position.set(0, 0.74, 0.92);
+  wheel.rotation.x = -0.35;
+  group.add(wheel);
+  const spin = new THREE.Group();
+  wheel.add(spin);
+  mesh(new THREE.BoxGeometry(0.28, 0.13, 0.04), carbon, [0, 0, 0], spin);
+  mesh(new THREE.BoxGeometry(0.06, 0.17, 0.05), carbon, [-0.16, -0.01, 0], spin);
+  mesh(new THREE.BoxGeometry(0.06, 0.17, 0.05), carbon, [0.16, -0.01, 0], spin);
+  mesh(new THREE.BoxGeometry(0.11, 0.05, 0.01), glow, [0, 0.02, -0.022], spin);
+  mesh(new THREE.BoxGeometry(0.2, 0.012, 0.01), secondary, [0, 0.062, -0.022], spin);
+  for (const side of [-1, 1]) {
+    mesh(new THREE.SphereGeometry(0.045, 12, 10), glove, [side * 0.16, 0.01, -0.035], spin).scale.set(1, 1.35, 1);
+    const arm = mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.42, 10), primary, [side * 0.21, -0.07, -0.22], spin);
+    arm.rotation.x = Math.PI / 2 - 0.35;
+    arm.rotation.z = side * 0.25;
+  }
+  group.userData.wheelSpin = spin;
   return group;
 }
 
-export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, cockpitTheme, nearestTrackInfo, trackWidth }) {
+export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, cockpitTheme, nearestTrackInfo, trackWidth, getSteer = () => 0 }) {
   let cameraMode = "chase";
   let chaseCameraReady = false;
   let cameraHeading = 0;
@@ -135,6 +140,8 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
       cockpitView.visible = true;
       cockpitView.position.set(state.x, 0, state.z);
       cockpitView.rotation.y = state.heading;
+      // Positive steer turns right: clockwise from the driver's seat.
+      cockpitView.userData.wheelSpin.rotation.z = getSteer() * 1.1;
     }
     const eyeHeight = 1.0;
     const forwardOffset = 0.3;

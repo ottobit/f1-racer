@@ -52,15 +52,12 @@ export function setupRaceSystems({
   }
 
   function startPitStop() {
-    if (
-      getRaceState() !== "racing" ||
-      state.pitState !== "none" ||
-      !isInPitZone(state) ||
-      Math.abs(state.speed) > pitSpeedLimit
-    ) {
+    if (getRaceState() !== "racing" || state.pitState !== "none") {
       state.pitRequested = false;
       return;
     }
+    // The call stays armed until the car is slow inside the pit zone (#135).
+    if (!isInPitZone(state) || Math.abs(state.speed) > pitSpeedLimit) return;
     state.pitRequested = false;
     state.pitState = "servicing";
     state.pitServiceEndTime = performance.now() + pitServiceMs;
