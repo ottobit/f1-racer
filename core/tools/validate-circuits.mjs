@@ -24,7 +24,8 @@
 
 import * as THREE from "three";
 import { CIRCUITS } from "../client/shared/circuits.js";
-import { sampleCenterline, headingOf, sideNormal } from "../client/shared/track-geometry.js";
+import { sampleCenterline, headingOf, sideNormal, nearestTrackInfo } from "../client/shared/track-geometry.js";
+import { buildPitLane, PIT_LANE } from "../client/shared/pit-lane.js";
 
 const SAMPLES = 360; // matches main.js's CENTERLINE_SAMPLES: validate the resolution the game actually drives on
 
@@ -210,6 +211,32 @@ function checkSeparation(circuit, centerline) {
   ];
 }
 
+// Pit lane (#147): on its flat stretch the lane asphalt must stay clear of
+// every track leg, and its nearest centerline sample must only move forward
+// (lap progress and the chase camera both project onto the centerline).
+function checkPitLane(circuit, centerline) {
+  const lane = buildPitLane(centerline, circuit.width, 1);
+  const n = centerline.length, half = circuit.width / 2;
+  const issues = [];
+  let prev = null;
+  for (const p of lane.path) {
+    const info = nearestTrackInfo(centerline, p.x, p.z);
+    if (p.flat && info.dist < half + PIT_LANE.halfWidth + 0.5) {
+      issues.push({ level: "error", message: `pit lane at s=${p.s.toFixed(0)} is ${info.dist.toFixed(2)} from the centerline — overlaps the track`, at: p });
+      break;
+    }
+    if (prev !== null) {
+      const step = (info.idx - prev + n) % n;
+      if (step > n / 2 || step > 6) {
+        issues.push({ level: "error", message: `pit lane at s=${p.s.toFixed(0)} jumps from centerline sample ${prev} to ${info.idx}`, at: p });
+        break;
+      }
+    }
+    prev = info.idx;
+  }
+  return issues;
+}
+
 export function validateCircuit(circuit) {
   const curve = buildCurve(circuit);
   const centerline = sampleCenterline(curve, SAMPLES);
@@ -219,6 +246,7 @@ export function validateCircuit(circuit) {
     ...checkSegmentLengths(centerline, circuit.width),
     ...checkCurvature(centerline, circuit.width),
     ...checkSeparation(circuit, centerline),
+    ...checkPitLane(circuit, centerline),
   ];
   return { circuit, centerline, issues };
 }
