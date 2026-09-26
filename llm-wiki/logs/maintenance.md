@@ -1340,3 +1340,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `main.js`: the autopilot gets `findCar(driverId)`, which searches `aiCars` (remote cars included), and `TRACK_LENGTH`. Versions: driver-providers v2, main v96, race-bootstrap v57.
 - Teleporting was rejected: writing x/z directly would break the sync, lap counting and collisions.
 - Verification: `node --check`. A headless solo run held station correctly in qualifying, where the reference AI car is parked. Race-phase behaviour is still to verify with the user, because headless qualifying is too slow to reach the race.
+
+## 2026-09-26 — Room bot smooth broadcast and strategy resend (#184)
+
+- User report from the C8AR race: the bot's car moved in jerks on their phone. Cause: the headless bot renders with software GL at a few fps, and it simulates and broadcasts `car_state` only once per frame. The sparse samples outlast the 0.25 s extrapolation window on other clients.
+- `main.js`: `renderer.render` is skipped when a driver provider is active (`?driver=`). Versions: main v97, race-bootstrap v58.
+- `core/tools/room-bot.mjs`: every new page resends `strategy.json`, so a Rivincita no longer starts without targets. The one-shot `pit` and `radio` are stripped from that resend.
+- The live race also confirmed that radio banners arrive, station keeping works (1.9 m alongside, 10 m ahead) and the auto box call fitted softs at 2.5 laps.
+- Verification: `node --check` and `git diff --check`. Smoothness still needs the next race with the user.
