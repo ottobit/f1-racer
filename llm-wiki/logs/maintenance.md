@@ -1285,3 +1285,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race-camera.js`: `COCKPIT_EYE` is now (0, 1.0, −0.02), with a ~12° downward pitch (`COCKPIT_PITCH_DROP`). The old gaze was almost level and left the wheel ~50° below the eye, outside the 58° FOV, so the wheel top and gloves were never in frame; now they are.
 - Version chain: css v54, race-input v50 (comment only), race-camera v33, main v88, race-bootstrap v49.
 - Verification: `node --check` and `git diff --check` only; not yet tried in game. If the wheel covers too much road, lower `COCKPIT_PITCH_DROP`.
+
+## 2026-09-26 — VIEW stacked above BOX (#171)
+
+- `race.html`: the touch VIEW button moves from above FRENO (#169) into the throttle `.gas-stack`, above BOX. FRENO is a single button again. The user dropped the double-tap alternative.
+- Comments updated in `race-controls.css` and `race-input.js`, plus the `modes.html` copy.
+- Version chain: css v55, race-input v51, main v89, race-bootstrap v50.
+- Verification: `node --check` and `git diff --check` only. The throttle column now holds VIEW, BOX and GAS, about 220 px on short landscape screens.

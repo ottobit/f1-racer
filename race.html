@@ -26,7 +26,7 @@
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="core/client/style.css?v=51" />
-  <link rel="stylesheet" href="core/client/race/race-controls.css?v=54" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=55" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -179,14 +179,12 @@
       </svg>
     </div>
     <div class="touch-group touch-group--throttle">
-      <!-- VIEW above the brake (#169), mirroring BOX above the throttle. -->
-      <div class="gas-stack">
-        <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
-        <button id="btn-brake" class="touch-btn" aria-label="Freno">FRENO</button>
-      </div>
+      <button id="btn-brake" class="touch-btn" aria-label="Freno">FRENO</button>
       <!-- BOX sits right above the throttle on touch (#155): the HUD row
            was too small a target mid-race. -->
       <div class="gas-stack">
+        <!-- VIEW stacked above BOX (#171). -->
+        <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
         <button type="button" id="pit-toggle" data-key="KeyP" tabindex="-1" aria-label="Chiama il box">BOX</button>
         <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">GAS</button>
       </div>
@@ -217,6 +215,6 @@
       window.addEventListener("scroll", pin);
     })();
   </script>
-  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=49"></script>
+  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=50"></script>
 </body>
 </html>

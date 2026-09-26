@@ -52,7 +52,7 @@ html.touch #brake-map{top:auto;right:auto;left:50%;transform:translateX(-50%);wi
   /* Keep the wheel clear of the left-edge system gestures (#153). */
   #touch-controls .touch-group--steer{margin-left:clamp(14px,4vw,40px)}}
 /* Phone shortcuts (#133, #135): tap the ERS readout to toggle it; BOX and
-   VIEW sit above the pedals (#155, #169); S/M/H under the speedo show
+   VIEW sit above the throttle (#155, #171); S/M/H under the speedo show
    only during the pit stop. Touch only. */
 #ers-indicator,#hud-shortcuts button{margin:0;border:0;font-family:inherit;line-height:inherit;-webkit-appearance:none;appearance:none}
 #hud-shortcuts{display:none}
@@ -81,5 +81,5 @@ html.touch.hud-not-racing #ers-indicator,html.touch.hud-not-racing #pit-toggle{o
 .gas-stack{display:flex;flex-direction:column;gap:8px}
 html.touch #pit-toggle,html.touch #view-toggle{min-height:44px;border-radius:10px;border:1px solid #facc1566;background:#1c2530d9;color:#fde68a;font:800 11px system-ui;letter-spacing:.14em;touch-action:manipulation}
 html.touch #pit-toggle:active,html.touch #view-toggle:active{background:#3a3520}
-/* VIEW above the brake (#169): same pad as BOX, neutral colours. */
+/* VIEW above BOX (#171): same pad as BOX, neutral colours. */
 html.touch #view-toggle{border-color:#b2c8d566;color:#dbe7ef}
