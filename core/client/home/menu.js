@@ -145,8 +145,17 @@ function render() {
   const { standings, allRaced, state } = computeStandings(CIRCUITS);
 
   if (!circuitSelectionInitialized) {
-    const nextRace = CIRCUITS.findIndex((circuit) => !state.raceResults[circuit.id]);
-    selectedCircuitIndex = nextRace >= 0 ? nextRace : 0;
+    // Back from the garage (#151): keep the stored pick while it's still
+    // unraced, otherwise move on to the next unraced circuit after it.
+    let stored = null;
+    try { stored = localStorage.getItem(SELECTED_CIRCUIT_KEY); } catch (e) {}
+    const storedIndex = Math.max(0, CIRCUITS.findIndex((circuit) => circuit.id === stored));
+    let nextRace = -1;
+    for (let step = 0; step < CIRCUITS.length && nextRace < 0; step++) {
+      const index = (storedIndex + step) % CIRCUITS.length;
+      if (!state.raceResults[CIRCUITS[index].id]) nextRace = index;
+    }
+    selectedCircuitIndex = nextRace >= 0 ? nextRace : storedIndex;
     circuitSelectionInitialized = true;
   }
 
