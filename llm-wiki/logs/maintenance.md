@@ -1266,3 +1266,15 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   wheel rate; at full lock the .30 floor adds little past ~60 m/s because the
   ceiling caps it (5.45 vs 5.38 g at 60 m/s).
 - `?vNN` chain bumped up to `race.html`; `node --check` only.
+
+## 2026-09-26 — Phones default to the medium graphics profile (#167)
+
+- `graphics-profiles.js` `detectDefaultProfileId`: touch devices start on
+  `medium`; `low` only with `navigator.deviceMemory` <= 4 GB (Chromium) or
+  fewer than 4 cores. The DPR >= 3 rule is gone: it sent every recent iPhone
+  to `low`.
+- Evidence (user, iPhone 17): auto picked `low`; `?gfx=high` still at
+  16.7 ms (60 fps cap); 30 fps earlier was iOS Low Power Mode, not load.
+- Desktop unchanged (`high` with >= 8 cores, else `medium`). Auto choice is
+  not persisted, so existing players move on next load; `?gfx=` overrides stay.
+- Open: `high` as phone default not chosen — one device is not enough data.
