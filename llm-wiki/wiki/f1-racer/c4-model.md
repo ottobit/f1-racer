@@ -3,6 +3,19 @@
 > As-is model of `master` at 2026-09-27. Planned elements are explicitly
 > labelled; everything else describes the code currently in the repository.
 
+## Detailed four-level models
+
+This page is the combined architectural map. The two runtime types each have
+their own complete C4 path, kept separate so local and multiplayer concerns do
+not blur into one oversized diagram:
+
+- [Solo/local — C4 levels 1 to 4](c4-local.md)
+- [Multiplayer — C4 levels 1 to 4](c4-multiplayer.md)
+
+Both detailed documents use the same visual language: people are dark blue,
+systems/containers are blue, code components are light blue, data stores are
+green and external infrastructure is grey.
+
 ## Scope and architectural drivers
 
 F1 Racer is one product with two runtime shapes:
@@ -355,4 +368,3 @@ flowchart LR
 | Room state machine | `core/server/rooms.mjs` |
 | Agent facade | `core/client/race/agent-api.js`, `driver-providers.js` |
 | Automated room participant | `core/tools/room-bot.mjs` |
-
