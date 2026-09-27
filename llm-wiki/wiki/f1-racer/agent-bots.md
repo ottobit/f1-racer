@@ -131,8 +131,10 @@ What the first agent-managed races taught (source: race VSN2):
   50–60 fps, the same as the 4-core cloud box, so 5 bots do not measure
   the GPU. Test 8–11 bots.
 - Open: most dips (~51 fps) came near the agent's decision rounds; the
-  agent may compete with the bots for CPU. Whether the human still sees
-  jumping cars without ngrok is not reported yet.
+  agent may compete with the bots for CPU.
+- The human saw no jumping cars: with server and bots on one PC (no ngrok,
+  no relay) the residual jump of the cloud setup is gone, so it was the
+  network path.
 
 ## Many browser bots on one box (#233, #239)
 
@@ -160,8 +162,8 @@ Capacity on the 4-core cloud box (bots' `botFps`, human's view):
   in a race each page also simulates and draws the other cars.
 - Keep `botFps` at or above ~50: below that race results do not rank
   strategies.
-- Open: with 5 bots a small residual jump remains on the human's screen,
-  likely the network path (relay, ngrok, `car_state` cadence).
+- With 5 bots a small residual jump remained on the human's screen; the
+  local-PC run (no ngrok, no relay) removed it, so it was the network path.
 
 ### What is shared inside Chromium (#242)
 

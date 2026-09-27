@@ -32,7 +32,9 @@ wrong, this note says so.
   (22:30:43, 22:32:53, 22:34:03). Race 1, with no decisions, stayed at
   60. Hypothesis: the agent's own processes compete for CPU with the bots
   on the same PC.
-- Human's view (the jumping remote cars): not reported. Open.
+- Human's view: no jumping remote cars (user, 2026-09-28). With room
+  server and bots on one PC, no ngrok and no relay, the residual jump seen
+  on the cloud setup is gone: it was the network path.
 
 ## Strategy
 
