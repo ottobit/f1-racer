@@ -1390,3 +1390,9 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Versions: car-model v35, race-car-view v37, main v102, race-bootstrap v63, showroom v40, garage v52.
 - Open: helmet still reads as a ball from side/pit-TV views — next step of #196.
 - Verified with `node --check` and headless cockpit renders.
+
+## 2026-09-27 — Touch shortcuts on pointerdown (#199)
+
+- `core/client/race/race-input.js`: VIEW, BOX, S/M/H tyres and ERS replayed their key on `click`, which phones only synthesise for a lone touch — with the throttle or wheel held they needed 4-5 taps. Now `pointerdown` + `preventDefault`, like the pedals.
+- Versions: race-input v53, main v103, race-bootstrap v64.
+- Verified with `node --check`; multitouch to be confirmed on the phone.

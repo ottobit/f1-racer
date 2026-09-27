@@ -211,9 +211,12 @@ export function setupRaceInput({
 
   // Phone shortcuts (#131, #133, #139): the ERS readout on the speedo, the
   // VIEW and BOX above the throttle (#155, #171) replay the keys,
-  // like the pad does.
+  // like the pad does. pointerdown, not click (#199): phones only synthesise
+  // a click for a lone touch, so a tap while holding the throttle or the
+  // wheel took 4-5 tries.
   document.querySelectorAll("#hud-cluster [data-key], #touch-controls [data-key]").forEach((el) => {
-    el.addEventListener("click", () => {
+    el.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
       window.dispatchEvent(new KeyboardEvent("keydown", { code: el.dataset.key }));
     });
   });
