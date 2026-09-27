@@ -1,3 +1,8 @@
+// Room nicknames are free text (#220): escape anything built into innerHTML.
+export function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
 export function formatTime(ms) {
   const totalSeconds = ms / 1000;
   const minutes = Math.floor(totalSeconds / 60);
@@ -99,7 +104,7 @@ export function setupRaceHud({
       <ol>${classification.map((entry, index) => `
         <li class="${entry.id === "player" ? "is-player" : ""}${entry.id !== "player" && isDisconnected(entry.id) ? " is-disconnected" : ""}">
           <span class="qualifying-timing__position">${index + 1}</span>
-          <span class="qualifying-timing__name">${entry.name}</span>
+          <span class="qualifying-timing__name">${escapeHtml(entry.name)}</span>
           <strong>${Number.isFinite(entry.time) ? formatTime(entry.time) : "--:--.--"}</strong>
         </li>`).join("")}</ol>`;
     qualifyingTimingEl.hidden = false;
@@ -145,7 +150,7 @@ export function setupRaceHud({
       <ol>${order.map((entry, index) => `
         <li class="${entry.driverId === "player" ? "is-player" : ""}${entry.driverId !== "player" && isDisconnected(entry.driverId) ? " is-disconnected" : ""}">
           <span class="qualifying-timing__position">${index + 1}</span>
-          <span class="qualifying-timing__name">${entry.driverId === "player" ? "TU" : nameOf(entry.driverId)}</span>
+          <span class="qualifying-timing__name">${entry.driverId === "player" ? "TU" : escapeHtml(nameOf(entry.driverId))}</span>
           <strong>${gaps[index]}</strong>
         </li>`).join("")}</ol>`;
     qualifyingTimingEl.hidden = false;
