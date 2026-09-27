@@ -1375,3 +1375,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Helmet radius .19 → .155, longer shape, glossy `helmet`-role paint, wide visor band, primary-colour crown (`driverHelmetCrown`, also hidden by the cockpit camera in `race-camera.js`), protruding chin; smaller gloves.
 - User still finds the driver toy-like; follow-up thread opened. From the chase camera the driver is hidden by the engine cover.
 - Verified with `node --check` and headless close-up renders.
+
+## 2026-09-27 — Restore 25/09 handling (#194)
+
+- `core/client/race/steering.js`: removed the #161 yaw grip ceiling (`gripLimitYaw`, 5.5 g/v) — it washed the car wide as speed rose on corner exits — and the speed-dependent wheel rate limit in `smoothSteering`; #165's .30 high-speed floor kept.
+- `race-input.js` / `main.js`: `speedRatio` plumbing dropped; versions steering v5, race-input v52, main v101, race-bootstrap v62.
+- Physics follow-up thread opened (fairness: fixed timestep; aero grip/braking/drag).
+- Verified with `node --check`; handling to be judged in game.
