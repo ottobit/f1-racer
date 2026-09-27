@@ -1505,3 +1505,14 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   Start lights now correct for the server clock offset.
 - Verified with a local room server (Vallechiara, 5 laps 15.7–17.2 s, finish
   reported). Qualifying and pit stop not yet exercised headless.
+
+## 2026-09-27 — Room nicknames in multiplayer (#220)
+
+- `main.js` v111: `displayName(driverId)` returns the room nickname of the
+  participant who reserved that driver (own car included); solo keeps roster
+  names. Used by nameplates, race tower, qualifying times and results.
+- Security: nicknames are free text (server only trims/truncates) and several
+  of those views use `innerHTML` — new `escapeHtml` (`race-hud.js` v40)
+  applied to every name built into HTML; nameplates/radio use `textContent`.
+- Chain `race-bootstrap.js` v72, `race.html` (skipped v110/v71 used by #219).
+- Syntax checks only.

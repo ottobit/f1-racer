@@ -9,7 +9,7 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 import { createStudioEnvironment } from "../shared/car-model.js?v=35";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=37";
 import { setupRaceInput } from "./race-input.js?v=56";
-import { setupRaceHud } from "./race-hud.js?v=39";
+import { escapeHtml, setupRaceHud } from "./race-hud.js?v=40";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=35";
 import { setupPlayerPhysics } from "./player-physics.js?v=9";
@@ -821,8 +821,19 @@ const AI_QUALIFYING_RESULTS = multiplayer
 function multiplayerQualifyingRivals() {
   return multiplayer.getRemoteDrivers().map(({ participantId, driverId }) => {
     const participant = multiplayer.room.participants.find((p) => p.participantId === participantId);
-    return { id: driverId, name: displayDriverName(driverId), time: participant?.qualiBestTime ?? Infinity };
+    return { id: driverId, name: displayName(driverId), time: participant?.qualiBestTime ?? Infinity };
   });
+}
+
+// Multiplayer (#220): friends and agents race under the name they chose in
+// the room, not the roster driver they reserved. Solo keeps roster names.
+function displayName(driverId) {
+  if (multiplayer) {
+    const id = driverId === "player" ? MY_ROOM_DRIVER_ID : driverId;
+    const participant = multiplayer.room.participants.find((p) => p.driverId === id);
+    if (participant?.nickname) return participant.nickname;
+  }
+  return displayDriverName(driverId);
 }
 
 function isDriverDisconnected(driverId) {
@@ -850,7 +861,7 @@ const hud = setupRaceHud({
   tireGripFactor,
   gearInfo,
   currentRaceOrder,
-  nameOf: displayDriverName,
+  nameOf: displayName,
   updateEngineSound,
   playShiftClick,
   updateAmbientChorus,
@@ -910,8 +921,9 @@ const { updateAiCar } = setupRaceAi({
   cautionSpeedMultiplier,
 });
 
+// Escaped: it lands in innerHTML, and room nicknames are free text (#220).
 function driverName(driverId) {
-  return displayDriverName(driverId);
+  return escapeHtml(displayName(driverId));
 }
 
 // Multiplayer results (#113): the server's finish order, the same for
@@ -1061,7 +1073,7 @@ const raceNameplates = setupRaceNameplates({
   camera,
   mount: document.getElementById("driver-nameplates"),
   cars: aiCars,
-  nameOf: displayDriverName,
+  nameOf: displayName,
   isDisconnected: isDriverDisconnected,
 });
 const { integratePlayerMotion } = setupPlayerPhysics({
@@ -1629,7 +1641,7 @@ if (isBotSession) {
     isCautionActive: () => cautionState === "active",
     isRaining,
     circuitName: circuit.name,
-    nameOf: displayDriverName,
+    nameOf: displayName,
   });
   humanInputListeners.push(agentApi.onHumanInput);
   if (botDriver) {
