@@ -1396,3 +1396,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `core/client/race/race-input.js`: VIEW, BOX, S/M/H tyres and ERS replayed their key on `click`, which phones only synthesise for a lone touch — with the throttle or wheel held they needed 4-5 taps. Now `pointerdown` + `preventDefault`, like the pedals.
 - Versions: race-input v53, main v103, race-bootstrap v64.
 - Verified with `node --check`; multitouch to be confirmed on the phone.
+
+## 2026-09-27 — Physics substeps, 25/09 steering back (#197, cycle 1)
+
+- `core/client/race/player-physics.js`: each frame integrated in equal substeps of at most 1/120 s (`stepMotion`); track-limit counting once per frame. Node sim, same inputs 15 vs 150 fps: gap 1.57 m / 0.8° -> 0.28 m / 0.1°. AI still integrates per frame.
+- `steering.js` / `race-input.js`: user could no longer win on the phone after #194; #194 had kept #165's travel .38 and floor .30 without the grip ceiling (~45% more yaw per thumb at top speed than 25/09). Back to 25/09: travel .48, floor .22.
+- Versions: player-physics v8, steering v6, race-input v54, main v105, race-bootstrap v66.
+- Next in #197: aero (v² grip/braking, drag, slipstream), tuned on the player's phone lap times; then AI on the same physics.
+- Verified with `node --check`; feel to be judged in game.
