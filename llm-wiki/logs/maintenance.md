@@ -1516,3 +1516,14 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   applied to every name built into HTML; nameplates/radio use `textContent`.
 - Chain `race-bootstrap.js` v72, `race.html` (skipped v110/v71 used by #219).
 - Syntax checks only.
+
+## 2026-09-27 — Hotfix: import race-rules.js in main.js (#222)
+
+- `core/client/race/main.js`: #219 moved car params, tyres, ERS/pit/DRS,
+  grid and damage constants into `race-rules.js` but never imported them;
+  the race page threw `playerCarParams is not defined` (black screen).
+- Added the import (`race-rules.js?v=1`); bumped `main.js` v112 and
+  `race-bootstrap.js` v73 in `race.html`.
+- Lesson: `node --check` does not catch undeclared identifiers; after a
+  module extraction, grep that every moved export is imported.
+- Verified: the local browser bot loaded the race and wrote `state.json`.
