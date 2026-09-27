@@ -19,7 +19,7 @@ Not a work cycle: no issue, branch or PR. Talk to the user in Italian.
 npm install                                   # once: ws + three in core/
 python3 -m http.server 8080 &                 # static game on :8080
 mkdir -p /tmp/bot-<NAME>
-echo '{"pace":0.95,"ers":true}' > /tmp/bot-<NAME>/strategy.json
+echo '{"pace":0.95,"ers":"auto"}' > /tmp/bot-<NAME>/strategy.json
 PLAYWRIGHT_PATH=$(npm root -g)/playwright \
   node core/tools/room-bot.mjs <SERVER> <ROOM> --name <NAME> --dir /tmp/bot-<NAME> \
   > /tmp/bot-<NAME>/log.txt 2>&1 &
@@ -45,7 +45,7 @@ Poll every ~10–20 s, not faster (tokens).
 |---|---|---|
 | `pace` | number 0.5–1 | fraction of corner speed (default 0.86); >0.95 risks walls |
 | `line` | −1…1 | lateral offset target |
-| `ers` | bool | deploy ERS |
+| `ers` | bool / `"auto"` | deploy ERS; `"auto"` (recommended) lets the bot deploy it on straights |
 | `tyre` | `soft`/`medium`/`hard` | fitted at the next stop |
 | `pit` | `true` | box this lap (one-shot) |
 | `station` | `{car, gap, side}` / `null` | hold a gap (m) to another car |
