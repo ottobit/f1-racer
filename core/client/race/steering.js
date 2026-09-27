@@ -12,8 +12,9 @@ export function steeringYaw(steer, speed, authority, grip, load = 1) {
   const velocity = Math.abs(speed);
   // No rotation while stationary; keep high-speed steering controlled without
   // making the car feel numb once it reaches real racing pace.
-  // #165: #153's .30 floor restored (user prefers the precision). #194:
-  // no grip ceiling on top — it washed the car wide on every exit.
-  const speedLimit = .30 + .70 / (1 + Math.pow(velocity / 42, 1.45));
+  // #194: no grip ceiling on top — it washed the car wide on every exit.
+  // #197: 25/09 floor back (.22): with no ceiling, #165's .30 left a phone
+  // thumb ~45% more yaw at top speed than when the car was drivable.
+  const speedLimit = .22 + .78 / (1 + Math.pow(velocity / 42, 1.45));
   return -steer * authority * speedLimit * Math.min(velocity / 7, 1) * grip * load * Math.sign(speed);
 }
