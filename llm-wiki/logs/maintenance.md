@@ -1468,3 +1468,16 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   pings natively: no client change, no `?vNN` bump.
 - Verified server-only with a paused-socket client (2 -> 1 participants);
   the user must restart the room server to pick it up.
+
+## 2026-09-27 — Bot strategy ers:"auto" and ERS re-arm (#212)
+
+- `core/client/race/driver-providers.js` (v3): `setStrategy` accepts
+  `ers: "auto"`; the fast layer deploys on straights/gentle kinks
+  (`severity < 0.2`), starting at >= 20% charge, until flat or a corner.
+- `core/client/race/main.js` (v109): bug fix — the bot only wrote
+  `state.ersActive` when its ERS target changed, so after `race-systems.js`
+  switched off a flat battery a steady `ers:true` never re-armed it. Now it
+  follows the bot's decision every frame (only with charge left).
+- Version chain: `race-bootstrap.js` v70, `race.html`.
+- `procedure-racing.md`: documents `"auto"`, now the recommended start value.
+- Bot sessions only; human driving unchanged. Syntax checks only.
