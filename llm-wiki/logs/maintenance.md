@@ -1419,3 +1419,15 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race-input.js`: travel back to .38 (~60px to full lock); `TOUCH_STEER_EXPONENT` 1.6 passed to `shapeSteering` (new optional exponent in `steering.js`, pad keeps 1.22). Same gain as 25/09 up to ~30px of drag, full lock at ~60px. #202's .22 high-speed floor kept.
 - Versions: steering v7, race-input v55, main v106, race-bootstrap v67.
 - Headless two-finger start (CDP touch) showed the wheel responding at once; the edge gesture can't be simulated — to be confirmed on the phone. `node --check` only otherwise.
+
+## 2026-09-27 — Aero: downforce braking and slipstream (#197)
+
+- `core/client/race/player-physics.js`: brake force scales with speed²
+  (0.8x slow, ~1.2x at top speed); slipstream behind a visible car
+  (30 m range, 3 m half-width) cuts drag and adds up to 3.5% top speed,
+  exposed as `state.slipstream`.
+- Steering yaw deliberately untouched: it is tuned for phone thumbs and
+  extra high-speed yaw (#194) made the car undrivable on mobile.
+- Not done, closes #197 anyway: AI still integrates its own simpler model
+  (variable step, no aero); brake hint still assumes flat `usableBrake`.
+- Verified with `node --check` and `git diff --check` only.
