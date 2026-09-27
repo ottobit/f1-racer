@@ -1491,3 +1491,17 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `core/tools/room-bot.mjs`: logs `ready` when it ticks the ready box.
 - Origin: first agent races (rooms PDFP, Z47X) produced #211 and #212.
 - Syntax checks only.
+
+## 2026-09-27 — Headless room bot on the real player physics (#214)
+
+- New `core/client/race/race-rules.js`: player car limits, tyres, ERS, DRS,
+  pit, runoff drag, grid slots and contact constants moved out of `main.js`
+  (values unchanged) so the browser and Node share one source.
+- `main.js` v110 imports them; chain `race-bootstrap.js` v71, `race.html`.
+- `core/tools/headless-room-bot.mjs`: ChatGPT's WebGL-free transport (PR #218,
+  superseded) kept; its on-rails model replaced by `player-physics.js`,
+  `race-systems.js` (real pit lane), `race-progress.js`, `race-collisions.js`
+  and the layered driver — same car as `?driver=layered`, no Chromium.
+  Start lights now correct for the server clock offset.
+- Verified with a local room server (Vallechiara, 5 laps 15.7–17.2 s, finish
+  reported). Qualifying and pit stop not yet exercised headless.
