@@ -18,8 +18,27 @@ export function setupPlayerPhysics({
   const REVERSE_DELAY_S = 0.6;
   const REVERSE_ACCEL = 9;
   let stoppedBrakeTime = 0;
+  // Fixed-size physics substeps (#197): one integration over the whole
+  // frame made grip, braking and the yaw response depend on the frame rate
+  // (a 30 fps phone and a 144 Hz monitor drove different cars). Each frame
+  // is split into equal steps of at most 1/120 s, so every device
+  // integrates at nearly the same resolution without render interpolation.
+  const MAX_STEP_S = 1 / 120;
 
   function integratePlayerMotion(dt) {
+    const steps = Math.max(1, Math.ceil(dt / MAX_STEP_S - 1e-6));
+    const h = dt / steps;
+    let info = null;
+    for (let i = 0; i < steps; i++) info = stepMotion(h);
+
+    const isOffTrack = info.dist > grassLimit;
+    if (isOffTrack && !state.wasOffTrack) state.trackLimitViolationsThisLap++;
+    state.wasOffTrack = isOffTrack;
+
+    return info;
+  }
+
+  function stepMotion(dt) {
     const preSpeedFactor = Math.min(Math.abs(state.speed) / car.maxSpeed, 1);
     const preLateralDemand = Math.min(
       Math.abs(state.lateralSpeed) / Math.max(Math.abs(state.speed) * 0.3, 1),
@@ -127,11 +146,6 @@ export function setupPlayerPhysics({
 
     const info = nearestTrackInfo(state.x, state.z);
     applyTrackBoundary(state, dt, info);
-
-    const isOffTrack = info.dist > grassLimit;
-    if (isOffTrack && !state.wasOffTrack) state.trackLimitViolationsThisLap++;
-    state.wasOffTrack = isOffTrack;
-
     return info;
   }
 
