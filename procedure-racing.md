@@ -1,7 +1,8 @@
-# Giochiamo — agent play session
+# Racing procedure — agent play session
 
-Trigger: the user writes **"Giochiamo"** (or sends a room-server URL + room
-code). This file is all you need: do NOT read the wiki, handoff or history.
+Trigger (by inference, no fixed keyword): the user wants to play/race
+against agents — "giochiamo", "facciamo una gara", a room-server URL, a
+room code, "entra in stanza", etc. This file is all you need: do NOT read the wiki, handoff or history.
 Not a work cycle: no issue, branch or PR. Talk to the user in Italian.
 
 ## Inputs (ask only for what's missing)
