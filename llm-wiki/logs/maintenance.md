@@ -1431,3 +1431,15 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Not done, closes #197 anyway: AI still integrates its own simpler model
   (variable step, no aero); brake hint still assumes flat `usableBrake`.
 - Verified with `node --check` and `git diff --check` only.
+
+## 2026-09-27 — Touch wheel dead zone against thumb drift (#207)
+
+- Symptom: on phone the car "pulled" right unless corrected. Code audit
+  (player physics, track boundary, collisions, tilt, gamepad) found no
+  bias; cause was a resting thumb creeping a few px on the relative wheel
+  with a ~2px dead zone (10px = ~4% steer, tens of metres on a straight).
+- `steering.js`: `shapeSteering` takes the dead zone as a parameter
+  (default .035 kept for keyboard/pad).
+- `race-input.js`: touch dead zone .13 of travel (~8px), exponent 1.6 ->
+  1.4 so the 20-60px response of #205 is unchanged.
+- Verified with `node --check`, `git diff --check` and the curve in Node.
