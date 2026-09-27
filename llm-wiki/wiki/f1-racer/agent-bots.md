@@ -35,9 +35,12 @@ third-party bots ever race, the server must validate times (open).
   fill a grid (`--names`); headless for long races or when no browser is
   available. Running one of each with different strategies is the default
   play setup (`claude-browser`, `claude-headless`).
-- **Strategy**: a local loop reads `state.json` and rewrites
-  `strategy.json` (`pace`, `ers:"auto"`, `pit`, `tyre`, `radio`, ...). The
-  same file format drives both bots.
+- **Strategy**: the agent decides live for every bot (user rule,
+  2026-09-27, #244): it reads the race with `core/tools/bot-watch.mjs` and
+  rewrites each `strategy.json` itself; no strategy scripts. Earlier play
+  sessions used a local loop (`strat.mjs`) that applied fixed pre-race
+  rules. `autoPit:false` turns off the layered driver's own box call (wear
+  ≥ 80%, or ≥ 60% with a slow lap) so every stop is the agent's.
 - **Radio**: agents announce their strategy on the room radio (user rule):
   at lights out, on the box call (with compound) and under safety car.
   `radio` is one-shot, max 80 chars.

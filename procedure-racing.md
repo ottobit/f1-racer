@@ -39,12 +39,12 @@ PLAYWRIGHT_PATH=$(npm root -g)/playwright \
   11 bots at 30–33 fps with visible stutter. Use 5 (smooth for the human),
   7 at most.
 - One command for a whole fleet (#244), on the cloud box or a player's PC:
-  `node core/tools/bot-fleet.mjs <SERVER> <ROOM> --count 5` serves :8080
-  itself (no Python), runs the fixed 5-strategy mix (pace/stop/compound,
-  radio included) and prints every bot's `botFps` and position every 10 s.
-  Keep it running in the background for the whole session. Add `--gpu`
-  (or `--headed`) on a machine with a real GPU; `state.json` `gpuRenderer`
-  says what WebGL really uses ("SwiftShader" = CPU).
+  `node core/tools/bot-fleet.mjs <SERVER> <ROOM> --count 5` (run it in the
+  background) serves :8080 itself (no Python), joins the bots and prints
+  every bot's `botFps` and position every 10 s. It decides nothing: you are
+  the strategist of every bot (below). Add `--gpu` (or `--headed`) on a
+  machine with a real GPU; `state.json` `gpuRenderer` says what WebGL
+  really uses ("SwiftShader" = CPU).
 - On the player's PC (run the agent there with `claude remote-control`):
   `npm install` in `core/`, `npm i -g playwright`,
   `npx playwright install chromium`; if the room server runs on the same
@@ -57,9 +57,21 @@ PLAYWRIGHT_PATH=$(npm root -g)/playwright \
 
 ## During the race
 
-The bot re-reads `strategy.json` on every change and writes `state.json`
-every 2 s. Loop: read `state.json` → decide → rewrite `strategy.json`.
-Poll every ~10–20 s, not faster (tokens).
+You decide, live, for every bot (user rule, 2026-09-27): no strategy
+scripts, no loops that apply rules for you. The bot re-reads
+`strategy.json` on every change and writes `state.json` every 2 s.
+
+- Read the race: `node core/tools/bot-watch.mjs [DIR] --timeout 20` waits
+  until something worth a decision happens (lap, pit state, safety car,
+  wear crossing 50/70/85%, damage) or 20 s pass, then prints one line per
+  bot. It only reports.
+- Decide and write each bot's `strategy.json` yourself (whole file, it is
+  not merged), always with `"autoPit":false` so the driver never boxes on
+  its own; `pit`/`radio` are one-shot.
+- Before lights out: give every bot its own plan (pace, planned stop,
+  compound) and announce it by `radio`.
+- Repeat watch → decide → write until `finished`. Stay in the turn during
+  the race: that is what keeps a cloud container awake.
 
 `strategy.json` (all keys optional; invalid values are ignored):
 
@@ -70,6 +82,7 @@ Poll every ~10–20 s, not faster (tokens).
 | `ers` | bool / `"auto"` | deploy ERS; `"auto"` (recommended) lets the bot deploy it on straights |
 | `tyre` | `soft`/`medium`/`hard` | fitted at the next stop |
 | `pit` | `true` | box this lap (one-shot) |
+| `autoPit` | bool | `false`: the driver never boxes on its own (default `true`) |
 | `station` | `{car, gap, side}` / `null` | hold a gap (m) to another car |
 | `radio` | string ≤80 | message shown in the room (one-shot) |
 
@@ -81,17 +94,16 @@ Key `state.json` fields: `session.phase/state`, `lap`/`lapsTotal`,
 Radio (user rule): announce your strategy with `radio` — at lights out,
 on every box call (with the compound) and under safety car.
 
-Rules of thumb: wear ≥ ~80% with ≥ 2 laps left → `pit` + fresh `tyre`;
+Rules of thumb (yours to apply, per bot): wear ≥ ~80% with ≥ 2 laps left → `pit` + fresh `tyre`;
 damage high → lower `pace`; `safetyCar` true → `ers:false`, save for restart.
 
 ## Stay alive (cloud agents)
 
 A cloud container is suspended when the agent sits idle: the bot dies
-mid-room and leaves a ghost the host has to wait out (#211). Keep a
-background loop running for the whole play session, not
-just the race — e.g. a small script that reads `state.json` every 5 s,
-applies the strategy, and keeps waiting across rematches. Stop it only when
-the user says to stop.
+mid-room and leaves a ghost the host has to wait out (#211). During a race
+you are working (watch → decide), so it stays awake; between races keep
+the fleet running in the background and don't end the session. Stop the
+bots only when the user says to stop.
 
 ## Bug and requirement hunt (user rule)
 
