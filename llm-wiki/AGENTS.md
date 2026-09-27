@@ -101,3 +101,6 @@ connects architecture, decisions, roadmap and external patterns.
     the session when a PR is created — leave it, don't spend a call
     removing it mid-cycle; `Concludi` unsubscribes;
   - short replies: what was done, what the user must decide.
+- Play sessions: when the user writes "Giochiamo" (or sends a room-server
+  URL / room code), read only `GIOCHIAMO.md` at the repo root and follow it
+  — no wiki, no issue/branch/PR.
