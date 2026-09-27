@@ -1364,3 +1364,7 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Still fully procedural: livery roles, sponsor decals and the non-detail batching are unchanged; rear sponsor plane rotated so it reads correctly from behind.
 - `car-model.js` v33, chain bumped up to `race.html` and `garage.html`.
 - Verified with `node --check` and a one-off headless render (rear/side/front) compared with `master`.
+
+## 2026-09-27 — Close cycles only on "Concludi" (#190)
+
+- `llm-wiki/AGENTS.md`: the 2026-09-24 auto-close rule is replaced; when the work is done the cycle stops at the draft PR and is closed only when the user says "Concludi" (steps in the `concludi` skill).
