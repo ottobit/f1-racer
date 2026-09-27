@@ -339,7 +339,7 @@ function readStrategy() {
     const update = JSON.parse(fs.readFileSync(STRATEGY_FILE, "utf8"));
     if (Number.isFinite(update.pace)) targets.pace = clamp(update.pace, 0.5, 1);
     if (Number.isFinite(update.line)) targets.line = clamp(update.line, -1, 1);
-    if (typeof update.ers === "boolean") targets.ers = update.ers;
+    if (typeof update.ers === "boolean" || update.ers === "auto") targets.ers = update.ers;
     if (["soft", "medium", "hard"].includes(update.tyre)) targets.tyre = update.tyre;
     if (update.station === null) targets.station = null;
     else if (update.station && typeof update.station.car === "string") {
@@ -444,9 +444,13 @@ function simulate(now, dt) {
   }
 
   const beforeLap = Math.floor(Math.max(distance, 0) / trackLength);
+  const severity = cornerSeverity(distance / trackLength);
   const wearFactor = 1 - Math.max(0, tyreWearPct - 70) / 250;
-  const ersFactor = targets.ers && ersChargePct > 0 ? 1.05 : 1;
-  let targetSpeed = MAX_SPEED * (1 - cornerSeverity(distance / trackLength) * 0.48) * targets.pace * wearFactor * ersFactor;
+  const ersActive = targets.ers === true
+    ? ersChargePct > 0
+    : targets.ers === "auto" && severity < 0.2 && ersChargePct >= 20;
+  const ersFactor = ersActive ? 1.05 : 1;
+  let targetSpeed = MAX_SPEED * (1 - severity * 0.48) * targets.pace * wearFactor * ersFactor;
   targetSpeed = stationSpeed(targetSpeed);
   if (speed < targetSpeed) speed = Math.min(targetSpeed, speed + ACCEL * dt);
   else speed = Math.max(targetSpeed, speed - BRAKE * dt);
@@ -454,7 +458,7 @@ function simulate(now, dt) {
   distance += stepDistance;
   tyreDistance += stepDistance;
   tyreWearPct = clamp((tyreDistance / (trackLength * TYRE_LIFE_LAPS)) * 100, 0, 100);
-  if (targets.ers && speed > 1) ersChargePct = Math.max(0, ersChargePct - 4 * dt);
+  if (ersActive && speed > 1) ersChargePct = Math.max(0, ersChargePct - 4 * dt);
   else ersChargePct = Math.min(100, ersChargePct + 2 * dt);
   const afterLap = Math.floor(Math.max(distance, 0) / trackLength);
   if (afterLap > beforeLap) {
@@ -512,7 +516,12 @@ function snapshot(now) {
     tyreWearPct,
     tyreCompound,
     damagePct: 0,
-    ers: { chargePct: ersChargePct, active: !!targets.ers },
+    ers: {
+      chargePct: ersChargePct,
+      active: targets.ers === true
+        ? ersChargePct > 0
+        : targets.ers === "auto" && cornerSeverity(distance / trackLength) < 0.2 && ersChargePct >= 20,
+    },
     gapAheadS: gapSeconds(ahead),
     gapBehindS: gapSeconds(behind),
     nearbyCars: order.filter((entry) => entry.participantId !== credentials?.participantId).slice(0, 4),
