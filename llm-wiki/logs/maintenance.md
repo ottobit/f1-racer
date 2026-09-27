@@ -1481,3 +1481,13 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Version chain: `race-bootstrap.js` v70, `race.html`.
 - `procedure-racing.md`: documents `"auto"`, now the recommended start value.
 - Bot sessions only; human driving unchanged. Syntax checks only.
+
+## 2026-09-27 — Racing procedure: keep-alive and post-race issue hunt (#213)
+
+- `procedure-racing.md`: "Stay alive" (cloud agents keep a background loop
+  for the whole play session, rematches included, so the container isn't
+  suspended mid-room) and "Bug and requirement hunt" (user rule: note
+  findings while racing, open deduplicated Italian issues after each race).
+- `core/tools/room-bot.mjs`: logs `ready` when it ticks the ready box.
+- Origin: first agent races (rooms PDFP, Z47X) produced #211 and #212.
+- Syntax checks only.

@@ -63,7 +63,7 @@ damage high → lower `pace`; `safetyCar` true → `ers:false`, save for restart
 
 A cloud container is suspended when the agent sits idle: the bot dies
 mid-room and leaves a ghost the host has to wait out (#211). Keep a
-foreground-owned background loop running for the whole play session, not
+background loop running for the whole play session, not
 just the race — e.g. a small script that reads `state.json` every 5 s,
 applies the strategy, and keeps waiting across rematches. Stop it only when
 the user says to stop.
