@@ -213,22 +213,25 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
         const glove=mesh(new THREE.SphereGeometry(.045,12,8),stripe,[side*.135,-.005,-.008],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.95,1.25,.95);
         mesh(new THREE.SphereGeometry(.016,8,6),stripe,[side*.112,.03,-.022],driverSteeringWheel).name="driverThumb";
       }else{
-        const glove=mesh(new THREE.SphereGeometry(.052,10,7),stripe,[side*.115,0,.025],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.78,1.18,.72);
+        const glove=mesh(new THREE.SphereGeometry(.04,10,7),stripe,[side*.115,0,.02],driverSteeringWheel);glove.name="driverGlove";glove.scale.set(.8,1.15,.75);
       }
     }
     // HANS collar resting on the shoulders behind the helmet.
     const hans=mesh(new THREE.TorusGeometry(.105,.026,8,16,Math.PI),carbon,[0,.8,-.02]);hans.name="driverHans";hans.rotation.set(Math.PI/2,0,Math.PI);
     // Helmet (#89): livery shell, accent centre stripe, front-only visor
     // slot, chin bar and a small rear spoiler.
-    const helmet=mesh(new THREE.SphereGeometry(.155,detail?28:20,detail?18:12),helmetPaint,[0,.9,.03]);helmet.name="driverHelmet";helmet.scale.set(.9,.95,1.1);
+    const helmet=mesh(new THREE.SphereGeometry(.155,detail?28:20,detail?18:12),helmetPaint,[0,.9,.03]);helmet.name="driverHelmet";helmet.scale.set(.88,.92,1.14);
     const helmetStripe=mesh(new THREE.TorusGeometry(.155,.011,6,detail?32:20,Math.PI),gold,[0,.9,.03]);helmetStripe.name="driverHelmetStripe";helmetStripe.rotation.y=Math.PI/2;helmetStripe.scale.set(1.1,.95,1);
     // Wide visor band and a livery-coloured crown (#192): a plain white ball
     // with a thin slot read as a cartoon face.
-    const visor=mesh(new THREE.SphereGeometry(.159,detail?24:16,8,Math.PI/2-1.15,2.3,1.08,.46),new THREE.MeshPhysicalMaterial({color:0x1d2f40,metalness:1,roughness:.08,clearcoat:1}),[0,.9,.03]);visor.name="driverVisor";visor.scale.set(.9,.95,1.1);
-    const crown=mesh(new THREE.SphereGeometry(.158,detail?28:20,6,0,Math.PI*2,0,.9),paint,[0,.9,.03]);crown.name="driverHelmetCrown";crown.scale.set(.9,.95,1.1);
-    const chin=mesh(new THREE.SphereGeometry(.1,12,8),helmetPaint,[0,.845,.08]);chin.name="driverChin";chin.scale.set(1.2,.7,1);
+    const visor=mesh(new THREE.SphereGeometry(.159,detail?24:16,8,Math.PI/2-1.15,2.3,1.08,.46),new THREE.MeshPhysicalMaterial({color:0x1d2f40,metalness:1,roughness:.08,clearcoat:1}),[0,.9,.03]);visor.name="driverVisor";visor.scale.set(.88,.92,1.14);
+    const crown=mesh(new THREE.SphereGeometry(.158,detail?28:20,6,0,Math.PI*2,0,.9),paint,[0,.9,.03]);crown.name="driverHelmetCrown";crown.scale.set(.88,.92,1.14);
+    const chin=mesh(new THREE.SphereGeometry(.09,12,8),helmetPaint,[0,.84,.1]);chin.name="driverChin";chin.scale.set(1.25,.75,1.3);
     const spoiler=box(.14,.016,.06,gold,[0,.99,-.12]);spoiler.name="driverHelmetSpoiler";spoiler.rotation.x=.35;
   }
+  // Cockpit sides (#192) up to the helmet's midline, as on a real F1: arms
+  // and shoulders stay inside the tub, only the helmet shows.
+  for(const side of [-1,1]){const wall=shell([[-.42,.02,.78,.02,3],[-.32,.06,.8,.1,3.4],[.25,.06,.8,.09,3.4],[.48,.045,.78,.05,3],[.56,.01,.76,.01,3]],paint,side*.27);wall.name="cockpitSide";}
   // Headrest padding (#192) wrapped round the back and sides of the helmet,
   // as high as a real F1 cockpit's, so the driver sits in the car.
   const headrest=mesh(new THREE.TorusGeometry(.2,.055,8,detail?24:14,Math.PI*1.3),paint,[0,.8,-.01]);headrest.name="cockpitHeadrest";headrest.rotation.set(Math.PI/2,0,-Math.PI*1.15);headrest.scale.set(1,1.3,.8);
