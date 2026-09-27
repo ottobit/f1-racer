@@ -38,6 +38,17 @@ PLAYWRIGHT_PATH=$(npm root -g)/playwright \
   worse). Measured in a race on the 4-core cloud box: 7 bots at 56–59 fps,
   11 bots at 30–33 fps with visible stutter. Use 5 (smooth for the human),
   7 at most.
+- One command for a whole fleet (#244), on the cloud box or a player's PC:
+  `node core/tools/bot-fleet.mjs <SERVER> <ROOM> --count 5` serves :8080
+  itself (no Python), runs the fixed 5-strategy mix (pace/stop/compound,
+  radio included) and prints every bot's `botFps` and position every 10 s.
+  Keep it running in the background for the whole session. Add `--gpu`
+  (or `--headed`) on a machine with a real GPU; `state.json` `gpuRenderer`
+  says what WebGL really uses ("SwiftShader" = CPU).
+- On the player's PC (run the agent there with `claude remote-control`):
+  `npm install` in `core/`, `npm i -g playwright`,
+  `npx playwright install chromium`; if the room server runs on the same
+  PC use `ws://localhost:8787` as `<SERVER>` (no ngrok, no relay).
 - Behind an HTTPS proxy (`HTTPS_PROXY` set) the bot relays the WebSocket on
   `:8081` by itself; a second room-bot process reuses that relay. Port 8080
   serves the game for every bot on the box.
@@ -96,4 +107,5 @@ user asks.
 Race over (`session.state` = `finished`): tell the user the result. On
 "Rivincita" the running bots go back to the room and ready up by themselves
 (#224 closed). When the user says to stop:
-`pkill -f room-bot.mjs; pkill -f "http.server 8080"`.
+`pkill -f room-bot.mjs; pkill -f "http.server 8080"` (fleet: Ctrl-C or
+`pkill -f bot-fleet.mjs`).
