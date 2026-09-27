@@ -12,6 +12,7 @@ export function setupPlayerPhysics({
   steeringYaw,
   nearestTrackInfo,
   applyTrackBoundary,
+  slipstreamCars = [],
 }) {
   // Brake stops the car; reverse only after holding it at a standstill
   // (#103) — it used to carry straight through zero at full brake force.
@@ -24,10 +25,39 @@ export function setupPlayerPhysics({
   // is split into equal steps of at most 1/120 s, so every device
   // integrates at nearly the same resolution without render interpolation.
   const MAX_STEP_S = 1 / 120;
+  // Aero (#197). Braking follows downforce: ~1.2x brakeDecel at top speed,
+  // ~0.8x in slow corners, so late braking pays off on straights and hard
+  // stops at low speed need more room. Steering yaw is left alone: it is
+  // tuned for phone thumbs (steering.js) and extra high-speed yaw broke it.
+  // Slipstream: close behind a visible car, less drag and a slightly higher
+  // top speed, fading with the gap.
+  const SLIPSTREAM_RANGE_M = 30;
+  const SLIPSTREAM_HALF_WIDTH_M = 3;
+  const SLIPSTREAM_TOP_SPEED = 0.035;
+  let slipstream = 0;
+
+  function measureSlipstream() {
+    if (state.speed < 30) return 0;
+    const fx = Math.sin(state.heading);
+    const fz = Math.cos(state.heading);
+    let best = 0;
+    for (const other of slipstreamCars) {
+      if (other.group && !other.group.visible) continue;
+      const dx = other.x - state.x;
+      const dz = other.z - state.z;
+      const ahead = dx * fx + dz * fz;
+      if (ahead < 2 || ahead > SLIPSTREAM_RANGE_M) continue;
+      if (Math.abs(dx * fz - dz * fx) > SLIPSTREAM_HALF_WIDTH_M) continue;
+      best = Math.max(best, 1 - ahead / SLIPSTREAM_RANGE_M);
+    }
+    return best;
+  }
 
   function integratePlayerMotion(dt) {
     const steps = Math.max(1, Math.ceil(dt / MAX_STEP_S - 1e-6));
     const h = dt / steps;
+    slipstream = measureSlipstream();
+    state.slipstream = slipstream;
     let info = null;
     for (let i = 0; i < steps; i++) info = stepMotion(h);
 
@@ -55,7 +85,8 @@ export function setupPlayerPhysics({
     if (!input.back) stoppedBrakeTime = 0;
     if (input.back) {
       if (state.speed > 0) {
-        const brakeAuthority = longitudinalGripBudget * (1 + brakingLoadTransfer * 0.25);
+        const aeroBrake = 0.8 + 0.4 * preSpeedFactor * preSpeedFactor;
+        const brakeAuthority = longitudinalGripBudget * (1 + brakingLoadTransfer * 0.25) * aeroBrake;
         state.speed = Math.max(0, state.speed - car.brakeDecel * brakeAuthority * dt);
         stoppedBrakeTime = 0;
       } else {
@@ -66,7 +97,7 @@ export function setupPlayerPhysics({
       const traction = longitudinalGripBudget * (1 - accelerationLoadTransfer * 0.35);
       // Power fades with speed (aero drag): launch at car.accel, only ~15%
       // of it left at top speed — roughly real F1 0-100/0-200/0-300 times.
-      const powerFade = 1 - 0.85 * preSpeedFactor * preSpeedFactor;
+      const powerFade = 1 - 0.85 * (1 - 0.3 * slipstream) * preSpeedFactor * preSpeedFactor;
       state.speed += car.accel * traction * powerFade * dt;
     } else {
       // Lift-off: aero drag + engine braking, strong at top speed (~1.4g)
@@ -82,7 +113,8 @@ export function setupPlayerPhysics({
       tyreSpeedFactor(state) *
       (state.drsActive ? drsSpeedMultiplier : 1) *
       (state.ersActive ? ersSpeedMultiplier : 1) *
-      cautionSpeedMultiplier();
+      cautionSpeedMultiplier() *
+      (1 + SLIPSTREAM_TOP_SPEED * slipstream);
     state.speed = Math.max(
       car.reverseMaxSpeed,
       Math.min(playerMaxSpeed, state.speed)
