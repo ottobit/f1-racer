@@ -1,6 +1,10 @@
-import { shapeSteering, smoothSteering } from "./steering.js?v=7";
+import { shapeSteering, smoothSteering } from "./steering.js?v=8";
 
-const TOUCH_STEER_EXPONENT = 1.6;
+// #207: a resting thumb creeps a few px; with a ~2px dead zone that was a
+// steady few-% steer (the car "pulled" on straights). ~8px dead zone, and
+// a softer exponent keeps the 20-60px drag response of #205.
+const TOUCH_STEER_EXPONENT = 1.4;
+const TOUCH_STEER_DEAD_ZONE = .13;
 
 const KEY_MAP = {
   ArrowUp: "forward",
@@ -243,7 +247,7 @@ export function setupRaceInput({
     // cancelling the touch). The steeper curve keeps 25/09's gain for the
     // first ~30px of drag.
     const travel = Math.max(45, wheelEl.clientWidth * 0.38);
-    touchSteer = shapeSteering((event.clientX - wheelOrigin) / travel, TOUCH_STEER_EXPONENT);
+    touchSteer = shapeSteering((event.clientX - wheelOrigin) / travel, TOUCH_STEER_EXPONENT, TOUCH_STEER_DEAD_ZONE);
   });
   const releaseWheel = (event) => {
     if (event.pointerId === wheelPointer) {
