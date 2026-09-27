@@ -30,6 +30,7 @@ browser game built with plain HTML/CSS/JavaScript and Three.js.
 - Technical handoff: [`F1-RACER-WIKI.md`](../../../F1-RACER-WIKI.md)
 - Development procedure: [`procedure.md`](../../../procedure.md)
 - Architecture page: [architecture.md](architecture.md)
+- C4 model — game and multiplayer: [c4-model.md](c4-model.md)
 - Decisions page: [decisions.md](decisions.md)
 - Roadmap page: [roadmap.md](roadmap.md)
 - Developer tooling / publishing workflow: [tooling.md](tooling.md)
