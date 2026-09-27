@@ -1368,3 +1368,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 ## 2026-09-27 — Close cycles only on "Concludi" (#190)
 
 - `llm-wiki/AGENTS.md`: the 2026-09-24 auto-close rule is replaced; when the work is done the cycle stops at the draft PR and is closed only when the user says "Concludi" (steps in the `concludi` skill).
+
+## 2026-09-27 — Driver model proportions (#192)
+
+- `core/client/shared/car-model.js`: driver seated lower (smaller torso/shoulders/arms), cockpit side walls (`cockpitSide`) up to the helmet midline and a livery headrest ring (`cockpitHeadrest`), so only the helmet shows.
+- Helmet radius .19 → .155, longer shape, glossy `helmet`-role paint, wide visor band, primary-colour crown (`driverHelmetCrown`, also hidden by the cockpit camera in `race-camera.js`), protruding chin; smaller gloves.
+- User still finds the driver toy-like; follow-up thread opened. From the chase camera the driver is hidden by the engine cover.
+- Verified with `node --check` and headless close-up renders.
