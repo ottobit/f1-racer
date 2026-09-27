@@ -367,4 +367,4 @@ flowchart LR
 | Room transport | `core/server/room-server.mjs` |
 | Room state machine | `core/server/rooms.mjs` |
 | Agent facade | `core/client/race/agent-api.js`, `driver-providers.js` |
-| Automated room participant | `core/tools/room-bot.mjs` |
+| Automated room participant | `core/tools/room-bot.mjs` (browser), `headless-room-bot.mjs` (Node) — see [agent-bots.md](agent-bots.md) |

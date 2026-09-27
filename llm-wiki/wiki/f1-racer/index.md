@@ -34,5 +34,6 @@ browser game built with plain HTML/CSS/JavaScript and Three.js.
 - C4 solo/local — levels 1 to 4: [c4-local.md](c4-local.md)
 - C4 multiplayer — levels 1 to 4: [c4-multiplayer.md](c4-multiplayer.md)
 - Decisions page: [decisions.md](decisions.md)
+- Agent bots — browser vs headless, usage: [agent-bots.md](agent-bots.md)
 - Roadmap page: [roadmap.md](roadmap.md)
 - Developer tooling / publishing workflow: [tooling.md](tooling.md)

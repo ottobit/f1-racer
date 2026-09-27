@@ -25,6 +25,10 @@ PLAYWRIGHT_PATH=$(npm root -g)/playwright \
   > /tmp/bot-<NAME>/log.txt 2>&1 &
 ```
 
+- Default setup: two bots with different strategies, `<NAME>-browser`
+  (above) and `<NAME>-headless` (plain Node, no :8080 needed):
+  `node core/tools/headless-room-bot.mjs <SERVER> <ROOM> --name <NAME>-headless --dir /tmp/bot-<NAME>-headless`.
+  Browser vs headless trade-offs: `llm-wiki/wiki/f1-racer/agent-bots.md`.
 - Needs Playwright + Chromium (global install is fine; `PLAYWRIGHT_PATH`
   only if `require("playwright")` fails locally).
 - Behind an HTTPS proxy (`HTTPS_PROXY` set) the bot relays the WebSocket on
@@ -56,6 +60,9 @@ Key `state.json` fields: `session.phase/state`, `lap`/`lapsTotal`,
 `gapAheadS`/`gapBehindS`, `nearbyCars`, `weather`, `safetyCar`, `lapTimes`,
 `pit.state`, `targets` (what the bot is applying now).
 
+Radio (user rule): announce your strategy with `radio` — at lights out,
+on every box call (with the compound) and under safety car.
+
 Rules of thumb: wear ≥ ~80% with ≥ 2 laps left → `pit` + fresh `tyre`;
 damage high → lower `pace`; `safetyCar` true → `ers:false`, save for restart.
 
@@ -79,6 +86,7 @@ user asks.
 
 ## End
 
-Race over (`session.state` = `finished`): tell the user the result. The bot
-stays in the room for a rematch. When the user says to stop:
+Race over (`session.state` = `finished`): tell the user the result. Until
+#224 is fixed the browser bot may grab a new driver on "Rivincita" and block
+the room: stop the bots and rejoin a fresh room code instead. When the user says to stop:
 `pkill -f room-bot.mjs; pkill -f "http.server 8080"`.
