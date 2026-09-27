@@ -1,4 +1,4 @@
-import { buildCar as buildCarModel } from "../shared/car-model.js?v=33";
+import { buildCar as buildCarModel } from "../shared/car-model.js?v=34";
 
 const DEFAULT_FRONT_WHEEL_STEER_ANGLE = 0.55;
 
