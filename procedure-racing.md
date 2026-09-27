@@ -35,7 +35,9 @@ PLAYWRIGHT_PATH=$(npm root -g)/playwright \
 - Many browser bots (#233): `--names a,b,c --dir /tmp/bots` runs them in
   one Chromium, files in `/tmp/bots/<name>/`. They render with `gfx=low` in
   a small viewport; `state.json` has `botFps` (below ~50 the bot drives
-  worse). Measured on the 4-core cloud box: 11 bots at ~58 fps.
+  worse). Measured in a race on the 4-core cloud box: 7 bots at 56–59 fps,
+  11 bots at 30–33 fps with visible stutter. Use 5 (smooth for the human),
+  7 at most.
 - Behind an HTTPS proxy (`HTTPS_PROXY` set) the bot relays the WebSocket on
   `:8081` by itself; a second room-bot process reuses that relay. Port 8080
   serves the game for every bot on the box.
@@ -91,7 +93,7 @@ user asks.
 
 ## End
 
-Race over (`session.state` = `finished`): tell the user the result. Until
-#224 is fixed the browser bot may grab a new driver on "Rivincita" and block
-the room: stop the bots and rejoin a fresh room code instead. When the user says to stop:
+Race over (`session.state` = `finished`): tell the user the result. On
+"Rivincita" the running bots go back to the room and ready up by themselves
+(#224 closed). When the user says to stop:
 `pkill -f room-bot.mjs; pkill -f "http.server 8080"`.
