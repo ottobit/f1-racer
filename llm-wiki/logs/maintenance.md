@@ -1593,3 +1593,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
   fresh room.
 - Open: residual network jump; final `tyreWearPct` 100% on softs and
   68–72% on mediums/hards regardless of stops (new issue).
+
+
+## 2026-09-27 — Wiki: Chromium sharing and GPU impact (#242)
+
+- `wiki/f1-racer/agent-bots.md`: new subsection "What is shared inside Chromium" under the many-browser-bots section; it replaces the one-line sharing bullet.
+- Table of layers: browser, GPU and network process shared per `room-bot.mjs` process; context and page/renderer one per bot. Corrects the "one Chromium per bot" misreading.
+- Cost model: each renderer runs the full race (JS, physics, three.js of every car); `gfx=low` trims only drawing; the cloud box has no GPU (`/dev/nvidia*` and `/dev/dri` absent), so WebGL runs in software on the same 4 cores.
+- GPU impact marked Probable/Needs verification: it would offload drawing but not simulation; `room-bot.mjs` launches Chromium without GPU flags.
+- Docs only, verified with `git diff --check`.
