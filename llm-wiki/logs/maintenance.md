@@ -1405,6 +1405,14 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Next in #197: aero (v² grip/braking, drag, slipstream), tuned on the player's phone lap times; then AI on the same physics.
 - Verified with `node --check`; feel to be judged in game.
 
+## 2026-09-27 — C4 architecture atlas (#203)
+
+- Added `c4-model.md` as the combined map of the static game, optional room backend, deployment topology, runtime flow, authority boundaries and planned Browser Copilot integration.
+- Added separate `c4-local.md` and `c4-multiplayer.md` documents. Each follows all four C4 levels explicitly: System Context, Containers, Components and selective Code views, with additional deployment and sequence diagrams.
+- Local architecture documents the browser-only consistency boundary, per-frame simulation path and `localStorage` ownership. Multiplayer documents the client-authoritative car simulation, server-authoritative room lifecycle, ephemeral `car_state` relay and peer-to-peer WebRTC audio.
+- Updated the F1 Racer wiki index to link the overview and both detailed architecture tracks. Planned agent controls remain clearly separated from the as-is runtime.
+- Verification: `git diff --check`, balanced Markdown fences, and structural checks confirming levels 1–4 plus seven Mermaid diagrams in each detailed document. No browser tests, per project policy.
+
 ## 2026-09-27 — Touch wheel: short travel, steeper curve (#197)
 
 - Regression from #202: at the qualifying start the steering froze, then came back. Likely cause: the 25/09 .48 travel (~80px) put a left-lock thumb in Android's back-gesture strip, which cancels the touch (same problem #153/#155 fixed).
