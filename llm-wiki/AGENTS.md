@@ -80,11 +80,12 @@ connects architecture, decisions, roadmap and external patterns.
 - Flow per work cycle (not per change): one GitHub issue -> one branch ->
   one draft PR (Italian body). Each change in the cycle is its own commit
   on that branch (`node --check` + `git diff --check` before each), pushed
-  as it lands. Once the work is done, close the cycle right away without
-  waiting (user's rule, 2026-09-24: the user tests on `master`, never on
-  branches) — same steps as "Concludi": one `logs/maintenance.md` entry,
-  ready, merge ("Closes #N"), pull `master`, delete branch; then remind
-  the user to run `/compact`.
+  as it lands. When the work is done, stop at the draft PR and report;
+  close the cycle only when the user says "Concludi" (user's rule,
+  2026-09-27, replacing the 2026-09-24 auto-close) — steps in the
+  `concludi` skill: one `logs/maintenance.md` entry, ready, merge
+  ("Closes #N"), pull `master`, delete branch; then remind the user to
+  run `/compact`.
 - Risky changes (multiplayer protocol, start/race flow) get their own cycle.
 - Every relative client import/script/link carries a `?vNN` query (a new
   import starts at `?v=1`); bump it on every import/script/link whose file
