@@ -48,7 +48,7 @@ Serve `https`/`wss` anche se siete tutti in casa: la pagina su GitHub Pages è
 1. Avvia il server (da `f1-racer/`) e lascia il terminale aperto:
 
    ```sh
-   npm run start:room-server
+   npm start
    ```
 
    Deve stampare `listening on ws://localhost:8787`.

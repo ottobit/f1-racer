@@ -5,7 +5,8 @@ play procedure itself lives in [`procedure-racing.md`](../../../procedure-racing
 this page is the why and the trade-offs. Sources:
 [agent bots session](../../sources/2026-09-27-agent-bots-session.md),
 [12-car bot races](../../sources/2026-09-27-twelve-car-bot-races.md),
-[browser bot capacity](../../sources/2026-09-27-browser-bot-capacity.md).
+[browser bot capacity](../../sources/2026-09-27-browser-bot-capacity.md),
+[race VSN2 from the player's PC](../../sources/2026-09-28-race-vsn2-local-pc.md).
 
 ## Browser bot vs headless bot
 
@@ -94,6 +95,47 @@ set, bots' own timing:
   also report duplicates, even at ~58 fps. Use the host's results screen as
   truth.
 
+## Live strategy in practice (VSN2, #244–#247)
+
+What the first agent-managed races taught (source: race VSN2):
+
+- **The rule only holds while the agent works.** In race 1 the agent set the
+  plans before lights out and then stopped: no decision for 4 minutes.
+  From lights out to `finished` the agent must stay in the watch → decide
+  → write cycle (`core/tools/bot-watch.mjs`).
+- **Don't call the box twice.** `pit:true` stays armed until the car
+  reaches the pit entry (`race-systems.js:77-89`), which can be most of a
+  lap. Calling again on a car that was still `pit none` caused double
+  stops. `bot-watch` now prints `armed` (#246).
+- **Applied pace ≠ requested pace** because of the driver's tactical mode:
+  damage > 20% caps it at 0.75, `attack` adds 0.035. `bot-watch` prints
+  the mode.
+- **Wear is compound-independent as a %:** ~33% a lap
+  (`tyreProgress / TYRE_LIFE_LAPS`). The compound's `wearRate` only scales
+  what that % costs in grip and top speed (`race-rules.js:41-61`). Over 5
+  laps every tyre hits 100% by lap 3, so one stop is the baseline.
+- **A stop also repairs**: damage × 0.25 (`race-systems.js:100`).
+- **Back in the room** `state.json` reads `phase: "room"` with `lastRace`
+  (#246); before that fix it froze mid-race and the race 1 classification
+  was lost.
+- **Unrequested stops** (b3, b4 with `autoPit:false`): cause not found.
+  `room-bot` now logs every `pit` transition (#247). Open.
+
+## Running on the player's PC (#244, VSN2)
+
+- Setup: `claude remote-control` in the repo on the PC, room server and
+  bots on the same machine (`ws://localhost:8787`), fleet with `--gpu`.
+  `gh` may be missing there: the local agent writes a raw report under
+  `llm-wiki/sources/raw/` and pushes it, and issues are filed later.
+- GT 640 with `--gpu`: WebGL on the real GPU (ANGLE/D3D11). 5 bots at
+  50–60 fps, the same as the 4-core cloud box, so 5 bots do not measure
+  the GPU. Test 8–11 bots.
+- Open: most dips (~51 fps) came near the agent's decision rounds; the
+  agent may compete with the bots for CPU.
+- The human saw no jumping cars: with server and bots on one PC (no ngrok,
+  no relay) the residual jump of the cloud setup is gone, so it was the
+  network path.
+
 ## Many browser bots on one box (#233, #239)
 
 All bots share the static server on :8080 and one WebSocket relay on :8081;
@@ -120,8 +162,8 @@ Capacity on the 4-core cloud box (bots' `botFps`, human's view):
   in a race each page also simulates and draws the other cars.
 - Keep `botFps` at or above ~50: below that race results do not rank
   strategies.
-- Open: with 5 bots a small residual jump remains on the human's screen,
-  likely the network path (relay, ngrok, `car_state` cadence).
+- With 5 bots a small residual jump remained on the human's screen; the
+  local-PC run (no ngrok, no relay) removed it, so it was the network path.
 
 ### What is shared inside Chromium (#242)
 
