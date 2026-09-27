@@ -12,7 +12,7 @@ import { setupRaceInput } from "./race-input.js?v=55";
 import { setupRaceHud } from "./race-hud.js?v=39";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=35";
-import { setupPlayerPhysics } from "./player-physics.js?v=8";
+import { setupPlayerPhysics } from "./player-physics.js?v=9";
 import { setupRaceAi } from "./race-ai.js?v=29";
 import { setupRaceSystems } from "./race-systems.js?v=30";
 import { setupRaceProgress } from "./race-progress.js?v=27";
@@ -1227,6 +1227,7 @@ const { integratePlayerMotion } = setupPlayerPhysics({
   steeringYaw,
   nearestTrackInfo,
   applyTrackBoundary,
+  slipstreamCars: aiCars,
 });
 
 // Synthesizes a plausible AI qualifying lap time from its own pace, rather
