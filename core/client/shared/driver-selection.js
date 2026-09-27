@@ -1,4 +1,4 @@
-import { DRIVER_ROSTER, driverById } from "./driver-roster.js?v=1";
+import { DRIVER_ROSTER, driverById } from "./driver-roster.js?v=2";
 
 const SELECTED_DRIVER_KEY = "f1racer-selected-driver-v1";
 export const SELECTABLE_DRIVER_IDS = DRIVER_ROSTER.map((driver) => driver.id);

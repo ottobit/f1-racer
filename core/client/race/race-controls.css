@@ -91,3 +91,25 @@ html.touch #pit-toggle,html.touch #view-toggle{min-height:44px;border-radius:10p
 html.touch #pit-toggle:active,html.touch #view-toggle:active{background:#3a3520}
 /* VIEW above BOX (#171): same pad as BOX, neutral colours. */
 html.touch #view-toggle{border-color:#b2c8d566;color:#dbe7ef}
+
+/* Per-driver voice status: transparent, with a thumb-sized local control. */
+.qualifying-timing__name:has(.driver-voice) { display: flex; align-items: center; overflow: visible; }
+.driver-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.driver-voice { flex-shrink: 0; }
+.driver-voice { display: inline-flex; position: relative; align-items: center; justify-content: center;
+  vertical-align: middle; width: 16px; height: 18px; margin-right: 4px; padding: 0;
+  border: 0; background: transparent; color: #a5abb4; }
+.driver-voice svg { width: 14px; height: 14px; fill: currentColor; }
+.driver-voice svg path:not(:first-child) { fill: none; stroke: currentColor; stroke-width: 2; }
+.driver-voice__slash { display: none; }
+.driver-voice.is-muted .driver-voice__slash { display: block; }
+.driver-voice.is-muted .driver-voice__waves { display: none; }
+.driver-voice[data-status="active"] { color: #86e4b3; }
+.driver-voice[data-status="connecting"] { color: #f3ce75; }
+.driver-voice[data-status="error"] { color: #f78787; }
+button.driver-voice { pointer-events: auto; cursor: pointer; touch-action: manipulation; z-index: 1; }
+button.driver-voice::before { content: ""; position: absolute; inset: -13px -14px; }
+button.driver-voice:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+.driver-voice.is-speaking { filter: drop-shadow(0 0 3px #86e4b3); animation: voice-pulse .7s ease-in-out infinite alternate; }
+@keyframes voice-pulse { to { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .driver-voice.is-speaking { animation: none; } }

@@ -47,3 +47,20 @@ third-party bots ever race, the server must validate times (open).
   the bots saw (`pageerror`, protocol hiccups, strategy API gaps).
 - **Checks**: `node --check` does not catch a missing import (#222); after a
   module extraction, confirm with a bot run that the race page loads.
+
+## Shared tactics and finish behavior (#228–#229)
+
+`createLayeredProvider({ fast, getState })` evaluates the race picture every
+0.5 simulation seconds. Browser bots read `_ENVIRONMENT_.getState()`;
+headless bots use their compatible snapshot. Close gaps raise pace or move
+inside before a corner (never defend while another car is alongside).
+Rain and damage cap pace; tyre wear combined with lap-time degradation can
+request one pit stop, reset after fresh tyres. ERS defaults to `auto` on
+straights; explicit ERS strategy still applies except under caution.
+`getTargets()` exposes base targets, effective targets and tactical mode.
+
+`finish-pull-over.js` supplies one post-finish plan to the browser player,
+solo AI and headless bot. It picks the nearest track edge once, blends the
+lateral target over two seconds, and brakes to a stop only after reaching
+the edge. It uses ordinary steering/motion, without relocating the car.
+The plan is reset when the grid is initialized for another race.

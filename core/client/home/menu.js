@@ -1,8 +1,8 @@
 import { CIRCUITS, LAPS_PER_RACE } from "../shared/circuits.js?v=39";
-import { computeStandings, resetChampionship } from "../shared/championship.js?v=1";
-import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
-import { liveryById } from "../shared/driver-themes.js?v=27";
-import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=1";
+import { computeStandings, resetChampionship } from "../shared/championship.js?v=2";
+import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
+import { liveryById } from "../shared/driver-themes.js?v=28";
+import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=2";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
 
@@ -214,7 +214,7 @@ function render() {
             <div class="circuit-meta"><span>${personality.type}</span><span>${personality.level}</span></div>
             <h2>${circuit.name}</h2>
             <p>${personality.note}</p>
-            <div class="circuit-facts"><span><b>${LAPS_PER_RACE}</b> giri</span><span><b>9</b> rivali</span><span>${circuit.weather === "pioggia" ? "🌧️ Bagnato" : "☀️ Asciutto"}</span></div>
+            <div class="circuit-facts"><span><b>${LAPS_PER_RACE}</b> giri</span><span><b>${DRIVER_ROSTER.length - 1}</b> rivali</span><span>${circuit.weather === "pioggia" ? "🌧️ Bagnato" : "☀️ Asciutto"}</span></div>
             <div class="circuit-launch"><span class="circuit-status">${status}</span><a class="circuit-race-link" href="race.html?circuit=${circuit.id}&difficulty=${difficulty}">SCENDI IN PISTA →</a></div>
           </div>
         </div>

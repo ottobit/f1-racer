@@ -1,3 +1,5 @@
+import { finishPullOver } from "./finish-pull-over.js?v=1";
+
 const AI_AVOID_RADIUS = 4.5;
 const AI_AVOID_STRENGTH = 10;
 
@@ -9,6 +11,8 @@ function progressGapAhead(from, to) {
 
 export function setupRaceAi({
   ai,
+  trackWidth,
+  isRace = () => true,
   centerline,
   headingOf,
   sideNormal,
@@ -101,12 +105,14 @@ export function setupRaceAi({
       }
     }
 
-    const aimX =
+    const finishPlan = car.finishPosition && isRace()
+      ? finishPullOver(car, dt, { centerline, nearestTrackInfo, sideNormal, trackWidth }) : null;
+    const aimX = finishPlan?.x ?? (
       target.x +
-      lateral.x * (lineOffset + avoidPush * AI_AVOID_STRENGTH * 0.12);
-    const aimZ =
+      lateral.x * (lineOffset + avoidPush * AI_AVOID_STRENGTH * 0.12));
+    const aimZ = finishPlan?.z ?? (
       target.z +
-      lateral.z * (lineOffset + avoidPush * AI_AVOID_STRENGTH * 0.12);
+      lateral.z * (lineOffset + avoidPush * AI_AVOID_STRENGTH * 0.12));
 
     const toTarget = Math.atan2(aimX - car.x, aimZ - car.z);
     let err = toTarget - car.heading;
@@ -116,14 +122,14 @@ export function setupRaceAi({
     const cornerSpeedFactor = 1 - profile.severity * 0.48;
     const baseTargetSpeed = ai.maxSpeed * cornerSpeedFactor;
     const tacticalBoost = nearestAhead && profile.severity < 0.25 ? 1.04 : 1;
-    const aiMaxSpeed =
+    const aiMaxSpeed = finishPlan?.targetSpeed ?? (
       baseTargetSpeed *
       tacticalBoost *
       (1 - car.damage) *
       tyreSpeedFactor(car) *
       (car.drsActive ? drsSpeedMultiplier : 1) *
       (car.ersActive ? ersSpeedMultiplier : 1) *
-      cautionSpeedMultiplier();
+      cautionSpeedMultiplier());
 
     if (car.speed > aiMaxSpeed) {
       car.speed = Math.max(aiMaxSpeed, car.speed - ai.brakeDecel * dt);

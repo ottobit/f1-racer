@@ -36,6 +36,8 @@ export function setupRaceHud({
   getQualifyingRivals,
   isDisconnected = () => false,
   getRaceState = () => "racing",
+  getVoiceState = null,
+  toggleVoice = () => {},
 }) {
   // Solo play passes a static qualifyingRivals array (synthesized once);
   // multiplayer (#44) passes getQualifyingRivals instead, since live
@@ -80,6 +82,42 @@ export function setupRaceHud({
   const firstAtLoop = new Map(); // loop index -> first crossing time
   const carLoops = new Map(); // driverId -> { loop, at }
 
+  const speakerSvg = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="driver-voice__waves" d="M16 8q4 4 0 8M19 5q7 7 0 14"/><path class="driver-voice__slash" d="M3 3l18 18"/></svg>`;
+  function voiceIcon(id) {
+    if (!getVoiceState) return "";
+    const tag = id === "player" ? "button" : "span";
+    return `<${tag} class="driver-voice" data-voice-driver="${escapeHtml(id)}" ${tag === "button" ? 'type="button" aria-label="Attiva audio"' : 'role="img" aria-label="Stato audio"'}>${speakerSvg}</${tag}>`;
+  }
+  qualifyingTimingEl.addEventListener("click", (event) => {
+    if (event.target.closest('button[data-voice-driver="player"]')) {
+      event.stopPropagation();
+      toggleVoice();
+      updateVoiceIcons();
+    }
+  });
+  function updateVoiceIcons() {
+    if (!getVoiceState) return;
+    for (const el of qualifyingTimingEl.querySelectorAll("[data-voice-driver]")) {
+      const voice = getVoiceState(el.dataset.voiceDriver);
+      const silent = voice.muted || voice.hasMic === false;
+      el.dataset.status = voice.status;
+      el.classList.toggle("is-muted", !!silent);
+      el.classList.toggle("is-speaking", !!voice.speaking);
+      const labels = { active: "Audio connesso", connecting: "Audio in connessione", error: "Audio non disponibile",
+        disconnected: "Pilota disconnesso", idle: "Audio non attivato", "listen-only": "Solo ascolto" };
+      let label = labels[voice.status] || labels.idle;
+      if (voice.muted) label += ", microfono silenziato";
+      if (voice.speaking) label += ", sta parlando";
+      if (el.tagName === "BUTTON") {
+        el.disabled = voice.status === "connecting" || voice.hasMic === false;
+        el.setAttribute("aria-pressed", String(!!voice.muted));
+        label += voice.status === "idle" ? ": attiva" : voice.muted ? ": riattiva microfono" : ": silenzia microfono";
+      }
+      el.setAttribute("aria-label", label);
+      el.title = label;
+    }
+  }
+
   function setRaceLabel() {
     circuitNameEl.textContent = circuitLabel();
     hintEl.textContent = raceHintText;
@@ -104,7 +142,7 @@ export function setupRaceHud({
       <ol>${classification.map((entry, index) => `
         <li class="${entry.id === "player" ? "is-player" : ""}${entry.id !== "player" && isDisconnected(entry.id) ? " is-disconnected" : ""}">
           <span class="qualifying-timing__position">${index + 1}</span>
-          <span class="qualifying-timing__name">${escapeHtml(entry.name)}</span>
+          <span class="qualifying-timing__name">${voiceIcon(entry.id)}<span class="driver-name">${escapeHtml(entry.name)}</span></span>
           <strong>${Number.isFinite(entry.time) ? formatTime(entry.time) : "--:--.--"}</strong>
         </li>`).join("")}</ol>`;
     qualifyingTimingEl.hidden = false;
@@ -150,7 +188,7 @@ export function setupRaceHud({
       <ol>${order.map((entry, index) => `
         <li class="${entry.driverId === "player" ? "is-player" : ""}${entry.driverId !== "player" && isDisconnected(entry.driverId) ? " is-disconnected" : ""}">
           <span class="qualifying-timing__position">${index + 1}</span>
-          <span class="qualifying-timing__name">${entry.driverId === "player" ? "TU" : escapeHtml(nameOf(entry.driverId))}</span>
+          <span class="qualifying-timing__name">${voiceIcon(entry.driverId)}<span class="driver-name">${entry.driverId === "player" ? "TU" : escapeHtml(nameOf(entry.driverId))}</span></span>
           <strong>${gaps[index]}</strong>
         </li>`).join("")}</ol>`;
     qualifyingTimingEl.hidden = false;
@@ -168,6 +206,7 @@ export function setupRaceHud({
   }
 
   function updateSpeedoHud() {
+    updateVoiceIcons();
     const speedKmh = Math.abs(state.speed) * kmhPerUnit;
     speedValueEl.textContent = Math.round(speedKmh);
 

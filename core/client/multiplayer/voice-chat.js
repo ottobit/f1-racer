@@ -1,5 +1,5 @@
 // Race voice chat (#1): every participant talks to every other one over a
-// peer-to-peer WebRTC mesh (N<=10, audio only, ~30 kbps per peer). The room
+// peer-to-peer WebRTC mesh (N<=12, audio only, ~30 kbps per peer). The room
 // server only relays signaling (see room-server.mjs "voice_signal"); audio
 // never touches it. Started from the engine-gate tap, the one user gesture
 // every race already has, so the mic prompt needs no extra button.
@@ -30,6 +30,8 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
   // speakers (the <audio> element already plays it).
   let meterCtx = null;
   let meterScratch = null;
+  const localMeter = {};
+  const remoteStatus = new Map();
 
   function attachMeter(peer, stream) {
     try {
@@ -53,7 +55,27 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
       if (greeted.has(id)) continue;
       greeted.add(id);
       client.sendVoiceSignal(id, { kind: "hello" });
+      sendState(id);
     }
+  }
+
+  function sendState(id) {
+    client.sendVoiceSignal(id, { kind: "voice_state", muted, hasMic: !!localTrack && localTrack.readyState === "live" });
+  }
+
+  function broadcastState() {
+    for (const id of otherIds(client.room)) sendState(id);
+  }
+
+  function speaking(peer) {
+    if (!peer?.meter) return false;
+    const { analyser } = peer.meter;
+    meterScratch ||= new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(meterScratch);
+    let sum = 0;
+    for (const sample of meterScratch) sum += sample * sample;
+    if (Math.sqrt(sum / meterScratch.length) > 0.015) peer.spokeAt = performance.now();
+    return performance.now() - (peer.spokeAt ?? -Infinity) < 180;
   }
 
   const isOfferer = (otherId) => myId < otherId;
@@ -166,7 +188,11 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
     heardFromPeer = true;
     const peer = peers.get(from);
     switch (data.kind) {
+      case "voice_state":
+        remoteStatus.set(from, { muted: data.muted === true, hasMic: data.hasMic === true });
+        break;
       case "hello":
+        sendState(from);
         // The other side (re)started, so any connection we hold is stale.
         if (isOfferer(from)) await makeOffer(from);
         else {
@@ -175,6 +201,7 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
         }
         break;
       case "hello_reply":
+        sendState(from);
         if (isOfferer(from) && (!peer || DEAD_STATES.has(peer.pc.connectionState))) await makeOffer(from);
         break;
       case "offer":
@@ -210,7 +237,14 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
   // candidates), and only once the mic question is settled, so an answer
   // always carries the local track when there is one.
   let signalChain = micRequest
-    .then((stream) => { localTrack = stream.getAudioTracks()[0] || null; })
+    .then((stream) => {
+      if (stopped) { for (const track of stream.getTracks()) track.stop(); return; }
+      localTrack = stream.getAudioTracks()[0] || null;
+      if (localTrack) {
+        attachMeter(localMeter, stream);
+        localTrack.addEventListener("ended", () => { broadcastState(); report(); });
+      }
+    })
     .catch((err) => console.warn("[voice-chat] no microphone, listen-only", err))
     .then(() => {
       if (stopped) return;
@@ -229,6 +263,7 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
     const present = new Set(otherIds(room));
     for (const id of [...peers.keys()]) if (!present.has(id)) closePeer(id);
     for (const id of [...failed]) if (!present.has(id)) failed.delete(id);
+    for (const id of remoteStatus.keys()) if (!present.has(id)) remoteStatus.delete(id);
     greetNewPeers(room);
     report();
   });
@@ -239,107 +274,33 @@ export function startVoiceChat({ client, onStatus = () => {} }) {
     stopped = true;
     for (const id of [...peers.keys()]) closePeer(id);
     if (localTrack) localTrack.stop();
+    localMeter.meter?.source.disconnect();
+    meterCtx?.close().catch(() => {});
+    window.removeEventListener("pagehide", stop);
   }
 
   return {
-    // Fills `out` (Float32Array, 128 samples) with the loudest peer's
-    // waveform and returns its RMS level; 0 when nothing is coming in.
-    readWaveform(out) {
-      let best = 0;
-      for (const peer of peers.values()) {
-        if (!peer.meter || peer.pc.connectionState !== "connected") continue;
-        meterScratch ||= new Float32Array(peer.meter.analyser.fftSize);
-        peer.meter.analyser.getFloatTimeDomainData(meterScratch);
-        let sum = 0;
-        for (const v of meterScratch) sum += v * v;
-        const rms = Math.sqrt(sum / meterScratch.length);
-        if (rms > best) {
-          best = rms;
-          for (let i = 0; i < out.length; i++) out[i] = meterScratch[Math.floor((i * meterScratch.length) / out.length)];
-        }
+    getState(id) {
+      if (stopped || serverUnsupported) return { status: "error", hasMic: false };
+      if (id === myId) {
+        const hasMic = !!localTrack && localTrack.readyState === "live";
+        return { status: !ready ? "connecting" : hasMic ? "active" : "listen-only",
+          hasMic, muted, speaking: hasMic && !muted && speaking(localMeter) };
       }
-      return best;
+      const peer = peers.get(id);
+      const remote = remoteStatus.get(id);
+      const connection = peer?.pc.connectionState;
+      const status = failed.has(id) || DEAD_STATES.has(connection) ? "error"
+        : connection === "connected" ? "active" : "connecting";
+      return { status, ...remote, speaking: status === "active" && remote?.muted !== true && speaking(peer) };
     },
     toggleMute() {
+      if (!localTrack || localTrack.readyState !== "live") return;
       muted = !muted;
       if (localTrack) localTrack.enabled = !muted;
+      broadcastState();
       report();
     },
     stop,
-  };
-}
-
-// Short reason shown next to the peer count while nobody is connected (#93).
-function voiceDiagnosis({ connected, connecting, failed, expected, heardFromPeer, serverUnsupported }) {
-  if (serverUnsupported) return "server da aggiornare";
-  if (connected > 0) return failed > 0 ? `${connected} · ${failed} falliti` : String(connected);
-  if (failed > 0) return "collegamento fallito";
-  if (connecting > 0) return "collego…";
-  if (expected === 0) return "nessun altro";
-  if (!heardFromPeer) return "nessuna risposta";
-  return "in attesa";
-}
-
-// Connection outcome shown as the icon colour (#180).
-function voiceTone({ connected, connecting, failed, expected, heardFromPeer, serverUnsupported }) {
-  if (connected > 0) return "ok";
-  if (serverUnsupported || failed > 0) return "fail";
-  if (connecting > 0 || (expected > 0 && !heardFromPeer)) return "pending";
-  return "idle";
-}
-
-const RECEIVING_RMS = 0.015; // below this the line stays hidden (silence)
-const MIC_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6" fill="none"/><path class="voice-toggle__slash" d="M4 4l16 16" fill="none"/></svg>`;
-
-// HUD icon under the lap counter: coloured by the connection outcome, with
-// a waveform line only while audio is actually coming in; a tap mutes or
-// unmutes the local mic. The text diagnosis (#93) lives in its label.
-// Returns the onStatus callback to wire in.
-export function mountVoiceToggle(container) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "voice-toggle";
-  button.dataset.tone = "pending";
-  button.innerHTML = `${MIC_ICON}<canvas class="voice-toggle__wave" width="64" height="24"></canvas>`;
-  button.setAttribute("aria-pressed", "false");
-  button.setAttribute("aria-label", "Voce: collego…");
-  container.appendChild(button);
-  const canvas = button.querySelector("canvas");
-  const g = canvas.getContext("2d");
-  const wave = new Float32Array(64);
-  let voice = null;
-  button.addEventListener("click", () => voice && voice.toggleMute());
-
-  function drawWave() {
-    requestAnimationFrame(drawWave);
-    const level = voice ? voice.readWaveform(wave) : 0;
-    const receiving = level > RECEIVING_RMS;
-    button.classList.toggle("is-receiving", receiving);
-    g.clearRect(0, 0, canvas.width, canvas.height);
-    if (!receiving) return;
-    const gain = Math.min(8, 0.35 / level);
-    g.beginPath();
-    for (let i = 0; i < wave.length; i++) {
-      const y = canvas.height / 2 - wave[i] * gain * (canvas.height / 2);
-      if (i === 0) g.moveTo(0, y);
-      else g.lineTo((i / (wave.length - 1)) * canvas.width, y);
-    }
-    g.strokeStyle = getComputedStyle(button).color;
-    g.lineWidth = 2;
-    g.stroke();
-  }
-  requestAnimationFrame(drawWave);
-
-  return {
-    attach(v) { voice = v; },
-    onStatus(status) {
-      const { muted, hasMic } = status;
-      const label = !hasMic ? "solo ascolto" : muted ? "muto" : "microfono attivo";
-      button.dataset.tone = voiceTone(status);
-      button.setAttribute("aria-label", `Voce: ${voiceDiagnosis(status)} · ${label}`);
-      button.title = button.getAttribute("aria-label");
-      button.setAttribute("aria-pressed", String(muted || !hasMic));
-      button.disabled = !hasMic;
-    },
   };
 }

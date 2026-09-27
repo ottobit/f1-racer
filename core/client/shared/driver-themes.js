@@ -4,6 +4,7 @@ export const TEAM_LIVERIES = [
   { id: "solare", label: "Solare", primary: 0xe6c229, secondary: 0x111820, sponsors: { main: "LUMENZA", partner: "ORBITA ENERGY" } },
   { id: "smeraldo", label: "Smeraldo", primary: 0x1f9d4a, secondary: 0xc9f7d5, sponsors: { main: "VIREON", partner: "CANOPY TECH" } },
   { id: "artica", label: "Artica", primary: 0xf5f5f5, secondary: 0x7aa7c7, sponsors: { main: "NIVALIS", partner: "BOREAL DATA" } },
+  { id: "ossidiana", label: "Ossidiana", primary: 0x16191f, secondary: 0xd5b879, sponsors: { main: "ONYX", partner: "NOCTIS LABS" } },
 ];
 
 const LIVERY_BY_ID = Object.fromEntries(TEAM_LIVERIES.map((livery) => [livery.id, livery]));
@@ -18,6 +19,7 @@ export function liveryIdForDriver(driverId) {
   if (driverId === "rival-yellow" || driverId === "rival-yellow-2") return "solare";
   if (driverId === "rival-green-1" || driverId === "rival-green-2") return "smeraldo";
   if (driverId === "rival-white-1" || driverId === "rival-white-2") return "artica";
+  if (driverId === "rival-black-1" || driverId === "rival-black-2") return "ossidiana";
   return "fenice";
 }
 
@@ -91,6 +93,20 @@ export const DRIVER_COCKPIT_THEMES = {
     primary: 0xffffff,
     secondary: 0xf0a6ff,
     glow: 0xffc4f7,
+  },
+  "rival-black-1": {
+    label: "Nico Ombra",
+    motto: "SHADOW",
+    primary: 0x16191f,
+    secondary: 0xd5b879,
+    glow: 0xf0d89e,
+  },
+  "rival-black-2": {
+    label: "Mira Onyx",
+    motto: "MIDNIGHT",
+    primary: 0x20242b,
+    secondary: 0xd5b879,
+    glow: 0xdbe5f2,
   },
 };
 
