@@ -1,0 +1,230 @@
+22:14:55 [fleet] 5 bots, files in C:\Users\giuse\AppData\Local\Temp\f1-bots
+22:14:56 [claude-b1] page /room.html
+22:14:56 [claude-b1] room Invito alla stanza VSN2: scrivi il tuo nome e premi Entra.
+22:14:57 [claude-b1] reserved rival-red
+22:14:57 [claude-b1] ready
+22:14:58 [claude-b2] page /room.html
+22:14:58 [claude-b2] room Invito alla stanza VSN2: scrivi il tuo nome e premi Entra.
+22:14:59 [claude-b2] reserved rival-red-2
+22:14:59 [claude-b2] ready
+22:14:59 [claude-b3] page /room.html
+22:14:59 [claude-b3] room Invito alla stanza VSN2: scrivi il tuo nome e premi Entra.
+22:15:00 [claude-b3] reserved rival-blue
+22:15:00 [claude-b3] ready
+22:15:01 [claude-b4] page /room.html
+22:15:01 [claude-b4] room Invito alla stanza VSN2: scrivi il tuo nome e premi Entra.
+22:15:02 [claude-b4] reserved rival-blue-2
+22:15:02 [claude-b4] ready
+22:15:02 [claude-b5] page /room.html
+22:15:02 [fleet] waiting | b1 -fps P- | b2 -fps P- | b3 -fps P- | b4 -fps P- | b5 -fps P-
+22:15:02 [claude-b5] room Invito alla stanza VSN2: scrivi il tuo nome e premi Entra.
+22:15:03 [claude-b5] reserved rival-yellow
+22:15:03 [claude-b5] ready
+22:15:12 [fleet] waiting | b1 -fps P- | b2 -fps P- | b3 -fps P- | b4 -fps P- | b5 -fps P-
+22:15:22 [fleet] waiting | b1 -fps P- | b2 -fps P- | b3 -fps P- | b4 -fps P- | b5 -fps P-
+22:15:24 [claude-b2] page /race.html
+22:15:24 [claude-b3] page /race.html
+22:15:24 [claude-b4] page /race.html
+22:15:24 [claude-b1] page /race.html
+22:15:24 [claude-b5] page /race.html
+22:15:24 [claude-b2] page /race.html
+22:15:24 [claude-b3] page /race.html
+22:15:24 [claude-b4] page /race.html
+22:15:24 [claude-b1] page /race.html
+22:15:24 [claude-b5] page /race.html
+22:15:32 [fleet] waiting | b1 -fps P- | b2 -fps P- | b3 -fps P- | b4 -fps P- | b5 -fps P-
+22:15:40 [claude-b1] gpu ANGLE (NVIDIA, NVIDIA GeForce GT 640 (0x00000FC0) Direct3D11 vs_5_0 ps_5_0, D3D11)
+22:15:40 [claude-b4] gpu ANGLE (NVIDIA, NVIDIA GeForce GT 640 (0x00000FC0) Direct3D11 vs_5_0 ps_5_0, D3D11)
+22:15:40 [claude-b3] gpu ANGLE (NVIDIA, NVIDIA GeForce GT 640 (0x00000FC0) Direct3D11 vs_5_0 ps_5_0, D3D11)
+22:15:40 [claude-b1] strategy {"pace":0.93,"ers":"auto","autoPit":false,"tyre":"soft","radio":"b1: soft, spinta subito, sosta anticipata"}
+22:15:40 [claude-b3] strategy {"pace":0.87,"ers":"auto","autoPit":false,"tyre":"hard","radio":"b3: hard, stint lungo, gestione gomme"}
+22:15:40 [claude-b4] strategy {"pace":0.91,"ers":"auto","autoPit":false,"tyre":"medium","radio":"b4: medium, attacco nel primo stint"}
+22:15:40 [claude-b2] gpu ANGLE (NVIDIA, NVIDIA GeForce GT 640 (0x00000FC0) Direct3D11 vs_5_0 ps_5_0, D3D11)
+22:15:40 [claude-b2] strategy {"pace":0.89,"ers":"auto","autoPit":false,"tyre":"medium","radio":"b2: medium, ritmo costante, una sosta a meta gara"}
+22:15:41 [claude-b5] gpu ANGLE (NVIDIA, NVIDIA GeForce GT 640 (0x00000FC0) Direct3D11 vs_5_0 ps_5_0, D3D11)
+22:15:41 [claude-b5] strategy {"pace":0.85,"ers":"auto","autoPit":false,"tyre":"hard","radio":"b5: hard, piano zero soste"}
+22:15:42 [fleet] racing | b1 51fps P1 | b2 -fps P5 | b3 51fps P2 | b4 50fps P3 | b5 -fps P6
+22:15:52 [fleet] racing | b1 60fps P5 | b2 60fps P5 | b3 60fps P1 | b4 60fps P2 | b5 60fps P5
+22:16:02 [fleet] racing | b1 60fps P2 | b2 60fps P4 | b3 60fps P5 | b4 60fps P1 | b5 60fps P5
+22:16:12 [fleet] racing | b1 60fps P3 | b2 60fps P2 | b3 60fps P6 | b4 60fps P4 | b5 60fps P5
+22:16:22 [fleet] racing | b1 60fps P2 | b2 60fps P3 | b3 60fps P6 | b4 60fps P4 | b5 60fps P5
+22:16:32 [fleet] racing | b1 60fps P3 | b2 60fps P4 | b3 60fps P6 | b4 60fps P4 | b5 60fps P3
+22:16:42 [fleet] racing | b1 60fps P2 | b2 60fps P4 | b3 60fps P6 | b4 60fps P5 | b5 60fps P3
+22:16:52 [fleet] racing | b1 60fps P5 | b2 60fps P2 | b3 60fps P6 | b4 60fps P3 | b5 60fps P5
+22:17:02 [fleet] racing | b1 60fps P5 | b2 60fps P1 | b3 60fps P4 | b4 60fps P3 | b5 60fps P5
+22:17:12 [fleet] racing | b1 60fps P5 | b2 60fps P3 | b3 60fps P4 | b4 60fps P2 | b5 60fps P6
+22:17:22 [fleet] racing | b1 60fps P5 | b2 60fps P3 | b3 60fps P4 | b4 60fps P2 | b5 60fps P6
+22:17:32 [fleet] racing | b1 60fps P4 | b2 60fps P3 | b3 60fps P6 | b4 60fps P2 | b5 60fps P5
+22:17:42 [fleet] racing | b1 60fps P4 | b2 60fps P3 | b3 60fps P6 | b4 60fps P2 | b5 60fps P5
+22:17:52 [fleet] racing | b1 60fps P4 | b2 60fps P1 | b3 60fps P5 | b4 60fps P3 | b5 60fps P6
+22:18:02 [fleet] racing | b1 60fps P3 | b2 60fps P1 | b3 60fps P2 | b4 60fps P4 | b5 60fps P5
+22:18:12 [fleet] racing | b1 60fps P3 | b2 60fps P1 | b3 60fps P4 | b4 60fps P5 | b5 60fps P6
+22:18:22 [fleet] racing | b1 60fps P1 | b2 60fps P3 | b3 60fps P2 | b4 60fps P6 | b5 60fps P4
+22:18:32 [fleet] racing | b1 60fps P2 | b2 60fps P4 | b3 60fps P3 | b4 60fps P6 | b5 60fps P5
+22:18:42 [fleet] racing | b1 60fps P2 | b2 60fps P4 | b3 60fps P3 | b4 60fps P6 | b5 60fps P5
+22:18:52 [fleet] racing | b1 60fps P2 | b2 60fps P4 | b3 60fps P3 | b4 60fps P6 | b5 60fps P5
+22:19:02 [fleet] racing | b1 60fps P2 | b2 60fps P5 | b3 60fps P3 | b4 60fps P6 | b5 60fps P4
+22:19:12 [fleet] racing | b1 60fps P2 | b2 60fps P5 | b3 60fps P3 | b4 60fps P6 | b5 60fps P3
+22:19:22 [fleet] racing | b1 60fps P2 | b2 60fps P5 | b3 60fps P4 | b4 60fps P6 | b5 60fps P3
+22:19:32 [fleet] racing | b1 60fps P2 | b2 60fps P3 | b3 60fps P4 | b4 60fps P6 | b5 60fps P5
+22:19:42 [fleet] racing | b1 60fps P2 | b2 60fps P4 | b3 60fps P5 | b4 60fps P6 | b5 60fps P3
+22:19:52 [fleet] racing | b1 60fps P2 | b2 60fps P5 | b3 60fps P4 | b4 60fps P6 | b5 60fps P3
+22:19:54 [claude-b4] page /room.html
+22:19:54 [claude-b1] page /room.html
+22:19:54 [claude-b5] page /room.html
+22:19:54 [claude-b3] page /room.html
+22:19:55 [claude-b2] page /room.html
+22:19:55 [claude-b5] ready
+22:19:55 [claude-b4] ready
+22:19:55 [claude-b3] ready
+22:19:55 [claude-b1] ready
+22:20:02 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:20:12 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:20:22 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:20:25 [claude-b2] loop page.fill: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('#room-code-input')[22m
+[2m    - locator resolved to <input type="text" maxlength="4" autocomplete="off" id="room-code-input" placeholder="CODICE" autocapitalize="characters"/>[22m
+[2m    - fill("VSN2")[22m
+[2m  - attempting fill action[22m
+[2m    2 × waiting for element to be visible, enabled and editable[22m
+[2m      - element is not visible[22m
+[2m    - retrying fill action[22m
+[2m    - waiting 20ms[22m
+[2m    2 × waiting for element to be visible, enabled and editable[22m
+[2m      - element is not visible[22m
+[2m    - retrying fill action[22m
+[2m      - waiting 100ms[22m
+[2m    59 × waiting for element to be visible, enabled and editable[22m
+[2m       - element is not visible[22m
+[2m     - retrying fill action[22m
+[2m       - waiting 500ms[22m
+
+22:20:25 [claude-b2] ready
+22:20:32 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:20:42 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:20:52 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:21:02 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:21:12 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:21:22 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:21:33 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:21:43 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:21:53 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:22:03 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:22:13 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:22:23 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:22:33 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:22:43 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:22:53 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:23:03 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:23:13 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:23:23 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:23:33 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:23:43 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:23:53 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:24:03 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:24:13 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:24:23 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:24:33 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:24:43 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:24:53 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:25:03 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:25:13 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:25:23 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:25:33 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:25:43 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:25:53 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:26:03 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:26:13 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:26:23 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:26:33 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:26:43 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:26:53 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:27:03 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:27:13 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:27:23 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:27:33 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:27:43 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:27:53 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:28:03 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:28:13 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:28:23 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:28:33 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:28:43 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:28:53 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:29:03 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:29:13 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:29:23 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:29:33 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:29:43 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:29:53 [fleet] racing | b1 60fps P2 | b2 60fps P6 | b3 59fps P4 | b4 60fps P6 | b5 60fps P3
+22:29:57 [claude-b5] page /race.html
+22:29:57 [claude-b3] page /race.html
+22:29:57 [claude-b4] page /race.html
+22:29:57 [claude-b1] page /race.html
+22:29:57 [claude-b2] page /race.html
+22:29:57 [claude-b5] page /race.html
+22:29:57 [claude-b4] page /race.html
+22:29:57 [claude-b3] page /race.html
+22:29:57 [claude-b2] page /race.html
+22:29:57 [claude-b1] page /race.html
+22:29:58 [claude-b4] strategy {"pace":0.91,"ers":"auto","autoPit":false,"tyre":"medium","radio":"b4: medium, attacco nel primo stint"}
+22:29:58 [claude-b2] strategy {"pace":0.89,"ers":"auto","autoPit":false,"tyre":"medium","radio":"b2: medium, ritmo costante, una sosta a meta gara"}
+22:29:58 [claude-b3] strategy {"pace":0.87,"ers":"auto","autoPit":false,"tyre":"hard","radio":"b3: hard, stint lungo, gestione gomme"}
+22:29:58 [claude-b1] strategy {"pace":0.93,"ers":"auto","autoPit":false,"tyre":"soft","radio":"b1: soft, spinta subito, sosta anticipata"}
+22:29:58 [claude-b5] strategy {"pace":0.85,"ers":"auto","autoPit":false,"tyre":"hard","radio":"b5: hard, piano zero soste"}
+22:30:03 [fleet] racing | b1 60fps P2 | b2 60fps P3 | b3 60fps P6 | b4 60fps P5 | b5 60fps P1
+22:30:13 [fleet] racing | b1 59fps P5 | b2 59fps P2 | b3 59fps P3 | b4 59fps P4 | b5 59fps P1
+22:30:23 [fleet] racing | b1 60fps P6 | b2 60fps P5 | b3 60fps P3 | b4 60fps P4 | b5 60fps P2
+22:30:33 [fleet] racing | b1 60fps P6 | b2 60fps P4 | b3 60fps P5 | b4 60fps P3 | b5 60fps P1
+22:30:36 [claude-b1] strategy {"pace":0.95,"ers":"auto","autoPit":false,"radio":"b1: P6, spingo subito, zero soste su 5 giri"}
+22:30:38 [claude-b2] strategy {"pace":0.93,"ers":"auto","autoPit":false,"radio":"b2: P4, attacco nei primi due giri, niente sosta"}
+22:30:39 [claude-b3] strategy {"pace":0.92,"ers":"auto","autoPit":false,"radio":"b3: P5, ritmo alto ma pulito, zero soste"}
+22:30:41 [claude-b4] strategy {"pace":0.94,"ers":"auto","autoPit":false,"radio":"b4: P3, provo il podio, gomme fino alla fine"}
+22:30:43 [claude-b5] strategy {"pace":0.9,"ers":"auto","autoPit":false,"radio":"b5: P2, gestisco ERS e difendo, zero soste"}
+22:30:43 [fleet] racing | b1 52fps P4 | b2 51fps P3 | b3 51fps P5 | b4 52fps P6 | b5 52fps P1
+22:30:53 [fleet] racing | b1 60fps P3 | b2 60fps P4 | b3 60fps P5 | b4 60fps P6 | b5 60fps P2
+22:31:03 [fleet] racing | b1 57fps P5 | b2 57fps P3 | b3 56fps P3 | b4 56fps P5 | b5 57fps P2
+22:31:13 [fleet] racing | b1 51fps P4 | b2 52fps P2 | b3 54fps P4 | b4 54fps P6 | b5 53fps P1
+22:31:23 [fleet] racing | b1 53fps P4 | b2 53fps P1 | b3 53fps P3 | b4 53fps P6 | b5 53fps P5
+22:31:33 [fleet] racing | b1 60fps P4 | b2 60fps P3 | b3 60fps P5 | b4 60fps P6 | b5 60fps P1
+22:31:38 [claude-b2] strategy {"pace":0.93,"ers":"auto","autoPit":false,"pit":true,"tyre":"soft","radio":"b2: box box, soft per gli ultimi tre giri"}
+22:31:40 [claude-b5] strategy {"pace":0.92,"ers":"auto","autoPit":false,"pit":true,"tyre":"soft","radio":"b5: box box, soft e riparazione danni"}
+22:31:43 [fleet] racing | b1 60fps P4 | b2 60fps P3 | b3 60fps P5 | b4 60fps P6 | b5 60fps P2
+22:31:53 [fleet] racing | b1 60fps P4 | b2 60fps P3 | b3 60fps P4 | b4 60fps P6 | b5 60fps P2
+22:32:03 [fleet] racing | b1 60fps P5 | b2 60fps P4 | b3 60fps P3 | b4 60fps P6 | b5 60fps P2
+22:32:13 [fleet] racing | b1 60fps P5 | b2 60fps P4 | b3 60fps P3 | b4 60fps P6 | b5 60fps P2
+22:32:14 [claude-b1] strategy {"pace":0.95,"ers":"auto","autoPit":false,"pit":true,"tyre":"soft","radio":"b1: box box, soft fino alla bandiera"}
+22:32:17 [claude-b3] strategy {"pace":0.96,"ers":"auto","autoPit":false,"radio":"b3: gomme nuove, spingo fino alla fine"}
+22:32:19 [claude-b4] strategy {"pace":0.94,"ers":"auto","autoPit":false,"tyre":"soft","radio":"b4: sei ai box, monta soft e riparti"}
+22:32:23 [fleet] racing | b1 59fps P5 | b2 59fps P4 | b3 59fps P3 | b4 59fps P6 | b5 60fps P2
+22:32:33 [fleet] racing | b1 60fps P5 | b2 60fps P4 | b3 60fps P3 | b4 60fps P6 | b5 60fps P2
+22:32:43 [fleet] racing | b1 59fps P5 | b2 60fps P4 | b3 59fps P3 | b4 59fps P6 | b5 60fps P2
+22:32:45 [claude-b1] strategy {"pace":0.9,"ers":"auto","autoPit":false,"pit":true,"tyre":"soft","radio":"b1: box questo giro, gomme finite al 98%"}
+22:32:46 [claude-b2] strategy {"pace":0.88,"ers":"auto","autoPit":false,"pit":true,"tyre":"soft","radio":"b2: box questo giro, gomme finite e danni al 23%"}
+22:32:53 [fleet] racing | b1 52fps P6 | b2 54fps P5 | b3 52fps P3 | b4 52fps P4 | b5 53fps P2
+22:33:03 [fleet] racing | b1 60fps P6 | b2 59fps P4 | b3 60fps P3 | b4 60fps P5 | b5 59fps P2
+22:33:07 [claude-b1] strategy {"pace":0.97,"ers":"auto","autoPit":false,"radio":"b1: soft nuove, attacco fino alla bandiera"}
+22:33:08 [claude-b2] strategy {"pace":0.97,"ers":"auto","autoPit":false,"radio":"b2: soft nuove, recupero posizioni negli ultimi due giri"}
+22:33:10 [claude-b3] strategy {"pace":0.94,"ers":"auto","autoPit":false,"radio":"b3: P3, gestisco le hard al 51%, niente seconda sosta"}
+22:33:11 [claude-b4] strategy {"pace":0.95,"ers":"auto","autoPit":false,"radio":"b4: P4, attacco il podio, gomme fino in fondo"}
+22:33:13 [claude-b5] strategy {"pace":0.9,"ers":"auto","autoPit":false,"radio":"b5: P2 con margine, gestisco soft e ERS fino alla fine"}
+22:33:13 [fleet] racing | b1 57fps P6 | b2 58fps P4 | b3 56fps P3 | b4 56fps P5 | b5 58fps P2
+22:33:23 [fleet] racing | b1 60fps P6 | b2 60fps P5 | b3 60fps P2 | b4 60fps P4 | b5 60fps P3
+22:33:33 [fleet] racing | b1 60fps P6 | b2 60fps P5 | b3 60fps P2 | b4 60fps P4 | b5 60fps P2
+22:33:34 [claude-b3] strategy {"pace":0.91,"ers":"auto","autoPit":false,"radio":"b3: hard al 78%, porta a casa la posizione, non rischiare"}
+22:33:36 [claude-b5] strategy {"pace":0.96,"ers":"auto","autoPit":false,"radio":"b5: hai gomme migliori, attacca nell'ultimo giro"}
+22:33:38 [claude-b4] strategy {"pace":0.96,"ers":"auto","autoPit":false,"radio":"b4: ultimo giro, tutto quello che hai"}
+22:33:43 [fleet] racing | b1 60fps P6 | b2 60fps P5 | b3 60fps P3 | b4 60fps P4 | b5 60fps P2
+22:33:53 [fleet] racing | b1 60fps P6 | b2 60fps P5 | b3 60fps P3 | b4 60fps P4 | b5 60fps P2
+22:34:00 [claude-b3] strategy {"pace":0.88,"ers":"auto","autoPit":false,"radio":"b3: gomme a zero, ultimo giro pulito, porta la macchina a casa"}
+22:34:01 [claude-b1] strategy {"pace":0.98,"ers":"auto","autoPit":false,"radio":"b1: soft fresche, recupera tutto quello che puoi"}
+22:34:03 [claude-b2] strategy {"pace":0.98,"ers":"auto","autoPit":false,"radio":"b2: soft fresche, attacca b1 davanti"}
+22:34:03 [fleet] racing | b1 52fps P6 | b2 51fps P5 | b3 51fps P3 | b4 52fps P4 | b5 51fps P2
+22:34:13 [fleet] finished | b1 60fps P6 | b2 60fps P5 | b3 60fps P3 | b4 60fps P4 | b5 60fps P2
+22:34:23 [fleet] finished | b1 60fps P6 | b2 60fps P5 | b3 60fps P3 | b4 60fps P4 | b5 60fps P2
+22:34:33 [fleet] finished | b1 60fps P6 | b2 60fps P5 | b3 60fps P3 | b4 60fps P4 | b5 60fps P2
+22:34:43 [fleet] finished | b1 60fps P6 | b2 60fps P5 | b3 60fps P3 | b4 60fps P4 | b5 60fps P2
+22:34:53 [fleet] finished | b1 60fps P6 | b2 60fps P5 | b3 60fps P3 | b4 60fps P4 | b5 60fps P2
+22:35:03 [fleet] finished | b1 60fps P6 | b2 60fps P5 | b3 60fps P3 | b4 60fps P4 | b5 60fps P2
+22:35:13 [fleet] finished | b1 60fps P6 | b2 60fps P5 | b3 60fps P3 | b4 60fps P4 | b5 60fps P2
