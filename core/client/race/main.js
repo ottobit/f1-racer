@@ -8,7 +8,7 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=34";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=36";
-import { setupRaceInput } from "./race-input.js?v=51";
+import { setupRaceInput } from "./race-input.js?v=52";
 import { setupRaceHud } from "./race-hud.js?v=39";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=35";
@@ -23,7 +23,7 @@ import { setupAgentApi } from "./agent-api.js?v=3";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=2";
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=9";
 
-import { steeringYaw } from "./steering.js?v=4";
+import { steeringYaw } from "./steering.js?v=5";
 import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=41";
 import { buildPitLane } from "../shared/pit-lane.js?v=1";
 import { setupPitCrew } from "./pit-crew.js?v=2";
@@ -1690,7 +1690,7 @@ function animate(now = performance.now()) {
   if (!frameGate(now)) return;
   const dt = Math.min(clock.getDelta(), 0.1);
   if (botDriver) driveWithProvider(botDriver, dt);
-  updateSteeringInput(dt, Math.abs(state.speed) / CAR.maxSpeed);
+  updateSteeringInput(dt);
   update(dt);
   updateExhaust(dt);
   raceNameplates.update();
