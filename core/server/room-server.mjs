@@ -37,6 +37,13 @@ import {
 const PORT = Number(process.env.PORT) || 8787;
 const GRACE_MS = Number(process.env.ROOM_GRACE_MS) || DEFAULT_GRACE_MS;
 const QUALI_MS = Number(process.env.ROOM_QUALI_MS) || QUALIFYING_DURATION_MS;
+// A client that dies without closing its socket (a suspended cloud bot, a
+// phone that drops off the network) leaves a half-open connection that a
+// tunnel like ngrok keeps alive forever: no close, no grace, a ghost in the
+// room that blocks the start (#211). Protocol-level ping every interval;
+// a socket that missed the previous pong is terminated, which runs the
+// normal close -> grace path. Browsers answer pings on their own.
+const HEARTBEAT_MS = Number(process.env.ROOM_HEARTBEAT_MS) || 15000;
 
 const store = createStore();
 
@@ -103,9 +110,23 @@ function scheduleQualifyingEnd(roomCode) {
 }
 
 const wss = new WebSocketServer({ port: PORT });
-console.log(`[room-server] listening on ws://localhost:${PORT} (grace ${GRACE_MS}ms, qualifying ${QUALI_MS}ms)`);
+console.log(`[room-server] listening on ws://localhost:${PORT} (grace ${GRACE_MS}ms, qualifying ${QUALI_MS}ms, heartbeat ${HEARTBEAT_MS}ms)`);
+
+const heartbeat = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) {
+      ws.terminate();
+      continue;
+    }
+    ws.isAlive = false;
+    ws.ping();
+  }
+}, HEARTBEAT_MS);
+wss.on("close", () => clearInterval(heartbeat));
 
 wss.on("connection", (ws) => {
+  ws.isAlive = true;
+  ws.on("pong", () => { ws.isAlive = true; });
   // Which room/participant this specific socket currently represents, if
   // any — set on create/join/reconnect, cleared on explicit leave.
   let bound = null;
