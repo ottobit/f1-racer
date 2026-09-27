@@ -1578,3 +1578,16 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
   track limits, lap-3 slowdown, suspicious lap).
 - Correction: the "#228–#231 prepared for publication" entry above says
   publication pending; the user pushed and merged it as #232.
+
+## 2026-09-27 — Ingest: browser bot capacity (#239)
+
+- Source note `sources/2026-09-27-browser-bot-capacity.md` (rooms HBKY,
+  1 human + 11 browser bots, and XK5Z, 1 human + 7).
+- `wiki/f1-racer/agent-bots.md`: new section on many browser bots sharing
+  :8080 and the :8081 relay, with the measured race capacity; corrected
+  the "11 bots ~58 fps" claim (solo benchmark, 30–33 fps in a race);
+  rematch works (#224 closed); position duplicates affect browser bots too.
+- `procedure-racing.md`: 7 bots at most; "Rivincita" no longer needs a
+  fresh room.
+- Open: whether 5 bots remove the residual jumpiness, and the final
+  `tyreWearPct` reading 68–72% for stoppers and non-stoppers alike.
