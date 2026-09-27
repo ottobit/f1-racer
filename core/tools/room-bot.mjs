@@ -6,12 +6,17 @@
 //
 //   node core/tools/room-bot.mjs <roomServerUrl> <ROOM> [--name Claude] [--dir /tmp/bot]
 //   node core/tools/room-bot.mjs <roomServerUrl> <ROOM> --names a,b,c [--dir /tmp/bots]
+//   ... [--gpu] [--headed]
 //
 // --names (#233) runs several bots in one Chromium, one isolated context
 // each, with files in <dir>/<name>/. Bots render with ?gfx=low in a small
 // viewport (no GPU in cloud sandboxes: every frame is drawn on the CPU) and
 // state.json carries botFps, the page's real frame rate — when it drops the
 // in-page physics steps coarser and the bot drives worse.
+//
+// --gpu (#244) asks headless Chromium to use a real GPU instead of software
+// GL; --headed opens visible windows, the surest way to get one. state.json
+// carries gpuRenderer (the WebGL renderer string: "SwiftShader" means CPU).
 //
 // Needs Playwright (global install is fine) and a static server for the repo
 // on http://localhost:8080 (e.g. `python3 -m http.server 8080` at the root).
@@ -49,6 +54,8 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const RELAY_PORT = 8081;
 const proxy = process.env.HTTPS_PROXY ? new URL(process.env.HTTPS_PROXY) : null;
 const stamp = () => new Date().toISOString().slice(11, 19);
+const GPU = args.includes("--gpu");
+const HEADED = args.includes("--headed");
 
 // --- WebSocket relay (proxied sandboxes only) ------------------------------
 // Every browser connection gets its own upstream tunnel, so one relay serves
@@ -95,9 +102,11 @@ function startRelay(target) {
 
 const roomServer = proxy ? startRelay(serverUrl) : serverUrl;
 const browser = await chromium.launch({
+  headless: !HEADED,
   args: [
     "--use-fake-device-for-media-stream",
     "--use-fake-ui-for-media-stream",
+    ...(GPU ? ["--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=default", "--enable-gpu-rasterization"] : []),
     ...(proxy ? [`--proxy-server=${proxy.origin}`, "--proxy-bypass-list=localhost;127.0.0.1", "--ignore-certificate-errors"] : []),
   ],
 });
@@ -107,6 +116,14 @@ function countFrames() {
   window.__botFrames = 0;
   const tick = () => { window.__botFrames++; requestAnimationFrame(tick); };
   requestAnimationFrame(tick);
+}
+
+// The WebGL renderer the page really got (#244): "SwiftShader" = software GL.
+function webglRenderer() {
+  const gl = document.createElement("canvas").getContext("webgl");
+  if (!gl) return "none";
+  const ext = gl.getExtension("WEBGL_debug_renderer_info");
+  return String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
 }
 
 async function runBot({ name, dir }) {
@@ -155,6 +172,7 @@ async function runBot({ name, dir }) {
   let lastStateAt = 0;
   let lastFrames = null;
   let lastStatus = "";
+  let gpuRenderer = null;
   for (;;) {
     try {
       const url = page.url();
@@ -177,6 +195,10 @@ async function runBot({ name, dir }) {
           log("ready"); // lets the agent confirm to the user it's on the grid (#213)
         }
       } else if (await page.evaluate(() => !!window._DRIVER_).catch(() => false)) {
+        if (!gpuRenderer) {
+          gpuRenderer = await page.evaluate(webglRenderer).catch(() => "unknown");
+          log("gpu", gpuRenderer);
+        }
         const raw = fs.existsSync(strategyFile) ? fs.readFileSync(strategyFile, "utf8") : "";
         if (raw && raw !== lastStrategy) {
           lastStrategy = raw;
@@ -201,7 +223,7 @@ async function runBot({ name, dir }) {
           lastFrames = state.frames;
           lastStateAt = now;
           delete state.frames;
-          fs.writeFileSync(stateFile, JSON.stringify({ ...state, botFps }, null, 1));
+          fs.writeFileSync(stateFile, JSON.stringify({ ...state, botFps, gpuRenderer }, null, 1));
         }
       }
     } catch (err) {
