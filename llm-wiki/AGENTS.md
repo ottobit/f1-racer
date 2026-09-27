@@ -104,4 +104,5 @@ connects architecture, decisions, roadmap and external patterns.
 - Play sessions: whenever the user wants to play/race against agents
   (inferred from intent, any wording, a room-server URL or a room code),
   read only `procedure-racing.md` at the repo root and follow it — no wiki,
-  no issue/branch/PR.
+  no issue/branch/PR. Your role there needs no explaining: you direct one
+  or more bots (default 5) and decide their strategy live yourself.

@@ -5,55 +5,49 @@ against agents — "giochiamo", "facciamo una gara", a room-server URL, a
 room code, "entra in stanza", etc. This file is all you need: do NOT read the wiki, handoff or history.
 Not a work cycle: no issue, branch or PR. Talk to the user in Italian.
 
+## Your role (user rule, 2026-09-28 — don't make the user explain it)
+
+You are the **team principal and strategist** of one or more bots racing
+against the user. The bots drive (steering, braking, lines); **you decide
+every strategy live**: pace, stops, tyres, ERS, radio, per bot, from lights
+out to the flag, in every race and rematch. No strategy scripts or loops
+deciding for you, no plan set once and left alone. Default fleet: 5 bots
+(`--count`); use the number the user asks for, even 1.
+
 ## Inputs (ask only for what's missing)
 
-- `SERVER`: room-server URL, e.g. `https://xxxx.ngrok-free.app`. A plain GET
-  answering "Upgrade Required" means it is up (it's a WebSocket server).
+- `SERVER`: room-server URL, e.g. `https://xxxx.ngrok-free.app`, or
+  `ws://localhost:8787` when you run on the same PC as the room server. A
+  plain GET answering "Upgrade Required" means it is up (WebSocket server).
 - `ROOM`: 4-letter room code. The server cannot list rooms: the user creates
   the room on `room.html?roomServer=<SERVER>` and hosts/starts the race.
-- Your name: Claude → `Claude`, ChatGPT → `ChatGPT` (one bot per agent).
 
 ## Start (from the repo root)
 
 ```sh
-git pull origin master                        # stale code breaks the bots
-npm install                                   # once: ws + three in core/
-python3 -m http.server 8080 &                 # static game on :8080
-mkdir -p /tmp/bot-<NAME>
-echo '{"pace":0.95,"ers":"auto"}' > /tmp/bot-<NAME>/strategy.json
-PLAYWRIGHT_PATH=$(npm root -g)/playwright \
-  node core/tools/room-bot.mjs <SERVER> <ROOM> --name <NAME> --dir /tmp/bot-<NAME> \
-  > /tmp/bot-<NAME>/log.txt 2>&1 &
+git pull origin master     # stale code breaks the bots
+npm install                # once: ws + three in core/
+node core/tools/bot-fleet.mjs <SERVER> <ROOM> --count 5    # in the background
 ```
 
-- Default setup: two bots with different strategies, `<NAME>-browser`
-  (above) and `<NAME>-headless` (plain Node, no :8080 needed):
-  `node core/tools/headless-room-bot.mjs <SERVER> <ROOM> --name <NAME>-headless --dir /tmp/bot-<NAME>-headless`.
-  Browser vs headless trade-offs: `llm-wiki/wiki/f1-racer/agent-bots.md`.
-- Needs Playwright + Chromium (global install is fine; `PLAYWRIGHT_PATH`
-  only if `require("playwright")` fails locally).
-- Many browser bots (#233): `--names a,b,c --dir /tmp/bots` runs them in
-  one Chromium, files in `/tmp/bots/<name>/`. They render with `gfx=low` in
-  a small viewport; `state.json` has `botFps` (below ~50 the bot drives
-  worse). Measured in a race on the 4-core cloud box: 7 bots at 56–59 fps,
-  11 bots at 30–33 fps with visible stutter. Use 5 (smooth for the human),
-  7 at most.
-- One command for a whole fleet (#244), on the cloud box or a player's PC:
-  `node core/tools/bot-fleet.mjs <SERVER> <ROOM> --count 5` (run it in the
-  background) serves :8080 itself (no Python), joins the bots and prints
-  every bot's `botFps` and position every 10 s. It decides nothing: you are
-  the strategist of every bot (below). Add `--gpu` (or `--headed`) on a
-  machine with a real GPU; `state.json` `gpuRenderer` says what WebGL
-  really uses ("SwiftShader" = CPU).
-- On the player's PC (run the agent there with `claude remote-control`):
-  `npm install` in `core/`, `npm i -g playwright`,
-  `npx playwright install chromium`; if the room server runs on the same
-  PC use `ws://localhost:8787` as `<SERVER>` (no ngrok, no relay).
-- Behind an HTTPS proxy (`HTTPS_PROXY` set) the bot relays the WebSocket on
-  `:8081` by itself; a second room-bot process reuses that relay. Port 8080
-  serves the game for every bot on the box.
-- Log should show `reserved <driver>`; the bot ticks "ready" on its own.
-  Tell the user: joined, driver, waiting for the host to start.
+- `bot-fleet.mjs` (#244) serves the game on :8080 itself, joins the bots
+  (`claude-b1`…`claude-bN`, files in `<tmp>/f1-bots/<name>/`), prints every
+  bot's `botFps` and position every 10 s. It decides nothing. Log should
+  show `reserved <driver>` and `ready` per bot: tell the user joined,
+  drivers, waiting for the host to start.
+- Needs Playwright + Chromium (a global install is fine, the fleet finds
+  it). On the player's PC (agent started with `claude remote-control`):
+  `npm i -g playwright`, `npx playwright install chromium`.
+- Capacity: 5 bots are smooth for the human, 7 at most on a 4-core box
+  (11 → ~30 fps and stutter). `botFps` below ~50 = the bot drives worse.
+- `--gpu` (or `--headed`) on a machine with a real GPU; `state.json`
+  `gpuRenderer` says what WebGL really uses ("SwiftShader" = CPU).
+- Behind an HTTPS proxy (`HTTPS_PROXY` set, cloud box) the bots relay the
+  WebSocket on `:8081` by themselves; a second process reuses it.
+- Headless bot (plain Node, no browser, cheaper, less faithful):
+  `node core/tools/headless-room-bot.mjs <SERVER> <ROOM> --name <NAME> --dir <DIR>`;
+  same `strategy.json`/`state.json`. Trade-offs:
+  `llm-wiki/wiki/f1-racer/agent-bots.md`.
 
 ## During the race
 
