@@ -16,7 +16,7 @@
 
 const PACE_MIN = 0.5;
 const PACE_MAX = 1;
-const DEFAULT_TARGETS = { pace: 0.86, line: 0, ers: false, tyre: null, station: null };
+const DEFAULT_TARGETS = { pace: 0.86, line: 0, ers: "auto", tyre: null, station: null };
 const STATION_GAIN = 0.8; // m/s of correction per metre off station (#182)
 const STATION_MAX_CATCH_UP = 25;
 const STATION_MAX_DROP_BACK = 15;
@@ -61,6 +61,7 @@ export function createAutopilotProvider({ centerline, headingOf, sideNormal, nea
 
   return {
     capabilities: { hz: 60, maxLatencyMs: 0 },
+    preview: (car) => cornerProfile(nearestTrackInfo(car.x, car.z).idx),
     decide(car, _dt, targets = DEFAULT_TARGETS) {
       const info = nearestTrackInfo(car.x, car.z);
       const profile = cornerProfile(info.idx);
@@ -96,10 +97,15 @@ export function createAutopilotProvider({ centerline, headingOf, sideNormal, nea
 // Slow layer fed from outside (a bot script, an agent, a model): persistent
 // targets plus one-shot commands, validated field by field so a malformed
 // update never reaches the car.
-export function createLayeredProvider({ fast }) {
+export function createLayeredProvider({ fast, getState = () => null }) {
   const targets = { ...DEFAULT_TARGETS };
   let pending = {};
   let updatedAt = 0;
+  let tactical = {};
+  let elapsed = Infinity;
+  let pitCalled = false;
+  let mode = "cruise";
+  let effective = { ...targets };
 
   function setStrategy(update = {}) {
     if (typeof update !== "object" || update === null) return false;
@@ -126,12 +132,56 @@ export function createLayeredProvider({ fast }) {
   return {
     capabilities: fast.capabilities,
     setStrategy,
-    getTargets: () => ({ ...targets, updatedAt }),
+    getTargets: () => ({ ...targets, updatedAt, effective: { ...effective }, mode }),
     decide(car, dt) {
-      const { straight, ...controls } = fast.decide(car, dt, targets);
-      const ers = targets.ers === "auto"
+      elapsed += dt;
+      if (elapsed >= 0.5) {
+        elapsed = 0;
+        const view = getState();
+        tactical = {};
+        mode = "cruise";
+        if (view?.tyreWearPct < 30) pitCalled = false;
+        if (view?.session?.phase === "race" && view.session.state === "racing") {
+          const corner = fast.preview?.(car);
+          const alongside = (view.nearbyCars || []).some((other) => other.distanceMeters < 8);
+          const rain = view.weather === "rain";
+          const damaged = view.damagePct > 20;
+          if (view.safetyCar) {
+            mode = "caution";
+            tactical = { pace: Math.min(targets.pace, 0.65), ers: false };
+          } else {
+            if (Number.isFinite(view.gapAheadS) && view.gapAheadS >= 0 &&
+                view.gapAheadS < 1 && view.position > 1) {
+              mode = "attack";
+              tactical = { pace: clamp(targets.pace + 0.035, PACE_MIN, PACE_MAX) };
+            }
+            if (!alongside && !targets.station && Number.isFinite(view.gapBehindS) &&
+                view.gapBehindS >= 0 && view.gapBehindS < 0.5 && corner?.severity > 0.2) {
+              mode = "defend";
+              tactical.line = Math.sign(corner.turn) * 0.85;
+            }
+            if (rain || damaged) {
+              mode = rain ? "wet" : "preserve";
+              tactical.pace = Math.min(targets.pace, rain ? 0.8 : 1, damaged ? 0.75 : 1);
+            }
+            const times = view.lapTimes || {};
+            const degraded = times.bestMs > 0 && times.lastMs > times.bestMs * 1.12;
+            if (!pitCalled && !view.pit?.requested && view.pit?.state === "none" &&
+                view.lapsTotal - view.lap >= 2 &&
+                (view.tyreWearPct >= 80 || (view.tyreWearPct >= 60 && degraded))) {
+              pending.pit = true;
+              pitCalled = true;
+            }
+          }
+        }
+      }
+      effective = { ...targets, ...tactical };
+      // Explicit ERS and station targets remain authoritative; auto times
+      // deployment through the shared fast provider.
+      const { straight, ...controls } = fast.decide(car, dt, effective);
+      const ers = effective.ers === "auto"
         ? !!straight && (car.ersActive ? car.ersCharge > 0 : car.ersCharge >= ERS_AUTO_MIN_CHARGE)
-        : targets.ers;
+        : effective.ers;
       const out = { ...controls, ers, tyre: targets.tyre, ...pending };
       pending = {};
       return out;

@@ -1,27 +1,28 @@
+import { finishPullOver } from "./finish-pull-over.js?v=1";
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { CIRCUITS, getCircuit, LAPS_PER_RACE, TYRE_LIFE_LAPS } from "../shared/circuits.js?v=39";
-import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=1";
-import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=1";
-import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=1";
-import { liveryById } from "../shared/driver-themes.js?v=27";
-import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=29";
+import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=2";
+import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=2";
+import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
+import { liveryById } from "../shared/driver-themes.js?v=28";
+import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=30";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=35";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=37";
 import { setupRaceInput } from "./race-input.js?v=56";
-import { escapeHtml, setupRaceHud } from "./race-hud.js?v=40";
+import { escapeHtml, setupRaceHud } from "./race-hud.js?v=41";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=35";
 import { setupPlayerPhysics } from "./player-physics.js?v=9";
-import { setupRaceAi } from "./race-ai.js?v=29";
+import { setupRaceAi } from "./race-ai.js?v=30";
 import { setupRaceSystems } from "./race-systems.js?v=30";
-import { setupRaceProgress } from "./race-progress.js?v=27";
+import { setupRaceProgress } from "./race-progress.js?v=28";
 import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=3";
-import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=3";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=9";
+import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=4";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=10";
 
 import { steeringYaw } from "./steering.js?v=8";
 import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=41";
@@ -44,7 +45,7 @@ import {
   ERS_SPEED_MULTIPLIER, ERS_DRAIN_PER_SECOND, ERS_RECHARGE_PER_SECOND, PIT_SPEED_LIMIT, PIT_SERVICE_MS,
   START_FINISH_OFFSET, DRS_SPEED_MULTIPLIER, updateDrsEligibility, createTrackBoundary, GRID_SLOTS,
   createGridSlot, CAR_RADIUS, DAMAGE_MIN_IMPACT_SPEED, DAMAGE_PER_IMPACT_SPEED, DAMAGE_MAX_SPEED_PENALTY,
-} from "./race-rules.js?v=1";
+} from "./race-rules.js?v=2";
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
@@ -875,6 +876,8 @@ const hud = setupRaceHud({
   getQualifyingRivals: multiplayer ? multiplayerQualifyingRivals : undefined,
   isDisconnected: isDriverDisconnected,
   getRaceState: () => raceState,
+  getVoiceState: multiplayer ? (id) => multiplayer.getVoiceState(id) : null,
+  toggleVoice: () => multiplayer?.toggleVoice(),
 });
 
 // --- Main loop -------------------------------------------------------------
@@ -914,6 +917,8 @@ const raceSystems = setupRaceSystems({
 
 const { updateAiCar } = setupRaceAi({
   ai: AI,
+  trackWidth: TRACK_WIDTH,
+  isRace: () => sessionPhase === "race",
   centerline,
   headingOf,
   sideNormal,
@@ -977,8 +982,6 @@ if (multiplayer) {
 // below lifts, brakes to a cruise and follows the track while the results
 // wait, then fade in.
 const FINISH_RESULTS_DELAY_MS = 2600;
-const FINISH_COAST_SPEED = 25; // m/s (~90 km/h) before it only coasts
-const FINISH_COAST_LOOKAHEAD = 12; // centerline samples ahead
 
 function showResultsOverlay() {
   setTimeout(() => {
@@ -989,17 +992,14 @@ function showResultsOverlay() {
   }, FINISH_RESULTS_DELAY_MS);
 }
 
-function driveFinishCoast() {
-  const { idx } = nearestTrackInfo(state.x, state.z);
-  const aim = centerline[(idx + FINISH_COAST_LOOKAHEAD) % centerline.length];
-  let err = Math.atan2(aim.x - state.x, aim.z - state.z) - state.heading;
-  while (err > Math.PI) err -= Math.PI * 2;
-  while (err < -Math.PI) err += Math.PI * 2;
-  const steer = Math.max(-1, Math.min(1, -err * 3));
-  setExternalSteer(steer);
-  steering.value = steer;
-  input.forward = false;
-  input.back = state.speed > FINISH_COAST_SPEED;
+function driveFinishCoast(dt) {
+  const plan = finishPullOver(state, dt, { centerline, nearestTrackInfo, sideNormal, trackWidth: TRACK_WIDTH });
+  setExternalSteer(plan.steer);
+  steering.value = plan.steer;
+  input.forward = plan.throttle;
+  input.back = plan.brake;
+  state.ersActive = false;
+  state.drsActive = false;
 }
 
 function finishRace() {
@@ -1278,7 +1278,7 @@ function update(dt) {
   }
 
   const now = performance.now();
-  if (raceState === "finished") driveFinishCoast();
+  if (raceState === "finished") driveFinishCoast(dt);
   else if (state.pitRequested) raceSystems.startPitStop();
 
   updateDrsEligibility([state, ...aiCars], TRACK_LENGTH);
@@ -1621,7 +1621,7 @@ if (isBotSession && driverMode) {
     findCar: (driverId) => aiCars.find((car) => car.driverId === driverId) || null,
     trackLength: TRACK_LENGTH,
   });
-  botDriver = driverMode === "layered" ? createLayeredProvider({ fast: autopilot }) : autopilot;
+  botDriver = driverMode === "layered" ? createLayeredProvider({ fast: autopilot, getState: () => window._ENVIRONMENT_?.getState() }) : autopilot;
 }
 
 // Agent API (#176): opt-in only, via ?agent=1, so normal play is untouched.

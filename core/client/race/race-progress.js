@@ -72,6 +72,7 @@ export function setupRaceProgress({
       car.lap = 0;
       car.completedLaps = 0;
       car.finishPosition = null;
+      car.finishPullOver = null;
       car.gridPosition = index + 1;
       car.lapCheckpointPassed = false;
       car.ersCharge = 100;

@@ -1,3 +1,5 @@
+import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
+
 // Race rules shared by the browser runtime (main.js) and the headless room
 // bot (core/tools/headless-room-bot.mjs, #214): car limits, tyres, ERS, DRS,
 // pit lane, runoff, grid and contact constants. No three.js, no DOM — a bot
@@ -123,18 +125,8 @@ export function createTrackBoundary({ trackWidth, runoffEffect, nearestTrackInfo
 // A real F1 grid is single-file: each position steps back from the one
 // before it and alternates side (P1/P3/P5... one diagonal, P2/P4/P6... the
 // other). Pole first.
-export const GRID_SLOTS = [
-  { row: 0, lane: -1 }, // P1
-  { row: 1, lane: 1 }, // P2
-  { row: 2, lane: -1 }, // P3
-  { row: 3, lane: 1 }, // P4
-  { row: 4, lane: -1 }, // P5
-  { row: 5, lane: 1 }, // P6
-  { row: 6, lane: -1 }, // P7
-  { row: 7, lane: 1 }, // P8
-  { row: 8, lane: -1 }, // P9
-  { row: 9, lane: 1 }, // P10
-];
+// Derive capacity from the roster, just like the multiplayer server.
+export const GRID_SLOTS = DRIVER_ROSTER.map((_, row) => ({ row, lane: row % 2 ? 1 : -1 }));
 const GRID_ROW_GAP = 5; // meters behind the previous row
 
 // Places a grid slot by walking backward along the actual centerline from

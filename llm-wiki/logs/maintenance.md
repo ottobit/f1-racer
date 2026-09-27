@@ -1541,3 +1541,12 @@ start, and a realistic start "come fanno nelle gare ufficiali".
   headless bot runs the player physics (#214/#219); the server still has none.
 - `procedure-racing.md`: two-bot default setup, radio rule, rematch caveat.
 - Docs only; UMGY race confirmed radio and the headless pit stop (slow: #227).
+
+## 2026-09-27 — Tasks #228–#231 prepared for publication
+
+Implemented shared bot tactics, kerb pull-over after finishing, per-driver
+voice status and the Ossidiana pair (12-driver roster). Updated architecture
+and bot documentation. Structural checks passed for 20 JavaScript modules
+and relative module paths; gameplay/audio remain for manual validation.
+User authorized push and PR closure. Publication is pending: local Git has
+no GitHub credentials. Integrated branch: cycle/228-231-integration.

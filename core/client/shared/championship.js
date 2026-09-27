@@ -4,12 +4,12 @@
 
 const STORAGE_KEY = "f1racer-championship-v1";
 
-import { DRIVER_ROSTER } from "./driver-roster.js?v=1";
-import { loadSelectedDriverId } from "./driver-selection.js?v=1";
+import { DRIVER_ROSTER } from "./driver-roster.js?v=2";
+import { loadSelectedDriverId } from "./driver-selection.js?v=2";
 
 export const DRIVERS = DRIVER_ROSTER;
 
-// Real F1 points system (top 10 score) — fits a ten-car grid exactly.
+// Real F1 points system: only the top ten score, even as the grid grows.
 export const POINTS_BY_POSITION = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
 
 export function loadState() {

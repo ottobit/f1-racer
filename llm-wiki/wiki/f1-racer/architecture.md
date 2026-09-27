@@ -303,3 +303,20 @@ isn't a fully consistent cache-busting scheme; out of #46's scope.
 - Avoid adding a build system unless a future feature clearly requires it.
 - Keep structural checks cheap by default.
 - Do not alter the top HUD panel without a specific user request.
+
+## Driver capacity and voice status (#230–#231)
+
+- `driver-roster.js` is the source of truth for selectable identities,
+  multiplayer capacity and physical grid slots (`race-rules.js`). The
+  Ossidiana pair expands the field to 12; championship points still go
+  only to the first ten. Livries and cockpit themes remain in
+  `driver-themes.js`; garage paint follows the selected driver's team.
+- `voice-chat.js` exposes per-participant connection, microphone, mute and
+  speaking status. `voice_signal` carries `{kind:"voice_state", muted,
+  hasMic}` on greeting and mute changes, using the existing server relay.
+  Speaking is measured locally from each audio stream, without frequent
+  level broadcasts. The timing tower maps driver IDs to participants
+  through `race-multiplayer.js`; only the local speaker icon toggles mute,
+  and solo play has no voice icons.
+- Gameplay, mobile layout, audio permissions and microphone behavior need
+  manual validation; this change set received structural checks only.

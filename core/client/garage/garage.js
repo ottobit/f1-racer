@@ -4,10 +4,10 @@ import {
   playerLivery,
   saveGarageSetup,
   setupEffects,
-} from "../shared/garage-setup.js?v=29";
+} from "../shared/garage-setup.js?v=30";
 import { createShowroom } from "./showroom.js?v=40";
 import { getCircuit } from "../shared/circuits.js?v=39";
-import { loadSelectedDriverId } from "../shared/driver-selection.js?v=1";
+import { loadSelectedDriverId } from "../shared/driver-selection.js?v=2";
 import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=4";
 import { setupDiagnosticsOverlay } from "../race/race-diagnostics.js?v=1";
 

@@ -18,7 +18,7 @@ import { CIRCUITS } from "../client/shared/circuits.js";
 const ROOM_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"; // no 0/O, 1/I/L
 const ROOM_CODE_LENGTH = 4;
 const MAX_NICKNAME_LENGTH = 24;
-export const MAX_PARTICIPANTS = DRIVER_ROSTER.length; // 10 — one slot per reservable driver
+export const MAX_PARTICIPANTS = DRIVER_ROSTER.length; // one slot per reservable driver
 export const DEFAULT_GRACE_MS = 30000;
 // Stage 2 (#44): must match main.js's own QUALIFYING_DURATION_MS — the two
 // can't share an import across the browser/Node boundary, so this is a

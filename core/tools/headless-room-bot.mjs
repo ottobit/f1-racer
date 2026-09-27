@@ -1,3 +1,4 @@
+import { finishPullOver } from "../client/race/finish-pull-over.js";
 // Node-only multiplayer driver. Unlike room-bot.mjs it never opens the game
 // page, creates a WebGL renderer or needs Chromium: it joins the public room
 // protocol directly and drives the SAME car as the browser (#214) — the
@@ -89,7 +90,6 @@ const LIGHTS_OUT_MIN_MS = 200;
 const LIGHTS_OUT_MAX_MS = 3000;
 const TRACK_LIMIT_WARNING_THRESHOLD = 3; // as main.js
 const TRACK_LIMIT_PENALTY_MS = 1000;
-const FINISH_COAST_SPEED = 25; // as main.js's driveFinishCoast
 const REMOTE_STALE_MS = 3000;
 const CENTERLINE_SAMPLES = 360;
 const KMH_PER_UNIT = 3.6;
@@ -263,7 +263,7 @@ function buildSim(circuitId) {
     findCar: (id) => others.find((other) => other.driverId === id) || null,
     trackLength,
   });
-  const driver = createLayeredProvider({ fast: autopilot });
+  const driver = createLayeredProvider({ fast: autopilot, getState: () => snapshot(performance.now()) });
   log("circuit", circuit.id, `${Math.round(trackLength)}m`);
   return {
     circuit, centerline, trackLength, nearestTrackInfo, gridSlot, tyreWear,
@@ -277,6 +277,7 @@ function placeOnGrid(slotIndex) {
   const slot = GRID_SLOTS[Math.min(Math.max(slotIndex, 0), GRID_SLOTS.length - 1)];
   const pos = gridSlot(slot.row, slot.lane);
   Object.assign(state, freshState(), {
+    finishPullOver: null,
     x: pos.x,
     z: pos.z,
     heading: pos.heading,
@@ -513,12 +514,12 @@ function sendRadio(text) {
 function drive(dt) {
   const { state, input, steering, driver } = sim;
   if (raceState === "finished") {
-    // main.js's driveFinishCoast: keep steering the line, lift, brake down
-    // to a cruise.
-    const out = driver.decide(state, dt);
-    steering.value = out.steer;
-    input.forward = false;
-    input.back = state.speed > FINISH_COAST_SPEED;
+    const plan = finishPullOver(state, dt, { ...sim, sideNormal, trackWidth: sim.circuit.width });
+    steering.value = plan.steer;
+    input.forward = plan.throttle;
+    input.back = plan.brake;
+    state.ersActive = false;
+    state.drsActive = false;
     return;
   }
   const out = driver.decide(state, dt);
