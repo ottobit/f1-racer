@@ -1,8 +1,8 @@
 // Pure, frame-rate-independent steering helpers shared by runtime and tests.
-export function shapeSteering(raw) {
+export function shapeSteering(raw, exponent = 1.22) {
   const magnitude = Math.min(1, Math.abs(raw));
   if (magnitude < .035) return 0;
-  return Math.sign(raw) * Math.pow((magnitude - .035) / .965, 1.22);
+  return Math.sign(raw) * Math.pow((magnitude - .035) / .965, exponent);
 }
 export function smoothSteering(current, target, dt) {
   const returning = target === 0 || target * current < 0;
