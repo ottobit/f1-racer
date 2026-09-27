@@ -1527,3 +1527,17 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Lesson: `node --check` does not catch undeclared identifiers; after a
   module extraction, grep that every moved export is imported.
 - Verified: the local browser bot loaded the race and wrote `state.json`.
+
+## 2026-09-27 — Agent bots page: browser vs headless and usage (#225)
+
+- New `llm-wiki/wiki/f1-racer/agent-bots.md`: browser bot (`room-bot.mjs`,
+  real game in Playwright) vs headless bot (`headless-room-bot.mjs`, Node
+  with the shared physics modules) — hosting, protocol, clock, fidelity,
+  weak points — plus usage concepts (two bots, strategy loop, radio,
+  keep-alive, fresh room instead of rematch while #224 is open).
+- Source note `llm-wiki/sources/2026-09-27-agent-bots-session.md`; linked
+  from `index.md` and `c4-model.md`.
+- `decisions.md`: the "no physics on Node" note now points out that the
+  headless bot runs the player physics (#214/#219); the server still has none.
+- `procedure-racing.md`: two-bot default setup, radio rule, rematch caveat.
+- Docs only; UMGY race confirmed radio and the headless pit stop (slow: #227).
