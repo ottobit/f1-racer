@@ -1456,3 +1456,15 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Known limit: two bots on one machine collide on ports 8080/8081; a chat-only
   agent without a shell cannot run the bot.
 - Verified by joining room PDFP as `rival-red` with the documented commands.
+
+## 2026-09-27 — Room server heartbeat against ghost participants (#211)
+
+- `core/server/room-server.mjs`: protocol-level ping every `ROOM_HEARTBEAT_MS`
+  (default 15 s); a socket that missed the previous pong is `terminate()`d,
+  which runs the existing close -> grace -> removal path.
+- Why: a cloud bot suspended mid-room left a half-open socket that ngrok kept
+  alive; no close ever fired, the ghost blocked the race start.
+- Worst case a ghost leaves after ~30 s heartbeat + 30 s grace. Browsers answer
+  pings natively: no client change, no `?vNN` bump.
+- Verified server-only with a paused-socket client (2 -> 1 participants);
+  the user must restart the room server to pick it up.
