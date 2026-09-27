@@ -1602,3 +1602,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Cost model: each renderer runs the full race (JS, physics, three.js of every car); `gfx=low` trims only drawing; the cloud box has no GPU (`/dev/nvidia*` and `/dev/dri` absent), so WebGL runs in software on the same 4 cores.
 - GPU impact marked Probable/Needs verification: it would offload drawing but not simulation; `room-bot.mjs` launches Chromium without GPU flags.
 - Docs only, verified with `git diff --check`.
+
+## 2026-09-27 — Bot fleet from a local PC, agent-driven strategy (#244)
+
+- `core/tools/room-bot.mjs`: `--gpu` (GPU flags for headless Chromium) and `--headed`; `state.json` gains `gpuRenderer` (WebGL renderer string, "SwiftShader" = software GL), also logged once per page.
+- `core/tools/bot-fleet.mjs` (new): one cross-platform command; Node static server on :8080, N bots via `room-bot.mjs --names`, finds a global Playwright, prints `botFps`/position every 10 s. It holds no strategy logic.
+- `core/tools/bot-watch.mjs` (new): waits for a decision-worthy change (lap, pit, safety car, wear 50/70/85%, damage) or a timeout, then prints one line per bot; it only reports.
+- User rule: the agent decides every bot's strategy live (watch → decide → write `strategy.json`); no strategy loops. `driver-providers.js` gets `autoPit` (default true); `false` disables the layered driver's own wear-based box call. Version chain: driver-providers v5, main v114, race-bootstrap v75.
+- `procedure-racing.md` and wiki `agent-bots.md` updated (fleet, local-PC setup with `ws://localhost:8787`, live strategy). Verified with `node --check` and `git diff --check` only; first real run is the user's local-PC race.

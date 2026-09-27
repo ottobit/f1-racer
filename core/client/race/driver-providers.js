@@ -16,7 +16,7 @@
 
 const PACE_MIN = 0.5;
 const PACE_MAX = 1;
-const DEFAULT_TARGETS = { pace: 0.86, line: 0, ers: "auto", tyre: null, station: null };
+const DEFAULT_TARGETS = { pace: 0.86, line: 0, ers: "auto", tyre: null, station: null, autoPit: true };
 const STATION_GAIN = 0.8; // m/s of correction per metre off station (#182)
 const STATION_MAX_CATCH_UP = 25;
 const STATION_MAX_DROP_BACK = 15;
@@ -114,6 +114,8 @@ export function createLayeredProvider({ fast, getState = () => null }) {
     if (typeof update.ers === "boolean" || update.ers === "auto") targets.ers = update.ers;
     if (update.pit === true) pending.pit = true;
     if (TYRES.has(update.tyre)) targets.tyre = update.tyre; // fitted at the next stop
+    // false: only the strategist calls the box, never the wear rule below (#244).
+    if (typeof update.autoPit === "boolean") targets.autoPit = update.autoPit;
     if (update.station === null) targets.station = null;
     else if (update.station && typeof update.station.car === "string") {
       targets.station = {
@@ -166,7 +168,7 @@ export function createLayeredProvider({ fast, getState = () => null }) {
             }
             const times = view.lapTimes || {};
             const degraded = times.bestMs > 0 && times.lastMs > times.bestMs * 1.12;
-            if (!pitCalled && !view.pit?.requested && view.pit?.state === "none" &&
+            if (targets.autoPit && !pitCalled && !view.pit?.requested && view.pit?.state === "none" &&
                 view.lapsTotal - view.lap >= 2 &&
                 (view.tyreWearPct >= 80 || (view.tyreWearPct >= 60 && degraded))) {
               pending.pit = true;
