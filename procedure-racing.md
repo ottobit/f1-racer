@@ -16,6 +16,7 @@ Not a work cycle: no issue, branch or PR. Talk to the user in Italian.
 ## Start (from the repo root)
 
 ```sh
+git pull origin master                        # stale code breaks the bots
 npm install                                   # once: ws + three in core/
 python3 -m http.server 8080 &                 # static game on :8080
 mkdir -p /tmp/bot-<NAME>

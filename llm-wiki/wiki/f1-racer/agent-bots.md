@@ -2,8 +2,9 @@
 
 How agents (Claude, ChatGPT) join multiplayer rooms as participants. The
 play procedure itself lives in [`procedure-racing.md`](../../../procedure-racing.md);
-this page is the why and the trade-offs. Source:
-[agent bots session](../../sources/2026-09-27-agent-bots-session.md).
+this page is the why and the trade-offs. Sources:
+[agent bots session](../../sources/2026-09-27-agent-bots-session.md),
+[12-car bot races](../../sources/2026-09-27-twelve-car-bot-races.md).
 
 ## Browser bot vs headless bot
 
@@ -46,6 +47,14 @@ third-party bots ever race, the server must validate times (open).
   and block the room; start a fresh room instead of "Rivincita".
 - **Bug hunt**: after each race, open deduplicated Italian issues for what
   the bots saw (`pageerror`, protocol hiccups, strategy API gaps).
+- **Fresh checkout**: `git pull` before launching. A stale copy crashed the
+  browser bot when the host picked a driver added later (#232 roster).
+- **Grid size**: room capacity is the roster length (`MAX_PARTICIPANTS` in
+  `rooms.mjs`, 12 since #232); the room server must be restarted after a
+  roster change. No join after lights out.
+- **Live strategy changes**: only by rewriting a bot's `strategy.json`
+  (applied within ~2 s). The agent's strategy loop overwrites a manual
+  override at its next event, and #228 tactics may still adjust pace/pit.
 - **Checks**: `node --check` does not catch a missing import (#222); after a
   module extraction, confirm with a bot run that the race page loads.
 
@@ -65,3 +74,17 @@ solo AI and headless bot. It picks the nearest track edge once, blends the
 lateral target over two seconds, and brakes to a stop only after reaching
 the edge. It uses ordinary steering/motion, without relocating the car.
 The plan is reset when the grid is initialized for another race.
+
+## Strategy findings from 12-car races (Open)
+
+From four 1 human + 11 bot races (source above); small sample, one circuit
+set, bots' own timing:
+
+- `pace` above ~0.93 loses in a 12-car pack: track-limit penalties cost more
+  than corner speed gains (#236).
+- An early stop on softs (50% wear) won twice; non-stoppers won once. The
+  stop's cost depends on when traffic is lightest, not on stopping.
+- Lap 3 is 6–9 s slower for the whole field with no safety car, and one
+  bot posted a 22 s lap ~4 s under everyone: needs verification (#236).
+- Headless self-reported positions and finish state are unreliable (#235):
+  use the host's results screen, or the browser bot's state, as truth.

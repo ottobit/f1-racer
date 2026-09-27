@@ -1566,3 +1566,15 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Smoke test: two bots via `--names` plus a second process reusing the relay
   reached the room server. Not yet raced in a real room with N browser bots.
 - Docs: `procedure-racing.md`, `wiki/f1-racer/agent-bots.md`.
+
+## 2026-09-27 — Ingest: 12-car bot races (#237)
+
+- Source note `sources/2026-09-27-twelve-car-bot-races.md` (rooms PFDT, 6KEY,
+  F5XQ, ZJYD; 1 human + 11 bots).
+- `wiki/f1-racer/agent-bots.md`: fresh checkout, grid size = roster, live
+  strategy changes via `strategy.json`; new "Strategy findings (Open)".
+- `procedure-racing.md`: `git pull` as first start step.
+- New issues from the races: #235 (headless position/finish), #236 (pace vs
+  track limits, lap-3 slowdown, suspicious lap).
+- Correction: the "#228–#231 prepared for publication" entry above says
+  publication pending; the user pushed and merged it as #232.
