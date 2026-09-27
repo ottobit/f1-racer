@@ -1382,3 +1382,11 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race-input.js` / `main.js`: `speedRatio` plumbing dropped; versions steering v5, race-input v52, main v101, race-bootstrap v62.
 - Physics follow-up thread opened (fairness: fixed timestep; aero grip/braking/drag).
 - Verified with `node --check`; handling to be judged in game.
+
+## 2026-09-27 — Cockpit hands (#196)
+
+- Race-camera renders showed the driver hidden by the engine cover in the chase view; the toy look came from the cockpit view (white sphere gloves, sausage forearms).
+- `core/client/shared/car-model.js` (detail cars only): hands built round the wheel grips — dark matte back of hand, four two-segment fingers, thumb on the rotary, livery-secondary strap (#175 identity), suit cuff; forearms taper to the wrist (`rod` gains an end radius) with 16 radial segments.
+- Versions: car-model v35, race-car-view v37, main v102, race-bootstrap v63, showroom v40, garage v52.
+- Open: helmet still reads as a ball from side/pit-TV views — next step of #196.
+- Verified with `node --check` and headless cockpit renders.
