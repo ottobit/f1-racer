@@ -1412,3 +1412,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Local architecture documents the browser-only consistency boundary, per-frame simulation path and `localStorage` ownership. Multiplayer documents the client-authoritative car simulation, server-authoritative room lifecycle, ephemeral `car_state` relay and peer-to-peer WebRTC audio.
 - Updated the F1 Racer wiki index to link the overview and both detailed architecture tracks. Planned agent controls remain clearly separated from the as-is runtime.
 - Verification: `git diff --check`, balanced Markdown fences, and structural checks confirming levels 1–4 plus seven Mermaid diagrams in each detailed document. No browser tests, per project policy.
+
+## 2026-09-27 — Touch wheel: short travel, steeper curve (#197)
+
+- Regression from #202: at the qualifying start the steering froze, then came back. Likely cause: the 25/09 .48 travel (~80px) put a left-lock thumb in Android's back-gesture strip, which cancels the touch (same problem #153/#155 fixed).
+- `race-input.js`: travel back to .38 (~60px to full lock); `TOUCH_STEER_EXPONENT` 1.6 passed to `shapeSteering` (new optional exponent in `steering.js`, pad keeps 1.22). Same gain as 25/09 up to ~30px of drag, full lock at ~60px. #202's .22 high-speed floor kept.
+- Versions: steering v7, race-input v55, main v106, race-bootstrap v67.
+- Headless two-finger start (CDP touch) showed the wheel responding at once; the edge gesture can't be simulated — to be confirmed on the phone. `node --check` only otherwise.

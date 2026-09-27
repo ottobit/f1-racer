@@ -1,4 +1,6 @@
-import { shapeSteering, smoothSteering } from "./steering.js?v=6";
+import { shapeSteering, smoothSteering } from "./steering.js?v=7";
+
+const TOUCH_STEER_EXPONENT = 1.6;
 
 const KEY_MAP = {
   ArrowUp: "forward",
@@ -235,11 +237,13 @@ export function setupRaceInput({
   wheelEl.addEventListener("pointermove", (event) => {
     if (event.pointerId !== wheelPointer) return;
     // Relative drag from where the finger lands (#155, absolute steering
-    // from #153 jerked the car on thumb placement); ~90px to full lock
-    // keeps the finger away from the screen-edge gestures. #197: 25/09
-    // travel back (.48 of the wheel, was .38 since #155).
-    const travel = Math.max(45, wheelEl.clientWidth * 0.48);
-    touchSteer = shapeSteering((event.clientX - wheelOrigin) / travel);
+    // from #153 jerked the car on thumb placement); ~60px to full lock
+    // keeps the finger away from the screen-edge gestures (#197: the 25/09
+    // .48 travel put a left-lock thumb in Android's back-gesture strip,
+    // cancelling the touch). The steeper curve keeps 25/09's gain for the
+    // first ~30px of drag.
+    const travel = Math.max(45, wheelEl.clientWidth * 0.38);
+    touchSteer = shapeSteering((event.clientX - wheelOrigin) / travel, TOUCH_STEER_EXPONENT);
   });
   const releaseWheel = (event) => {
     if (event.pointerId === wheelPointer) {
