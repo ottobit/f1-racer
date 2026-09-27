@@ -10,6 +10,9 @@
 // - LayeredProvider: the autopilot plus slow strategy targets (pace, line,
 //   ERS, box calls, radio) pushed from outside at any rate through
 //   window._DRIVER_.setStrategy(); the last valid targets stay in force.
+//   ers: "auto" (#212) hands deployment to the fast layer: an outside
+//   agent sampling every few seconds can't time a battery that drains and
+//   refills in seconds.
 
 const PACE_MIN = 0.5;
 const PACE_MAX = 1;
@@ -18,6 +21,8 @@ const STATION_GAIN = 0.8; // m/s of correction per metre off station (#182)
 const STATION_MAX_CATCH_UP = 25;
 const STATION_MAX_DROP_BACK = 15;
 const TYRES = new Set(["soft", "medium", "hard"]);
+const ERS_AUTO_MAX_SEVERITY = 0.2; // deploy on straights and gentle kinks only
+const ERS_AUTO_MIN_CHARGE = 20; // % needed to start a deployment
 const RADIO_MAX_CHARS = 80;
 
 const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
@@ -82,6 +87,7 @@ export function createAutopilotProvider({ centerline, headingOf, sideNormal, nea
         steer: clamp(-err * STEER_GAIN, -1, 1),
         throttle: car.speed < targetSpeed ? 1 : 0,
         brake: car.speed > targetSpeed + SPEED_MARGIN ? 1 : 0,
+        straight: profile.severity < ERS_AUTO_MAX_SEVERITY,
       };
     },
   };
@@ -99,7 +105,7 @@ export function createLayeredProvider({ fast }) {
     if (typeof update !== "object" || update === null) return false;
     if (Number.isFinite(update.pace)) targets.pace = clamp(update.pace, PACE_MIN, PACE_MAX);
     if (Number.isFinite(update.line)) targets.line = clamp(update.line, -1, 1);
-    if (typeof update.ers === "boolean") targets.ers = update.ers;
+    if (typeof update.ers === "boolean" || update.ers === "auto") targets.ers = update.ers;
     if (update.pit === true) pending.pit = true;
     if (TYRES.has(update.tyre)) targets.tyre = update.tyre; // fitted at the next stop
     if (update.station === null) targets.station = null;
@@ -122,7 +128,11 @@ export function createLayeredProvider({ fast }) {
     setStrategy,
     getTargets: () => ({ ...targets, updatedAt }),
     decide(car, dt) {
-      const out = { ...fast.decide(car, dt, targets), ers: targets.ers, tyre: targets.tyre, ...pending };
+      const { straight, ...controls } = fast.decide(car, dt, targets);
+      const ers = targets.ers === "auto"
+        ? !!straight && (car.ersActive ? car.ersCharge > 0 : car.ersCharge >= ERS_AUTO_MIN_CHARGE)
+        : targets.ers;
+      const out = { ...controls, ers, tyre: targets.tyre, ...pending };
       pending = {};
       return out;
     },

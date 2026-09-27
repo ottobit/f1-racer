@@ -1456,3 +1456,38 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Known limit: two bots on one machine collide on ports 8080/8081; a chat-only
   agent without a shell cannot run the bot.
 - Verified by joining room PDFP as `rival-red` with the documented commands.
+
+## 2026-09-27 — Room server heartbeat against ghost participants (#211)
+
+- `core/server/room-server.mjs`: protocol-level ping every `ROOM_HEARTBEAT_MS`
+  (default 15 s); a socket that missed the previous pong is `terminate()`d,
+  which runs the existing close -> grace -> removal path.
+- Why: a cloud bot suspended mid-room left a half-open socket that ngrok kept
+  alive; no close ever fired, the ghost blocked the race start.
+- Worst case a ghost leaves after ~30 s heartbeat + 30 s grace. Browsers answer
+  pings natively: no client change, no `?vNN` bump.
+- Verified server-only with a paused-socket client (2 -> 1 participants);
+  the user must restart the room server to pick it up.
+
+## 2026-09-27 — Bot strategy ers:"auto" and ERS re-arm (#212)
+
+- `core/client/race/driver-providers.js` (v3): `setStrategy` accepts
+  `ers: "auto"`; the fast layer deploys on straights/gentle kinks
+  (`severity < 0.2`), starting at >= 20% charge, until flat or a corner.
+- `core/client/race/main.js` (v109): bug fix — the bot only wrote
+  `state.ersActive` when its ERS target changed, so after `race-systems.js`
+  switched off a flat battery a steady `ers:true` never re-armed it. Now it
+  follows the bot's decision every frame (only with charge left).
+- Version chain: `race-bootstrap.js` v70, `race.html`.
+- `procedure-racing.md`: documents `"auto"`, now the recommended start value.
+- Bot sessions only; human driving unchanged. Syntax checks only.
+
+## 2026-09-27 — Racing procedure: keep-alive and post-race issue hunt (#213)
+
+- `procedure-racing.md`: "Stay alive" (cloud agents keep a background loop
+  for the whole play session, rematches included, so the container isn't
+  suspended mid-room) and "Bug and requirement hunt" (user rule: note
+  findings while racing, open deduplicated Italian issues after each race).
+- `core/tools/room-bot.mjs`: logs `ready` when it ticks the ready box.
+- Origin: first agent races (rooms PDFP, Z47X) produced #211 and #212.
+- Syntax checks only.

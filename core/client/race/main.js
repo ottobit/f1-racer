@@ -20,7 +20,7 @@ import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=3";
-import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=2";
+import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=3";
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=9";
 
 import { steeringYaw } from "./steering.js?v=8";
@@ -1570,7 +1570,6 @@ if (multiplayer) multiplayer.onRadio(showRadio);
 // Room bot driver (#7): the provider's inputs replace the human's, through
 // the same controls (no second physics path). The pit lane keeps its own
 // autopilot (#147); the provider only calls the stop and picks the tyre.
-let botErs = false;
 function driveWithProvider(provider, dt) {
   const driving = sessionPhase === "race" ? raceState === "racing" : qualiState === "running";
   if (!driving) return;
@@ -1586,10 +1585,11 @@ function driveWithProvider(provider, dt) {
   input.back = out.brake > 0;
   if (sessionPhase !== "race") return;
   if (out.pit) state.pitRequested = true;
-  if (!!out.ers !== botErs) {
-    botErs = !!out.ers;
-    state.ersActive = botErs;
-  }
+  // Follow the bot's ERS every frame, not only on change: once the battery
+  // ran flat race-systems.js switched it off, and a steady ers:true would
+  // never have re-armed it (#212).
+  const wantErs = !!out.ers && state.ersCharge > 0;
+  if (wantErs !== state.ersActive) state.ersActive = wantErs;
 }
 
 let botDriver = null;
