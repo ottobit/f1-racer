@@ -1610,3 +1610,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `core/tools/bot-watch.mjs` (new): waits for a decision-worthy change (lap, pit, safety car, wear 50/70/85%, damage) or a timeout, then prints one line per bot; it only reports.
 - User rule: the agent decides every bot's strategy live (watch → decide → write `strategy.json`); no strategy loops. `driver-providers.js` gets `autoPit` (default true); `false` disables the layered driver's own wear-based box call. Version chain: driver-providers v5, main v114, race-bootstrap v75.
 - `procedure-racing.md` and wiki `agent-bots.md` updated (fleet, local-PC setup with `ws://localhost:8787`, live strategy). Verified with `node --check` and `git diff --check` only; first real run is the user's local-PC race.
+
+## 2026-09-28 — Race VSN2 from the player's PC: bot tool fixes and ingest (#246)
+
+- `core/tools/room-bot.mjs`: back in the room `state.json` reads `phase: "room"` with `lastRace` instead of freezing mid-race (race 1 classification was lost); 3 s timeouts on the join fill/click (30 s stall); every `pit.requested`/`pit.state` transition is logged to trace unrequested stops (#247, still open).
+- `core/tools/bot-watch.mjs`: prints `armed` for a pending box call (the double stops came from re-sending `pit`) and the driver's tactical mode; handles bots in the room. README: root script is `npm start`.
+- Ingest: new source `sources/2026-09-28-race-vsn2-local-pc.md` over the raw report and fleet log. It corrects two raw claims against the code: `pit.requested` was already exposed, and wear % grows ~33%/lap on every compound (`wearRate` only scales the grip/speed cost). `agent-bots.md` gets "Live strategy in practice" and "Running on the player's PC"; no jump with server and bots on one PC, so the cloud jump was the network path.
+- Role made explicit for new sessions: `procedure-racing.md` opens with "Your role" (team principal of one or more bots, default 5, strategy decided live every race) and starts from `bot-fleet.mjs`; the skill description and `AGENTS.md` say the same.
+- Verified with `node --check` and `git diff --check` only; GPU capacity (8–11 bots with `--gpu`) is tomorrow's test.
