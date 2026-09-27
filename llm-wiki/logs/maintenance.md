@@ -1404,3 +1404,10 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - Versions: player-physics v8, steering v6, race-input v54, main v105, race-bootstrap v66.
 - Next in #197: aero (v² grip/braking, drag, slipstream), tuned on the player's phone lap times; then AI on the same physics.
 - Verified with `node --check`; feel to be judged in game.
+
+## 2026-09-27 — Touch wheel: short travel, steeper curve (#197)
+
+- Regression from #202: at the qualifying start the steering froze, then came back. Likely cause: the 25/09 .48 travel (~80px) put a left-lock thumb in Android's back-gesture strip, which cancels the touch (same problem #153/#155 fixed).
+- `race-input.js`: travel back to .38 (~60px to full lock); `TOUCH_STEER_EXPONENT` 1.6 passed to `shapeSteering` (new optional exponent in `steering.js`, pad keeps 1.22). Same gain as 25/09 up to ~30px of drag, full lock at ~60px. #202's .22 high-speed floor kept.
+- Versions: steering v7, race-input v55, main v106, race-bootstrap v67.
+- Headless two-finger start (CDP touch) showed the wheel responding at once; the edge gesture can't be simulated — to be confirmed on the phone. `node --check` only otherwise.
