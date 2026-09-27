@@ -134,7 +134,9 @@ decision, made explicitly by the user, not a quiet extension:
   `core/server/room-server.mjs`, never stored — see `architecture.md`). No server-side
   physics; porting `core/client/race/player-physics.js`/`core/client/race/race-ai.js`/`core/client/race/race-collisions.js` to
   run headless on Node was considered and rejected as its own project, not
-  this stage's job.
+  this stage's job. (Later, #214/#219: the headless room bot does run the
+  player physics on Node through `race-rules.js`, but only for its own car;
+  the server still has no physics — see [agent-bots.md](agent-bots.md).)
 - **Disconnection during qualifying/race:** the disconnected participant's
   car simply freezes where it was (no more broadcasts arrive — a natural
   consequence of client-authoritative sync, not extra logic) and their
