@@ -111,12 +111,14 @@ Capacity on the 4-core cloud box (bots' `botFps`, human's view):
 |---|---|---|
 | 11 | 30–33 | remote cars stutter; bots several s/lap slower |
 | 7 | 56–59 | still a little jumpy, better |
-| 5 | not tested | Open |
+| 5 | ~50 at the start, 59–60 later | much smoother (recommended) |
 
 - Solo benchmarks (11 bots ~58 fps alone on track) overstate capacity:
   in a race each page also simulates and draws the other cars.
 - Keep `botFps` at or above ~50: below that race results do not rank
   strategies.
-- Open: with 7 bots near the 60 fps cap, the residual jumpiness may come
-  from the network path (relay, ngrok, `car_state` cadence), not CPU. A
-  5-bot race decides it: if the jumps stay, it is not the bot count.
+- One Chromium process is shared, but every page has its own renderer
+  running the whole race (physics + drawing all cars): CPU cost grows with
+  the number of bots, the shared browser only saves memory and start-up.
+- Open: with 5 bots a small residual jump remains on the human's screen,
+  likely the network path (relay, ngrok, `car_state` cadence).

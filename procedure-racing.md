@@ -36,7 +36,8 @@ PLAYWRIGHT_PATH=$(npm root -g)/playwright \
   one Chromium, files in `/tmp/bots/<name>/`. They render with `gfx=low` in
   a small viewport; `state.json` has `botFps` (below ~50 the bot drives
   worse). Measured in a race on the 4-core cloud box: 7 bots at 56–59 fps,
-  11 bots at 30–33 fps with visible stutter — use 7 at most.
+  11 bots at 30–33 fps with visible stutter. Use 5 (smooth for the human),
+  7 at most.
 - Behind an HTTPS proxy (`HTTPS_PROXY` set) the bot relays the WebSocket on
   `:8081` by itself; a second room-bot process reuses that relay. Port 8080
   serves the game for every bot on the box.

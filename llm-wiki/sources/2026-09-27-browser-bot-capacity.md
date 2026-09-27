@@ -27,6 +27,7 @@ own `state.json` (`botFps`, `position`, best lap) plus what the human saw.
 | Solo benchmark, `gfx=low` 480×270 | 11 | ~58 | — | — |
 | Race HBKY, 12 cars | 11 | 30–33 | ~29.7 s (b1) | Cars stutter and look erratic |
 | Race XK5Z, 8 cars | 7 | 56–59 | 22.7–26.0 s | Still a little jumpy, better |
+| Race 3WK4, 6 cars | 5 | 49–51 at the start, 59–60 at the end | 24.3–25.7 s | Much better; the residual jump now looks like network |
 
 - Solo benchmarks overstate capacity: in a real race every page also
   simulates and renders the other cars, so 11 bots halve their frame rate.
@@ -34,7 +35,8 @@ own `state.json` (`botFps`, `position`, best lap) plus what the human saw.
   rank strategies.
 - With 7 bots the pages are near the 60 fps cap, so the residual jumpiness
   on the human's screen may come from the network path (relay, ngrok,
-  `car_state` cadence) rather than CPU. Not yet tested with 5 bots.
+  `car_state` cadence) rather than CPU. With 5 bots (3WK4) the human saw
+  much smoother cars, with a small residual jump that looks like network.
 
 ## Other observations
 
@@ -43,6 +45,16 @@ own `state.json` (`botFps`, `position`, best lap) plus what the human saw.
 - Duplicate self-reported positions also with browser bots, also at
   56–59 fps (two P6 in XK5Z, two P2 and two P5 in HBKY): not a CPU artefact
   (#235).
-- Final `tyreWearPct` read 68–72% for almost every bot, stoppers and
-  non-stoppers alike, on 5-lap races with a 3-lap tyre life; only one soft
-  runner read 100%. Needs verification.
+- Final `tyreWearPct` in three races: every bot on softs read 100%, every
+  bot on mediums or hards 68–72%, stoppers and non-stoppers alike, on
+  5-lap races with a 3-lap tyre life. Needs verification.
+- Duplicate positions again in 3WK4 with 5 bots (two P1 mid-race, two P2
+  at the end).
+
+## Browser sharing
+
+`--names` shares the Chromium browser process (plus its GPU and network
+processes) between bots, which saves memory and start-up time. Each bot's
+page still has its own renderer process running the full game: JS,
+physics and WebGL drawing of every car. CPU cost grows with the number of
+bots.
