@@ -8,11 +8,11 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=35";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=37";
-import { setupRaceInput } from "./race-input.js?v=53";
+import { setupRaceInput } from "./race-input.js?v=54";
 import { setupRaceHud } from "./race-hud.js?v=39";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=35";
-import { setupPlayerPhysics } from "./player-physics.js?v=7";
+import { setupPlayerPhysics } from "./player-physics.js?v=8";
 import { setupRaceAi } from "./race-ai.js?v=29";
 import { setupRaceSystems } from "./race-systems.js?v=30";
 import { setupRaceProgress } from "./race-progress.js?v=27";
@@ -23,7 +23,7 @@ import { setupAgentApi } from "./agent-api.js?v=3";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=2";
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=9";
 
-import { steeringYaw } from "./steering.js?v=5";
+import { steeringYaw } from "./steering.js?v=6";
 import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=41";
 import { buildPitLane } from "../shared/pit-lane.js?v=1";
 import { setupPitCrew } from "./pit-crew.js?v=2";
