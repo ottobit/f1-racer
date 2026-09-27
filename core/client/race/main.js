@@ -76,16 +76,14 @@ const circuitId = new URLSearchParams(location.search).get("circuit");
 const circuit = getCircuit(circuitId);
 
 const TRACK_WIDTH = circuit.width;
-const START_FINISH_OFFSET = 5;
 const CONTROL_POINTS = circuit.points.map(([x, z]) => new THREE.Vector3(x, 0, z));
 
 // Light dynamic weather: a fixed per-circuit trait (see circuits.js), not
 // randomized per race. Rain only touches cornering grip and top speed —
 // braking/acceleration feel is left alone — plus a darker, closer sky and
-// fog so it also reads as wet at a glance, not just plays different.
+// fog so it also reads as wet at a glance, not just plays different. The
+// multipliers themselves live in race-rules.js.
 const isRaining = circuit.weather === "pioggia";
-const RAIN_TURN_RATE_MULTIPLIER = 0.82;
-const RAIN_MAX_SPEED_MULTIPLIER = 0.93;
 
 // Scales rendering cost (DPR, shadows, rain/cloud counts) by device, never
 // gameplay/physics — see graphics-profiles.js (#2).
@@ -93,25 +91,9 @@ const graphicsProfile = loadGraphicsProfile();
 
 const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom", circuit.curveTension ?? 0.5);
 
-// Top speed is tuned to a realistic F1 figure (maxSpeed is treated as m/s
-// for the km/h readout below, so 88 -> ~317 km/h on a straight, ~340 with
-// ERS or DRS on a low-drag setup — #151) rather than
-// the earlier, much slower placeholder value — accel/brakeDecel/coastDecel
-// scale up with it so 0-100%, braking distance, and grass drag all still
-// feel like the same car, just faster.
-const CAR = {
-  maxSpeed: 88 * (1 + GARAGE_EFFECTS.speed * 0.006) * (isRaining ? RAIN_MAX_SPEED_MULTIPLIER : 1),
-  reverseMaxSpeed: -28,
-  // Launch acceleration (m/s²); fades with speed in player-physics.js.
-  // Was a flat 47 (0-100 km/h in 0.6s); now ~1.8s 0-100, ~4s 0-200.
-  accel: 16 * (1 + GARAGE_EFFECTS.traction * 0.006),
-  brakeDecel: 75 * (1 + GARAGE_EFFECTS.braking * 0.018),
-  coastDecel: 28,
-  maxTurnRate: 2.0 * (1 + GARAGE_EFFECTS.downforce * 0.012) * (isRaining ? RAIN_TURN_RATE_MULTIPLIER : 1), // rad/s ceiling; actual rate is scaled down further by
-  // speed in update() below — a single quick tap used to be enough to spin
-  // off track at top speed, so turn authority now drops off as you speed up
-  // instead of maxing out there.
-};
+// Player car limits (top speed, accel, braking, turn rate) live in
+// race-rules.js, shared with the headless room bot (#214).
+const CAR = playerCarParams(GARAGE_EFFECTS, isRaining);
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
 
@@ -137,69 +119,14 @@ const AI = {
   brakeDecel: 68,
 };
 
-// Tire wear degrades grip gradually over the race distance for both player
-// and AI, cutting into cornering rate rather than straight-line pace. The
-// player can box in the real pit lane (#147); AI cars stay out.
-const TIRE_WEAR_MAX_TURN_PENALTY = 0.22; // steering authority lost at full wear
-
-// Lightweight race compounds. The race remains browser-friendly, but tyre
-// choice now changes initial grip and the rate at which grip is lost.
-const TYRE_COMPOUNDS = {
-  soft: { label: "SOFT", grip: 1.06, wearRate: 1.35 },
-  medium: { label: "MED", grip: 1.0, wearRate: 1.0 },
-  hard: { label: "HARD", grip: 0.95, wearRate: 0.75 },
-};
-const TYRE_ORDER = ["soft", "medium", "hard"];
-const ERS_SPEED_MULTIPLIER = 1.05;
-const ERS_DRAIN_PER_SECOND = 24;
-const ERS_RECHARGE_PER_SECOND = 7;
-const PIT_SPEED_LIMIT = 18;
-const PIT_SERVICE_MS = 2200;
-
-// Worn tyres also cost top speed (#149), for the player and the AI alike:
-// about 1 s a lap at full wear on a medium set.
-const TIRE_WEAR_MAX_SPEED_PENALTY = 0.05;
-
-function tyreWear(totalProgress, car) {
-  const distance = car?.tyreProgress ?? totalProgress;
-  return Math.min(Math.max(distance / TYRE_LIFE_LAPS, 0), 1);
-}
-
-function tireGripFactor(totalProgress, car = null) {
-  const tyre = TYRE_COMPOUNDS[car?.tyreCompound] || TYRE_COMPOUNDS.medium;
-  const wear = tyreWear(totalProgress, car);
-  const wetGrip = isRaining ? 0.82 : 1;
-  return tyre.grip * (1 - TIRE_WEAR_MAX_TURN_PENALTY * wear * tyre.wearRate) * wetGrip;
-}
-
-function tyreSpeedFactor(car) {
-  const tyre = TYRE_COMPOUNDS[car.tyreCompound] || TYRE_COMPOUNDS.medium;
-  return 1 - TIRE_WEAR_MAX_SPEED_PENALTY * tyreWear(car.totalProgress, car) * tyre.wearRate;
-}
+// Tyres, ERS and pit constants live in race-rules.js (#214). The player can
+// box in the real pit lane (#147); AI cars stay out.
+const { tireGripFactor, tyreSpeedFactor } = createTyreModel({ isRaining, tyreLifeLaps: TYRE_LIFE_LAPS });
 
 // Collisions: running wide costs grip (grass), hitting the wall costs most
 // of your speed, and cars bumping each other lose speed and get pushed
 // apart rather than overlapping. All tuned for arcade feel, not real physics.
-const GRASS_LIMIT = TRACK_WIDTH / 2; // asphalt edge, right where the kerb is painted
-// Real curbs are meant to be driven over — riding one, or running a bit wide
-// onto the grass past it, should only cost grip, never trigger the wall
-// bounce below. At 1.5 units this margin was thin enough that clipping a
-// kerb at speed (much easier now that top speed is ~2x what it was) would
-// often overshoot straight into the wall in a single frame, which read as
-// bouncing off the kerb itself. Widened to a real runoff area — checked
-// against all three circuits' tightest corners (see the offline validation
-// script) so opposing sides of a corner never get close enough for their
-// off-track zones to overlap.
-const WALL_LIMIT = TRACK_WIDTH / 2 + 4; // legacy distance used for runoff drag ramp; no invisible hard stop
-// Ramped from zero at the grass edge up to this at the wall, 65 (barely
-// above coastDecel) never shed enough speed over a typical excursion at
-// top speed to avoid still slamming the wall at near-full pace — the
-// runoff read as decorative rather than as grass. Raised well past
-// brakeDecel and front-loaded (see the 0.45 floor below) so running wide
-// costs real speed immediately, not just right before the wall.
-const GRASS_MAX_DECEL = 240 * (1 - GARAGE_EFFECTS.runoff * 0.035); // units/s^2 of extra drag in the runoff
-const WALL_BOUNCE_SPEED_FACTOR = 0.25; // speed kept after hitting a wall
-const CAR_RADIUS = 1.0; // rough footprint for car-vs-car contact
+// Runoff drag, contact and damage constants live in race-rules.js (#214).
 
 // Safety car: a real multi-car pile-up (several distinct cars hitting a
 // wall in a short window — not just routine jostling, which happens
@@ -213,12 +140,6 @@ const CAUTION_DURATION_MS = 12000;
 const CAUTION_COOLDOWN_MS = 10000; // minimum gap before another can trigger
 const CAUTION_SPEED_FACTOR = 0.45;
 
-// Collision damage follows relative impact speed and applies equally to the
-// player and every AI car. A gentle rub leaves no mark; a hard contact costs
-// both cars pace without making either one undriveable.
-const DAMAGE_MIN_IMPACT_SPEED = 7;
-const DAMAGE_PER_IMPACT_SPEED = 0.003;
-const DAMAGE_MAX_SPEED_PENALTY = 0.25; // hard cap: never lose more than this
 
 // Track limits (player only — AI already steers within bounds): running
 // wide costs grip on the spot via the grass drag above, but real stewards
@@ -295,6 +216,13 @@ const centerlineStep = centerline.map((p, i) => {
 function nearestTrackInfo(x, z) {
   return nearestPointOnCenterline(centerline, x, z);
 }
+
+// Runoff drag past the kerb (race-rules.js, shared with the headless bot).
+const { grassLimit: GRASS_LIMIT, applyTrackBoundary } = createTrackBoundary({
+  trackWidth: TRACK_WIDTH,
+  runoffEffect: GARAGE_EFFECTS.runoff,
+  nearestTrackInfo,
+});
 
 // Updates a car's fair, start-offset-independent progress accumulator (see
 // the comment by `state` below for why raw track-progress isn't enough) and
@@ -620,74 +548,13 @@ const AI_DRIVERS = multiplayer
 // in the zone — the rubber-banding real DRS gives on a pit straight,
 // simplified to no separate detection point and no manual button (this
 // game has no extra input to spare for one).
-const DRS_ZONE_FRACTION = 0.1; // first 10% of the lap, right after the line
-const DRS_GAP_SECONDS = 1.0;
-// +8% (~25 km/h): closer to real DRS than the old +15% (#151).
-const DRS_SPEED_MULTIPLIER = 1.08;
+// Zone, gap, multiplier and updateDrsEligibility: race-rules.js (#214).
 
-// Sets car.drsActive for this frame on every car in `cars` (player state
-// object + aiCars), based on each one's gap — in seconds, estimated from
-// its own current speed — to whoever is directly ahead of it on track.
-// Uses each car's totalProgress from the end of the previous frame, which
-// is what's available before this frame has moved anyone yet.
-function updateDrsEligibility(cars) {
-  const order = [...cars].sort((a, b) => b.totalProgress - a.totalProgress);
-  for (let i = 0; i < order.length; i++) {
-    const car = order[i];
-    const lapFraction = car.totalProgress - Math.floor(car.totalProgress);
-    if (i === 0 || lapFraction >= DRS_ZONE_FRACTION) {
-      car.drsActive = false;
-      continue;
-    }
-    const ahead = order[i - 1];
-    const gapMeters = (ahead.totalProgress - car.totalProgress) * TRACK_LENGTH;
-    const gapSeconds = gapMeters / Math.max(Math.abs(car.speed), 1);
-    car.drsActive = gapSeconds < DRS_GAP_SECONDS;
-  }
-}
-
-const GRID_ROW_GAP = 5; // meters behind the previous row
-const GRID_LANE_OFFSET = Math.min(TRACK_WIDTH / 4, 3.2); // stay clear of grass
 const TRACK_LENGTH = trackCurve.getLength();
-const GRID_ROW_SAMPLES = Math.max(
-  1,
-  Math.round((GRID_ROW_GAP / TRACK_LENGTH) * centerline.length)
-);
 
-// Places a grid slot by walking backward along the actual centerline from
-// the start/finish line, not offsetting in one fixed direction — a couple
-// of these circuits have the line sitting just before a bend, and a
-// straight-line offset there cut across the grass instead of following the
-// road. Each slot also takes its own heading from the curve at that point.
-function gridSlot(row, lane) {
-  const idx =
-    (((-row * GRID_ROW_SAMPLES) % centerline.length) + centerline.length) %
-    centerline.length;
-  const p = centerline[idx];
-  const lateral = sideNormal(p);
-  return {
-    x: p.x + lateral.x * GRID_LANE_OFFSET * lane,
-    z: p.z + lateral.z * GRID_LANE_OFFSET * lane,
-    heading: headingOf(p),
-  };
-}
-
-// A real F1 grid is single-file, not paired: each position steps back from
-// the one before it and alternates side, so P1/P3/P5/... form one diagonal
-// line and P2/P4/P6/... form the other — not two cars sharing a row before
-// the next pair steps back. (An earlier version of this paired them up
-// instead, which doesn't match what a real F1 grid looks like.)
-const AI_GRID_SLOTS = [
-  { row: 1, lane: 1 }, // P2
-  { row: 2, lane: -1 }, // P3
-  { row: 3, lane: 1 }, // P4
-  { row: 4, lane: -1 }, // P5
-  { row: 5, lane: 1 }, // P6
-  { row: 6, lane: -1 }, // P7
-  { row: 7, lane: 1 }, // P8
-  { row: 8, lane: -1 }, // P9
-  { row: 9, lane: 1 }, // P10
-];
+// Grid slots walk back along the centerline from the line (race-rules.js).
+const gridSlot = createGridSlot({ centerline, trackWidth: TRACK_WIDTH, trackLength: TRACK_LENGTH, headingOf, sideNormal });
+const AI_GRID_SLOTS = GRID_SLOTS.slice(1);
 const aiCars = AI_DRIVERS.map((driver, i) => {
   const model = buildCar(driver.livery);
   scene.add(model.group);
@@ -730,7 +597,7 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
 // in each position once qualifying (below) decides the order. The visual
 // grid-box markings further down are painted at these same fixed slots
 // regardless of who ends up there, so they don't need this list themselves.
-const ALL_GRID_SLOTS = [{ row: 0, lane: -1 }, ...AI_GRID_SLOTS];
+const ALL_GRID_SLOTS = GRID_SLOTS;
 
 // The AI only appears once the grid order is set (see finishQualifying) —
 // during qualifying it's a solo flying lap, no traffic. Multiplayer (#44)
@@ -1000,22 +867,6 @@ const clock = new THREE.Clock();
 // Keeps a car (player or AI) on the track: grass beyond the asphalt bleeds
 // speed off faster (lost grip), and the wall beyond that stops it hard and
 // pushes it back in-bounds, instead of letting it drive through scenery.
-function applyTrackBoundary(car, dt, info) {
-  info = info || nearestTrackInfo(car.x, car.z);
-  if (info.dist > GRASS_LIMIT) {
-    // Kerbs/runoff are traversable. Going wider progressively adds drag,
-    // but never snaps the car back to an invisible boundary or kills all
-    // momentum. Physical barrier meshes remain visual; a future barrier
-    // collider can use explicit geometry rather than track-width distance.
-    const runoffDepth = Math.max(0, info.dist - GRASS_LIMIT);
-    const t = Math.min(runoffDepth / Math.max(WALL_LIMIT - GRASS_LIMIT, 0.01), 1);
-    const decel = GRASS_MAX_DECEL * (0.28 + 0.72 * t) * dt;
-    const crawlSpeed = 8;
-    if (car.speed > crawlSpeed) car.speed = Math.max(crawlSpeed, car.speed - decel);
-    else if (car.speed < -crawlSpeed) car.speed = Math.min(-crawlSpeed, car.speed + decel);
-  }
-  return info;
-}
 
 const carCollisions = setupCarCollisions({
   radius: CAR_RADIUS,
@@ -1412,7 +1263,7 @@ function update(dt) {
   if (raceState === "finished") driveFinishCoast();
   else if (state.pitRequested) raceSystems.startPitStop();
 
-  updateDrsEligibility([state, ...aiCars]);
+  updateDrsEligibility([state, ...aiCars], TRACK_LENGTH);
   raceSystems.updateEnergyRecovery([state, ...aiCars], dt);
 
   // In the pit lane (#147) the autopilot drives the player and the rest of

@@ -1,10 +1,18 @@
 // Node-only multiplayer driver. Unlike room-bot.mjs it never opens the game
 // page, creates a WebGL renderer or needs Chromium: it joins the public room
-// protocol directly and advances a lightweight car along the same sampled
-// circuit centerline used by the browser runtime.
+// protocol directly and drives the SAME car as the browser (#214) — the
+// player physics (player-physics.js), race rules (race-rules.js: tyres, ERS,
+// DRS, runoff, grid), the real pit lane (race-systems.js), lap counting
+// (race-progress.js), contact with the other cars (race-collisions.js) and
+// the same autopilot + strategy layer as ?driver=layered
+// (driver-providers.js). Only rendering, audio and the HUD are left out.
 //
 //   node core/tools/headless-room-bot.mjs <server> <ROOM> \
 //     --name ChatGPT --dir /tmp/bot-ChatGPT [--driver rival-red-2]
+//
+// Strategy/state files work like room-bot.mjs: every change to
+// <dir>/strategy.json goes to setStrategy (pace, line, ers, tyre, pit,
+// station, radio); <dir>/state.json is rewritten every 2 s.
 
 import fs from "node:fs";
 import http from "node:http";
@@ -14,7 +22,40 @@ import * as THREE from "three";
 import { WebSocket } from "ws";
 import { CIRCUITS, LAPS_PER_RACE, TYRE_LIFE_LAPS, getCircuit } from "../client/shared/circuits.js";
 import { DRIVER_ROSTER } from "../client/shared/driver-roster.js";
-import { headingOf, sampleCenterline, sideNormal } from "../client/shared/track-geometry.js";
+import { DEFAULT_SETUP, setupEffects } from "../client/shared/garage-setup.js";
+import { buildPitLane } from "../client/shared/pit-lane.js";
+import {
+  headingOf,
+  nearestTrackInfo as nearestOnCenterline,
+  sampleCenterline,
+  sideNormal,
+} from "../client/shared/track-geometry.js";
+import { createAutopilotProvider, createLayeredProvider } from "../client/race/driver-providers.js";
+import { setupPlayerPhysics } from "../client/race/player-physics.js";
+import { setupCarCollisions } from "../client/race/race-collisions.js";
+import { setupRaceProgress } from "../client/race/race-progress.js";
+import {
+  CAR_RADIUS,
+  DAMAGE_MAX_SPEED_PENALTY,
+  DAMAGE_MIN_IMPACT_SPEED,
+  DAMAGE_PER_IMPACT_SPEED,
+  DRS_SPEED_MULTIPLIER,
+  ERS_DRAIN_PER_SECOND,
+  ERS_RECHARGE_PER_SECOND,
+  ERS_SPEED_MULTIPLIER,
+  GRID_SLOTS,
+  PIT_SERVICE_MS,
+  PIT_SPEED_LIMIT,
+  START_FINISH_OFFSET,
+  TYRE_COMPOUNDS,
+  createGridSlot,
+  createTrackBoundary,
+  createTyreModel,
+  playerCarParams,
+  updateDrsEligibility,
+} from "../client/race/race-rules.js";
+import { setupRaceSystems } from "../client/race/race-systems.js";
+import { steeringYaw } from "../client/race/steering.js";
 
 const args = process.argv.slice(2);
 const option = (name, fallback = null) => {
@@ -34,33 +75,35 @@ const STRATEGY_FILE = path.join(DIR, "strategy.json");
 const STATE_FILE = path.join(DIR, "state.json");
 const REQUEST_TIMEOUT_MS = 8000;
 const RECONNECT_DELAY_MS = 1500;
-const BROADCAST_INTERVAL_MS = 80;
+const BROADCAST_INTERVAL_MS = 80; // same as race-multiplayer.js
 const STATE_INTERVAL_MS = 2000;
 const TICK_INTERVAL_MS = 16;
+const MAX_STEP_S = 1 / 60; // the physics substeps further inside (1/120 s)
 const QUALI_LAUNCH_DELAY_MS = 1800;
-const RACE_START_LEAD_MS = 8000;
+// Start lights, as main.js's runRaceStartLights: the lights begin this long
+// after the server's raceStartedAt (server clock), one per second, then go
+// out after a hold seeded by raceStartedAt — the same instant for everyone.
+const MP_START_LEAD_MS = 8000;
 const LIGHT_INTERVAL_MS = 1000;
 const LIGHTS_OUT_MIN_MS = 200;
 const LIGHTS_OUT_MAX_MS = 3000;
-const MAX_SPEED = 82;
-const ACCEL = 15;
-const BRAKE = 45;
-const COAST = 8;
+const TRACK_LIMIT_WARNING_THRESHOLD = 3; // as main.js
+const TRACK_LIMIT_PENALTY_MS = 1000;
+const FINISH_COAST_SPEED = 25; // as main.js's driveFinishCoast
+const REMOTE_STALE_MS = 3000;
 const CENTERLINE_SAMPLES = 360;
+const KMH_PER_UNIT = 3.6;
+// A room bot has no garage of its own: a fresh browser profile races the
+// default setup, so this does too.
+const EFFECTS = setupEffects(DEFAULT_SETUP);
 
 fs.mkdirSync(DIR, { recursive: true });
 if (!fs.existsSync(STRATEGY_FILE)) {
-  fs.writeFileSync(STRATEGY_FILE, '{"pace":0.95,"ers":true}\n');
+  fs.writeFileSync(STRATEGY_FILE, '{"pace":0.95,"ers":"auto"}\n');
 }
 
 const log = (...values) => console.log(new Date().toISOString().slice(11, 19), ...values);
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-const wrap01 = (value) => ((value % 1) + 1) % 1;
-const wrapAngle = (value) => {
-  while (value > Math.PI) value -= Math.PI * 2;
-  while (value < -Math.PI) value += Math.PI * 2;
-  return value;
-};
+const round1 = (value) => Math.round(value * 10) / 10;
 
 function websocketUrl(value) {
   if (/^https:/i.test(value)) return value.replace(/^https:/i, "wss:");
@@ -110,47 +153,140 @@ let credentials = null;
 let room = null;
 let driverId = null;
 let readyRequestInFlight = false;
-const remoteCars = new Map();
-
-const targets = { pace: 0.95, line: 0, ers: true, tyre: "medium", station: null };
+let serverOffsetMs = 0; // serverNow - Date.now(), from the latest message
 let lastStrategyMtime = -1;
-let lastRadio = null;
-let pitRequested = false;
-
-let circuit = getCircuit();
-let curve = null;
-let centerline = [];
-let trackLength = 1;
-let phase = "lobby";
-let phaseState = "waiting";
-let goAt = Infinity;
-let distance = 0;
-let speed = 0;
-let lap = 0;
-let completedLaps = 0;
-let lapStartedAt = 0;
-let bestLapTime = null;
-let lastLapTime = null;
-let lapTimes = [];
-let finishedReported = false;
-let qualiReported = false;
-let tyreWearPct = 0;
-let tyreCompound = "medium";
-let tyreDistance = 0;
-let ersChargePct = 100;
-let pitState = "none";
-let pitUntil = 0;
 let lastBroadcastAt = 0;
 let lastStateAt = 0;
-let lastTickAt = Date.now();
+let lastTickAt = performance.now();
 
-function buildTrack(circuitId) {
-  circuit = getCircuit(circuitId);
+// --- The car -----------------------------------------------------------------
+// Everything a race needs for one circuit, rebuilt when the room changes
+// circuit. Same wiring as main.js; comments there explain each piece.
+
+let sim = null;
+let phase = "lobby"; // lobby | qualifying | racing
+let raceState = "waiting"; // waiting | countdown | racing | finished
+let goAt = Infinity; // Date.now() at which the car may move
+let finishedReported = false;
+let qualiBestTime = null;
+const remoteCars = new Map(); // participantId -> car-shaped object
+
+function freshState() {
+  return {
+    x: 0, z: 0, heading: 0, speed: 0,
+    gridPosition: 1,
+    lap: 0, completedLaps: 0, lapCheckpointPassed: false,
+    lapStartTime: 0, currentLapTime: 0, bestLapTime: null, lastLapTime: null,
+    prevRawProgress: 0, totalProgress: 0,
+    damage: 0, drsActive: false,
+    tyreCompound: "medium", tyreProgress: 0,
+    ersCharge: 100, ersActive: false,
+    pitState: "none", pitServiceEndTime: 0, pitRequested: false,
+    lastImpactEffectTime: 0, lastCollisionTime: 0,
+    lateralSpeed: 0, yawRate: 0,
+    wasOffTrack: false, trackLimitViolationsThisLap: 0, lastLapPenaltyMs: 0,
+  };
+}
+
+function buildSim(circuitId) {
+  const circuit = getCircuit(circuitId);
   const points = circuit.points.map(([x, z]) => new THREE.Vector3(x, 0, z));
-  curve = new THREE.CatmullRomCurve3(points, true, "catmullrom", circuit.curveTension ?? 0.5);
-  centerline = sampleCenterline(curve, CENTERLINE_SAMPLES);
-  trackLength = curve.getLength();
+  const curve = new THREE.CatmullRomCurve3(points, true, "catmullrom", circuit.curveTension ?? 0.5);
+  const centerline = sampleCenterline(curve, CENTERLINE_SAMPLES);
+  const visualCenterline = sampleCenterline(curve, CENTERLINE_SAMPLES * 4);
+  const trackLength = curve.getLength();
+  const isRaining = circuit.weather === "pioggia";
+  const nearestTrackInfo = (x, z) => nearestOnCenterline(centerline, x, z);
+  const car = playerCarParams(EFFECTS, isRaining);
+  const { tireGripFactor, tyreSpeedFactor, tyreWear } = createTyreModel({ isRaining, tyreLifeLaps: TYRE_LIFE_LAPS });
+  const { grassLimit, applyTrackBoundary } = createTrackBoundary({
+    trackWidth: circuit.width,
+    runoffEffect: EFFECTS.runoff,
+    nearestTrackInfo,
+  });
+  const gridSlot = createGridSlot({ centerline, trackWidth: circuit.width, trackLength, headingOf, sideNormal });
+  const pitLane = buildPitLane(visualCenterline, circuit.width, 1);
+  const state = freshState();
+  const input = { forward: false, back: false, left: false, right: false };
+  const steering = { value: 0 };
+  const others = []; // live remote cars, refreshed every tick
+  const { integratePlayerMotion } = setupPlayerPhysics({
+    car,
+    state,
+    input,
+    steering,
+    drsSpeedMultiplier: DRS_SPEED_MULTIPLIER,
+    ersSpeedMultiplier: ERS_SPEED_MULTIPLIER,
+    grassLimit,
+    tireGripFactor,
+    tyreSpeedFactor,
+    cautionSpeedMultiplier: () => 1, // caution is local to each browser; none here
+    steeringYaw,
+    nearestTrackInfo,
+    applyTrackBoundary,
+    slipstreamCars: others,
+  });
+  const systems = setupRaceSystems({
+    state,
+    input,
+    aiMaxSpeed: car.maxSpeed,
+    getRaceState: () => (phase === "racing" ? raceState : "qualifying"),
+    isCautionActive: () => false,
+    pitLane,
+    pitSpeedLimit: PIT_SPEED_LIMIT,
+    pitServiceMs: PIT_SERVICE_MS,
+    ersDrainPerSecond: ERS_DRAIN_PER_SECOND,
+    ersRechargePerSecond: ERS_RECHARGE_PER_SECOND,
+  });
+  const { advanceProgress } = setupRaceProgress({
+    state,
+    aiCars: others,
+    allGridSlots: GRID_SLOTS,
+    gridSlot,
+    nearestTrackInfo,
+    centerlineLength: centerline.length,
+    finishProgress: START_FINISH_OFFSET / trackLength,
+    lapsPerRace: LAPS_PER_RACE,
+  });
+  const collisions = setupCarCollisions({
+    radius: CAR_RADIUS,
+    damageThreshold: DAMAGE_MIN_IMPACT_SPEED,
+    damagePerSpeed: DAMAGE_PER_IMPACT_SPEED,
+    maxDamage: DAMAGE_MAX_SPEED_PENALTY,
+  });
+  const autopilot = createAutopilotProvider({
+    centerline,
+    headingOf,
+    sideNormal,
+    nearestTrackInfo,
+    maxSpeed: car.maxSpeed,
+    findCar: (id) => others.find((other) => other.driverId === id) || null,
+    trackLength,
+  });
+  const driver = createLayeredProvider({ fast: autopilot });
   log("circuit", circuit.id, `${Math.round(trackLength)}m`);
+  return {
+    circuit, centerline, trackLength, nearestTrackInfo, gridSlot, tyreWear,
+    state, input, steering, others, integratePlayerMotion, systems,
+    advanceProgress, collisions, driver,
+  };
+}
+
+function placeOnGrid(slotIndex) {
+  const { state, gridSlot, nearestTrackInfo, centerline } = sim;
+  const slot = GRID_SLOTS[Math.min(Math.max(slotIndex, 0), GRID_SLOTS.length - 1)];
+  const pos = gridSlot(slot.row, slot.lane);
+  Object.assign(state, freshState(), {
+    x: pos.x,
+    z: pos.z,
+    heading: pos.heading,
+    gridPosition: slotIndex + 1,
+    prevRawProgress: nearestTrackInfo(pos.x, pos.z).idx / centerline.length,
+    tyreCompound: state.tyreCompound,
+  });
+  sim.steering.value = 0;
+  sim.input.forward = false;
+  sim.input.back = false;
 }
 
 function seededUnit(seed) {
@@ -160,39 +296,27 @@ function seededUnit(seed) {
   return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
 }
 
-function gridDistance() {
-  const order = room?.grid || [];
-  const row = Math.max(0, order.indexOf(driverId));
-  return -row * 5;
-}
-
-function resetRun(nextPhase) {
+function startSession(nextPhase) {
   phase = nextPhase;
-  phaseState = "countdown";
-  speed = 0;
-  completedLaps = 0;
-  lap = 0;
-  bestLapTime = null;
-  lastLapTime = null;
-  lapTimes = [];
+  raceState = "countdown";
   finishedReported = false;
-  qualiReported = false;
-  tyreWearPct = 0;
-  tyreDistance = 0;
-  pitState = "none";
-  pitUntil = 0;
+  qualiBestTime = null;
   if (nextPhase === "qualifying") {
-    distance = 0;
+    // Every participant takes its own grid slot, by its index among the
+    // participants with a driver (main.js's QUALI_START_INDEX).
+    const withDriver = (room?.participants || []).filter((entry) => entry.driverId);
+    placeOnGrid(withDriver.findIndex((entry) => entry.participantId === credentials?.participantId));
     goAt = Date.now() + QUALI_LAUNCH_DELAY_MS;
   } else {
-    distance = gridDistance();
-    const seed = room?.raceStartedAt || Date.now();
+    placeOnGrid((room?.grid || []).indexOf(driverId));
+    const seed = room?.raceStartedAt ?? Date.now() + serverOffsetMs;
     const hold = LIGHTS_OUT_MIN_MS + seededUnit(seed) * (LIGHTS_OUT_MAX_MS - LIGHTS_OUT_MIN_MS);
-    goAt = seed + RACE_START_LEAD_MS + 5 * LIGHT_INTERVAL_MS + hold;
+    goAt = seed + MP_START_LEAD_MS + 5 * LIGHT_INTERVAL_MS + hold - serverOffsetMs;
   }
-  lapStartedAt = goAt;
   log(nextPhase, "starts in", `${Math.max(0, Math.round(goAt - Date.now()))}ms`);
 }
+
+// --- Room protocol -------------------------------------------------------------
 
 function sendRaw(payload) {
   if (!ws || ws.readyState !== WebSocket.OPEN) return false;
@@ -265,21 +389,51 @@ function updateRoom(nextRoom) {
   if (!nextRoom) return;
   const previousPhase = room?.sessionPhase;
   room = nextRoom;
-  if (room.circuitId && room.circuitId !== circuit.id) buildTrack(room.circuitId);
+  driverId = participant()?.driverId || driverId;
+  if (!sim || (room.circuitId && room.circuitId !== sim.circuit.id)) sim = buildSim(room.circuitId || CIRCUITS[0].id);
   if (room.sessionPhase === "lobby") {
     phase = "lobby";
-    phaseState = "waiting";
+    raceState = "waiting";
     queueMicrotask(ensureReady);
   } else if (room.sessionPhase !== previousPhase || phase !== room.sessionPhase) {
-    resetRun(room.sessionPhase);
+    startSession(room.sessionPhase);
   }
+}
+
+function updateRemote(message) {
+  const entry = room?.participants?.find((p) => p.participantId === message.participantId);
+  if (!entry?.driverId) return;
+  const car = remoteCars.get(message.participantId) || {
+    participantId: message.participantId,
+    lateralSpeed: 0,
+    yawRate: 0,
+    damage: 0,
+    lastCollisionTime: 0,
+    lastImpactEffectTime: 0,
+  };
+  Object.assign(car, {
+    driverId: entry.driverId,
+    x: message.x,
+    z: message.z,
+    heading: message.heading,
+    speed: message.speed || 0,
+    lap: message.lap ?? car.lap ?? 0,
+    totalProgress: Number.isFinite(message.totalProgress) ? message.totalProgress : car.totalProgress ?? 0,
+    seenAt: Date.now(),
+  });
+  remoteCars.set(message.participantId, car);
 }
 
 function handleMessage(data) {
   let message;
   try { message = JSON.parse(data.toString()); } catch { return; }
+  if (Number.isFinite(message.serverNow)) serverOffsetMs = message.serverNow - Date.now();
   if (message.type === "car_state") {
-    remoteCars.set(message.participantId, { ...message, seenAt: Date.now() });
+    updateRemote(message);
+    return;
+  }
+  if (message.type === "voice_signal" && message.data?.kind === "radio") {
+    log("radio", message.data.text);
     return;
   }
   if (message.room) updateRoom(message.room);
@@ -332,215 +486,180 @@ async function connect() {
 }
 
 function readStrategy() {
+  if (!sim) return;
   try {
     const stat = fs.statSync(STRATEGY_FILE);
     if (stat.mtimeMs === lastStrategyMtime) return;
     lastStrategyMtime = stat.mtimeMs;
     const update = JSON.parse(fs.readFileSync(STRATEGY_FILE, "utf8"));
-    if (Number.isFinite(update.pace)) targets.pace = clamp(update.pace, 0.5, 1);
-    if (Number.isFinite(update.line)) targets.line = clamp(update.line, -1, 1);
-    if (typeof update.ers === "boolean" || update.ers === "auto") targets.ers = update.ers;
-    if (["soft", "medium", "hard"].includes(update.tyre)) targets.tyre = update.tyre;
-    if (update.station === null) targets.station = null;
-    else if (update.station && typeof update.station.car === "string") {
-      targets.station = {
-        car: update.station.car,
-        gap: Number.isFinite(update.station.gap) ? clamp(update.station.gap, -500, 500) : 0,
-        side: Number.isFinite(update.station.side) ? clamp(update.station.side, -1, 1) : 0,
-      };
-    }
-    if (update.pit === true) pitRequested = true;
-    if (typeof update.radio === "string" && update.radio.trim() && update.radio !== lastRadio) {
-      lastRadio = update.radio;
-      for (const entry of room?.participants || []) {
-        if (entry.participantId !== credentials?.participantId) {
-          sendRaw({ type: "voice_signal", to: entry.participantId, data: { kind: "radio", text: update.radio.trim().slice(0, 80) } });
-        }
-      }
-    }
-    log("strategy", JSON.stringify(targets));
+    sim.driver.setStrategy(update);
+    log("strategy", JSON.stringify(update));
   } catch (error) {
     log("strategy ignored", error.message);
   }
 }
 
-function cornerSeverity(fraction) {
-  const index = Math.floor(wrap01(fraction) * centerline.length);
-  let turn = 0;
-  let previous = headingOf(centerline[index]);
-  for (let step = 1; step <= 22; step++) {
-    const current = headingOf(centerline[(index + step) % centerline.length]);
-    turn += wrapAngle(current - previous);
-    previous = current;
+function sendRadio(text) {
+  for (const entry of room?.participants || []) {
+    if (entry.participantId !== credentials?.participantId) {
+      sendRaw({ type: "voice_signal", to: entry.participantId, data: { kind: "radio", text } });
+    }
   }
-  return Math.min(1, Math.abs(turn) * 0.72);
 }
 
-function carPose() {
-  const fraction = wrap01(distance / trackLength);
-  const point = curve.getPointAt(fraction);
-  const tangent = curve.getTangentAt(fraction);
-  const normal = sideNormal({ tx: tangent.x, tz: tangent.z });
-  return {
-    x: point.x + normal.x * targets.line * 2,
-    z: point.z + normal.z * targets.line * 2,
-    heading: Math.atan2(tangent.x, tangent.z),
-    fraction,
-  };
-}
+// --- One frame -----------------------------------------------------------------
+// Same order as main.js's update() (race) and updateQualifying().
 
-function stationSpeed(targetSpeed) {
-  const station = targets.station;
-  if (!station || !room) return targetSpeed;
-  const targetParticipant = room.participants.find((entry) => entry.driverId === station.car || entry.nickname === station.car);
-  const remote = targetParticipant ? remoteCars.get(targetParticipant.participantId) : null;
-  if (!remote || !Number.isFinite(remote.totalProgress)) return targetSpeed;
-  const ownProgress = distance / trackLength;
-  const offStation = (remote.totalProgress - ownProgress) * trackLength + station.gap;
-  return clamp((remote.speed || 0) + offStation * 0.8, 0, targetSpeed);
+function drive(dt) {
+  const { state, input, steering, driver } = sim;
+  if (raceState === "finished") {
+    // main.js's driveFinishCoast: keep steering the line, lift, brake down
+    // to a cruise.
+    const out = driver.decide(state, dt);
+    steering.value = out.steer;
+    input.forward = false;
+    input.back = state.speed > FINISH_COAST_SPEED;
+    return;
+  }
+  const out = driver.decide(state, dt);
+  if (out.radio) sendRadio(out.radio);
+  if (state.pitState === "servicing" && TYRE_COMPOUNDS[out.tyre]) state.tyreCompound = out.tyre;
+  if (state.pitState !== "none") return;
+  steering.value = out.steer;
+  input.forward = out.throttle > 0 && !(out.brake > 0);
+  input.back = out.brake > 0;
+  if (phase !== "racing") return;
+  if (out.pit) state.pitRequested = true;
+  const wantErs = !!out.ers && state.ersCharge > 0;
+  if (wantErs !== state.ersActive) state.ersActive = wantErs;
 }
 
 function completeLap(now) {
-  completedLaps += 1;
-  lap = completedLaps;
-  const time = now - lapStartedAt;
-  lapStartedAt = now;
-  lastLapTime = time;
-  bestLapTime = bestLapTime === null ? time : Math.min(bestLapTime, time);
-  lapTimes.push(time);
-  if (phase === "qualifying" && (!qualiReported || time <= bestLapTime)) {
-    qualiReported = true;
-    request("report_quali_time", { timeMs: time }).catch((error) => log("quali report", error.message));
+  const { state } = sim;
+  const penaltyMs = state.trackLimitViolationsThisLap > TRACK_LIMIT_WARNING_THRESHOLD ? TRACK_LIMIT_PENALTY_MS : 0;
+  const lapTime = now - state.lapStartTime + penaltyMs;
+  state.lapStartTime = now;
+  state.lastLapTime = lapTime;
+  state.lastLapPenaltyMs = penaltyMs;
+  state.trackLimitViolationsThisLap = 0;
+  if (state.bestLapTime === null || lapTime < state.bestLapTime) state.bestLapTime = lapTime;
+  if (phase === "qualifying" && (qualiBestTime === null || lapTime < qualiBestTime)) {
+    qualiBestTime = lapTime;
+    request("report_quali_time", { timeMs: lapTime }).catch((error) => log("quali report", error.message));
   }
-  if (phase === "racing" && completedLaps >= LAPS_PER_RACE && !finishedReported) {
-    finishedReported = true;
-    phaseState = "finished";
-    request("report_finish").catch((error) => log("finish report", error.message));
-    log("finished", `${Math.round((now - goAt) / 1000)}s`);
-  }
+  log("lap", state.completedLaps, `${(lapTime / 1000).toFixed(3)}s`, penaltyMs ? "(+penalty)" : "");
 }
 
-function simulate(now, dt) {
-  if (!curve || phase === "lobby") return;
-  if (now < goAt) return;
-  if (phaseState === "countdown") {
-    phaseState = "driving";
-    lapStartedAt = now;
+function simulate(dt) {
+  if (!sim || phase === "lobby") return;
+  const { state, systems, collisions, others } = sim;
+  const now = performance.now();
+  others.length = 0;
+  for (const car of remoteCars.values()) {
+    if (Date.now() - car.seenAt < REMOTE_STALE_MS) others.push(car);
+  }
+  if (raceState === "countdown") {
+    if (Date.now() < goAt) return;
+    raceState = phase === "racing" ? "racing" : "running";
+    state.lapStartTime = now;
     log("lights out");
   }
-  if (phaseState === "finished") {
-    speed = Math.max(0, speed - COAST * dt);
-    return;
-  }
-  if (pitState === "servicing") {
-    speed = 0;
-    if (now >= pitUntil) {
-      pitState = "none";
-      tyreWearPct = 0;
-      tyreDistance = 0;
-      tyreCompound = targets.tyre || tyreCompound;
-    }
+  drive(dt);
+
+  if (phase === "qualifying") {
+    const info = sim.integratePlayerMotion(dt);
+    if (sim.advanceProgress(state, info.idx / sim.centerline.length)) completeLap(now);
+    state.currentLapTime = now - state.lapStartTime;
     return;
   }
 
-  const beforeLap = Math.floor(Math.max(distance, 0) / trackLength);
-  const severity = cornerSeverity(distance / trackLength);
-  const wearFactor = 1 - Math.max(0, tyreWearPct - 70) / 250;
-  const ersActive = targets.ers === true
-    ? ersChargePct > 0
-    : targets.ers === "auto" && severity < 0.2 && ersChargePct >= 20;
-  const ersFactor = ersActive ? 1.05 : 1;
-  let targetSpeed = MAX_SPEED * (1 - severity * 0.48) * targets.pace * wearFactor * ersFactor;
-  targetSpeed = stationSpeed(targetSpeed);
-  if (speed < targetSpeed) speed = Math.min(targetSpeed, speed + ACCEL * dt);
-  else speed = Math.max(targetSpeed, speed - BRAKE * dt);
-  const stepDistance = speed * dt;
-  distance += stepDistance;
-  tyreDistance += stepDistance;
-  tyreWearPct = clamp((tyreDistance / (trackLength * TYRE_LIFE_LAPS)) * 100, 0, 100);
-  if (ersActive && speed > 1) ersChargePct = Math.max(0, ersChargePct - 4 * dt);
-  else ersChargePct = Math.min(100, ersChargePct + 2 * dt);
-  const afterLap = Math.floor(Math.max(distance, 0) / trackLength);
-  if (afterLap > beforeLap) {
-    completeLap(now);
-    if (pitRequested && phase === "racing" && !finishedReported) {
-      pitRequested = false;
-      pitState = "servicing";
-      pitUntil = now + 2500;
-      log("pit stop", tyreCompound, "->", targets.tyre || tyreCompound);
-    }
+  if (raceState !== "finished" && state.pitRequested) systems.startPitStop();
+  updateDrsEligibility([state, ...others], sim.trackLength);
+  systems.updateEnergyRecovery([state], dt);
+  const inPit = systems.updatePitStop(now, dt);
+  const info = inPit ? sim.nearestTrackInfo(state.x, state.z) : sim.integratePlayerMotion(dt);
+  if (!inPit) systems.applyPitLimiter(dt);
+  collisions.resolve(inPit ? others : [state, ...others], now);
+  if (sim.advanceProgress(state, info.idx / sim.centerline.length)) completeLap(now);
+  state.currentLapTime = now - state.lapStartTime;
+  if (raceState === "racing" && state.completedLaps >= LAPS_PER_RACE && !finishedReported) {
+    finishedReported = true;
+    raceState = "finished";
+    request("report_finish").catch((error) => log("finish report", error.message));
+    log("finished");
   }
 }
 
 function broadcast(now) {
-  if (!curve || now - lastBroadcastAt < BROADCAST_INTERVAL_MS) return;
+  if (!sim || phase === "lobby" || now - lastBroadcastAt < BROADCAST_INTERVAL_MS) return;
   lastBroadcastAt = now;
-  const pose = carPose();
+  const { state } = sim;
   sendRaw({
     type: "car_state",
-    x: pose.x,
-    z: pose.z,
-    heading: pose.heading,
-    speed,
-    lap,
-    totalProgress: distance / trackLength,
+    x: state.x,
+    z: state.z,
+    heading: state.heading,
+    speed: state.speed,
+    lap: state.lap,
+    totalProgress: state.totalProgress,
   });
 }
 
-function ranking() {
-  const own = { participantId: credentials?.participantId, totalProgress: distance / trackLength, speed };
-  const entries = [own, ...[...remoteCars.values()].filter((entry) => Date.now() - entry.seenAt < 3000)];
-  return entries.sort((a, b) => (b.totalProgress ?? 0) - (a.totalProgress ?? 0));
-}
-
+// state.json: the fields of agent-api.js getState() a strategy uses.
 function snapshot(now) {
-  const pose = curve ? carPose() : { x: 0, z: 0, heading: 0 };
-  const order = ranking();
-  const index = order.findIndex((entry) => entry.participantId === credentials?.participantId);
-  const ahead = index > 0 ? order[index - 1] : null;
-  const behind = index >= 0 && index < order.length - 1 ? order[index + 1] : null;
-  const gapSeconds = (entry) => entry
-    ? Math.abs((entry.totalProgress - distance / trackLength) * trackLength) / Math.max(speed, 1)
-    : null;
+  if (!sim) return { session: { phase, state: raceState } };
+  const { state, trackLength, others } = sim;
+  const order = [
+    { id: driverId, self: true, totalProgress: state.totalProgress, speed: state.speed },
+    ...others.map((car) => ({ id: car.driverId, totalProgress: car.totalProgress, speed: car.speed })),
+  ].sort((a, b) => b.totalProgress - a.totalProgress);
+  const index = order.findIndex((entry) => entry.self);
+  const gapSeconds = (lead, follow) => (follow.speed > 1 ? round1(((lead.totalProgress - follow.totalProgress) * trackLength) / follow.speed) : null);
   return {
-    session: { phase, state: phaseState },
-    circuit: circuit.name,
+    timestamp: Date.now(),
+    session: { phase: phase === "racing" ? "race" : phase, state: raceState },
+    circuit: sim.circuit.name,
     driver: driverId,
-    x: pose.x,
-    z: pose.z,
-    heading: pose.heading,
-    speed,
-    lap,
+    speedKmh: round1(state.speed * KMH_PER_UNIT),
+    lap: state.completedLaps,
     lapsTotal: LAPS_PER_RACE,
-    position: index >= 0 ? index + 1 : null,
-    tyreWearPct,
-    tyreCompound,
-    damagePct: 0,
-    ers: {
-      chargePct: ersChargePct,
-      active: targets.ers === true
-        ? ersChargePct > 0
-        : targets.ers === "auto" && cornerSeverity(distance / trackLength) < 0.2 && ersChargePct >= 20,
-    },
-    gapAheadS: gapSeconds(ahead),
-    gapBehindS: gapSeconds(behind),
-    nearbyCars: order.filter((entry) => entry.participantId !== credentials?.participantId).slice(0, 4),
-    weather: circuit.weather || "sereno",
+    position: index + 1,
+    onTrack: !state.wasOffTrack,
+    damagePct: Math.round((state.damage || 0) * 100),
+    tyreCompound: state.tyreCompound,
+    tyreWearPct: Math.round(sim.tyreWear(state.totalProgress, state) * 100),
+    drsActive: !!state.drsActive,
+    nearbyCars: others.map((car) => {
+      const gapMeters = (car.totalProgress - state.totalProgress) * trackLength;
+      return { id: car.driverId, relative: gapMeters >= 0 ? "ahead" : "behind", distanceMeters: round1(Math.abs(gapMeters)) };
+    }).sort((a, b) => a.distanceMeters - b.distanceMeters).slice(0, 4),
+    weather: sim.circuit.weather === "pioggia" ? "rain" : "dry",
     safetyCar: false,
-    lapTimes,
-    bestLapTime,
-    lastLapTime,
-    pit: { state: pitState, requested: pitRequested },
-    targets: { ...targets, updatedAt: now },
+    lapTimes: {
+      currentMs: Math.round(state.currentLapTime || 0),
+      lastMs: state.lastLapTime ? Math.round(state.lastLapTime) : null,
+      bestMs: state.bestLapTime ? Math.round(state.bestLapTime) : null,
+    },
+    ers: { chargePct: Math.round(state.ersCharge ?? 0), active: !!state.ersActive },
+    pit: { state: state.pitState, requested: !!state.pitRequested },
+    gapAheadS: index > 0 ? gapSeconds(order[index - 1], order[index]) : null,
+    gapBehindS: index < order.length - 1 ? gapSeconds(order[index], order[index + 1]) : null,
+    targets: sim.driver.getTargets(),
   };
 }
 
 function tick() {
-  const now = Date.now();
-  const dt = Math.min((now - lastTickAt) / 1000, 0.1);
+  const now = performance.now();
+  let elapsed = Math.min((now - lastTickAt) / 1000, 0.25);
   lastTickAt = now;
   readStrategy();
-  simulate(now, dt);
+  // A late timer tick never becomes one long step: the car is simulated in
+  // frame-sized slices, like a browser at 60 fps.
+  while (elapsed > 1e-4) {
+    const dt = Math.min(elapsed, MAX_STEP_S);
+    simulate(dt);
+    elapsed -= dt;
+  }
   broadcast(now);
   if (now - lastStateAt >= STATE_INTERVAL_MS) {
     lastStateAt = now;
@@ -562,6 +681,5 @@ async function stop() {
 
 process.once("SIGINT", stop);
 process.once("SIGTERM", stop);
-buildTrack(CIRCUITS[0].id);
 setInterval(tick, TICK_INTERVAL_MS);
 connect();
