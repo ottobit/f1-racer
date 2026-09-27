@@ -39,6 +39,12 @@ import {
   offsetEdge,
   nearestTrackInfo as nearestPointOnCenterline,
 } from "../shared/track-geometry.js?v=39";
+import {
+  RAIN_TURN_RATE_MULTIPLIER, RAIN_MAX_SPEED_MULTIPLIER, playerCarParams, TYRE_COMPOUNDS, createTyreModel,
+  ERS_SPEED_MULTIPLIER, ERS_DRAIN_PER_SECOND, ERS_RECHARGE_PER_SECOND, PIT_SPEED_LIMIT, PIT_SERVICE_MS,
+  START_FINISH_OFFSET, DRS_SPEED_MULTIPLIER, updateDrsEligibility, createTrackBoundary, GRID_SLOTS,
+  createGridSlot, CAR_RADIUS, DAMAGE_MIN_IMPACT_SPEED, DAMAGE_PER_IMPACT_SPEED, DAMAGE_MAX_SPEED_PENALTY,
+} from "./race-rules.js?v=1";
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
