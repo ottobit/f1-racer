@@ -59,6 +59,24 @@ Key `state.json` fields: `session.phase/state`, `lap`/`lapsTotal`,
 Rules of thumb: wear ≥ ~80% with ≥ 2 laps left → `pit` + fresh `tyre`;
 damage high → lower `pace`; `safetyCar` true → `ers:false`, save for restart.
 
+## Stay alive (cloud agents)
+
+A cloud container is suspended when the agent sits idle: the bot dies
+mid-room and leaves a ghost the host has to wait out (#211). Keep a
+foreground-owned background loop running for the whole play session, not
+just the race — e.g. a small script that reads `state.json` every 5 s,
+applies the strategy, and keeps waiting across rematches. Stop it only when
+the user says to stop.
+
+## Bug and requirement hunt (user rule)
+
+While racing, note anything odd: bot behaviour, room/protocol hiccups,
+strategy API gaps, physics, HUD. After each race: search existing issues for
+duplicates, then open one GitHub issue per finding, in Italian, with what
+was seen, likely cause (with file paths) and a proposal. Tell the user the
+issue numbers in one line. Fixing them is a normal work cycle, only when the
+user asks.
+
 ## End
 
 Race over (`session.state` = `finished`): tell the user the result. The bot

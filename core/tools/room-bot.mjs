@@ -133,7 +133,10 @@ for (;;) {
         if (free) { await free.click(); log("reserved", await free.getAttribute("data-driver-id")); }
       }
       const ready = await page.$("#room-ready-checkbox");
-      if (!entryVisible && ready && !(await ready.isChecked())) await ready.check();
+      if (!entryVisible && ready && !(await ready.isChecked())) {
+        await ready.check();
+        log("ready"); // lets the agent confirm to the user it's on the grid (#213)
+      }
     } else if (await page.evaluate(() => !!window._DRIVER_).catch(() => false)) {
       const raw = fs.existsSync(STRATEGY_FILE) ? fs.readFileSync(STRATEGY_FILE, "utf8") : "";
       if (raw && raw !== lastStrategy) {
