@@ -70,8 +70,16 @@ scripts, no loops that apply rules for you. The bot re-reads
   its own; `pit`/`radio` are one-shot.
 - Before lights out: give every bot its own plan (pace, planned stop,
   compound) and announce it by `radio`.
-- Repeat watch → decide → write until `finished`. Stay in the turn during
-  the race: that is what keeps a cloud container awake.
+- Repeat watch → decide → write until `finished`, for every race including
+  rematches. Never end your turn between lights out and `finished`: a plan
+  set before the start and left alone is not live strategy (VSN2 race 1).
+  Staying in the turn also keeps a cloud container awake.
+- `pit ... armed` in the watch line = the box call is still pending (it
+  stays armed until the pit entry, up to a lap): never send `pit` again,
+  or the car stops twice. The word after `pace` is the driver's tactical
+  mode, which explains a pace different from the one you set.
+- Wear % grows ~33% a lap on every compound; over 5 laps one stop is the
+  baseline. A stop also cuts damage to a quarter.
 
 `strategy.json` (all keys optional; invalid values are ignored):
 
@@ -111,7 +119,10 @@ While racing, note anything odd: bot behaviour, room/protocol hiccups,
 strategy API gaps, physics, HUD. After each race: search existing issues for
 duplicates, then open one GitHub issue per finding, in Italian, with what
 was seen, likely cause (with file paths) and a proposal. Tell the user the
-issue numbers in one line. Fixing them is a normal work cycle, only when the
+issue numbers in one line. No `gh`/GitHub tools (e.g. on the player's
+PC): write a raw report in `llm-wiki/sources/raw/<date>-race-<ROOM>.md`
+(setup, fps, decisions per lap, anomalies with file paths) plus the fleet
+log, and push it; a later session files the issues and ingests it. Fixing them is a normal work cycle, only when the
 user asks.
 
 ## End
