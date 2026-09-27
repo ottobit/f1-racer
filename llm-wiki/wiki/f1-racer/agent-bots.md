@@ -117,8 +117,46 @@ Capacity on the 4-core cloud box (bots' `botFps`, human's view):
   in a race each page also simulates and draws the other cars.
 - Keep `botFps` at or above ~50: below that race results do not rank
   strategies.
-- One Chromium process is shared, but every page has its own renderer
-  running the whole race (physics + drawing all cars): CPU cost grows with
-  the number of bots, the shared browser only saves memory and start-up.
 - Open: with 5 bots a small residual jump remains on the human's screen,
   likely the network path (relay, ngrok, `car_state` cadence).
+
+### What is shared inside Chromium (#242)
+
+Common misreading: "one Chromium per bot". It is the opposite: with
+`--names b1,b2,b3` one `room-bot.mjs` process launches **one** Chromium
+(`chromium.launch` in `core/tools/room-bot.mjs`, headless, no GPU flags) and
+opens one context + one page per bot.
+
+| Layer | How many | What it does |
+|---|---|---|
+| Browser process | 1 per `room-bot.mjs` process | Window/tab management, shared by all bots |
+| GPU process | 1 | Runs WebGL for every page; on the cloud box it is software GL on the CPU (no `/dev/nvidia*`, no `/dev/dri`) |
+| Network process | 1 | HTTP/WebSocket for every page (then the :8081 relay) |
+| Context | 1 per bot | Isolated cookies/storage, so each bot is a separate room participant |
+| Page + renderer process | 1 per bot | The whole game: JS, physics, AI, strategy layer, three.js scene of **every** car in the race |
+
+Where the cost goes:
+
+- The renderers do the real work and they are not shared: N bots = N full
+  games simulating and drawing the same race. Sharing the browser saves only
+  memory and start-up time, not CPU.
+- `gfx=low` + 480×270 cut only the drawing cost of each page. Physics,
+  AI and the simulation of the other cars stay the same, which is why the
+  solo benchmark (11 bots ~58 fps alone on track) fell to 30–33 fps in a
+  12-car race.
+- Without a GPU the drawing itself also lands on the CPU (software GL), so
+  the 4 cores pay both simulation and rendering.
+
+Would a real GPU help? (Probable, not measured)
+
+- Yes, for the drawing part: WebGL would leave the CPU. The solo benchmark
+  hints at the size (8 bots: ~42 fps at `gfx=high` 1280×720 vs 60 fps at
+  `gfx=low` 480×270, all on software GL).
+- No, for the simulation part: JS and physics of every car stay on the CPU
+  in every renderer, so the bot count would still be capped by cores.
+- The bots run in the cloud container, which has no GPU; a GPU in the
+  user's PC helps only if the bots run on that PC, and headless Chromium may
+  need GPU flags (e.g. `--enable-gpu`, `--use-angle`) to use it. Needs
+  verification.
+- Cheaper lever for the CPU part: fewer bots per box, or headless bots
+  (no rendering at all) to fill the grid.
