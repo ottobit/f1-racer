@@ -1550,3 +1550,19 @@ and bot documentation. Structural checks passed for 20 JavaScript modules
 and relative module paths; gameplay/audio remain for manual validation.
 User authorized push and PR closure. Publication is pending: local Git has
 no GitHub credentials. Integrated branch: cycle/228-231-integration.
+
+## 2026-09-27 — Many browser bots in one process (#233)
+
+- `core/tools/room-bot.mjs`: `--names a,b,c` runs one isolated Playwright
+  context per bot in a single Chromium, files in `<dir>/<name>/`; `--name`
+  unchanged. Joins staggered 1.5 s (two bots asking the same driver at once
+  made the loser silently pick another).
+- Relay on :8081 is shared: a process finding the port taken reuses the
+  running relay instead of crashing (it was the one-browser-bot-per-box limit).
+- Bots render with `gfx=low` in a 480×270 viewport; `state.json` reports
+  `botFps` (in-page physics degrades when fps drops).
+- Measured on the 4-core cloud box, solo `race.html?driver=layered`:
+  8 bots high/1280×720 ~42 fps, 8 low/small 60, 11 low/small ~58.
+- Smoke test: two bots via `--names` plus a second process reusing the relay
+  reached the room server. Not yet raced in a real room with N browser bots.
+- Docs: `procedure-racing.md`, `wiki/f1-racer/agent-bots.md`.

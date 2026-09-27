@@ -31,9 +31,13 @@ PLAYWRIGHT_PATH=$(npm root -g)/playwright \
   Browser vs headless trade-offs: `llm-wiki/wiki/f1-racer/agent-bots.md`.
 - Needs Playwright + Chromium (global install is fine; `PLAYWRIGHT_PATH`
   only if `require("playwright")` fails locally).
+- Many browser bots (#233): `--names a,b,c --dir /tmp/bots` runs them in
+  one Chromium, files in `/tmp/bots/<name>/`. They render with `gfx=low` in
+  a small viewport; `state.json` has `botFps` (below ~50 the bot drives
+  worse). Measured on the 4-core cloud box: 11 bots at ~58 fps.
 - Behind an HTTPS proxy (`HTTPS_PROXY` set) the bot relays the WebSocket on
-  `:8081` by itself; ports 8080/8081 must be free. Two agents on the same
-  machine → only one can run; otherwise each agent runs on its own box.
+  `:8081` by itself; a second room-bot process reuses that relay. Port 8080
+  serves the game for every bot on the box.
 - Log should show `reserved <driver>`; the bot ticks "ready" on its own.
   Tell the user: joined, driver, waiting for the host to start.
 
