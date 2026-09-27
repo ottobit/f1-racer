@@ -1443,3 +1443,16 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 - `race-input.js`: touch dead zone .13 of travel (~8px), exponent 1.6 ->
   1.4 so the 20-60px response of #205 is unchanged.
 - Verified with `node --check`, `git diff --check` and the curve in Node.
+
+## 2026-09-27 — Racing procedure for agent drivers (#209)
+
+- New `procedure-racing.md` at the root: self-contained play session guide
+  (inputs, static server + `core/tools/room-bot.mjs` launch, `strategy.json`
+  keys, useful `state.json` fields, rules of thumb, shutdown).
+- New skill `.claude/skills/procedure-racing/`: triggered by intent (any
+  wording, a room-server URL or a room code), points to the file only.
+- `llm-wiki/AGENTS.md`: same rule for other agents, so a play session skips
+  wiki and history.
+- Known limit: two bots on one machine collide on ports 8080/8081; a chat-only
+  agent without a shell cannot run the bot.
+- Verified by joining room PDFP as `rival-red` with the documented commands.
