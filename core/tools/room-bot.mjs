@@ -173,6 +173,8 @@ async function runBot({ name, dir }) {
   let lastFrames = null;
   let lastStatus = "";
   let gpuRenderer = null;
+  let lastRace = null; // last race snapshot, kept in state.json once back in the room (#246)
+  let lastPit = "";
   for (;;) {
     try {
       const url = page.url();
@@ -182,8 +184,10 @@ async function runBot({ name, dir }) {
         if (status !== lastStatus) { lastStatus = status; if (status) log("room", status); }
         if (entryVisible && Date.now() - lastJoinTry > 15000) {
           lastJoinTry = Date.now();
-          await page.fill("#room-code-input", code);
-          await page.click("#room-join-btn");
+          // Short timeouts: the entry can hide between the check and the
+          // fill, and a default 30 s wait stalls this bot's whole loop (#246).
+          await page.fill("#room-code-input", code, { timeout: 3000 });
+          await page.click("#room-join-btn", { timeout: 3000 });
         }
         if (!entryVisible && !(await page.$("#room-driver-grid [data-driver-id].active"))) {
           const free = await page.$("#room-driver-grid [data-driver-id]:not([disabled])");
@@ -193,6 +197,14 @@ async function runBot({ name, dir }) {
         if (!entryVisible && ready && !(await ready.isChecked())) {
           await ready.check();
           log("ready"); // lets the agent confirm to the user it's on the grid (#213)
+        }
+        // Back in the room the race snapshot must not look live (#246).
+        if (Date.now() - lastStateAt > 2000) {
+          lastStateAt = Date.now();
+          lastFrames = null;
+          fs.writeFileSync(stateFile, JSON.stringify({
+            timestamp: lastStateAt, session: { phase: "room", state: entryVisible ? "joining" : "lobby" }, lastRace,
+          }, null, 1));
         }
       } else if (await page.evaluate(() => !!window._DRIVER_).catch(() => false)) {
         if (!gpuRenderer) {
@@ -224,6 +236,16 @@ async function runBot({ name, dir }) {
           lastStateAt = now;
           delete state.frames;
           fs.writeFileSync(stateFile, JSON.stringify({ ...state, botFps, gpuRenderer }, null, 1));
+          lastRace = {
+            session: state.session, lap: state.lap, lapsTotal: state.lapsTotal, position: state.position,
+            finished: state.finished, raceResult: state.raceResult, standings: state.standings, lapTimes: state.lapTimes,
+          };
+          // Every box-call transition, to find stops nobody asked for (#247).
+          const pit = `${state.pit?.requested ? "armed" : "-"}/${state.pit?.state}`;
+          if (pit !== lastPit) {
+            if (lastPit) log("pit", pit, `lap ${state.lap} wear ${state.tyreWearPct}% ${state.tyreCompound} strategy ${lastStrategy.trim() || "-"}`);
+            lastPit = pit;
+          }
         }
       }
     } catch (err) {
