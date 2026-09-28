@@ -227,6 +227,38 @@ export function setupRaceInput({
     });
   });
 
+  // Unlike VIEW and BOX this is a hold action: the independent pointer
+  // capture lets a second finger keep steering or accelerating (#252).
+  const lookBack = document.getElementById("look-back");
+  let lookPointer = null;
+  lookBack.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    if (lookPointer !== null) return;
+    lookPointer = event.pointerId;
+    lookBack.setPointerCapture(lookPointer);
+    lookBack.classList.add("is-held");
+    window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyR" }));
+  });
+  const releaseLookBack = (event) => {
+    if (lookPointer !== event.pointerId) return;
+    lookPointer = null;
+    lookBack.classList.remove("is-held");
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyR" }));
+  };
+  for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
+    lookBack.addEventListener(type, releaseLookBack);
+  }
+  const resetLookBack = () => {
+    lookPointer = null;
+    lookBack.classList.remove("is-held");
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyR" }));
+  };
+  window.addEventListener("blur", resetLookBack);
+  window.addEventListener("pagehide", resetLookBack);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) resetLookBack();
+  });
+
   wheelEl.addEventListener("pointerdown", (event) => {
     event.preventDefault();
     if (motionActive || motionPending) stopMotion();

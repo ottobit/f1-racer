@@ -1675,3 +1675,8 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 ## 2026-09-28 — Room home link #254
 - Reapplied desktop link hit target fix on current master; preserved newer styles and version badge.
 - User authorized conclusion. Static diff check; desktop click, keyboard and mobile verification remain manual.
+
+## 2026-09-28 — Held rear view (#252)
+- Hold R or the independent DIETRO touch button to look behind; release restores the selected camera. Driving inputs remain unchanged.
+- Reset held touch on focus loss, page hide and visibility change. Preserve newer qualifying simulation and bump the full import chain.
+- Syntax and diff checks only; desktop/mobile gameplay remains manual. Merge pending authorization review.
