@@ -213,14 +213,17 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
     camera.near = 0.1;
     // Looking back from ahead of the car keeps nearby pursuers and the
     // player's car visible in both chase and cockpit modes.
+    // state.y is the road height under the car (banked free-drive oval,
+    // #274); undefined, so 0, in the race.
+    const groundY = state.y || 0;
     camera.position.set(
       state.x + Math.sin(state.heading) * 3.8,
-      3.1,
+      3.1 + groundY,
       state.z + Math.cos(state.heading) * 3.8
     );
     lookTarget.set(
       state.x - Math.sin(state.heading) * 12,
-      1.0,
+      1.0 + groundY,
       state.z - Math.cos(state.heading) * 12
     );
     camera.lookAt(lookTarget);
@@ -260,7 +263,8 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
         desiredZ = track.z + (desiredZ - track.z) * scale;
       }
     }
-    desiredPosition.set(desiredX, camHeight, desiredZ);
+    const groundY = state.y || 0;
+    desiredPosition.set(desiredX, camHeight + groundY, desiredZ);
     if (!chaseCameraReady) {
       camera.position.copy(desiredPosition);
       chaseCameraReady = true;
@@ -269,7 +273,7 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
     }
     lookTarget.set(
       state.x + Math.sin(viewHeading) * 4,
-      1 + lookPitch * 8,
+      1 + lookPitch * 8 + groundY,
       state.z + Math.cos(viewHeading) * 4
     );
     camera.lookAt(lookTarget);
