@@ -15,6 +15,15 @@
 //   // Hand control back to the human:
 //   window._ENVIRONMENT_.release();
 //
+// Continuous control (#201): `act()` holds a command until the next act(),
+// the lease running out, release() or a human touching a control — no
+// neutral gap between two commands. `enqueue()` plays a short list of
+// timed segments. With WebMCP (`navigator.modelContext`) the same calls are
+// also exposed as the tools f1_observe / f1_act / f1_enqueue / f1_release.
+//
+//   await window._ENVIRONMENT_.act({ steer: -0.3, throttle: 1, leaseMs: 1500 });
+//   await window._ENVIRONMENT_.enqueue([{ steer: 0.2, throttle: 1, durationMs: 400 }]);
+//
 // Known limitation: pedals are digital in this game (input.forward/back are
 // booleans, not an analog throttle/brake channel) — `throttle`/`brake` are
 // accepted as 0..1 per the MVP contract but thresholded to on/off under the
@@ -48,6 +57,10 @@ export function setupAgentApi({
   const KMH_PER_UNIT = 3.6; // matches race-hud.js's own speed readout
   const DEFAULT_STEP_MS = 500;
   const MAX_STEP_MS = 3000; // safe upper bound: no step can pin an input forever
+  const DEFAULT_LEASE_MS = 1000;
+  const MAX_LEASE_MS = 5000; // no act() can pin an input for longer
+  const MAX_QUEUE_SEGMENTS = 10;
+  const MAX_QUEUE_MS = 5000;
   const CORNER_LOOKAHEAD_SAMPLES = 40;
   const NEARBY_CARS_LIMIT = 5;
 
@@ -105,6 +118,8 @@ export function setupAgentApi({
           relative: gapMeters >= 0 ? "ahead" : "behind",
           distanceMeters: round1(Math.abs(gapMeters)),
           lateralOffsetMeters: round1(carLateral - selfLateral),
+          // Another room participant (human or bot), not a local AI (#201).
+          remote: !!car.isRemote,
         };
       })
       .sort((a, b) => a.distanceMeters - b.distanceMeters)
@@ -168,6 +183,7 @@ export function setupAgentApi({
         gapToLeaderMeters: round1((order[0].totalProgress - entry.totalProgress) * trackLength),
       })),
       finished,
+      control: controlSnapshot(),
       raceResult: finished
         ? order.map((entry) => ({ id: entry.driverId, position: entry.finishPosition }))
         : null,
@@ -188,10 +204,112 @@ export function setupAgentApi({
     input.back = agentHoldsBack;
   }
 
+  // One controller for step(), act() and enqueue() (#201). Each command
+  // bumps `generation`, so a timer left over from an older command can
+  // never neutralise a newer one.
+  let controlMode = "human"; // human | agent | released
+  let applied = { steer: 0, throttle: 0, brake: 0 };
+  let leaseTimer = null;
+  let leaseEndsAt = 0;
+  let queue = null; // { segments, index }
+  let generation = 0;
+
+  function clearTimers() {
+    clearTimeout(leaseTimer);
+    leaseTimer = null;
+    leaseEndsAt = 0;
+    queue = null;
+  }
+
+  function apply(command) {
+    applied = {
+      steer: clampRange(Number(command.steer) || 0, -1, 1),
+      throttle: clamp01(Number(command.throttle) || 0),
+      brake: clamp01(Number(command.brake) || 0),
+    };
+    setExternalSteer(applied.steer);
+    setThrottleBrake(applied.throttle, applied.brake);
+    controlMode = "agent";
+  }
+
+  function neutral(mode) {
+    clearTimers();
+    applied = { steer: 0, throttle: 0, brake: 0 };
+    setExternalSteer(mode === "agent" ? 0 : null);
+    setThrottleBrake(0, 0);
+    controlMode = mode;
+  }
+
+  function controlSnapshot() {
+    return {
+      mode: controlMode,
+      ...applied,
+      leaseRemainingMs: leaseEndsAt ? Math.max(0, Math.round(leaseEndsAt - performance.now())) : 0,
+      queue: queue ? { index: queue.index, length: queue.segments.length } : null,
+    };
+  }
+
+  // Holds `command` for `ms`, then calls `onEnd` unless something newer
+  // took over in the meantime.
+  function hold(command, ms, onEnd) {
+    clearTimeout(leaseTimer);
+    apply(command);
+    const mine = generation;
+    leaseEndsAt = performance.now() + ms;
+    leaseTimer = setTimeout(() => {
+      if (mine === generation) onEnd();
+    }, ms);
+  }
+
+  async function act(command = {}) {
+    generation++;
+    clearTimers();
+    const leaseMs = clampRange(Number(command.leaseMs) || DEFAULT_LEASE_MS, 50, MAX_LEASE_MS);
+    hold(command, leaseMs, () => neutral("released"));
+    return getState();
+  }
+
+  async function enqueue(segments = []) {
+    if (!Array.isArray(segments) || !segments.length) throw new Error("f1-agent-api: enqueue needs at least one segment");
+    if (segments.length > MAX_QUEUE_SEGMENTS) throw new Error(`f1-agent-api: at most ${MAX_QUEUE_SEGMENTS} segments`);
+    const timed = segments.map((segment) => ({ ...segment, durationMs: clampRange(Number(segment.durationMs) || DEFAULT_STEP_MS, 50, MAX_QUEUE_MS) }));
+    if (timed.reduce((sum, segment) => sum + segment.durationMs, 0) > MAX_QUEUE_MS) {
+      throw new Error(`f1-agent-api: a queue lasts at most ${MAX_QUEUE_MS}ms`);
+    }
+    generation++;
+    clearTimers();
+    queue = { segments: timed, index: 0 };
+    const playFrom = (index) => {
+      queue.index = index;
+      hold(timed[index], timed[index].durationMs, () => {
+        if (index + 1 < timed.length) playFrom(index + 1);
+        else neutral("released");
+      });
+    };
+    playFrom(0);
+    return getState();
+  }
+
+  // Kept for compatibility: a held command for durationMs, then neutral
+  // steering and pedals before it resolves (the old contract).
   let stepping = false;
-  let stepAbort = null;
-  function abortActiveStep() {
-    if (stepAbort) stepAbort();
+  async function step(action = {}) {
+    if (stepping) throw new Error("f1-agent-api: a step is already in progress");
+    stepping = true;
+    try {
+      const durationMs = clampRange(Number(action.durationMs) || DEFAULT_STEP_MS, 50, MAX_STEP_MS);
+      generation++;
+      clearTimers();
+      const mine = generation;
+      hold(action, durationMs, () => {});
+      // Its own timer: the step resolves even when a human or a newer
+      // command took over in the meantime.
+      await new Promise((resolve) => setTimeout(resolve, durationMs));
+      if (mine === generation) neutral("agent");
+      return getState();
+    } finally {
+      stepping = false;
+    }
   }
 
   // Registered as the input module's onHumanInput callback (see main.js):
@@ -199,48 +317,88 @@ export function setupAgentApi({
   // this module itself, so it's a reliable "a human just touched a real
   // control" signal distinct from the agent's own programmatic input.
   function handBackToHuman() {
-    abortActiveStep();
+    if (controlMode === "human") return;
+    generation++;
+    clearTimers();
+    applied = { steer: 0, throttle: 0, brake: 0 };
+    controlMode = "human";
     setExternalSteer(null);
     if (agentHoldsForward) { input.forward = false; agentHoldsForward = false; }
     if (agentHoldsBack) { input.back = false; agentHoldsBack = false; }
   }
 
-  async function step(action = {}) {
-    if (stepping) throw new Error("f1-agent-api: a step is already in progress");
-    stepping = true;
-    let aborted = false;
-    stepAbort = () => { aborted = true; };
-    try {
-      const steer = clampRange(Number(action.steer) || 0, -1, 1);
-      const throttle = clamp01(Number(action.throttle) || 0);
-      const brake = clamp01(Number(action.brake) || 0);
-      const durationMs = clampRange(Number(action.durationMs) || DEFAULT_STEP_MS, 50, MAX_STEP_MS);
-
-      setExternalSteer(steer);
-      setThrottleBrake(throttle, brake);
-
-      await new Promise((resolve) => setTimeout(resolve, durationMs));
-
-      if (!aborted) {
-        setThrottleBrake(0, 0);
-        setExternalSteer(0);
-      }
-      return getState();
-    } finally {
-      stepping = false;
-      stepAbort = null;
-    }
-  }
-
   function release() {
-    abortActiveStep();
-    setExternalSteer(null);
-    setThrottleBrake(0, 0);
+    generation++;
+    neutral("released");
     return getState();
   }
 
-  window._ENVIRONMENT_ = { getState, step, release };
+  // Leaving the page or the tab going away drops any agent command.
+  window.addEventListener("pagehide", () => { if (controlMode === "agent") release(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && controlMode === "agent") release();
+  });
+
+  window._ENVIRONMENT_ = { getState, step, act, enqueue, release };
+  registerWebMcpTools({ getState, act, enqueue, release });
   window.dispatchEvent(new CustomEvent("f1-environment-ready"));
 
   return { onHumanInput: handBackToHuman };
+}
+
+// WebMCP bridge (#201): the same controller as window._ENVIRONMENT_, as
+// tools for browsers that expose navigator.modelContext. Only reached with
+// ?agent=1 (this module is not loaded otherwise); without WebMCP nothing
+// changes.
+function registerWebMcpTools({ getState, act, enqueue, release }) {
+  const modelContext = navigator.modelContext;
+  if (!modelContext) return;
+  const reply = (value) => ({ content: [{ type: "text", text: JSON.stringify(value) }] });
+  const command = {
+    steer: { type: "number", minimum: -1, maximum: 1, description: "-1 left, +1 right" },
+    throttle: { type: "number", minimum: 0, maximum: 1 },
+    brake: { type: "number", minimum: 0, maximum: 1 },
+  };
+  const tools = [
+    {
+      name: "f1_observe",
+      description: "Read the race state of the car this page drives.",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => reply(getState()),
+    },
+    {
+      name: "f1_act",
+      description: "Hold steer/throttle/brake until the next f1_act, the lease running out (ms, max 5000), f1_release or a human input.",
+      inputSchema: { type: "object", properties: { ...command, leaseMs: { type: "number", minimum: 50, maximum: 5000 } } },
+      execute: async (args) => reply(await act(args || {})),
+    },
+    {
+      name: "f1_enqueue",
+      description: "Play up to 10 timed segments (total at most 5000 ms), then go neutral. Replaced by f1_act, f1_release or a human input.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          segments: {
+            type: "array",
+            maxItems: 10,
+            items: { type: "object", properties: { ...command, durationMs: { type: "number", minimum: 50, maximum: 5000 } } },
+          },
+        },
+        required: ["segments"],
+      },
+      execute: async (args) => reply(await enqueue(args?.segments || [])),
+    },
+    {
+      name: "f1_release",
+      description: "Drop every agent command at once and hand the car back.",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => reply(release()),
+    },
+  ];
+  try {
+    if (typeof modelContext.registerTool === "function") tools.forEach((tool) => modelContext.registerTool(tool));
+    else if (typeof modelContext.provideContext === "function") modelContext.provideContext({ tools });
+  } catch (error) {
+    console.warn("f1-agent-api: WebMCP registration failed", error);
+  }
 }
