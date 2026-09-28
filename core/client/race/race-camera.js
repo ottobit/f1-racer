@@ -141,7 +141,8 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
   if (lookSurface) {
     lookSurface.style.touchAction = "none";
     lookSurface.addEventListener("pointerdown", (event) => {
-      if (event.pointerType === "mouse" && event.button !== 0) return;
+      // Mouse only (#278): on touch a finger that misses the wheel would turn the camera.
+      if (event.pointerType !== "mouse" || event.button !== 0) return;
       dragPointer = event.pointerId;
       dragOrigin = [event.clientX, event.clientY];
       drag = [0, 0];
