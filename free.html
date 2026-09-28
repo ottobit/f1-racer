@@ -10,20 +10,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="F1 Racer" />
   <meta name="theme-color" content="#05060a" />
-  <title>F1 Racer — ottobit arcade</title>
+  <title>Guida libera — F1 Racer</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>" />
-  <meta name="description" content="Time trial 3D su circuito misto, su una griglia da 10 auto. Giocabile subito nel browser." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://ottobit.github.io/f1-racer/" />
-  <meta property="og:title" content="F1 Racer — ottobit arcade" />
-  <meta property="og:description" content="Time trial 3D su circuito misto, su una griglia da 10 auto. Giocabile subito nel browser." />
-  <meta property="og:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="F1 Racer — ottobit arcade" />
-  <meta name="twitter:description" content="Time trial 3D su circuito misto, su una griglia da 10 auto. Giocabile subito nel browser." />
-  <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="core/client/style.css?v=54" />
   <link rel="stylesheet" href="core/client/race/race-controls.css?v=58" />
@@ -68,49 +56,15 @@
 </head>
 <body>
   <div id="app"></div>
-  <div id="driver-nameplates" aria-hidden="true"></div>
 
-  <!-- Corner HUD, not a center-top cluster of bordered cards — the boxes
-       kept fighting for limited space above the horizon and drew attention
-       to themselves instead of the track. Real sim HUDs (this was modeled
-       directly on a screenshot of one) float plain text with a drop shadow
-       for legibility in each corner instead, leaving the whole middle of
-       the screen clear. Only the speed/gear readout keeps a background
-       pill, same as the reference — it's the one place a lot of different
-       numbers share tight quarters. -->
   <div id="hud">
     <div id="hud-topleft">
-      <a class="back-link" href="index.html">← circuiti</a>
-      <div id="time">0:00.00</div>
-      <div id="hud-topleft-row">
-        <span id="position">P-</span>
-        <span class="stats-sep">·</span>
-        <span id="lap">Giro 0/3</span>
-      </div>
+      <a class="back-link" href="index.html">← esci</a>
+      <div id="circuit-name" class="circuit-name">Guida libera · Ovale sopraelevato</div>
     </div>
-
-    <div id="hud-topright">
-      <div id="circuit-name" class="circuit-name"></div>
-      <div id="best">Migliore --:--.--</div>
-      <div id="hud-topright-row">
-        <span id="tyre-compound">MED</span>
-        <span id="tire-wear">Gomme 100%</span>
-        <span id="damage-row" hidden><span id="damage">Danni 0%</span></span>
-      </div>
-    </div>
-
-    <canvas id="brake-map" width="256" height="256" aria-hidden="true"></canvas>
 
     <div id="hud-cluster">
     <div id="hud-bottomright" class="hud-panel">
-      <div id="shift-lights" aria-hidden="true">
-        <span class="shift-led"></span><span class="shift-led"></span>
-        <span class="shift-led"></span><span class="shift-led"></span>
-        <span class="shift-led"></span><span class="shift-led"></span>
-        <span class="shift-led"></span><span class="shift-led"></span>
-      </div>
-      <span id="drs-indicator" aria-hidden="true">DRS</span>
-      <button type="button" id="ers-indicator" data-key="KeyE" tabindex="-1" aria-label="ERS acceso/spento">ERS 100%</button>
       <div id="speed-track" aria-hidden="true">
         <div id="speed-fill"></div>
       </div>
@@ -119,38 +73,12 @@
         <span id="speed-value">0</span>
         <span class="speedo-unit">km/h</span>
       </div>
-    </div>
-    <div id="hud-shortcuts">
-      <button type="button" class="pit-tyre" data-key="Digit1" tabindex="-1" aria-label="Gomme morbide">S</button>
-      <button type="button" class="pit-tyre" data-key="Digit2" tabindex="-1" aria-label="Gomme medie">M</button>
-      <button type="button" class="pit-tyre" data-key="Digit3" tabindex="-1" aria-label="Gomme dure">H</button>
+      <div id="bank-value" class="bank-readout" role="status">Rettilineo</div>
     </div>
     </div>
   </div>
 
-  <aside id="qualifying-timing" class="qualifying-timing" aria-label="Classifica piloti" hidden></aside>
-
-  <div id="hud-telemetry" class="hud-panel" aria-label="Telemetria">
-    <div><span class="telemetry-label">SLIP</span><strong id="slip-value">0%</strong></div>
-    <div><span class="telemetry-label">LATERALE</span><strong id="lateral-value">0 km/h</strong></div>
-  </div>
-
-  <div id="hint">WASD / frecce per guidare, C per la camera, I/J/K/L o trascina per guardarti intorno, tieni R (L1 sul pad) per guardare dietro — 5 giri contro 9 rivali</div>
-
-  <div id="penalty-notice" aria-hidden="true">Track limits — +1.0s</div>
-
-  <div id="caution-banner" aria-hidden="true" hidden>⚠️ Safety car — andatura ridotta</div>
-
-  <div id="radio-banner" role="status" aria-live="polite" hidden></div>
-
-  <div id="start-lights" class="start-lights" hidden aria-live="polite"></div>
-  <div id="engine-gate" class="engine-gate" hidden>
-    <div class="engine-gate-card">
-      <span class="engine-gate-kicker">IN GRIGLIA</span>
-      <strong>Avvia il motore</strong>
-      <small>Premi un tasto o tocca lo schermo</small>
-    </div>
-  </div>
+  <div id="hint">WASD / frecce per guidare, C per la camera, I/J/K/L o trascina per guardarti intorno, tieni R (L1 sul pad) per guardare dietro, Esc per uscire</div>
 
   <div id="touch-controls">
     <!-- Tilt steering hidden in #83 (the braking map takes its place); the
@@ -182,26 +110,10 @@
     </div>
     <div class="touch-group touch-group--throttle">
       <button id="btn-brake" class="touch-btn" aria-label="Freno">FRENO</button>
-      <!-- BOX sits right above the throttle on touch (#155): the HUD row
-           was too small a target mid-race. -->
       <div class="gas-stack">
         <button type="button" id="look-back" tabindex="-1" aria-label="Tieni premuto per guardare dietro">DIETRO</button>
-        <!-- VIEW stacked above BOX (#171). -->
         <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
-        <button type="button" id="pit-toggle" data-key="KeyP" tabindex="-1" aria-label="Chiama il box">BOX</button>
         <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">GAS</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="results-overlay" hidden>
-    <div class="results-card">
-      <h2 id="results-title">Gara finita</h2>
-      <ol id="results-order"></ol>
-      <p id="results-points"></p>
-      <div class="results-actions">
-        <a id="results-next" class="results-btn results-btn--primary" href="index.html">Prossimo circuito</a>
-        <a class="results-btn" href="index.html">Torna ai circuiti</a>
       </div>
     </div>
   </div>
@@ -218,7 +130,7 @@
       window.addEventListener("scroll", pin);
     })();
   </script>
-  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=87"></script>
+  <script type="module" src="core/client/free/free.js?v=1"></script>
   <script src="core/client/shared/version.js?v=268" defer></script>
 </body>
 </html>

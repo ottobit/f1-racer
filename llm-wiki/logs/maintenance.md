@@ -1722,3 +1722,9 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `race-input.js` (v58): gamepad L1 (button 4) is a hold that replays KeyR down/up, so `race-camera.js` needs no change; released on button release, pad disconnect, blur and hidden tab (`clearDrivingInput`). Until now look back existed only on keyboard (R) and touch (DIETRO).
 - `race.html` hint mentions L1. Version chain: main v125, race-bootstrap v86; release badge v267.
 - Verified with `node --check` only; to try with a standard pad in chase and cockpit.
+
+## 2026-09-28 — Free drive on a banked oval (#274)
+
+- New page `free.html` + `core/client/free/` (`free.js`, `oval.js`, `banking.js`, `free-sim.js`): one car, no rivals/qualifying/race/laps/results, exit link + Esc. Separate from `race.html` and multiplayer on purpose; `FREE_OVAL` is not in `CIRCUITS`. Home gets a "Guida libera" card (`index.html`, `style.css` v54 on every page).
+- Banking derives from the centerline's signed curvature (24° in the turns, flat straights), pivoting on the inside edge so the infield needs no ramps; the physics stays 2D (`setupPlayerPhysics` unchanged) and only the pose (height, pitch, roll) and a small grip bonus come from it. `race-camera.js` (v39) adds `state.y`; main v126, race-bootstrap v87.
+- `core/tools/validate-free-oval.mjs`: shape, bank profile, pose signs and autopilot laps (3 laps in 120 s at pace 0.9 and 1, 0 s off the road). Everything else is syntax-checked only: look, feel and touch drag are to be tried in the browser. `F1-RACER-WIKI.md` has a new section.
