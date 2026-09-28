@@ -1653,3 +1653,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `home/menu.js`: the standings row whose id matches the selected driver gets `is-selected` + `aria-current`; `computeStandings` already maps `player` to the selected driver, so the highlight follows a driver change and survives reloads.
 - `style.css`: tinted background, bold text and an inset white bar on the first cell (not colour alone); no "Tu" label, order and points unchanged.
 - Cache chain: `style.css?v=53` in all pages (previous versions were out of step, 33–52), `menu.js?v=44`. Verified with `node --check` and `git diff --check` only.
+
+## 2026-09-28 — AI qualifying times from a simulated flying lap (#261)
+
+- `race/main.js`: `simulateAiFlyingLapMs()` drives one throwaway car with the race AI (`race-ai.js`, own `setupRaceAi` instance and private progress counter) at a fixed 1/60 s step, fresh mediums, no traffic: out lap from standstill, then a timed lap. Replaces the flat `length / AI top speed x 1.35` estimate, which ignored how twisty each circuit is.
+- Simulated once per session (all AI share the same parameters); each driver gets a -2%..+3% spread. Fallback to the old formula if no lap closes within 600 s simulated. Multiplayer unchanged.
+- Node measurement (normal difficulty): AI faster than before on vallechiara/montenero/colleverde/baiadoro, slower on altomare/pianalago/portoscuro/serramonte; 11–56 ms per circuit.
+- Known limit: on Marzamemi the race AI runs wide in both tight loops (up to 7 m off, crawling), giving an 84.8 s lap vs 33.9 s before; that is a real race-AI defect, left for its own issue. Kerb drag split out to #262.
+- Cache chain: `main.js?v=119`, `race-bootstrap.js?v=80`. Verified with `node --check`, `git diff --check` and the Node sim only.
