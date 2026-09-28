@@ -1728,3 +1728,9 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - New page `free.html` + `core/client/free/` (`free.js`, `oval.js`, `banking.js`, `free-sim.js`): one car, no rivals/qualifying/race/laps/results, exit link + Esc. Separate from `race.html` and multiplayer on purpose; `FREE_OVAL` is not in `CIRCUITS`. Home gets a "Guida libera" card (`index.html`, `style.css` v54 on every page).
 - Banking derives from the centerline's signed curvature (24° in the turns, flat straights), pivoting on the inside edge so the infield needs no ramps; the physics stays 2D (`setupPlayerPhysics` unchanged) and only the pose (height, pitch, roll) and a small grip bonus come from it. `race-camera.js` (v39) adds `state.y`; main v126, race-bootstrap v87.
 - `core/tools/validate-free-oval.mjs`: shape, bank profile, pose signs and autopilot laps (3 laps in 120 s at pace 0.9 and 1, 0 s off the road). Everything else is syntax-checked only: look, feel and touch drag are to be tried in the browser. `F1-RACER-WIKI.md` has a new section.
+
+## 2026-09-28 — Free look drag: mouse only (#278)
+
+- `race-camera.js` (v40): the canvas drag-to-look (#255) now starts only for `pointerType === "mouse"`; on touch, a finger that missed the steering wheel landed on the canvas and turned the camera while driving.
+- Touch has no free-look gesture now (keyboard I/J/K/L and pad right stick / L1 are unchanged). A dedicated on-screen look pad (as in PR #268) stays an open option if it is missed.
+- Version chain: main v127, race-bootstrap v88, `free.js` v2; release badge v269. Verified with `node --check` only.
