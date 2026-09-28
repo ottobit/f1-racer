@@ -1661,3 +1661,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Node measurement (normal difficulty): AI faster than before on vallechiara/montenero/colleverde/baiadoro, slower on altomare/pianalago/portoscuro/serramonte; 11–56 ms per circuit.
 - Known limit: on Marzamemi the race AI runs wide in both tight loops (up to 7 m off, crawling), giving an 84.8 s lap vs 33.9 s before; that is a real race-AI defect, left for its own issue. Kerb drag split out to #262.
 - Cache chain: `main.js?v=119`, `race-bootstrap.js?v=80`. Verified with `node --check`, `git diff --check` and the Node sim only.
+
+## 2026-09-28 — Release number visible in-page (#264)
+
+- New `core/client/shared/version.js` (classic script, `defer`): reads its own `?v` and shows it as a small `vN` badge, bottom centre, 10px, semi-transparent, `pointer-events: none`, safe-area aware.
+- Included in `index`, `race`, `garage`, `room` and `modes` as `version.js?v=264`; the number is the issue of the last released cycle and lives in the HTML, so a stale number means a stale cached page.
+- `concludi` skill: step 3 bumps the `?v` in all HTML pages with one `sed`; the final reply names the version to look for.
+- Known limit: not checked in a browser; the badge could overlap a bottom-centre HUD element in race.
+- Also closed #105 (all items done; the TURN item stays in #106).
+- Verified with `node --check` and `git diff --check` only.

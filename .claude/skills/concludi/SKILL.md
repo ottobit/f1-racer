@@ -18,6 +18,8 @@ log entry and commit message in English. No browser tests.
    `## <YYYY-MM-DD> — <short title> (#<N>)` followed by 3-6 bullets (files
    touched and why, decisions, known limits, how it was verified). Build it
    from `git log master..HEAD` and the PR diff, not from memory.
+   Also set the release number shown in-page to the cycle's issue number:
+   `sed -i -E 's#(shared/version\.js\?v=)[0-9]+#\1<N>#' *.html`.
    Commit (`git diff --check` first) and push.
 4. **Ready + merge**: mark the PR ready for review, then merge it (merge
    method `merge`) with a commit message containing `Closes #<N>`.
@@ -25,6 +27,7 @@ log entry and commit message in English. No browser tests.
    `git branch -D cycle/<N>-...` and `git push origin --delete cycle/<N>-...`
    (if the remote delete is refused, tell the user to delete it on GitHub).
 6. **Subscriptions**: unsubscribe this session from the PR's activity.
-7. **Reply** (short, Italian): PR merged, what the user should test in game,
+7. **Reply** (short, Italian): PR merged, the version the page must show
+   (`v<N>`, bottom centre), what the user should test in game,
    any branch left to delete, and finally remind: "Ora lancia `/compact`"
    (`/compact` is a client command — the skill cannot run it).
