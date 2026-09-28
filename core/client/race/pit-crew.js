@@ -1,10 +1,11 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { PIT_LANE } from "../shared/pit-lane.js?v=2";
+import { PIT_LANE, pitLanePose } from "../shared/pit-lane.js?v=3";
 
 // Pit crew: removers and fitters handle two distinct wheel sets. The used
 // set stays in the garage after the fresh set is attached to the car.
-// Positions live in the selected team's box frame
-// (+z along the lane, +x away from the track for side +1).
+// Positions live in the selected team's box frame, centred where the car
+// stops on the apron (+z along the lane, +x away from the track for side +1).
+// Every other team's crew waits at its own garage, tyres in hand (#258).
 
 const smooth = (t) => { t = Math.min(Math.max(t, 0), 1); return t * t * (3 - 2 * t); };
 
@@ -20,22 +21,25 @@ const parts = {
   boot: new THREE.BoxGeometry(0.12, 0.07, 0.2),
   gun: new THREE.CylinderGeometry(0.045, 0.045, 0.26, 10),
   jack: new THREE.BoxGeometry(0.06, 0.06, 0.9),
+  tyre: new THREE.CylinderGeometry(0.34, 0.34, 0.36, 18),
+  rim: new THREE.CylinderGeometry(0.2, 0.2, 0.37, 12),
 };
 const shared = {
   dark: new THREE.MeshStandardMaterial({ color: 0x1a1d21, roughness: 0.7 }),
   helmet: new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.35 }),
   visor: new THREE.MeshStandardMaterial({ color: 0x0c1116, roughness: 0.15, metalness: 0.4 }),
   tool: new THREE.MeshStandardMaterial({ color: 0x9aa3a8, roughness: 0.4, metalness: 0.6 }),
+  rubber: new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9 }),
 };
 
-function mechanic(suit, tool) {
+function mechanic(suit, tool, shadows = true) {
   const group = new THREE.Group();
   group.scale.setScalar(0.88); // about as tall as the old block figures
   const add = (parent, geometry, material, x, y, z, rx = 0) => {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(x, y, z);
     mesh.rotation.x = rx;
-    mesh.castShadow = true;
+    mesh.castShadow = shadows;
     parent.add(mesh);
     return mesh;
   };
@@ -57,12 +61,47 @@ function mechanic(suit, tool) {
   for (const x of [-0.2, 0.2]) add(hips, parts.arm, suit, x, 0.3, 0.12, -1.1);
   if (tool === "gun") add(hips, parts.gun, shared.tool, 0, 0.22, 0.34, Math.PI / 2).name = "wheelGun";
   if (tool === "jack") add(hips, parts.jack, shared.tool, 0, 0.12, 0.5, 0.35);
+  if (tool === "tyre") {
+    const tyre = add(hips, parts.tyre, shared.rubber, 0, 0.24, 0.42);
+    tyre.rotation.z = Math.PI / 2;
+    add(tyre, parts.rim, shared.tool, 0, 0, 0);
+  }
   return { group, legs, hips };
+}
+
+// Other teams' crews stand ready at their garage mouth, facing the lane:
+// four with fresh tyres, a gunner and the two jack men.
+function waitingCrews(scene, pitLane, faceX) {
+  const out = pitLane.side;
+  const roles = ["jack", "tyre", "tyre", "gun", "tyre", "tyre", "jack"];
+  const group = new THREE.Group();
+  group.name = "waitingPitCrews";
+  for (const box of pitLane.boxes) {
+    if (box.index === pitLane.boxIndex) continue;
+    const suit = new THREE.MeshStandardMaterial({ color: box.team.primary, roughness: 0.75 });
+    const bay = new THREE.Group();
+    bay.position.set(
+      box.x + Math.cos(box.heading) * PIT_LANE.bay * out, 0,
+      box.z - Math.sin(box.heading) * PIT_LANE.bay * out,
+    );
+    bay.rotation.y = box.heading;
+    roles.forEach((role, index) => {
+      const body = mechanic(suit, role, false).group;
+      body.position.set(out * (faceX + 0.45), 0, (index - 3) * 0.75);
+      body.rotation.y = -out * Math.PI / 2;
+      bay.add(body);
+    });
+    group.add(bay);
+  }
+  scene.add(group);
 }
 
 export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }) {
   const w = PIT_LANE.halfWidth, out = pitLane.side;
-  const box = pitLane.path[pitLane.boxIndex];
+  const box = pitLanePose(pitLane, pitLane.boxDist);
+  // Garage face, measured from the car's stop position on the apron.
+  const faceX = w + PIT_LANE.apron - PIT_LANE.bay;
+  waitingCrews(scene, pitLane, faceX);
   const frame = new THREE.Group();
   frame.position.set(box.x, 0, box.z);
   frame.rotation.y = box.heading;
@@ -73,7 +112,7 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
   const crew = [];
   function addMember(x, z, role, index) {
     const body = mechanic(suit, role === "jack" ? "jack" : "gun");
-    const idle = new THREE.Vector3(out * (w + (role === "fitter" ? 2.3 : 1.3)), 0, -2.3 + index * 0.5);
+    const idle = new THREE.Vector3(out * (faceX + (role === "fitter" ? 1.1 : 0.4)), 0, -2.3 + index * 0.5);
     const target = new THREE.Vector3(x, 0, z);
     body.group.position.copy(idle);
     body.group.rotation.y = -out * Math.PI / 2;
@@ -148,7 +187,7 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
   }
 
   frame.updateMatrixWorld(true);
-  const tvCamera = frame.localToWorld(new THREE.Vector3(-out * (w + 1.6), 3.2, 5.5));
+  const tvCamera = frame.localToWorld(new THREE.Vector3(-out * (w + 1.6 + PIT_LANE.bay), 3.2, 5.5));
   const tvTarget = new THREE.Vector3(box.x, 0.5, box.z);
 
   let active = false;

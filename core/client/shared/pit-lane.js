@@ -16,6 +16,9 @@ export const PIT_LANE = {
   before: 64,     // lane starts this far before the line
   after: 56,      // and rejoins this far after it
   ramp: 26,       // length of each merge ramp
+  apron: 3.1,     // working apron between the lane edge and the garage face
+  bay: 4,         // car stops this far from the lane centre, on the apron
+  bayRamp: 9,     // pull in/out of the bay over this distance
   step: 1,
 };
 
@@ -90,7 +93,18 @@ export function pitLanePose(pitLane, dist) {
   const t = (dist - a.dist) / (b.dist - a.dist || 1);
   let dh = b.heading - a.heading;
   dh = Math.atan2(Math.sin(dh), Math.cos(dh));
-  return { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, heading: a.heading + dh * t };
+  const heading = a.heading + dh * t;
+  // Around the box the car pulls sideways onto its team's apron, leaving the
+  // lane free for cars driving through (#258).
+  const delta = dist - pitLane.boxDist;
+  const u = 1 - Math.min(Math.abs(delta) / PIT_LANE.bayRamp, 1);
+  const shift = PIT_LANE.bay * smooth(u) * pitLane.side;
+  const slope = -Math.sign(delta) * PIT_LANE.bay * 6 * u * (1 - u) / PIT_LANE.bayRamp;
+  return {
+    x: a.x + (b.x - a.x) * t + Math.cos(heading) * shift,
+    z: a.z + (b.z - a.z) * t - Math.sin(heading) * shift,
+    heading: heading + Math.atan(slope) * pitLane.side,
+  };
 }
 
 // True when (x, z) lies on the lane asphalt plus `margin` — scenery and
