@@ -12,7 +12,7 @@ import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=38";
 import { setupRaceInput } from "./race-input.js?v=57";
 import { escapeHtml, setupRaceHud } from "./race-hud.js?v=41";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
-import { setupRaceCamera } from "./race-camera.js?v=37";
+import { setupRaceCamera } from "./race-camera.js?v=38";
 import { setupPlayerPhysics } from "./player-physics.js?v=9";
 import { setupRaceAi } from "./race-ai.js?v=30";
 import { setupRaceSystems } from "./race-systems.js?v=32";
@@ -1079,6 +1079,7 @@ const raceCamera = setupRaceCamera({
   nearestTrackInfo,
   trackWidth: TRACK_WIDTH,
   pitCamera: { position: pitCrew.tvCamera, target: pitCrew.tvTarget },
+  lookSurface: renderer.domElement, // drag to look around (#255)
 });
 const raceNameplates = setupRaceNameplates({
   camera,

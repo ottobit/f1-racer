@@ -1701,3 +1701,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - #241 closed without code: wear % is compound-independent; the 68–72% finishes were the layered driver's own wear-based stops (~lap 2.9, before `autoPit` existed), unlogged until #247's `pit` line.
 - #227 closed without code: browser and headless share the same pit code; offline `updatePitStop` runs give 8.3–10.9 s in the lane (6.7–8.4 s lost) + limiter and exit, 10–12 s on Baiadoro. The 7 s browser figure counted one lap of the two the lane spans. The real lever is `PIT_SPEED_LIMIT` / `PIT_LANE.before/after`.
 - Release badge is now a monotonic counter (`concludi` skill updated): v263 for #235, v264 here. Verified with `node --check` only.
+
+## 2026-09-28 — Free look with pad, keyboard and touch (#255)
+
+- `race-camera.js` (v38): free look — right stick (axes 2/3, dead zone 0.2), I/J/K/L, or a drag on the scene canvas (`lookSurface`, touch or mouse, 140 px = full turn) turns the view up to ~80° sideways and ±20° up/down; it follows at 9/s and eases back at 5/s on release. Works in chase (camera orbits the car) and cockpit; look back (R) and the pit TV shot keep priority.
+- Reset on blur, pagehide, hidden tab and pointer cancel; the chosen camera mode is untouched.
+- `main.js` (v123) passes `renderer.domElement`; `race.html` hint mentions the keys; race-bootstrap v84.
+- Not verified in a browser (syntax only): the drag needs the canvas to receive touches outside the wheel and pedals. Release badge v265.
