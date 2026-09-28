@@ -1647,3 +1647,9 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `shared/pit-lane.js`: `pitLanePose` shifts the car 4 m onto its team's apron over a 9 m ramp (`PIT_LANE.bay`, `bayRamp`); client and headless bots share it. `track-art.js`: garages set back by `PIT_LANE.apron` (3.1 m), pillars at bay dividers, scenery margins widened; `validate-circuits` garage check includes the apron (no errors).
 - `race/pit-crew.js`: crews sit on stools watching the race; the player's crew stands and carries the fresh set out when the box is requested, then puts the used set down and sits again. Other teams' crews stay seated next to instanced tyre stacks; they do not animate for opponents' stops.
 - Cache chain: pit-lane v3, race-systems v32, track-art v43, pit-crew v4, main v118, race-bootstrap v79. Verified with `node --check`, `git diff --check` and a numeric pose check only; visuals and phone fluidity left to play testing.
+
+## 2026-09-28 — Selected driver highlighted in home standings (#253)
+
+- `home/menu.js`: the standings row whose id matches the selected driver gets `is-selected` + `aria-current`; `computeStandings` already maps `player` to the selected driver, so the highlight follows a driver change and survives reloads.
+- `style.css`: tinted background, bold text and an inset white bar on the first cell (not colour alone); no "Tu" label, order and points unchanged.
+- Cache chain: `style.css?v=53` in all pages (previous versions were out of step, 33–52), `menu.js?v=44`. Verified with `node --check` and `git diff --check` only.
