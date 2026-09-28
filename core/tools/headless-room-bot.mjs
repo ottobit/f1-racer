@@ -22,7 +22,7 @@ import tls from "node:tls";
 import * as THREE from "three";
 import { WebSocket } from "ws";
 import { CIRCUITS, LAPS_PER_RACE, TYRE_LIFE_LAPS, getCircuit } from "../client/shared/circuits.js";
-import { DRIVER_ROSTER } from "../client/shared/driver-roster.js";
+import { DRIVER_ROSTER, driverById } from "../client/shared/driver-roster.js";
 import { DEFAULT_SETUP, setupEffects } from "../client/shared/garage-setup.js";
 import { buildPitLane } from "../client/shared/pit-lane.js";
 import {
@@ -205,7 +205,7 @@ function buildSim(circuitId) {
     nearestTrackInfo,
   });
   const gridSlot = createGridSlot({ centerline, trackWidth: circuit.width, trackLength, headingOf, sideNormal });
-  const pitLane = buildPitLane(visualCenterline, circuit.width, 1);
+  const pitLane = buildPitLane(visualCenterline, circuit.width, 1, driverById(driverId).team);
   const state = freshState();
   const input = { forward: false, back: false, left: false, right: false };
   const steering = { value: 0 };
@@ -266,7 +266,7 @@ function buildSim(circuitId) {
   const driver = createLayeredProvider({ fast: autopilot, getState: () => snapshot(performance.now()) });
   log("circuit", circuit.id, `${Math.round(trackLength)}m`);
   return {
-    circuit, centerline, trackLength, nearestTrackInfo, gridSlot, tyreWear,
+    circuit, centerline, trackLength, nearestTrackInfo, gridSlot, tyreWear, driverId,
     state, input, steering, others, integratePlayerMotion, systems,
     advanceProgress, collisions, driver,
   };
@@ -391,7 +391,9 @@ function updateRoom(nextRoom) {
   const previousPhase = room?.sessionPhase;
   room = nextRoom;
   driverId = participant()?.driverId || driverId;
-  if (!sim || (room.circuitId && room.circuitId !== sim.circuit.id)) sim = buildSim(room.circuitId || CIRCUITS[0].id);
+  if (!sim || sim.driverId !== driverId || (room.circuitId && room.circuitId !== sim.circuit.id)) {
+    sim = buildSim(room.circuitId || CIRCUITS[0].id);
+  }
   if (room.sessionPhase === "lobby") {
     phase = "lobby";
     raceState = "waiting";

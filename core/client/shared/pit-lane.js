@@ -8,19 +8,20 @@
 // smoothstep ramps. Distances are world units along the centerline; `s` = 0
 // is the start/finish line (centerline sample 0).
 
+import { TEAM_LIVERIES } from "./driver-themes.js?v=28";
+
 export const PIT_LANE = {
   offset: 6,      // lane centre, past the asphalt edge
   halfWidth: 2.5, // lane asphalt half width
   before: 64,     // lane starts this far before the line
   after: 56,      // and rejoins this far after it
   ramp: 26,       // length of each merge ramp
-  box: 8,         // service box, just past the line (in front of the garage)
   step: 1,
 };
 
 const smooth = (t) => t * t * (3 - 2 * t);
 
-export function buildPitLane(centerline, width, side = 1) {
+export function buildPitLane(centerline, width, side = 1, teamId = TEAM_LIVERIES[0].id) {
   const n = centerline.length, half = width / 2;
   const cum = [0];
   for (let i = 0; i < n; i++) {
@@ -54,16 +55,27 @@ export function buildPitLane(centerline, width, side = 1) {
     const f = frame(s), d = offsetAt(s);
     path.push({ x: f.x + f.tz * d * side, z: f.z - f.tx * d * side, s, d, flat: d >= lane - 0.01 });
   }
-  let dist = 0, boxIndex = 0;
+  let dist = 0;
   path.forEach((p, k) => {
     if (k > 0) dist += Math.hypot(p.x - path[k - 1].x, p.z - path[k - 1].z);
     p.dist = dist;
     const a = path[Math.max(0, k - 1)], b = path[Math.min(path.length - 1, k + 1)];
     p.heading = Math.atan2(b.x - a.x, b.z - a.z);
-    if (Math.abs(p.s - PIT_LANE.box) < Math.abs(path[boxIndex].s - PIT_LANE.box)) boxIndex = k;
   });
+  // A stable team order on every client; both drivers share their team's
+  // bay. Keep the entire service area off the entry/exit merge ramps.
+  const flat = path.filter((p) => p.flat);
+  const first = flat[0].dist, last = flat[flat.length - 1].dist;
+  const spacing = (last - first) / TEAM_LIVERIES.length;
+  const boxes = TEAM_LIVERIES.map((team, index) => {
+    const target = first + spacing * (index + 0.5);
+    const point = flat.reduce((a, b) => Math.abs(b.dist - target) < Math.abs(a.dist - target) ? b : a);
+    return { team, index: path.indexOf(point), dist: point.dist, spacing, ...point };
+  });
+  const selected = boxes.find((box) => box.team.id === teamId) || boxes[0];
+  const boxIndex = selected.index;
   return {
-    side, half, lane, path, length: dist, boxIndex, boxDist: path[boxIndex].dist,
+    side, half, lane, path, boxes, length: dist, boxIndex, boxDist: selected.dist,
     entryS: -before, exitS: after, total,
   };
 }

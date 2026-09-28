@@ -1625,3 +1625,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `core/client/race/race-camera.js`: updated the cockpit camera's hidden helmet parts to match the new geometry.
 - Garage and race module imports and HTML entry points received cache-version bumps; wheel radius, steering pivots, physics and collision geometry are unchanged.
 - Verified with `node --check` on the changed model and camera, `git diff --check`, and matching local/remote source trees; visual appearance on mobile and in a live race remains for manual inspection.
+
+## 2026-09-28 — Team pit bays and separate wheel sets (#250, PR #251)
+
+- Added six signed, team-coloured bays with deterministic team stopping distances shared by browser and headless drivers.
+- Replaced the same-wheel out/in animation with four removers, four fitters and two jack mechanics. A separate wheel set is mounted; used wheels remain in the garage, compound markings stay distinct, and geometry is reused across stops.
+- Updated architecture notes and client cache versions. Static syntax and whitespace checks passed; published source tree matched the local implementation. Gameplay, successive stops and mobile fluidity remain manual checks.
+- User authorized conclusion with "Concludi"; no remote crew synchronization or teammate service queue was added.

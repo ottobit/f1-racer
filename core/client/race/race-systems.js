@@ -1,4 +1,4 @@
-import { pitLanePose } from "../shared/pit-lane.js?v=1";
+import { pitLanePose } from "../shared/pit-lane.js?v=2";
 
 const PIT_LIMITER_LEAD = 90; // units before the lane entry: top speed down to lane pace
 const PIT_LIMITER_DECEL = 45;
