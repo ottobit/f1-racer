@@ -96,12 +96,17 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
   let cameraMode = "chase";
   let chaseCameraReady = false;
   let cameraHeading = 0;
+  let lookingBack = false;
   const desiredPosition = new THREE.Vector3();
   const cockpitView = cockpitCar ? prepareCockpitCar(cockpitCar).group : null;
   const eye = new THREE.Vector3();
   const lookTarget = new THREE.Vector3();
 
   window.addEventListener("keydown", (event) => {
+    if (event.code === "KeyR") {
+      if (!event.target.closest?.("input,textarea,select,[contenteditable='true']")) lookingBack = true;
+      return;
+    }
     if (event.code !== "KeyC") return;
     cameraMode = cameraMode === "chase" ? "cockpit" : "chase";
     playerCar.group.visible = cameraMode !== "cockpit";
@@ -109,6 +114,34 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
     // The wheel sits a hand-span from the eye: pull the near plane in.
     camera.near = cameraMode === "cockpit" ? 0.03 : 0.1;
   });
+  window.addEventListener("keyup", (event) => {
+    if (event.code === "KeyR") lookingBack = false;
+  });
+  window.addEventListener("blur", () => { lookingBack = false; });
+  window.addEventListener("pagehide", () => { lookingBack = false; });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) lookingBack = false;
+  });
+
+  function updateRearCamera() {
+    chaseCameraReady = false;
+    playerCar.group.visible = true;
+    if (cockpitView) cockpitView.visible = false;
+    camera.near = 0.1;
+    // Looking back from ahead of the car keeps nearby pursuers and the
+    // player's car visible in both chase and cockpit modes.
+    camera.position.set(
+      state.x + Math.sin(state.heading) * 3.8,
+      3.1,
+      state.z + Math.cos(state.heading) * 3.8
+    );
+    lookTarget.set(
+      state.x - Math.sin(state.heading) * 12,
+      1.0,
+      state.z - Math.cos(state.heading) * 12
+    );
+    camera.lookAt(lookTarget);
+  }
 
   function updateChaseCamera(dt) {
     if (cockpitView) cockpitView.visible = false;
@@ -197,6 +230,10 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
   function updateCamera(dt) {
     if (pitCamera && state.pitState === "servicing") {
       updatePitCamera();
+      return;
+    }
+    if (lookingBack) {
+      updateRearCamera();
       return;
     }
     playerCar.group.visible = cameraMode !== "cockpit";

@@ -91,6 +91,8 @@ html.touch #pit-toggle,html.touch #view-toggle{min-height:44px;border-radius:10p
 html.touch #pit-toggle:active,html.touch #view-toggle:active{background:#3a3520}
 /* VIEW above BOX (#171): same pad as BOX, neutral colours. */
 html.touch #view-toggle{border-color:#b2c8d566;color:#dbe7ef}
+html.touch #look-back{min-height:44px;border-radius:10px;border:1px solid #b2c8d566;background:#1c2530d9;color:#dbe7ef;font:800 10px system-ui;letter-spacing:.08em;touch-action:none}
+html.touch #look-back.is-held{background:#34536b;color:#fff;border-color:#dbe7ef}
 
 /* Per-driver voice status: transparent, with a thumb-sized local control. */
 .qualifying-timing__name:has(.driver-voice) { display: flex; align-items: center; overflow: visible; }

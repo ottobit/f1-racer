@@ -26,7 +26,7 @@
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="core/client/style.css?v=53" />
-  <link rel="stylesheet" href="core/client/race/race-controls.css?v=57" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=58" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -135,7 +135,7 @@
     <div><span class="telemetry-label">LATERALE</span><strong id="lateral-value">0 km/h</strong></div>
   </div>
 
-  <div id="hint">WASD / frecce per guidare, C per la camera cockpit — 5 giri contro 9 rivali</div>
+  <div id="hint">WASD / frecce per guidare, C per la camera, tieni R per guardare dietro — 5 giri contro 9 rivali</div>
 
   <div id="penalty-notice" aria-hidden="true">Track limits — +1.0s</div>
 
@@ -185,6 +185,7 @@
       <!-- BOX sits right above the throttle on touch (#155): the HUD row
            was too small a target mid-race. -->
       <div class="gas-stack">
+        <button type="button" id="look-back" tabindex="-1" aria-label="Tieni premuto per guardare dietro">DIETRO</button>
         <!-- VIEW stacked above BOX (#171). -->
         <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
         <button type="button" id="pit-toggle" data-key="KeyP" tabindex="-1" aria-label="Chiama il box">BOX</button>
@@ -217,7 +218,7 @@
       window.addEventListener("scroll", pin);
     })();
   </script>
-  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=80"></script>
-  <script src="core/client/shared/version.js?v=254" defer></script>
+  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=81"></script>
+  <script src="core/client/shared/version.js?v=252" defer></script>
 </body>
 </html>
