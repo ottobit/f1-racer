@@ -18,8 +18,9 @@ log entry and commit message in English. No browser tests.
    `## <YYYY-MM-DD> — <short title> (#<N>)` followed by 3-6 bullets (files
    touched and why, decisions, known limits, how it was verified). Build it
    from `git log master..HEAD` and the PR diff, not from memory.
-   Also set the release number shown in-page to the cycle's issue number:
-   `sed -i -E 's#(shared/version\.js\?v=)[0-9]+#\1<N>#' *.html`.
+   Also bump the release number shown in-page by one over `origin/master`'s
+   (monotonic: issue numbers are not, and the badge must only go up):
+   `sed -i -E 's#(shared/version\.js\?v=)[0-9]+#\1<R>#' *.html`.
    Commit (`git diff --check` first) and push.
 4. **Ready + merge**: mark the PR ready for review, then merge it (merge
    method `merge`) with a commit message containing `Closes #<N>`.
