@@ -170,6 +170,7 @@ let raceState = "waiting"; // waiting | countdown | racing | finished
 let goAt = Infinity; // Date.now() at which the car may move
 let finishedReported = false;
 let qualiBestTime = null;
+let lastRace = null; // last race snapshot, kept in state.json once back in the lobby (#235)
 const remoteCars = new Map(); // participantId -> car-shaped object
 
 function freshState() {
@@ -304,6 +305,7 @@ function startSession(nextPhase) {
   raceState = "countdown";
   finishedReported = false;
   qualiBestTime = null;
+  remoteCars.clear(); // the previous session's cars must not enter this order
   if (nextPhase === "qualifying") {
     // Every participant takes its own grid slot, by its index among the
     // participants with a driver (main.js's QUALI_START_INDEX).
@@ -397,6 +399,14 @@ function updateRoom(nextRoom) {
     sim = buildSim(room.circuitId || CIRCUITS[0].id);
   }
   if (room.sessionPhase === "lobby") {
+    // A rematch can close the race before this car reaches the flag: keep
+    // what it had, so the agent sees a finished race, not a vanished one.
+    if (phase === "racing") {
+      lastRace = { ...snapshot(Date.now()), endedBy: finishedReported ? "finish" : "rematch" };
+      lastRace.session = { phase: "race", state: "finished" };
+      delete lastRace.targets;
+      log("race closed", lastRace.endedBy, `lap ${lastRace.lap}/${LAPS_PER_RACE} P${lastRace.position}`);
+    }
     phase = "lobby";
     raceState = "waiting";
     queueMicrotask(ensureReady);
@@ -612,12 +622,28 @@ function broadcast(now) {
 
 // state.json: the fields of agent-api.js getState() a strategy uses.
 function snapshot(now) {
-  if (!sim) return { session: { phase, state: raceState } };
+  if (!sim || phase === "lobby") return { session: { phase, state: raceState }, lastRace };
   const { state, trackLength, others } = sim;
+  // Same order as race-progress.js: finishers first (in the order the
+  // server recorded them), then progress, then grid slot. Every car of the
+  // room counts, not only the ones heard from in the last few seconds:
+  // dropping a quiet car moved this one up a place (#235).
+  const people = new Map((room?.participants || []).map((entry) => [entry.participantId, entry]));
+  const grid = room?.grid || [];
+  const me = participant();
   const order = [
-    { id: driverId, self: true, totalProgress: state.totalProgress, speed: state.speed },
-    ...others.map((car) => ({ id: car.driverId, totalProgress: car.totalProgress, speed: car.speed })),
-  ].sort((a, b) => b.totalProgress - a.totalProgress);
+    { id: driverId, self: true, totalProgress: state.totalProgress, speed: state.speed,
+      finishedAt: me?.finishedAt ?? (finishedReported ? Infinity : null) },
+    ...[...remoteCars.values()].filter((car) => people.get(car.participantId)?.driverId).map((car) => ({
+      id: car.driverId, totalProgress: car.totalProgress, speed: car.speed,
+      finishedAt: people.get(car.participantId).finishedAt ?? null,
+    })),
+  ].sort((a, b) => {
+    if (a.finishedAt !== null && b.finishedAt !== null) return a.finishedAt - b.finishedAt;
+    if (a.finishedAt !== null) return -1;
+    if (b.finishedAt !== null) return 1;
+    return b.totalProgress - a.totalProgress || grid.indexOf(a.id) - grid.indexOf(b.id);
+  });
   const index = order.findIndex((entry) => entry.self);
   const gapSeconds = (lead, follow) => (follow.speed > 1 ? round1(((lead.totalProgress - follow.totalProgress) * trackLength) / follow.speed) : null);
   return {
@@ -629,6 +655,7 @@ function snapshot(now) {
     lap: state.completedLaps,
     lapsTotal: LAPS_PER_RACE,
     position: index + 1,
+    positionSource: order[index].finishedAt !== null && order[index].finishedAt !== Infinity ? "server-finish" : "progress",
     onTrack: !state.wasOffTrack,
     damagePct: Math.round((state.damage || 0) * 100),
     tyreCompound: state.tyreCompound,
