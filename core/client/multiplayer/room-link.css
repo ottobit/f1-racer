@@ -1,0 +1,19 @@
+/* Keep the room's home link above the large desktop heading and its help
+   panel, with an explicit mouse target and visible keyboard focus. */
+.room-hero .f1-home-kicker {
+  position: relative;
+  z-index: 2;
+}
+
+.room-hero .f1-home-kicker a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.room-hero .f1-home-kicker a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
