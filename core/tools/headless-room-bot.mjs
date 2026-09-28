@@ -51,6 +51,7 @@ import {
   TYRE_COMPOUNDS,
   createGridSlot,
   createTrackBoundary,
+  kerbWidthFor,
   createTyreModel,
   playerCarParams,
   updateDrsEligibility,
@@ -203,6 +204,7 @@ function buildSim(circuitId) {
     trackWidth: circuit.width,
     runoffEffect: EFFECTS.runoff,
     nearestTrackInfo,
+    kerbWidth: kerbWidthFor(circuit),
   });
   const gridSlot = createGridSlot({ centerline, trackWidth: circuit.width, trackLength, headingOf, sideNormal });
   const pitLane = buildPitLane(visualCenterline, circuit.width, 1, driverById(driverId).team);

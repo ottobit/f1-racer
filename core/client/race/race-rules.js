@@ -102,19 +102,34 @@ export function updateDrsEligibility(cars, trackLength) {
 // Running wide costs grip: past the asphalt edge the car is dragged down
 // progressively (front-loaded, see the 0.28 floor) towards a crawl, never
 // snapped back by an invisible wall.
-export function createTrackBoundary({ trackWidth, runoffEffect, nearestTrackInfo }) {
-  const grassLimit = trackWidth / 2; // asphalt edge, right where the kerb is painted
-  const wallLimit = trackWidth / 2 + 4; // runoff drag ramp length; no hard stop
+// Outer edge of the painted kerb beyond the asphalt edge (track-art.js
+// kerb profiles): Marzamemi's street kerb is narrower.
+export function kerbWidthFor(circuit) {
+  return circuit && circuit.theme === "marzamemi" ? 0.7 : 0.95;
+}
+
+// Like real track limits, a car is off only once its centre is past the
+// kerb, i.e. roughly all four wheels are beyond the asphalt edge. Riding the
+// kerb costs a little speed; runoff drag starts past it.
+export function createTrackBoundary({ trackWidth, runoffEffect, nearestTrackInfo, kerbWidth = 0.95 }) {
+  const kerbStart = trackWidth / 2; // asphalt edge, where the kerb starts
+  const grassLimit = kerbStart + kerbWidth; // outer kerb edge: off track past here
+  const wallLimit = grassLimit + 4; // runoff drag ramp length; no hard stop
   const grassMaxDecel = 240 * (1 - runoffEffect * 0.035); // units/s² of extra drag
+  const kerbDecel = grassMaxDecel * 0.015; // ~5% of the lightest grass drag
+  const crawlSpeed = 8;
+  function slow(car, decel) {
+    if (car.speed > crawlSpeed) car.speed = Math.max(crawlSpeed, car.speed - decel);
+    else if (car.speed < -crawlSpeed) car.speed = Math.min(-crawlSpeed, car.speed + decel);
+  }
   function applyTrackBoundary(car, dt, info) {
     info = info || nearestTrackInfo(car.x, car.z);
     if (info.dist > grassLimit) {
-      const runoffDepth = Math.max(0, info.dist - grassLimit);
-      const t = Math.min(runoffDepth / Math.max(wallLimit - grassLimit, 0.01), 1);
-      const decel = grassMaxDecel * (0.28 + 0.72 * t) * dt;
-      const crawlSpeed = 8;
-      if (car.speed > crawlSpeed) car.speed = Math.max(crawlSpeed, car.speed - decel);
-      else if (car.speed < -crawlSpeed) car.speed = Math.min(-crawlSpeed, car.speed + decel);
+      const runoffDepth = info.dist - grassLimit;
+      const t = Math.min(runoffDepth / (wallLimit - grassLimit), 1);
+      slow(car, grassMaxDecel * (0.28 + 0.72 * t) * dt);
+    } else if (info.dist > kerbStart) {
+      slow(car, kerbDecel * dt);
     }
     return info;
   }

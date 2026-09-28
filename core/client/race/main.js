@@ -43,9 +43,9 @@ import {
 import {
   RAIN_TURN_RATE_MULTIPLIER, RAIN_MAX_SPEED_MULTIPLIER, playerCarParams, TYRE_COMPOUNDS, createTyreModel,
   ERS_SPEED_MULTIPLIER, ERS_DRAIN_PER_SECOND, ERS_RECHARGE_PER_SECOND, PIT_SPEED_LIMIT, PIT_SERVICE_MS,
-  START_FINISH_OFFSET, DRS_SPEED_MULTIPLIER, updateDrsEligibility, createTrackBoundary, GRID_SLOTS,
+  START_FINISH_OFFSET, DRS_SPEED_MULTIPLIER, updateDrsEligibility, createTrackBoundary, kerbWidthFor, GRID_SLOTS,
   createGridSlot, CAR_RADIUS, DAMAGE_MIN_IMPACT_SPEED, DAMAGE_PER_IMPACT_SPEED, DAMAGE_MAX_SPEED_PENALTY,
-} from "./race-rules.js?v=2";
+} from "./race-rules.js?v=3";
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
@@ -229,6 +229,7 @@ const { grassLimit: GRASS_LIMIT, applyTrackBoundary } = createTrackBoundary({
   trackWidth: TRACK_WIDTH,
   runoffEffect: GARAGE_EFFECTS.runoff,
   nearestTrackInfo,
+  kerbWidth: kerbWidthFor(circuit),
 });
 
 // Updates a car's fair, start-offset-independent progress accumulator (see
