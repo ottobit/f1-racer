@@ -97,9 +97,20 @@ wing in both race and Garage models.
 
 `race/race-progress.js` counts a lap at the painted finish-line offset
 rather than at the spline origin and locks finish positions as cars
-complete the configured distance. AI automatic pit service is intentionally
-disabled while there is no visible pit lane; player-requested service
-remains available.
+complete the configured distance.
+
+`shared/pit-lane.js` assigns six service bays in canonical `TEAM_LIVERIES`
+order along the flat lane section. `buildPitLane(..., teamId)` selects the
+same stopping distance for both team drivers, browser and headless bots.
+`track-art.js` labels the six garages; `pit-crew.js` animates the local
+player's ten mechanics at their team's bay. Four removers take the used
+wheels away, four fitters install a separate set, and two mechanics lift
+the car. Wheel geometry is reused across stops; the newly mounted objects
+replace `playerCar.wheels` so rolling and steering keep working. Red,
+yellow and white sidewalls follow the selected compound; the removed set
+keeps its original colour. No multiplayer protocol or shared-box queue is
+introduced: remote crew animation and simultaneous teammate service are
+outside this visual cycle (#250). Visual checks remain manual.
 
 Race cars include a lightweight seated driver built from the shared
 procedural model. The suit material carries the primary livery role;

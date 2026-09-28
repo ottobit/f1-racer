@@ -1,9 +1,9 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { PIT_LANE } from "../shared/pit-lane.js?v=1";
+import { PIT_LANE } from "../shared/pit-lane.js?v=2";
 
-// Pit crew (#147): six low-poly mechanics wait in the garage and,
-// while the player is in the box, run out, jack the car and swap all four
-// wheels over the service time. Positions live in the box's local frame
+// Pit crew: removers and fitters handle two distinct wheel sets. The used
+// set stays in the garage after the fresh set is attached to the car.
+// Positions live in the selected team's box frame
 // (+z along the lane, +x away from the track for side +1).
 
 const smooth = (t) => { t = Math.min(Math.max(t, 0), 1); return t * t * (3 - 2 * t); };
@@ -55,7 +55,7 @@ function mechanic(suit, tool) {
   add(helmet, parts.visor, shared.visor, 0, 0, 0);
   // Arms reach forward, as if holding the tool.
   for (const x of [-0.2, 0.2]) add(hips, parts.arm, suit, x, 0.3, 0.12, -1.1);
-  if (tool === "gun") add(hips, parts.gun, shared.tool, 0, 0.22, 0.34, Math.PI / 2);
+  if (tool === "gun") add(hips, parts.gun, shared.tool, 0, 0.22, 0.34, Math.PI / 2).name = "wheelGun";
   if (tool === "jack") add(hips, parts.jack, shared.tool, 0, 0.12, 0.5, 0.35);
   return { group, legs, hips };
 }
@@ -68,57 +68,171 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
   frame.rotation.y = box.heading;
   scene.add(frame);
 
-  // Wheel gunners at each corner, then the front and rear jack men.
-  const work = [
-    [1.3, 0.72], [-1.3, 0.72], [1.3, -0.72], [-1.3, -0.72], [0, 2.3], [0, -2.3],
-  ];
+  const scale = playerCar.group.scale.x;
   const suit = new THREE.MeshStandardMaterial({ color: suitColor, roughness: 0.75 });
-  const crew = work.map(([x, z], index) => {
-    const body = mechanic(suit, index < 4 ? "gun" : "jack");
-    const idle = new THREE.Vector3(out * (w + 1.5), 0, -2.5 + index);
+  const crew = [];
+  function addMember(x, z, role, index) {
+    const body = mechanic(suit, role === "jack" ? "jack" : "gun");
+    const idle = new THREE.Vector3(out * (w + (role === "fitter" ? 2.3 : 1.3)), 0, -2.3 + index * 0.5);
     const target = new THREE.Vector3(x, 0, z);
     body.group.position.copy(idle);
     body.group.rotation.y = -out * Math.PI / 2;
     frame.add(body.group);
-    return { ...body, idle, target, facing: Math.atan2(-x, -z), stride: 0, last: idle.clone() };
-  });
+    const member = { ...body, role, idle, target, stride: 0, last: idle.clone(), lastX: idle.x, lastZ: idle.z };
+    crew.push(member);
+    return member;
+  }
 
-  const wheelSide = playerCar.wheels.map((wheel) => Math.sign(wheel.parent.position.x) || 1);
+  const compoundColors = { soft: 0xf04439, medium: 0xffcf32, hard: 0xf5f5f5 };
+  const ringGeometry = new THREE.TorusGeometry(0.345, 0.012, 4, 24);
+  function prepareWheel(wheel) {
+    const material = new THREE.MeshStandardMaterial({ color: compoundColors.medium, roughness: 0.8 });
+    for (const side of [-1, 1]) {
+      const ring = new THREE.Mesh(ringGeometry, material);
+      ring.rotation.y = Math.PI / 2;
+      ring.position.x = side * 0.195;
+      wheel.add(ring);
+    }
+    wheel.userData.pitCompoundMaterial = material;
+  }
+  function colorWheel(wheel, compound) {
+    wheel.userData.pitCompoundMaterial.color.set(compoundColors[compound] || compoundColors.medium);
+  }
+
+  const stations = playerCar.wheels.map((wheel, index) => {
+    const pivot = wheel.parent;
+    const hub = pivot.position.clone().multiplyScalar(scale);
+    const side = Math.sign(hub.x);
+    // Clone before adding the sidewall rings so the two sets have independent
+    // compound materials. Geometry is shared, never rebuilt during a stop.
+    const spare = wheel.clone(true);
+    prepareWheel(wheel);
+    prepareWheel(spare);
+    const remover = addMember(hub.x + side * 0.38, hub.z, "remover", index);
+    const fitter = addMember(hub.x + side * 0.38, hub.z, "fitter", index + 4);
+    frame.add(spare);
+    spare.scale.setScalar(scale);
+    spare.position.copy(fitter.idle).add(new THREE.Vector3(0, 0.52, 0));
+    return { pivot, hub, side, spare, old: wheel, fresh: spare, remover, fitter, removed: false, fitted: false };
+  });
+  addMember(0, 1.65, "jack", 8);
+  addMember(0, -1.6, "jack", 9);
+
+  // Reach the far side around the nose/tail instead of walking through the car.
+  function route(member, reach) {
+    const { idle, target } = member;
+    if (target.x * out >= 0.1) return member.group.position.lerpVectors(idle, target, reach);
+    const end = Math.sign(target.z || 1) * 1.95;
+    const a = new THREE.Vector3(idle.x, 0, end);
+    const b = new THREE.Vector3(target.x, 0, end);
+    if (reach < 0.25) return member.group.position.lerpVectors(idle, a, reach * 4);
+    if (reach < 0.7) return member.group.position.lerpVectors(a, b, (reach - 0.25) / 0.45);
+    return member.group.position.lerpVectors(b, target, (reach - 0.7) / 0.3);
+  }
+
+  const carried = new THREE.Vector3();
+  function handPosition(member, side) {
+    carried.copy(member.group.position);
+    carried.x -= side * 0.16;
+    carried.y = 0.52;
+    return carried;
+  }
+  function fitWheel(station, index) {
+    station.pivot.add(station.fresh);
+    station.fresh.position.set(0, 0, 0);
+    station.fresh.rotation.set(0, 0, 0);
+    station.fresh.scale.setScalar(1);
+    playerCar.wheels[index] = station.fresh;
+    station.fitted = true;
+    station.spare = station.old;
+  }
+
   frame.updateMatrixWorld(true);
   const tvCamera = frame.localToWorld(new THREE.Vector3(-out * (w + 1.6), 3.2, 5.5));
   const tvTarget = new THREE.Vector3(box.x, 0.5, box.z);
 
+  let active = false;
+  let mountedCompound = "medium";
   // Called after applyCarToMesh, which resets the car's pose every frame.
   function update(state, now) {
     const servicing = state.pitState === "servicing";
-    const t = servicing ? 1 - (state.pitServiceEndTime - now) / serviceMs : 0;
-    const reach = servicing ? smooth(t / 0.15) * (1 - smooth((t - 0.85) / 0.15)) : 0;
+    if (servicing && !active) {
+      active = true;
+      stations.forEach((station, index) => {
+        station.old = playerCar.wheels[index];
+        station.fresh = station.spare;
+        station.removed = station.fitted = false;
+        colorWheel(station.old, mountedCompound);
+      });
+    }
+    // Complete even when a slow/background frame skips the mounting phase.
+    const t = servicing ? Math.min(1, Math.max(0, 1 - (state.pitServiceEndTime - now) / serviceMs)) : active ? 1 : 0;
+    const lift = active ? smooth((t - 0.12) / 0.08) * (1 - smooth((t - 0.83) / 0.07)) : 0;
+    playerCar.group.position.y += 0.12 * lift;
     for (const member of crew) {
       const body = member.group;
-      body.position.lerpVectors(member.idle, member.target, reach);
+      const reach = !active ? 0 : member.role === "remover"
+        ? smooth(t / 0.18) * (1 - smooth((t - 0.36) / 0.25))
+        : member.role === "fitter"
+          ? smooth((t - 0.38) / 0.22) * (1 - smooth((t - 0.8) / 0.17))
+          : smooth(t / 0.12) * (1 - smooth((t - 0.9) / 0.1));
+      route(member, reach);
       // Walk: legs swing with the distance covered, then settle.
       const moved = body.position.distanceTo(member.last);
       member.last.copy(body.position);
       member.stride = moved > 1e-4 ? member.stride + moved * 9 : member.stride * 0.8;
       const swing = moved > 1e-4 ? Math.sin(member.stride) * 0.55 : 0;
       // Turn smoothly towards the car on the way in, back to the lane after.
-      const heading = reach > 0.5 ? member.facing : -out * Math.PI / 2;
+      const heading = moved > 1e-4 && reach < 0.95
+        ? Math.atan2(body.position.x - member.lastX, body.position.z - member.lastZ)
+        : Math.atan2(-member.target.x, 0);
+      member.lastX = body.position.x;
+      member.lastZ = body.position.z;
       let turn = heading - body.rotation.y;
       turn = Math.atan2(Math.sin(turn), Math.cos(turn));
       body.rotation.y += turn * 0.25;
       // Crouch at the wheel: hips drop, torso leans in, knees forward.
-      const crouch = smooth((reach - 0.8) / 0.2);
+      const crouch = member.role === "jack" ? 0.3 * reach : smooth((reach - 0.8) / 0.2);
       member.hips.position.y = 0.52 - 0.2 * crouch;
       member.hips.rotation.x = 0.45 * crouch;
       member.legs[0].position.y = member.legs[1].position.y = 0.52 - 0.2 * crouch;
       member.legs[0].rotation.x = swing - 0.9 * crouch;
       member.legs[1].rotation.x = -swing + 0.3 * crouch;
+      const gun = body.getObjectByName("wheelGun");
+      const tightening = active && (member.role === "remover" ? t >= 0.18 && t < 0.25 : t >= 0.74 && t < 0.8);
+      if (gun) gun.rotation.y = tightening ? Math.sin(now * 0.08) * 0.15 : 0;
     }
-    const lift = servicing ? smooth((t - 0.15) / 0.08) * (1 - smooth((t - 0.78) / 0.07)) : 0;
-    playerCar.group.position.y += 0.12 * lift;
-    // Old wheels off, new wheels on.
-    const off = servicing ? smooth((t - 0.25) / 0.12) * (1 - smooth((t - 0.5) / 0.15)) : 0;
-    playerCar.wheels.forEach((wheel, index) => { wheel.position.x = wheelSide[index] * 0.55 * off; });
+    stations.forEach((station, index) => {
+      if (!active) {
+        colorWheel(playerCar.wheels[index], state.tyreCompound);
+        return;
+      }
+      const { old, fresh, hub, side, remover, fitter } = station;
+      colorWheel(fresh, state.tyreCompound);
+      if (t >= 0.25 && !station.removed) {
+        frame.add(old);
+        old.rotation.set(0, 0, 0);
+        old.scale.setScalar(scale);
+        station.removed = true;
+      }
+      if (station.removed) {
+        old.position.copy(hub); old.position.y += 0.12 * lift;
+        old.position.lerp(handPosition(remover, side), smooth((t - 0.25) / 0.1));
+      }
+      if (!station.fitted) {
+        fresh.rotation.set(0, 0, 0);
+        fresh.scale.setScalar(scale);
+        fresh.position.copy(handPosition(fitter, side));
+        const install = smooth((t - 0.62) / 0.12);
+        const raisedHub = hub.clone(); raisedHub.y += 0.12 * lift;
+        fresh.position.lerp(raisedHub, install);
+        if (t >= 0.74) fitWheel(station, index);
+      }
+    });
+    if (!servicing) {
+      mountedCompound = state.tyreCompound;
+      active = false;
+    }
   }
 
   return { update, tvCamera, tvTarget };

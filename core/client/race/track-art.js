@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { offsetEdge } from '../shared/track-geometry.js?v=39';
-import { PIT_LANE, nearPitLane } from '../shared/pit-lane.js?v=1';
+import { PIT_LANE, nearPitLane } from '../shared/pit-lane.js?v=2';
 
 function random(seed=17){return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
 export function surfaceTexture(kind,renderer){
@@ -326,17 +326,29 @@ export function dressPitLane(scene,lane,renderer,wet){
   pillars.forEach((d,k)=>{const p=flat.reduce((a,b)=>Math.abs(b.dist-d)<Math.abs(a.dist-d)?b:a),q=across(p,w+.2);
     temp.position.set(q.x,1.35,q.z);temp.rotation.set(0,p.heading,0);temp.updateMatrix();pillarMesh.setMatrixAt(k,temp.matrix);});
   pillarMesh.castShadow=true;scene.add(pillarMesh);
-  // Service box: yellow frame on the lane and the team sign on the fascia.
-  const box=path[lane.boxIndex],group=new THREE.Group();
-  group.position.set(box.x,0,box.z);group.rotation.y=box.heading;scene.add(group);
+  // One signed, team-coloured bay for each scuderia, following the curve.
+  const bays=new THREE.Group();bays.name='teamPitBays';scene.add(bays);
+  for(const box of lane.boxes){
+  const group=new THREE.Group();group.name=`pitBay-${box.team.id}`;
+  group.position.set(box.x,0,box.z);group.rotation.y=box.heading;bays.add(group);
   const out=side; // group local +x points along across(), away from the track
   const yellow=new THREE.MeshStandardMaterial({color:0xf2c230,roughness:.7,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
   for(const [x,z,sx,sz] of [[-1.3,0,.14,5.6],[1.3,0,.14,5.6],[0,2.8,2.74,.14],[0,-2.8,2.74,.14]]){
     const m=new THREE.Mesh(new THREE.PlaneGeometry(sx,sz),yellow);m.rotation.x=-Math.PI/2;m.position.set(x,.03,z);group.add(m);
   }
-  const c=document.createElement('canvas');c.width=256;c.height=64;const ctx=c.getContext('2d');ctx.fillStyle='#f2c230';ctx.fillRect(0,0,256,64);ctx.fillStyle='#14202b';ctx.font='bold 44px sans-serif';ctx.textAlign='center';ctx.fillText('BOX',128,48);
+  const teamPaint=new THREE.MeshStandardMaterial({color:box.team.primary,roughness:.7});
+  const panelWidth=Math.min(6.5,box.spacing-.6);
+  const fascia=new THREE.Mesh(new THREE.BoxGeometry(.12,.75,panelWidth),teamPaint);
+  fascia.position.set(out*(w+.02),3.05,0);group.add(fascia);
+  // Tool cabinets in team colours make each garage legible below the sign.
+  const cabinet=new THREE.Mesh(new THREE.BoxGeometry(.7,1.05,1.1),teamPaint);
+  cabinet.position.set(out*(w+3.6),.525,-1.8);group.add(cabinet);
+  const c=document.createElement('canvas');c.width=512;c.height=96;const ctx=c.getContext('2d');
+  ctx.fillStyle='#'+box.team.primary.toString(16).padStart(6,'0');ctx.fillRect(0,0,512,96);
+  ctx.fillStyle='#'+box.team.secondary.toString(16).padStart(6,'0');ctx.font='bold 52px sans-serif';ctx.textAlign='center';ctx.fillText(box.team.label.toUpperCase(),256,66);
   const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
-  const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.4,.6),new THREE.MeshBasicMaterial({map:tex}));sign.position.set(out*(w+.05),3.05,0);sign.rotation.y=-out*Math.PI/2;group.add(sign);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(Math.min(4.8,panelWidth),.65),new THREE.MeshBasicMaterial({map:tex}));sign.position.set(out*(w-.06),3.05,0);sign.rotation.y=-out*Math.PI/2;group.add(sign);
   const lamp=new THREE.Mesh(new THREE.PlaneGeometry(4.4,.12),new THREE.MeshBasicMaterial({color:0xfff4d6}));lamp.position.set(out*(w+2.5),3.38,0);lamp.rotation.x=Math.PI/2;group.add(lamp);
-  return group;
+  }
+  return bays;
 }

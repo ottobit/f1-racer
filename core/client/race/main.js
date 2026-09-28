@@ -15,7 +15,7 @@ import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=35";
 import { setupPlayerPhysics } from "./player-physics.js?v=9";
 import { setupRaceAi } from "./race-ai.js?v=30";
-import { setupRaceSystems } from "./race-systems.js?v=30";
+import { setupRaceSystems } from "./race-systems.js?v=31";
 import { setupRaceProgress } from "./race-progress.js?v=28";
 import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
@@ -25,9 +25,9 @@ import { createAutopilotProvider, createLayeredProvider } from "./driver-provide
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=10";
 
 import { steeringYaw } from "./steering.js?v=8";
-import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=41";
-import { buildPitLane } from "../shared/pit-lane.js?v=1";
-import { setupPitCrew } from "./pit-crew.js?v=2";
+import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=42";
+import { buildPitLane } from "../shared/pit-lane.js?v=2";
+import { setupPitCrew } from "./pit-crew.js?v=3";
 import { gearInfo, setupRaceAudio } from "./race-audio.js?v=3";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
@@ -395,7 +395,7 @@ scene.add(buildRoadMesh());
 // the visual marker real curbs are.
 // Pit lane (#147): beside the start/finish line, on the side of the pit
 // building (track-art.js structure(0, 1)).
-const pitLane = buildPitLane(visualCenterline, TRACK_WIDTH, 1);
+const pitLane = buildPitLane(visualCenterline, TRACK_WIDTH, 1, PLAYER_LIVERY.id);
 dressCircuit(scene, centerline, TRACK_WIDTH, renderer, isRaining, circuit.theme, visualCenterline, pitLane);
 dressPitLane(scene, pitLane, renderer, isRaining);
 
