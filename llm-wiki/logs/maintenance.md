@@ -1734,3 +1734,8 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `race-camera.js` (v40): the canvas drag-to-look (#255) now starts only for `pointerType === "mouse"`; on touch, a finger that missed the steering wheel landed on the canvas and turned the camera while driving.
 - Touch has no free-look gesture now (keyboard I/J/K/L and pad right stick / L1 are unchanged). A dedicated on-screen look pad (as in PR #268) stays an open option if it is missed.
 - Version chain: main v127, race-bootstrap v88, `free.js` v2; release badge v269. Verified with `node --check` only.
+
+## 2026-09-28 — Driving hint: look-around drag is mouse-only (#280)
+
+- `race.html` and `free.html`: the hint now says "trascina col mouse per guardarti intorno", matching #278 (the canvas drag no longer exists on touch). Text only, no imports touched, so no `?v` chain; release badge v270.
+- Verified with `git diff --check` only. `modes.html` still does not list free look / L1 / free drive (open).
