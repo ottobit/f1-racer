@@ -171,6 +171,8 @@ let goAt = Infinity; // Date.now() at which the car may move
 let finishedReported = false;
 let qualiBestTime = null;
 let lastRace = null; // last race snapshot, kept in state.json once back in the lobby (#235)
+let lapExcursions = []; // this lap's track-limit excursions: { at, cause } (#236)
+const EXCURSION_CONTACT_MS = 1500; // an excursion this soon after a contact counts as pushed off
 const remoteCars = new Map(); // participantId -> car-shaped object
 
 function freshState() {
@@ -305,6 +307,7 @@ function startSession(nextPhase) {
   raceState = "countdown";
   finishedReported = false;
   qualiBestTime = null;
+  lapExcursions = [];
   remoteCars.clear(); // the previous session's cars must not enter this order
   if (nextPhase === "qualifying") {
     // Every participant takes its own grid slot, by its index among the
@@ -557,12 +560,20 @@ function completeLap(now) {
   state.lastLapTime = lapTime;
   state.lastLapPenaltyMs = penaltyMs;
   state.trackLimitViolationsThisLap = 0;
+  const excursions = lapExcursions;
+  lapExcursions = [];
   if (state.bestLapTime === null || lapTime < state.bestLapTime) state.bestLapTime = lapTime;
   if (phase === "qualifying" && (qualiBestTime === null || lapTime < qualiBestTime)) {
     qualiBestTime = lapTime;
     request("report_quali_time", { timeMs: lapTime }).catch((error) => log("quali report", error.message));
   }
   log("lap", state.completedLaps, `${(lapTime / 1000).toFixed(3)}s`, penaltyMs ? "(+penalty)" : "");
+  // Where and why each excursion happened, to tell contact from pace (#236).
+  if (penaltyMs) {
+    const contact = excursions.filter((entry) => entry.cause === "contact").length;
+    log("penalty", `lap ${state.completedLaps}`, `${excursions.length} excursions (contact ${contact}, limit ${excursions.length - contact})`,
+      `at ${excursions.map((entry) => entry.at.toFixed(2)).join(" ")}`);
+  }
 }
 
 function simulate(dt) {
@@ -592,8 +603,15 @@ function simulate(dt) {
   updateDrsEligibility([state, ...others], sim.trackLength);
   systems.updateEnergyRecovery([state], dt);
   const inPit = systems.updatePitStop(now, dt);
+  const wasOff = state.wasOffTrack;
   const info = inPit ? sim.nearestTrackInfo(state.x, state.z) : sim.integratePlayerMotion(dt);
   if (!inPit) systems.applyPitLimiter(dt);
+  if (state.wasOffTrack && !wasOff) {
+    lapExcursions.push({
+      at: info.idx / sim.centerline.length,
+      cause: now - (state.lastCollisionTime || 0) < EXCURSION_CONTACT_MS ? "contact" : "limit",
+    });
+  }
   collisions.resolve(inPit ? others : [state, ...others], now);
   if (sim.advanceProgress(state, info.idx / sim.centerline.length)) completeLap(now);
   state.currentLapTime = now - state.lapStartTime;
