@@ -1670,3 +1670,8 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Known limit: not checked in a browser; the badge could overlap a bottom-centre HUD element in race.
 - Also closed #105 (all items done; the TURN item stays in #106).
 - Verified with `node --check` and `git diff --check` only.
+
+
+## 2026-09-28 — Room home link #254
+- Reapplied desktop link hit target fix on current master; preserved newer styles and version badge.
+- User authorized conclusion. Static diff check; desktop click, keyboard and mobile verification remain manual.
