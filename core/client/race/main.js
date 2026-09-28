@@ -817,12 +817,16 @@ function circuitLabel() {
 // Multiplayer (#44) has no synthesized set — multiplayerQualifyingRivals()
 // below reads live participant times instead, since those change over the
 // session; solo keeps this static list, built once.
+// Fallback if the sim never closes a lap: the old flat estimate.
+const AI_FLYING_LAP_MS = multiplayer
+  ? 0
+  : simulateAiFlyingLapMs() || (TRACK_LENGTH / AI.maxSpeed) * 1000 * 1.35;
 const AI_QUALIFYING_RESULTS = multiplayer
   ? []
   : AI_DRIVERS.map((driver) => ({
       id: driver.id,
       name: displayDriverName(driver.id),
-      time: synthesizeAiQualiTime(),
+      time: synthesizeAiQualiTime(AI_FLYING_LAP_MS),
     })).sort((a, b) => a.time - b.time);
 
 function multiplayerQualifyingRivals() {
@@ -1099,17 +1103,60 @@ const { integratePlayerMotion } = setupPlayerPhysics({
   slipstreamCars: aiCars,
 });
 
-// Synthesizes a plausible AI qualifying lap time from its own pace, rather
-// than actually simulating nine solo flying laps — invisible to the
-// player either way, and this is far cheaper. A flat-out reference time
-// (track length / top speed) scaled up for the corners an AI can't take at
-// full speed, plus a little per-driver spread so the AI grid order isn't
-// identical every single qualifying session.
-function synthesizeAiQualiTime() {
-  const idealLapTimeMs = (TRACK_LENGTH / AI.maxSpeed) * 1000;
-  const CORNERING_LOSS_FACTOR = 1.35;
-  const variance = 0.94 + Math.random() * 0.12; // +/-6% spread between AI drivers
-  return idealLapTimeMs * CORNERING_LOSS_FACTOR * variance;
+// AI qualifying time (#261): one solo flying lap driven by the same race AI
+// (race-ai.js) on this circuit — fixed step, fresh tyres, no traffic —
+// instead of the old flat "length / top speed x 1.35" guess, which ignored
+// how twisty a circuit is. Every AI shares the same parameters, so the lap
+// is simulated once and each driver gets a small personal spread on top.
+function simulateAiFlyingLapMs() {
+  const SIM_DT = 1 / 60;
+  const SIM_MAX_SECONDS = 600;
+  const simAi = setupRaceAi({
+    ai: AI,
+    trackWidth: TRACK_WIDTH,
+    isRace: () => false,
+    centerline,
+    headingOf,
+    sideNormal,
+    nearestTrackInfo,
+    applyTrackBoundary,
+    // Own progress bookkeeping: the race's advanceProgress also counts laps
+    // and finish positions, which a throwaway car must not touch.
+    advanceProgress(car, rawProgress) {
+      let delta = rawProgress - car.prevRawProgress;
+      if (delta < -0.5) delta += 1;
+      else if (delta > 0.5) delta -= 1;
+      car.prevRawProgress = rawProgress;
+      car.totalProgress += delta;
+    },
+    tireGripFactor,
+    tyreSpeedFactor,
+    drsSpeedMultiplier: DRS_SPEED_MULTIPLIER,
+    ersSpeedMultiplier: ERS_SPEED_MULTIPLIER,
+    cautionSpeedMultiplier: () => 1,
+  });
+  const start = centerline[0];
+  const car = {
+    x: start.x, z: start.z, heading: headingOf(start), speed: 0,
+    prevRawProgress: 0, totalProgress: 0, damage: 0, lateralSpeed: 0, yawRate: 0,
+    drsActive: false, ersActive: false, tyreCompound: "medium", tyreProgress: 0,
+  };
+  const allCars = [car];
+  // Out lap from a standstill, then the timed lap.
+  let t = 0;
+  let lapStart = null;
+  while (t < SIM_MAX_SECONDS) {
+    simAi.updateAiCar(car, SIM_DT, allCars);
+    t += SIM_DT;
+    if (lapStart === null && car.totalProgress >= 1) lapStart = t;
+    else if (lapStart !== null && car.totalProgress >= 2) return (t - lapStart) * 1000;
+  }
+  return null;
+}
+
+function synthesizeAiQualiTime(flyingLapMs) {
+  const variance = 0.98 + Math.random() * 0.05; // -2%..+3% between AI drivers
+  return flyingLapMs * variance;
 }
 
 // Multiplayer (#44): pulls a remote car toward the latest network sample
