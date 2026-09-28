@@ -1716,3 +1716,9 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - WebMCP bridge: with `navigator.modelContext` the tools `f1_observe`, `f1_act`, `f1_enqueue` and `f1_release` wrap the same calls; without it nothing changes. Only loaded with `?agent=1` / bot sessions, as before.
 - Verified with a Node stub run (lease hand-over, expiry, queue, human takeover, step resolve); not run in a browser, WebMCP not exercised. `F1-RACER-WIKI.md` Agent API section updated. Version chain: main v124, race-bootstrap v85; release badge v266.
 - Open from #201: latency measurements and the ChatGPT in-app browser check need a real session.
+
+## 2026-09-28 — Pad: hold L1 to look back (#275)
+
+- `race-input.js` (v58): gamepad L1 (button 4) is a hold that replays KeyR down/up, so `race-camera.js` needs no change; released on button release, pad disconnect, blur and hidden tab (`clearDrivingInput`). Until now look back existed only on keyboard (R) and touch (DIETRO).
+- `race.html` hint mentions L1. Version chain: main v125, race-bootstrap v86; release badge v267.
+- Verified with `node --check` only; to try with a standard pad in chase and cockpit.
