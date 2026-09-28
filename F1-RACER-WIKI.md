@@ -764,6 +764,30 @@ before/after on at least one real smartphone and one desktop) has not been
 done from this environment, which has no real mobile hardware or GPU
 rendering — left for the user's own pass with the diagnostics overlay.
 
+## Free drive (`free.html`, `core/client/free/`, #274)
+
+A separate mode from the championship and multiplayer: one car on a wide
+banked oval, no rivals, qualifying, race, lap limit or results. Home has a
+"Guida libera" card; the page has an exit link and Esc.
+
+- `free.html` + `free/free.js` are their own page (not `race.html` with
+  flags), so the race flow is untouched. They reuse the race's input, camera,
+  audio and car model; the HUD is a small speed/gear/bank readout.
+- `free/oval.js`: `FREE_OVAL`, NOT in `CIRCUITS` (menu, championship, rooms
+  and bots never see it): a stadium shape, 720-unit straights, R 150, width 30.
+- `free/banking.js` (pure): bank from the signed curvature of the centerline
+  (smoothed), full 24° in the turns, flat straights. The road pivots on its
+  inside edge (ground level), so the outside is the high side, up to ~13 units.
+  `surfaceAt` gives height, gradient and bank; `poseOnSurface` gives pitch and
+  roll; `bankGripFactor` a small lateral-grip bonus (`BANK_GRIP_GAIN` 0.5).
+- `free/free-sim.js`: the same `setupPlayerPhysics` as the race, still 2D; the
+  banked pose (`state.y/pitch/roll/bank`) is derived every frame. No tyre wear.
+- `race-camera.js` adds `state.y` to its heights (undefined = 0 in the race).
+- `node tools/validate-free-oval.mjs` (from `core/`) checks the shape, the
+  banking and that the autopilot laps inside the road.
+- Limits: not run in a browser (look, feel, mobile touch drag untested); the
+  outside edge is a wall, there is no runoff on the high side.
+
 ## Agent API (`window._ENVIRONMENT_`)
 
 `core/client/race/agent-api.js` (#8/#9) lets an external agent drive the player car from an
