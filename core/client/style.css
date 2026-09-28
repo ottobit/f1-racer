@@ -1174,3 +1174,5 @@ html{scroll-behavior:smooth}
 .team-name{display:inline-flex;align-items:center;gap:8px}.team-name::before{content:"";width:3px;height:1.05em;border-radius:1px;background:linear-gradient(var(--team) 0 62%,var(--team2) 62%)}
 /* Driver locked during a championship (#155). */
 .setup-choice .driver-option:disabled{opacity:.35;cursor:not-allowed;filter:saturate(.4)}
+.home-command--free{grid-column:1/-1;min-height:104px}.home-command--free::before{background:radial-gradient(circle at 85% 50%,rgba(255,196,64,.16),transparent 34%),linear-gradient(125deg,#1c1a10,#0d0d0b)}
+.bank-readout{margin-top:.25rem;font:600 .72rem system-ui;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.75);text-align:right}

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="it" class="race">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/images/app-icon-180.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="F1 Racer" />
+  <meta name="theme-color" content="#05060a" />
+  <title>Guida libera — F1 Racer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="stylesheet" href="core/client/style.css?v=54" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=58" />
+  <script>
+    // Touch-capability detection done in JS, not just CSS: the
+    // (hover: none) and (pointer: coarse) media query is the "correct"
+    // way to ask this, but some mobile browsers report it inconsistently,
+    // which was hiding the on-screen controls on real devices. Checking
+    // touch support directly is more reliable. `?touch=1` / `?touch=0` in
+    // the URL forces it either way, for testing without a phone in hand.
+    (function () {
+      var forced = new URLSearchParams(location.search).get("touch");
+      var isTouch =
+        forced === "1" ||
+        (forced !== "0" &&
+          ("ontouchstart" in window || navigator.maxTouchPoints > 0));
+      if (isTouch) document.documentElement.classList.add("touch");
+      if (isTouch) {
+        // iOS Safari can still trigger page zoom despite viewport metadata
+        // and touch-action CSS. Cancel its legacy gesture events on the race
+        // page, and suppress rapid double-tap defaults without affecting links.
+        document.addEventListener("gesturestart", function (event) {
+          event.preventDefault();
+        }, { passive: false });
+        document.addEventListener("gesturechange", function (event) {
+          event.preventDefault();
+        }, { passive: false });
+        document.addEventListener("gestureend", function (event) {
+          event.preventDefault();
+        }, { passive: false });
+
+        var lastTouchEnd = 0;
+        document.addEventListener("touchend", function (event) {
+          if (event.target.closest("a")) return;
+          var now = Date.now();
+          if (now - lastTouchEnd <= 350) event.preventDefault();
+          lastTouchEnd = now;
+        }, { passive: false });
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud">
+    <div id="hud-topleft">
+      <a class="back-link" href="index.html">← esci</a>
+      <div id="circuit-name" class="circuit-name">Guida libera · Ovale sopraelevato</div>
+    </div>
+
+    <div id="hud-cluster">
+    <div id="hud-bottomright" class="hud-panel">
+      <div id="speed-track" aria-hidden="true">
+        <div id="speed-fill"></div>
+      </div>
+      <div class="speedo-readout">
+        <span id="gear-value" aria-hidden="true">N</span>
+        <span id="speed-value">0</span>
+        <span class="speedo-unit">km/h</span>
+      </div>
+      <div id="bank-value" class="bank-readout" role="status">Rettilineo</div>
+    </div>
+    </div>
+  </div>
+
+  <div id="hint">WASD / frecce per guidare, C per la camera, I/J/K/L o trascina per guardarti intorno, tieni R (L1 sul pad) per guardare dietro, Esc per uscire</div>
+
+  <div id="touch-controls">
+    <!-- Tilt steering hidden in #83 (the braking map takes its place); the
+         code in race-input.js is kept. -->
+    <div id="motion-controls" aria-label="Sterzo a movimento" hidden>
+      <button id="motion-toggle" type="button" aria-pressed="false">Attiva movimento</button>
+      <button id="motion-calibrate" type="button" hidden>Centra</button>
+      <select id="motion-sensitivity" aria-label="Sensibilità sterzo a movimento" hidden>
+        <option value="38">Dolce</option><option value="26" selected>Normale</option><option value="17">Rapido</option>
+      </select>
+      <span id="motion-status" role="status" aria-live="polite"></span>
+      <div id="motion-indicator" role="meter" aria-label="Sterzo: sinistra, centro, destra" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" hidden>
+        <span>SX</span><i id="motion-marker"></i><span>DX</span>
+      </div>
+    </div>
+    <div id="wheel-control" class="touch-group touch-group--steer" role="slider" tabindex="0" aria-label="Sterzo: trascina a sinistra o destra, oppure usa le frecce" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
+      <svg viewBox="0 0 140 140" aria-hidden="true">
+        <defs><linearGradient id="wheel-metal" x2=".5" y2="1"><stop stop-color="#586775"/><stop offset="1" stop-color="#15202b"/></linearGradient></defs>
+        <circle cx="70" cy="70" r="54" fill="none" stroke="#b2c8d5" stroke-opacity=".15" stroke-width="1" stroke-dasharray="2 7"/>
+        <path d="M31 29 Q18 29 16 48 L16 88 Q16 104 31 104 L42 101 L46 82 L94 82 L98 101 L109 104 Q124 104 124 88 L124 48 Q122 29 109 29 L96 42 L44 42Z" fill="#0a111a" stroke="#718391" stroke-width="2"/>
+        <path d="M43 42 L97 42 L104 62 L96 86 L44 86 L36 62Z" fill="url(#wheel-metal)" stroke="#889eae" stroke-width="1"/>
+        <rect x="53" y="46" width="34" height="18" rx="3" fill="#080f16" stroke="#465e71"/>
+        <text x="70" y="59" text-anchor="middle" font-family="monospace" font-size="10" fill="#b8dfdf">OB</text>
+        <rect x="65" y="33" width="10" height="7" rx="1" fill="#b5f4df"/>
+        <circle cx="49" cy="72" r="5" fill="#bf504e"/><circle cx="91" cy="72" r="5" fill="#407796"/>
+        <circle cx="70" cy="76" r="7" fill="#111a24" stroke="#8fabbc" stroke-width="2"/>
+        <path d="M24 44 L24 87 M30 45 L30 87 M110 45 L110 87 M116 44 L116 87" stroke="#586878" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="touch-group touch-group--throttle">
+      <button id="btn-brake" class="touch-btn" aria-label="Freno">FRENO</button>
+      <div class="gas-stack">
+        <button type="button" id="look-back" tabindex="-1" aria-label="Tieni premuto per guardare dietro">DIETRO</button>
+        <button type="button" id="view-toggle" data-key="KeyC" tabindex="-1" aria-label="Cambia visuale">VIEW</button>
+        <button id="btn-gas" class="touch-btn touch-btn--big" aria-label="Acceleratore">GAS</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // iOS home-screen apps can leave the document scrolled after a
+    // rotation or viewport change; the page then draws shifted while taps
+    // still hit the old spot, so the controls respond only below where
+    // they appear. Keep the (non-scrollable) race page pinned at 0,0.
+    (function () {
+      function pin() { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); }
+      window.addEventListener("resize", pin);
+      window.addEventListener("orientationchange", function () { setTimeout(pin, 300); });
+      window.addEventListener("scroll", pin);
+    })();
+  </script>
+  <script type="module" src="core/client/free/free.js?v=1"></script>
+  <script src="core/client/shared/version.js?v=267" defer></script>
+</body>
+</html>
