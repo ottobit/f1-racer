@@ -5,7 +5,8 @@ import { PIT_LANE, pitLanePose } from "../shared/pit-lane.js?v=3";
 // set stays in the garage after the fresh set is attached to the car.
 // Positions live in the selected team's box frame, centred where the car
 // stops on the apron (+z along the lane, +x away from the track for side +1).
-// Every other team's crew waits at its own garage, tyres in hand (#258).
+// Crews sit in their garage watching the race; the player's crew stands up
+// and carries the tyres out when the box is called (#258).
 
 const smooth = (t) => { t = Math.min(Math.max(t, 0), 1); return t * t * (3 - 2 * t); };
 
@@ -23,6 +24,7 @@ const parts = {
   jack: new THREE.BoxGeometry(0.06, 0.06, 0.9),
   tyre: new THREE.CylinderGeometry(0.34, 0.34, 0.36, 18),
   rim: new THREE.CylinderGeometry(0.2, 0.2, 0.37, 12),
+  stool: new THREE.CylinderGeometry(0.16, 0.16, 0.38, 10),
 };
 const shared = {
   dark: new THREE.MeshStandardMaterial({ color: 0x1a1d21, roughness: 0.7 }),
@@ -61,21 +63,28 @@ function mechanic(suit, tool, shadows = true) {
   for (const x of [-0.2, 0.2]) add(hips, parts.arm, suit, x, 0.3, 0.12, -1.1);
   if (tool === "gun") add(hips, parts.gun, shared.tool, 0, 0.22, 0.34, Math.PI / 2).name = "wheelGun";
   if (tool === "jack") add(hips, parts.jack, shared.tool, 0, 0.12, 0.5, 0.35);
-  if (tool === "tyre") {
-    const tyre = add(hips, parts.tyre, shared.rubber, 0, 0.24, 0.42);
-    tyre.rotation.z = Math.PI / 2;
-    add(tyre, parts.rim, shared.tool, 0, 0, 0);
-  }
   return { group, legs, hips };
 }
 
-// Other teams' crews stand ready at their garage mouth, facing the lane:
-// four with fresh tyres, a gunner and the two jack men.
+// Seated (sit = 1), crouched at the wheel, or walking (swing).
+function pose(member, sit, crouch = 0, swing = 0) {
+  const y = 0.52 - 0.2 * crouch - 0.08 * sit;
+  member.hips.position.y = y;
+  member.hips.rotation.x = 0.45 * crouch;
+  member.legs[0].position.y = member.legs[1].position.y = y;
+  member.legs[0].rotation.x = swing - 0.9 * crouch - 1.25 * sit;
+  member.legs[1].rotation.x = -swing + 0.3 * crouch - 1.25 * sit;
+}
+
+// Other teams' crews sit on stools in their garage watching the race, with
+// two stacks of fresh tyres by the garage mouth.
 function waitingCrews(scene, pitLane, faceX) {
   const out = pitLane.side;
-  const roles = ["jack", "tyre", "tyre", "gun", "tyre", "tyre", "jack"];
   const group = new THREE.Group();
   group.name = "waitingPitCrews";
+  scene.add(group);
+  const stools = [], tyres = [];
+  const slot = new THREE.Object3D();
   for (const box of pitLane.boxes) {
     if (box.index === pitLane.boxIndex) continue;
     const suit = new THREE.MeshStandardMaterial({ color: box.team.primary, roughness: 0.75 });
@@ -85,15 +94,32 @@ function waitingCrews(scene, pitLane, faceX) {
       box.z - Math.sin(box.heading) * PIT_LANE.bay * out,
     );
     bay.rotation.y = box.heading;
-    roles.forEach((role, index) => {
-      const body = mechanic(suit, role, false).group;
-      body.position.set(out * (faceX + 0.45), 0, (index - 3) * 0.75);
-      body.rotation.y = -out * Math.PI / 2;
-      bay.add(body);
-    });
     group.add(bay);
+    bay.add(slot);
+    for (let index = 0; index < 7; index++) {
+      const member = mechanic(suit, null, false);
+      member.group.position.set(out * (faceX + 2.4), 0, (index - 3) * 0.95);
+      member.group.rotation.y = -out * Math.PI / 2;
+      pose(member, 1);
+      bay.add(member.group);
+      slot.position.set(out * (faceX + 2.4), 0.19, (index - 3) * 0.95);
+      slot.updateMatrixWorld(true);
+      stools.push(slot.matrixWorld.clone());
+    }
+    for (const z of [-3.1, 3.1]) {
+      for (let k = 0; k < 4; k++) {
+        slot.position.set(out * (faceX + 1.2), 0.18 + k * 0.36, z);
+        slot.updateMatrixWorld(true);
+        tyres.push(slot.matrixWorld.clone());
+      }
+    }
+    bay.remove(slot);
   }
-  scene.add(group);
+  for (const [geometry, material, matrices] of [[parts.stool, shared.dark, stools], [parts.tyre, shared.rubber, tyres]]) {
+    const mesh = new THREE.InstancedMesh(geometry, material, matrices.length);
+    matrices.forEach((matrix, k) => mesh.setMatrixAt(k, matrix));
+    group.add(mesh);
+  }
 }
 
 export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }) {
@@ -112,12 +138,17 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
   const crew = [];
   function addMember(x, z, role, index) {
     const body = mechanic(suit, role === "jack" ? "jack" : "gun");
+    // Ready spot at the garage mouth, and a stool further in.
     const idle = new THREE.Vector3(out * (faceX + (role === "fitter" ? 1.1 : 0.4)), 0, -2.3 + index * 0.5);
+    const seat = new THREE.Vector3(out * (faceX + 2.4), 0, (index - 4.5) * 0.95);
     const target = new THREE.Vector3(x, 0, z);
-    body.group.position.copy(idle);
+    body.group.position.copy(seat);
     body.group.rotation.y = -out * Math.PI / 2;
     frame.add(body.group);
-    const member = { ...body, role, idle, target, stride: 0, last: idle.clone(), lastX: idle.x, lastZ: idle.z };
+    const stool = new THREE.Mesh(parts.stool, shared.dark);
+    stool.position.set(seat.x, 0.19, seat.z);
+    frame.add(stool);
+    const member = { ...body, role, idle, seat, from: seat.clone(), target, stride: 0, last: seat.clone(), lastX: seat.x, lastZ: seat.z };
     crew.push(member);
     return member;
   }
@@ -151,15 +182,17 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
     const fitter = addMember(hub.x + side * 0.38, hub.z, "fitter", index + 4);
     frame.add(spare);
     spare.scale.setScalar(scale);
-    spare.position.copy(fitter.idle).add(new THREE.Vector3(0, 0.52, 0));
-    return { pivot, hub, side, spare, old: wheel, fresh: spare, remover, fitter, removed: false, fitted: false };
+    // The spare set rests on the floor behind its fitter's stool.
+    const rest = fitter.seat.clone().add(new THREE.Vector3(out * 0.6, 0.35 * scale, 0));
+    spare.position.copy(rest);
+    return { pivot, hub, side, spare, rest, holder: fitter, old: wheel, fresh: spare, remover, fitter, removed: false, fitted: false };
   });
   addMember(0, 1.65, "jack", 8);
   addMember(0, -1.6, "jack", 9);
 
   // Reach the far side around the nose/tail instead of walking through the car.
   function route(member, reach) {
-    const { idle, target } = member;
+    const { from: idle, target } = member;
     if (target.x * out >= 0.1) return member.group.position.lerpVectors(idle, target, reach);
     const end = Math.sign(target.z || 1) * 1.95;
     const a = new THREE.Vector3(idle.x, 0, end);
@@ -184,6 +217,7 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
     playerCar.wheels[index] = station.fresh;
     station.fitted = true;
     station.spare = station.old;
+    station.holder = station.remover;
   }
 
   frame.updateMatrixWorld(true);
@@ -192,9 +226,16 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
 
   let active = false;
   let mountedCompound = "medium";
+  // 0 = seated watching the race, 1 = standing ready at the garage mouth.
+  let ready = 0, lastNow = null;
   // Called after applyCarToMesh, which resets the car's pose every frame.
   function update(state, now) {
     const servicing = state.pitState === "servicing";
+    const dt = lastNow === null ? 0 : Math.min(Math.max((now - lastNow) / 1000, 0), 0.25);
+    lastNow = now;
+    const wanted = servicing || state.pitRequested || state.pitState === "entering";
+    ready = wanted ? Math.min(1, ready + dt / 3) : Math.max(0, ready - dt / 4);
+    const stand = smooth(ready / 0.3), walk = smooth((ready - 0.3) / 0.7);
     if (servicing && !active) {
       active = true;
       stations.forEach((station, index) => {
@@ -215,6 +256,7 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
         : member.role === "fitter"
           ? smooth((t - 0.38) / 0.22) * (1 - smooth((t - 0.8) / 0.17))
           : smooth(t / 0.12) * (1 - smooth((t - 0.9) / 0.1));
+      member.from.lerpVectors(member.seat, member.idle, walk);
       route(member, reach);
       // Walk: legs swing with the distance covered, then settle.
       const moved = body.position.distanceTo(member.last);
@@ -224,7 +266,7 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
       // Turn smoothly towards the car on the way in, back to the lane after.
       const heading = moved > 1e-4 && reach < 0.95
         ? Math.atan2(body.position.x - member.lastX, body.position.z - member.lastZ)
-        : Math.atan2(-member.target.x, 0);
+        : active ? Math.atan2(-member.target.x, 0) : -out * Math.PI / 2;
       member.lastX = body.position.x;
       member.lastZ = body.position.z;
       let turn = heading - body.rotation.y;
@@ -232,11 +274,7 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
       body.rotation.y += turn * 0.25;
       // Crouch at the wheel: hips drop, torso leans in, knees forward.
       const crouch = member.role === "jack" ? 0.3 * reach : smooth((reach - 0.8) / 0.2);
-      member.hips.position.y = 0.52 - 0.2 * crouch;
-      member.hips.rotation.x = 0.45 * crouch;
-      member.legs[0].position.y = member.legs[1].position.y = 0.52 - 0.2 * crouch;
-      member.legs[0].rotation.x = swing - 0.9 * crouch;
-      member.legs[1].rotation.x = -swing + 0.3 * crouch;
+      pose(member, 1 - stand, crouch, swing);
       const gun = body.getObjectByName("wheelGun");
       const tightening = active && (member.role === "remover" ? t >= 0.18 && t < 0.25 : t >= 0.74 && t < 0.8);
       if (gun) gun.rotation.y = tightening ? Math.sin(now * 0.08) * 0.15 : 0;
@@ -244,6 +282,10 @@ export function setupPitCrew({ scene, pitLane, playerCar, suitColor, serviceMs }
     stations.forEach((station, index) => {
       if (!active) {
         colorWheel(playerCar.wheels[index], state.tyreCompound);
+        // Carried out when the box is called, put down again once seated.
+        if (stand < 0.01) station.holder = station.fitter;
+        station.spare.rotation.set(0, 0, 0);
+        station.spare.position.lerpVectors(station.rest, handPosition(station.holder, station.side), stand);
         return;
       }
       const { old, fresh, hub, side, remover, fitter } = station;
