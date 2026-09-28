@@ -22,6 +22,7 @@ const PAD_STEER_AXIS = 0;
 const PAD_BUTTON_CROSS = 0;
 const PAD_BUTTON_SQUARE = 2;
 const PAD_BUTTON_TRIANGLE = 3;
+const PAD_BUTTON_L1 = 4;
 const PAD_BUTTON_R1 = 5;
 const PAD_BUTTON_L2 = 6;
 const PAD_BUTTON_R2 = 7;
@@ -323,9 +324,19 @@ export function setupRaceInput({
     }
   }
 
+  // Look back (#275): L1 is a hold, like R on the keyboard and DIETRO on
+  // touch; the camera reads it as KeyR down/up.
+  let padLookingBack = false;
+  function setPadLookBack(down) {
+    if (down === padLookingBack) return;
+    padLookingBack = down;
+    window.dispatchEvent(new KeyboardEvent(down ? "keydown" : "keyup", { code: "KeyR" }));
+  }
+
   function pollGamepad() {
     const pad = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected);
     if (!pad) {
+      setPadLookBack(false);
       setPadPedal("forward", false);
       setPadPedal("back", false);
       padSteer = 0;
@@ -346,6 +357,7 @@ export function setupRaceInput({
     padButtonEdge(PAD_BUTTON_TRIANGLE, pressed(PAD_BUTTON_TRIANGLE), "KeyC");
     padButtonEdge(PAD_BUTTON_SQUARE, pressed(PAD_BUTTON_SQUARE), "KeyP");
     padButtonEdge(PAD_BUTTON_R1, pressed(PAD_BUTTON_R1), "KeyE");
+    setPadLookBack(pressed(PAD_BUTTON_L1));
   }
 
   function clearDrivingInput() {
@@ -357,6 +369,7 @@ export function setupRaceInput({
     touchSteer = 0;
     padSteer = 0;
     padHeld.forward = padHeld.back = false;
+    setPadLookBack(false);
     externalSteer = null;
     steering.value = 0;
     document.querySelectorAll(".touch-btn").forEach((button) => {
