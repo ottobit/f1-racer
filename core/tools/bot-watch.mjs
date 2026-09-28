@@ -8,7 +8,7 @@
 //
 // DIR is the fleet directory (default <tmp>/f1-bots), one subdir per bot.
 // Per bot: pace is the applied one, followed by the driver's tactical mode
-// (cruise/attack/defend/preserve/wet/caution) that explains a gap from the
+// (cruise/attack/traffic/defend/preserve/wet/caution) that explains a gap from the
 // requested pace; "pit none armed" means a box call is already pending.
 import fs from "node:fs";
 import os from "node:os";

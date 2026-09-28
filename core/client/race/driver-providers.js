@@ -16,6 +16,8 @@
 
 const PACE_MIN = 0.5;
 const PACE_MAX = 1;
+const TRAFFIC_METERS = 10;
+const TRAFFIC_PACE_CAP = 0.92;
 const DEFAULT_TARGETS = { pace: 0.86, line: 0, ers: "auto", tyre: null, station: null, autoPit: true };
 const STATION_GAIN = 0.8; // m/s of correction per metre off station (#182)
 const STATION_MAX_CATCH_UP = 25;
@@ -156,6 +158,13 @@ export function createLayeredProvider({ fast, getState = () => null }) {
                 view.gapAheadS < 1 && view.position > 1) {
               mode = "attack";
               tactical = { pace: clamp(targets.pace + 0.035, PACE_MIN, PACE_MAX) };
+            }
+            // In a pack a very high pace ends in contact and track-limit
+            // penalties (#236): with a car within 10 m, back off a little.
+            const close = (view.nearbyCars || []).some((other) => other.distanceMeters < TRAFFIC_METERS);
+            if (close && !targets.station && targets.pace > TRAFFIC_PACE_CAP) {
+              mode = mode === "attack" ? mode : "traffic";
+              tactical.pace = Math.min(tactical.pace ?? targets.pace, Math.max(TRAFFIC_PACE_CAP, targets.pace - 0.04));
             }
             if (!alongside && !targets.station && Number.isFinite(view.gapBehindS) &&
                 view.gapBehindS >= 0 && view.gapBehindS < 0.5 && corner?.severity > 0.2) {
