@@ -24,7 +24,7 @@ function isCompactLandscapeViewport() {
 // near-level gaze), with the road still filling the upper two thirds.
 const COCKPIT_EYE = new THREE.Vector3(0, 1.0, -0.02);
 const COCKPIT_PITCH_DROP = Math.tan(THREE.MathUtils.degToRad(12));
-const COCKPIT_HIDDEN_PARTS = ["driverHelmet", "driverVisor", "driverHelmetStripe", "driverChin", "driverHelmetSpoiler", "driverHans", "driverHelmetCrown"];
+const COCKPIT_HIDDEN_PARTS = ["driverHelmet", "driverVisor", "driverHelmetSpoiler", "driverHans"];
 const COCKPIT_GLASS_PARTS = ["halo", "haloPillar"];
 
 function prepareCockpitCar(model) {

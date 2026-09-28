@@ -6,6 +6,34 @@ function materialWithRole(material, role) {
 }
 
 const sponsorTextureCache = new Map();
+const helmetTextureCache = new Map();
+
+function helmetTexture(livery) {
+  const key = `${livery.primary}:${livery.secondary}:${livery.accent}`;
+  if (helmetTextureCache.has(key)) return helmetTextureCache.get(key);
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  const hex = (value) => `#${value.toString(16).padStart(6, '0')}`;
+  ctx.fillStyle = hex(livery.secondary); ctx.fillRect(0, 0, 512, 256);
+  ctx.fillStyle = hex(livery.primary);
+  ctx.fillRect(0, 38, 512, 32);
+  ctx.fillRect(0, 176, 512, 20);
+  ctx.fillStyle = hex(livery.accent ?? livery.secondary);
+  ctx.fillRect(0, 70, 512, 9);
+  // The lathe's horizontal UV wraps around the helmet: these panels run
+  // from the crown to the chin, with no separate cartoon-like cap pieces.
+  for (const x of [58, 242, 426]) {
+    ctx.fillStyle = hex(livery.primary);
+    ctx.fillRect(x, 80, 20, 92);
+    ctx.fillStyle = hex(livery.accent ?? livery.secondary);
+    ctx.fillRect(x + 20, 80, 7, 92);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  helmetTextureCache.set(key, texture);
+  return texture;
+}
 
 function sponsorTexture(livery, placement) {
   const sponsors = livery.sponsors || { main: "OTTOBIT", partner: "RACING" };
@@ -62,7 +90,11 @@ export function applyCarLivery(group, livery) {
     if (role === "primary") object.material.color.set(livery.primary);
     if (role === "secondary") object.material.color.set(livery.secondary);
     if (role === "accent") object.material.color.set(livery.accent ?? livery.secondary);
-    if (role === "helmet") object.material.color.set(livery.secondary);
+    if (role === "helmet") {
+      object.material.color.set(0xffffff);
+      object.material.map = helmetTexture(livery);
+      object.material.needsUpdate = true;
+    }
     const sponsorPlacement = object.material.userData.carSponsorPlacement;
     if (sponsorPlacement) {
       object.material.map = sponsorTexture(livery, sponsorPlacement);
@@ -192,7 +224,7 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     // spheres read as cartoon mittens in the cockpit view.
     const glove=new THREE.MeshStandardMaterial({color:0x2a2e35,metalness:0,roughness:.85});
     const gloveStrap=materialWithRole(new THREE.MeshStandardMaterial({color:livery.secondary,metalness:0,roughness:.7}),"secondary");
-    const helmetPaint=materialWithRole(new THREE.MeshPhysicalMaterial({color:livery.secondary,metalness:.2,roughness:.28,clearcoat:1,clearcoatRoughness:.08}),"helmet");
+    const helmetPaint=materialWithRole(new THREE.MeshPhysicalMaterial({color:0xffffff,map:helmetTexture(livery),metalness:.2,roughness:.28,clearcoat:1,clearcoatRoughness:.08}),"helmet");
     const torso=mesh(new THREE.SphereGeometry(.2,16,10),suit,[0,.64,-.07]);torso.name="driverTorso";torso.scale.set(.92,.7,.72);
     const shoulders=mesh(new THREE.SphereGeometry(.17,14,8),suit,[0,.74,-.04]);shoulders.name="driverShoulders";shoulders.scale.set(1.3,.4,.6);
     const neck=mesh(new THREE.CylinderGeometry(.055,.065,.09,10),black,[0,.8,0]);
@@ -233,15 +265,14 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     }
     // HANS collar resting on the shoulders behind the helmet.
     const hans=mesh(new THREE.TorusGeometry(.105,.026,8,16,Math.PI),carbon,[0,.8,-.02]);hans.name="driverHans";hans.rotation.set(Math.PI/2,0,Math.PI);
-    // Helmet (#89): livery shell, accent centre stripe, front-only visor
-    // slot, chin bar and a small rear spoiler.
-    const helmet=mesh(new THREE.SphereGeometry(.155,detail?28:20,detail?18:12),helmetPaint,[0,.9,.03]);helmet.name="driverHelmet";helmet.scale.set(.88,.92,1.14);
-    const helmetStripe=mesh(new THREE.TorusGeometry(.155,.011,6,detail?32:20,Math.PI),gold,[0,.9,.03]);helmetStripe.name="driverHelmetStripe";helmetStripe.rotation.y=Math.PI/2;helmetStripe.scale.set(1.1,.95,1);
-    // Wide visor band and a livery-coloured crown (#192): a plain white ball
-    // with a thin slot read as a cartoon face.
-    const visor=mesh(new THREE.SphereGeometry(.159,detail?24:16,8,Math.PI/2-1.15,2.3,1.08,.46),new THREE.MeshPhysicalMaterial({color:0x1d2f40,metalness:1,roughness:.08,clearcoat:1}),[0,.9,.03]);visor.name="driverVisor";visor.scale.set(.88,.92,1.14);
-    const crown=mesh(new THREE.SphereGeometry(.158,detail?28:20,6,0,Math.PI*2,0,.9),paint,[0,.9,.03]);crown.name="driverHelmetCrown";crown.scale.set(.88,.92,1.14);
-    const chin=mesh(new THREE.SphereGeometry(.09,12,8),helmetPaint,[0,.84,.1]);chin.name="driverChin";chin.scale.set(1.25,.75,1.3);
+    // One continuous, flat-bottomed helmet shell. The lower taper forms the
+    // chin guard instead of attaching a second sphere to the face.
+    const helmetProfile=[
+      [.082,-.115],[.118,-.105],[.135,-.077],[.151,-.042],
+      [.157,.012],[.155,.065],[.139,.103],[.105,.13],[.055,.147],[0,.15],
+    ].map(([radius,y])=>new THREE.Vector2(radius,y));
+    const helmet=mesh(new THREE.LatheGeometry(helmetProfile,detail?40:20),helmetPaint,[0,.9,.03]);helmet.name="driverHelmet";helmet.scale.z=1.1;
+    const visor=mesh(new THREE.SphereGeometry(.16,detail?32:20,detail?12:8,.28,Math.PI-.56,1.04,.54),new THREE.MeshPhysicalMaterial({color:0x172a38,metalness:.8,roughness:.1,clearcoat:1}),[0,.9,.03]);visor.name="driverVisor";visor.scale.z=1.1;
     const spoiler=box(.14,.016,.06,gold,[0,.99,-.12]);spoiler.name="driverHelmetSpoiler";spoiler.rotation.x=.35;
   }
   // Cockpit sides (#192) up to the helmet's midline, as on a real F1: arms
@@ -308,7 +339,11 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
       const rim=mesh(new THREE.CylinderGeometry(.23,.23,.025,detail?32:16),carbon,[s*.17,0,0],wheel);rim.rotation.z=Math.PI/2;
       const lip=mesh(new THREE.TorusGeometry(.225,.012,6,detail?32:16),alloy,[s*.19,0,0],wheel);lip.rotation.y=Math.PI/2;
       const marking=mesh(new THREE.TorusGeometry(.335,.007,4,detail?48:20),gold,[s*.19,0,0],wheel);marking.rotation.y=Math.PI/2;
-      if(detail)for(let j=0;j<10;j++){const a=j/10*Math.PI*2;rod([s*.195,Math.cos(a)*.07,Math.sin(a)*.07],[s*.195,Math.cos(a+.12)*.215,Math.sin(a+.12)*.215],.013,alloy,wheel);}
+      // Aerodynamic wheel cover with a recessed central nut. These parts
+      // rotate with the tyre and do not alter its radius or steering pivot.
+      const cover=mesh(new THREE.CylinderGeometry(.215,.215,.012,detail?32:16),carbon,[s*.205,0,0],wheel);cover.name="aeroWheelCover";cover.rotation.z=Math.PI/2;
+      const nut=mesh(new THREE.CylinderGeometry(.043,.043,.022,detail?12:8),gold,[s*.221,0,0],wheel);nut.name="wheelNut";nut.rotation.z=Math.PI/2;
+      if(detail)for(let j=0;j<8;j++){const a=j/8*Math.PI*2;rod([s*.214,Math.cos(a)*.095,Math.sin(a)*.095],[s*.214,Math.cos(a)*.19,Math.sin(a)*.19],.006,alloy,wheel);}
     }
     const hub=mesh(new THREE.CylinderGeometry(.065,.065,.42,10),gold,[0,0,0],wheel);hub.rotation.z=Math.PI/2;
     return wheel;

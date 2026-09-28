@@ -1618,3 +1618,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Ingest: new source `sources/2026-09-28-race-vsn2-local-pc.md` over the raw report and fleet log. It corrects two raw claims against the code: `pit.requested` was already exposed, and wear % grows ~33%/lap on every compound (`wearRate` only scales the grip/speed cost). `agent-bots.md` gets "Live strategy in practice" and "Running on the player's PC"; no jump with server and bots on one PC, so the cloud jump was the network path.
 - Role made explicit for new sessions: `procedure-racing.md` opens with "Your role" (team principal of one or more bots, default 5, strategy decided live every race) and starts from `bot-fleet.mjs`; the skill description and `AGENTS.md` say the same.
 - Verified with `node --check` and `git diff --check` only; GPU capacity (8–11 bots with `--gpu`) is tomorrow's test.
+
+## 2026-09-28 — Driver helmet and aerodynamic wheel covers (#196)
+
+- `core/client/shared/car-model.js`: replaced the layered spherical helmet with one lathed shell, a front visor and cached team-colour canvas graphics; added lightweight aerodynamic wheel covers and centre nuts.
+- `core/client/race/race-camera.js`: updated the cockpit camera's hidden helmet parts to match the new geometry.
+- Garage and race module imports and HTML entry points received cache-version bumps; wheel radius, steering pivots, physics and collision geometry are unchanged.
+- Verified with `node --check` on the changed model and camera, `git diff --check`, and matching local/remote source trees; visual appearance on mobile and in a live race remains for manual inspection.
