@@ -1708,3 +1708,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Reset on blur, pagehide, hidden tab and pointer cancel; the chosen camera mode is untouched.
 - `main.js` (v123) passes `renderer.domElement`; `race.html` hint mentions the keys; race-bootstrap v84.
 - Not verified in a browser (syntax only): the drag needs the canvas to receive touches outside the wheel and pedals. Release badge v265.
+
+## 2026-09-28 — Agent API: continuous control and WebMCP (#201)
+
+- `agent-api.js` (v4): one controller behind `step()`, new `act()` (command held until the next act, lease expiry — default 1 s, max 5 s — `release()` or human input) and `enqueue()` (≤ 10 segments, ≤ 5 s, then neutral). A `generation` counter keeps old timers from neutralising newer commands; `step()` now always resolves, even when a human takes over.
+- `getState().control` = `{ mode: human|agent|released, steer, throttle, brake, leaseRemainingMs, queue }`; `nearbyCars[].remote` flags room participants. `pagehide` / hidden tab release an agent command.
+- WebMCP bridge: with `navigator.modelContext` the tools `f1_observe`, `f1_act`, `f1_enqueue` and `f1_release` wrap the same calls; without it nothing changes. Only loaded with `?agent=1` / bot sessions, as before.
+- Verified with a Node stub run (lease hand-over, expiry, queue, human takeover, step resolve); not run in a browser, WebMCP not exercised. `F1-RACER-WIKI.md` Agent API section updated. Version chain: main v124, race-bootstrap v85; release badge v266.
+- Open from #201: latency measurements and the ChatGPT in-app browser check need a real session.
