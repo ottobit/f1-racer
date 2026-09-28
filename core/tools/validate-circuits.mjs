@@ -236,7 +236,7 @@ function checkPitLane(circuit, centerline) {
     // The garage row (track-art.js dressPitLane) stands behind the flat
     // stretch; its back wall must stay clear of every other leg's runoff.
     if (p.flat) {
-      const back = PIT_LANE.halfWidth + 5.3;
+      const back = PIT_LANE.halfWidth + PIT_LANE.apron + 5.3;
       const bx = p.x + Math.cos(p.heading) * back * lane.side, bz = p.z - Math.sin(p.heading) * back * lane.side;
       const garage = nearestTrackInfo(centerline, bx, bz);
       if (garage.dist < half + 3) {

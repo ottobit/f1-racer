@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { offsetEdge } from '../shared/track-geometry.js?v=39';
-import { PIT_LANE, nearPitLane } from '../shared/pit-lane.js?v=2';
+import { PIT_LANE, nearPitLane } from '../shared/pit-lane.js?v=3';
 
 function random(seed=17){return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
 export function surfaceTexture(kind,renderer){
@@ -180,7 +180,7 @@ export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points
       const p=points[i],n=normal(p),r=Math.atan2(p.tx,p.tz),side=(Math.floor(i/24)%2?1:-1);
       const distance=half+12.5,x=p.x+n.x*distance*side,z=p.z+n.z*distance*side;
       const safe=points.every((q,j)=>Math.abs(j-i)<10||Math.abs(j-i)>N-10||Math.hypot(q.x-x,q.z-z)>half+7);
-      if(!safe||!pitClear(x,z,6)||occupied.some(([ox,oz])=>Math.hypot(ox-x,oz-z)<13))continue;
+      if(!safe||!pitClear(x,z,6+PIT_LANE.apron)||occupied.some(([ox,oz])=>Math.hypot(ox-x,oz-z)<13))continue;
       occupied.push([x,z]);
       const h=2.8+(i%48===0?1.2:0);
       (i%48===0?warmHomes:homes).push({p:[x,h/2,z],r,s:[7.5,h,6]});
@@ -192,7 +192,7 @@ export function dressCircuit(scene,points,width,renderer,wet,theme,detail=points
     for(let i=0;i<N;i+=30){
       const p=points[i],n=normal(p),r=Math.atan2(p.tx,p.tz),side=i%60===0?1:-1;
       const d=half+7.5,x=p.x+n.x*d*side,z=p.z+n.z*d*side;
-      if(pitClear(x,z,6)){trunks.push({p:[x,2.6,z],s:[.28,5.2,.28]});crowns.push({p:[x,5.5,z],s:[2.6,.75,2.6],r:i});}
+      if(pitClear(x,z,6+PIT_LANE.apron)){trunks.push({p:[x,2.6,z],s:[.28,5.2,.28]});crowns.push({p:[x,5.5,z],s:[2.6,.75,2.6],r:i});}
       poles.push({p:[p.x-n.x*(half+5.7),3.1,p.z-n.z*(half+5.7)],s:[.16,6.2,.16]});
       const next=points[(i+30)%N],nn=normal(next);
       wirePositions.push(p.x-n.x*(half+5.7),6.05,p.z-n.z*(half+5.7),next.x-nn.x*(half+5.7),6.05,next.z-nn.z*(half+5.7));
@@ -309,21 +309,24 @@ export function dressPitLane(scene,lane,renderer,wet){
   // Pit wall between the track and the lane, on the flat stretch only.
   sweep(flat,-(w+.85),-(w+.55),0,.9,wallMat);sweep(flat,-(w+.88),-(w+.52),.9,1.02,trim);
   // Garage row along the whole flat stretch, following the lane's curve:
-  // floor, back wall, roof and a fascia, with pillars between the bays.
+  // floor, back wall, roof and a fascia, with pillars between the bays. The
+  // garages stand back behind a working apron, where cars stop (#258).
   const concrete=new THREE.MeshStandardMaterial({color:0x7d8285,roughness:.95,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
   const panel=new THREE.MeshStandardMaterial({color:0x1d2c3a,roughness:.6,side:THREE.DoubleSide});
   const steel=new THREE.MeshStandardMaterial({color:0xaab4b9,roughness:.5,side:THREE.DoubleSide});
   const inside=new THREE.MeshStandardMaterial({color:0x3a4650,roughness:.8,side:THREE.DoubleSide});
-  const depth=w+5;
+  const face=w+PIT_LANE.apron,depth=face+5;
   strip(flat,()=>w,()=>depth,.02,concrete);
   sweep(flat,depth,depth+.3,0,3.4,inside);
-  sweep(flat,w+.1,depth+.3,3.4,3.7,steel);
-  sweep(flat,w+.1,w+.25,2.7,3.4,panel);
-  for(const p of [flat[0],flat[flat.length-1]])sweep([p,path[Math.min(path.length-1,path.indexOf(p)+1)]],w+.1,depth+.3,0,3.4,panel);
+  sweep(flat,face+.1,depth+.3,3.4,3.7,steel);
+  sweep(flat,face+.1,face+.25,2.7,3.4,panel);
+  for(const p of [flat[0],flat[flat.length-1]])sweep([p,path[Math.min(path.length-1,path.indexOf(p)+1)]],face+.1,depth+.3,0,3.4,panel);
   const pillarGeo=new THREE.BoxGeometry(.22,2.7,.22),temp=new THREE.Object3D(),pillars=[];
-  for(let d=flat[0].dist;d<=flat[flat.length-1].dist;d+=5)pillars.push(d);
+  // Pillars divide the team bays, so each garage opens onto its own box.
+  const spacing=lane.boxes[0].spacing;
+  for(let k=0;k<=lane.boxes.length;k++)pillars.push(flat[0].dist+spacing*k);
   const pillarMesh=new THREE.InstancedMesh(pillarGeo,steel,pillars.length);
-  pillars.forEach((d,k)=>{const p=flat.reduce((a,b)=>Math.abs(b.dist-d)<Math.abs(a.dist-d)?b:a),q=across(p,w+.2);
+  pillars.forEach((d,k)=>{const p=flat.reduce((a,b)=>Math.abs(b.dist-d)<Math.abs(a.dist-d)?b:a),q=across(p,face+.2);
     temp.position.set(q.x,1.35,q.z);temp.rotation.set(0,p.heading,0);temp.updateMatrix();pillarMesh.setMatrixAt(k,temp.matrix);});
   pillarMesh.castShadow=true;scene.add(pillarMesh);
   // One signed, team-coloured bay for each scuderia, following the curve.
@@ -333,22 +336,23 @@ export function dressPitLane(scene,lane,renderer,wet){
   group.position.set(box.x,0,box.z);group.rotation.y=box.heading;bays.add(group);
   const out=side; // group local +x points along across(), away from the track
   const yellow=new THREE.MeshStandardMaterial({color:0xf2c230,roughness:.7,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
+  const bay=out*PIT_LANE.bay;
   for(const [x,z,sx,sz] of [[-1.3,0,.14,5.6],[1.3,0,.14,5.6],[0,2.8,2.74,.14],[0,-2.8,2.74,.14]]){
-    const m=new THREE.Mesh(new THREE.PlaneGeometry(sx,sz),yellow);m.rotation.x=-Math.PI/2;m.position.set(x,.03,z);group.add(m);
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(sx,sz),yellow);m.rotation.x=-Math.PI/2;m.position.set(bay+x,.03,z);group.add(m);
   }
   const teamPaint=new THREE.MeshStandardMaterial({color:box.team.primary,roughness:.7});
   const panelWidth=Math.min(6.5,box.spacing-.6);
   const fascia=new THREE.Mesh(new THREE.BoxGeometry(.12,.75,panelWidth),teamPaint);
-  fascia.position.set(out*(w+.02),3.05,0);group.add(fascia);
+  fascia.position.set(out*(face+.02),3.05,0);group.add(fascia);
   // Tool cabinets in team colours make each garage legible below the sign.
   const cabinet=new THREE.Mesh(new THREE.BoxGeometry(.7,1.05,1.1),teamPaint);
-  cabinet.position.set(out*(w+3.6),.525,-1.8);group.add(cabinet);
+  cabinet.position.set(out*(face+3.6),.525,-1.8);group.add(cabinet);
   const c=document.createElement('canvas');c.width=512;c.height=96;const ctx=c.getContext('2d');
   ctx.fillStyle='#'+box.team.primary.toString(16).padStart(6,'0');ctx.fillRect(0,0,512,96);
   ctx.fillStyle='#'+box.team.secondary.toString(16).padStart(6,'0');ctx.font='bold 52px sans-serif';ctx.textAlign='center';ctx.fillText(box.team.label.toUpperCase(),256,66);
   const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;
-  const sign=new THREE.Mesh(new THREE.PlaneGeometry(Math.min(4.8,panelWidth),.65),new THREE.MeshBasicMaterial({map:tex}));sign.position.set(out*(w-.06),3.05,0);sign.rotation.y=-out*Math.PI/2;group.add(sign);
-  const lamp=new THREE.Mesh(new THREE.PlaneGeometry(4.4,.12),new THREE.MeshBasicMaterial({color:0xfff4d6}));lamp.position.set(out*(w+2.5),3.38,0);lamp.rotation.x=Math.PI/2;group.add(lamp);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(Math.min(4.8,panelWidth),.65),new THREE.MeshBasicMaterial({map:tex}));sign.position.set(out*(face-.06),3.05,0);sign.rotation.y=-out*Math.PI/2;group.add(sign);
+  const lamp=new THREE.Mesh(new THREE.PlaneGeometry(4.4,.12),new THREE.MeshBasicMaterial({color:0xfff4d6}));lamp.position.set(out*(face+2.5),3.38,0);lamp.rotation.x=Math.PI/2;group.add(lamp);
   }
   return bays;
 }

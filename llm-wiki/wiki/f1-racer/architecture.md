@@ -102,8 +102,13 @@ complete the configured distance.
 `shared/pit-lane.js` assigns six service bays in canonical `TEAM_LIVERIES`
 order along the flat lane section. `buildPitLane(..., teamId)` selects the
 same stopping distance for both team drivers, browser and headless bots.
+Around the box, `pitLanePose` shifts the car `PIT_LANE.bay` sideways onto a
+working apron in front of its garage (#258), so the lane stays free for
+cars driving through; garages stand `PIT_LANE.apron` behind the lane edge.
 `track-art.js` labels the six garages; `pit-crew.js` animates the local
-player's ten mechanics at their team's bay. Four removers take the used
+player's ten mechanics at their team's bay. They sit on stools watching the
+race, stand up and carry the fresh set out when the box is requested, and
+sit down again after the stop; other teams' crews stay seated. Four removers take the used
 wheels away, four fitters install a separate set, and two mechanics lift
 the car. Wheel geometry is reused across stops; the newly mounted objects
 replace `playerCar.wheels` so rolling and steering keep working. Red,

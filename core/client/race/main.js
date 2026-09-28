@@ -15,7 +15,7 @@ import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=36";
 import { setupPlayerPhysics } from "./player-physics.js?v=9";
 import { setupRaceAi } from "./race-ai.js?v=30";
-import { setupRaceSystems } from "./race-systems.js?v=31";
+import { setupRaceSystems } from "./race-systems.js?v=32";
 import { setupRaceProgress } from "./race-progress.js?v=28";
 import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
@@ -25,9 +25,9 @@ import { createAutopilotProvider, createLayeredProvider } from "./driver-provide
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=10";
 
 import { steeringYaw } from "./steering.js?v=8";
-import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=42";
-import { buildPitLane } from "../shared/pit-lane.js?v=2";
-import { setupPitCrew } from "./pit-crew.js?v=3";
+import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=43";
+import { buildPitLane } from "../shared/pit-lane.js?v=3";
+import { setupPitCrew } from "./pit-crew.js?v=4";
 import { gearInfo, setupRaceAudio } from "./race-audio.js?v=3";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";

@@ -1640,3 +1640,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Fix: `race-camera.js?v=36`, `main.js?v=117`, `race-bootstrap.js?v=78` in `race.html`.
 - #249 history has eight identical "Improve driver helmet" commits; left as is (already on `master`).
 - Verified with `node --check` and `git diff --check` only.
+
+## 2026-09-28 — Pit working apron and seated crews (#258)
+
+- Recovered two parts of the user's pit request lost in the #250 issue text: room to drive past a car in its box, and crews that wait idle instead of standing at the car.
+- `shared/pit-lane.js`: `pitLanePose` shifts the car 4 m onto its team's apron over a 9 m ramp (`PIT_LANE.bay`, `bayRamp`); client and headless bots share it. `track-art.js`: garages set back by `PIT_LANE.apron` (3.1 m), pillars at bay dividers, scenery margins widened; `validate-circuits` garage check includes the apron (no errors).
+- `race/pit-crew.js`: crews sit on stools watching the race; the player's crew stands and carries the fresh set out when the box is requested, then puts the used set down and sits again. Other teams' crews stay seated next to instanced tyre stacks; they do not animate for opponents' stops.
+- Cache chain: pit-lane v3, race-systems v32, track-art v43, pit-crew v4, main v118, race-bootstrap v79. Verified with `node --check`, `git diff --check` and a numeric pose check only; visuals and phone fluidity left to play testing.
