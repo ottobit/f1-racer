@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 28573)
-Total output lines: 1627
-
 # Maintenance Log
 
 Append-only. One short entry per wiki update, newest last.
@@ -822,7 +819,190 @@ start, and a realistic start "come fanno nelle gare ufficiali".
 
 - New `core/client/race/race-brake-bar.js`: vertical strip of the next 300 m of centerline, player arrow at the bottom, rivals as dots (placed via nearest centerline sample). Each stretch is colored by a backwards braking envelope (`cornerTargetSpeed` + `0.8 * CAR.brakeDecel`) against the current speed: green = no braking, yellow -> red = braking zone/corner.
 - `main.js`: removed the minimap geometry, `brakeUrgency()` and the #73 `brakeTrail` mesh; `setupBrakeBar()` runs in the qualifying and race loops.
-- `race-hud.js`: `drawMinimap()` and its …3573 tokens truncated…home-screen mode (#115)
+- `race-hud.js`: `drawMinimap()` and its params removed. `race.html`: `#minimap` canvas replaced by `#brake-bar`.
+- Layout: right edge, vertically centered on desktop (`style.css`); above the gas pedal on touch (`race-controls.css`), shorter at `max-height:520px`. The canvas backing store follows its CSS box.
+- Verified with `node --check` and `git diff --check` only.
+
+## 2026-09-24 — Rotating braking map with real corner speeds (#77)
+
+- Root cause of "always green" in #75: `cornerTargetSpeed` reused the AI corner-severity formula, whose minimum is ~157-212 km/h on the current (short, 400-1900 m) circuits, so the player rarely exceeded it.
+- `main.js`: `cornerTargetSpeed` now = highest speed where `|steeringYaw(1, v, CAR.maxTurnRate)| * 0.8 >= v * curvature`, curvature over a ±6 m window. Corners come out at ~50-140 km/h.
+- `race-brake-bar.js` renamed to `race-brake-map.js`: heading-up section (30 m behind to 300 m ahead) around the player's dot, per-segment green -> yellow -> red from the braking envelope, rivals in the section as dots, faded edges.
+- Canvas `#brake-map`: 11rem at right-center on desktop, 9rem (7.5rem at `max-height:520px`) above the gas pedal on touch.
+- Verified with `node --check`, `git diff --check` and a node script printing the per-circuit corner speeds; not played.
+
+## 2026-09-24 — Steering no longer caps top speed (#79)
+
+- `core/client/race/player-physics.js`: corner scrub factor 0.9 -> 0.2 and
+  sliding traction cut 0.42 -> 0.15. Before, half lock held the car at
+  ~185 km/h and full lock at ~107 km/h flat out, acting as a hidden limiter.
+- Now (node sim, grip 1): half lock ~289 km/h, full lock ~253 km/h; going
+  in too fast ends off the road instead of being slowed by the game.
+- Version bumps: `player-physics.js?v=4`, `main.js?v=56`,
+  `race-bootstrap.js?v=15`.
+- Verified with `node --check` and `git diff --check`; no browser test.
+
+## 2026-09-25 — Braking map restyle (#81)
+
+- `core/client/race/race-brake-map.js`: the section is drawn as a road
+  (shadow, white edge lines, dark asphalt) with a thinner green/yellow/red
+  warning line down the middle; the player is a white arrow; rivals are
+  smaller dots with a white outline.
+- New label under the arrow: distance to the braking point (first sample
+  where the current speed is above the envelope), rounded to 10 m; "FRENA"
+  in red when it is under 8 m. Drawn after the edge fade so it stays sharp.
+- Stroke widths scale with the canvas size (tuned for 256 px).
+- Version bumps: `race-brake-map.js?v=2`, `main.js?v=57`,
+  `race-bootstrap.js?v=16`.
+- Verified with `node --check`, `git diff --check` and a node smoke test
+  with a mock canvas; no browser test.
+
+## 2026-09-25 — Touch braking map bottom center (#83)
+
+- `race.html`: `#motion-controls` (tilt steering: toggle, calibrate,
+  sensitivity) gets `hidden`; the code in `race-input.js` is kept on the
+  user's request so it can come back.
+- `core/client/race/race-controls.css`: `#motion-controls[hidden]` now
+  really hides (the id rule set `display:flex`); on touch `#brake-map`
+  moves bottom center between wheel and pedals (landscape
+  `min(9rem, 100vw - 380px)`, 7.5rem on short screens, standalone lifted
+  above the iOS home strip); portrait puts it above the controls
+  (bottom 205px). Desktop unchanged (right edge).
+- Version bump: `race-controls.css?v=43`.
+- Verified with `git diff --check`; no browser test.
+
+## 2026-09-25 — Wider, see-through touch braking map (#85)
+
+- `core/client/race/race-controls.css`: touch `#brake-map` is now a 16:10 box
+  (up to 17rem landscape, 14rem portrait), no drop shadow, opacity 0.9.
+- `core/client/race/race-brake-map.js`: zoom and stroke widths scale by the
+  short side of the canvas; black road shadow removed; asphalt is punched out
+  and refilled at 35% alpha, edges at 55%; elliptical fade starts at 35% of
+  the radius. Warning line, rival dots, arrow and label stay opaque.
+- Version chain: `race-brake-map.js?v=3`, `main.js?v=58`,
+  `race-bootstrap.js?v=17`, `race-controls.css?v=44`.
+- Verified with `node --check` and `git diff --check` only (no browser test).
+
+## 2026-09-25 — Stuck touch wheel/pedals (#87)
+
+- User report: while turning, even slowly, the car "loses the road" and then
+  the control stops responding.
+- `core/client/race/race-input.js`: wheel and pedals kept the first pointer id
+  until its release; a lost release left a ghost pointer (steer frozen, new
+  touches ignored). A new touch now takes over when the stored pointer is no
+  longer captured, and window-level `pointerup`/`pointercancel` (capture
+  phase) free any wheel/pedal owned by that pointer.
+- Root cause is probable, not reproduced (no browser tests); if the car still
+  slides at low speed, the next suspect is the lateral-slip model in
+  `player-physics.js`.
+- Version chain: `race-input.js?v=42`, `main.js?v=59`,
+  `race-bootstrap.js?v=18`. Verified with `node --check` + `git diff --check`.
+
+## 2026-09-25 — Driver model, exhaust pops, desktop map at bottom (#89)
+
+- `core/client/style.css`: desktop `#brake-map` moved from the right edge to
+  the bottom center (16:10, `min(22rem, 40vw)`, above `#hint`), matching the
+  see-through touch look of #85.
+- `core/client/shared/car-model.js`: driver helmet gets an accent centre
+  stripe, front-only visor slot, chin bar and rear spoiler; HANS collar;
+  arms bend at the elbow. Shared by race and garage showroom.
+- New `core/client/race/race-exhaust.js`: additive flame sprite on the player
+  car's tailpipe, popping 3-6 times on lift-off above 35% top speed and 1-2
+  times on a downshift; back on the gas cancels the queue. Sound comes from
+  `playExhaustPop()` in `race-audio.js` (band-passed noise + low thump).
+  Player car only; AI cars have no pops.
+- Version chains: `car-model.js?v=29` -> `race-car-view.js?v=29`,
+  `showroom.js?v=31` -> `garage.js?v=42`; `race-audio.js?v=3`,
+  `race-exhaust.js?v=1`, `main.js?v=60`, `race-bootstrap.js?v=19`,
+  `style.css?v=43` (race.html). Verified with `node --check` + `git diff --check`.
+
+## 2026-09-25 — Multiplayer livery and qualifying start slot (#91)
+
+- `core/client/race/main.js`: in a room the local car uses the room-reserved
+  driver (livery + cockpit theme) instead of the solo selection, so every
+  participant sees the same colour for the same car.
+- Multiplayer qualifying: each participant starts from its own grid slot
+  (index in the server's participant list) instead of all on pole;
+  `prevRawProgress` is derived from the actual start point.
+- Version chain: `main.js?v=61`, `race-bootstrap.js?v=20` (race.html).
+- Verified with `node --check` only; to be tested in a real two-player room.
+
+## 2026-09-25 — Voice chat diagnostics (#93)
+
+- Real test (iPhone + desktop on the same LAN): mic granted, HUD stuck on
+  "Voce · 0", no audio. Cause not yet known (stale room server vs. missing
+  TURN).
+- `voice-chat.js`: the HUD label now says why nobody is connected — room
+  server too old for `voice_signal`, no reply from peers, connecting,
+  connection failed (likely NAT, needs TURN) — and logs each WebRTC
+  connection/ICE state to the console.
+- `room-client.js`: an `unknown_type` error without reqId (old server
+  rejecting `voice_signal`) is forwarded to the voice layer.
+- Version chain: `voice-chat.js?v=2`, `race-multiplayer.js?v=3`,
+  `main.js?v=62`, `room-client.js?v=4`, `race-bootstrap.js?v=21`,
+  `room.js?v=5`. Verified with `node --check` only.
+
+## 2026-09-25 — Voice: stale socket close and late hellos (#95)
+
+- Real test: joiner showed "Voce · nessun altro", creator "Solo ascolto · nessuna risposta" — the joiner saw the creator as not connected.
+- `core/server/room-server.mjs`: a socket close is ignored when the participant is already bound to a newer socket (the room.html -> race.html navigation can deliver the old close after the new reconnect, which marked the live participant "grace" and dropped its socket from the relay map).
+- `core/client/multiplayer/voice-chat.js` (`?v=3`): hellos go to every peer that becomes connected, not only those present at start; chain bumped (`race-multiplayer.js?v=4`, `main.js?v=63`, `race-bootstrap.js?v=22`).
+- Root cause is probable, not proven; TURN is still missing for peers behind strict NAT. Verified with `node --check` only.
+
+## 2026-09-25 — Room invite link (#97)
+
+- `room.html` + `core/client/multiplayer/room.js` (`?v=6`): "Condividi link" button builds `room.html?join=CODE` keeping the current `roomServer`; native share sheet on mobile, clipboard fallback, raw link as last resort.
+- Opening an invite prefills the code and shows a hint; the nickname is remembered in `f1racer-room-nickname-v1`. A saved session for a different room is left so the invite wins.
+- Warns when the link cannot work for friends (page on localhost, or no public `roomServer`) — the host must open the game from GitHub Pages with `?roomServer=wss://…` for the link to be usable.
+- Verified with `node --check` only.
+
+## 2026-09-25 — roomServer accepts https (#99)
+
+- `core/client/multiplayer/room-client.js` (`?v=5`): `?roomServer=` maps `https://` to `wss://`, `http://` to `ws://`, and a bare host to `wss://`, so the ngrok URL can be pasted as printed.
+- Invite warning in `room.js` (`?v=7`) now suggests `?roomServer=https://…`; chain bumped (`race-bootstrap.js?v=23`, `race.html`, `room.html`).
+- Verified with `node --check` and a node run of the mapping.
+
+## 2026-09-25 — Cornering no longer feels like braking (#101)
+
+- Real test: steering made the engine note drop. The tyre scrub in `core/client/race/player-physics.js` (`?v=5`) was linear in slip and, near top speed, beat the engine's remaining push even at half lock.
+- Scrub now starts only past slip 0.3 (rescaled 0..1 above it): light/medium steering holds speed on the throttle; full lock at top speed still loses some (estimated ~5 km/h/s instead of ~15), so overdriving a corner still costs.
+- Player physics only; AI untouched. Chain bumped (`main.js?v=64`, `race-bootstrap.js?v=24`, `race.html`).
+- Verified with `node --check` only; the numbers are estimates from the formulas, to be confirmed in game.
+
+## 2026-09-25 — Brake no longer goes straight into reverse (#103)
+
+- Real test: holding the brake stopped the car and immediately reversed it — `brakeDecel` (75 m/s²) kept applying below zero down to `reverseMaxSpeed`.
+- `core/client/race/player-physics.js` (`?v=6`): braking clamps at 0; reverse starts only after the brake is held 0.6 s at a standstill, at 9 m/s² instead of full brake force. Releasing the brake resets the hold.
+- Also noted from the same test: a ~244 km/h top speed was probably collision damage (`(1 - damage)` in the speed cap), not a physics regression — the user will check the "Danni" HUD row.
+- Chain bumped (`main.js?v=65`, `race-bootstrap.js?v=25`, `race.html`). Verified with `node --check` only.
+
+## 2026-09-25 — Multiplayer race without qualifying (#107)
+
+- Part of the multiplayer experience list (#105). New room flag `qualifying` (default `true`), set by the host with `set_circuit` via the "Qualifica prima della gara" checkbox in `room.html`.
+- `core/server/rooms.mjs`: with `qualifying: false`, `startRace` shuffles the reserved drivers into `grid` and goes straight to `sessionPhase: "racing"` with `raceStartedAt`; `room-server.mjs` schedules the qualifying timer only when the phase is `qualifying`.
+- Client needs no race-page change: `race.html` already handles a room that is already `racing` through `onGridReady` (the reload-mid-race path).
+- Chain: `room-client.js?v=6`, `room.js?v=8`, `race-bootstrap.js?v=26`. Verified with `node --check` and a node run of `startRace` without qualifying. Requires restarting the room server.
+
+## 2026-09-25 — Synced multiplayer start lights (#109)
+
+- Found in code (part of #105): the lights-out hold was already seeded by `raceStartedAt`, but each browser began the sequence at its own engine fire-up, so whoever tapped first started first.
+- `core/server/room-server.mjs`: every server reply carries `serverNow`; `room-client.js` (`?v=7`) keeps the clock offset and exposes `serverNow()`, surfaced by `race-multiplayer.js` (`?v=5`).
+- `core/client/race/main.js`: `runRaceStartLights` takes an absolute anchor; in multiplayer the sequence starts `MP_START_LEAD_MS` (8 s) after `raceStartedAt` on the server clock. A late engine start joins the sequence in progress, or goes at once if the lights are already out. Solo is unchanged (anchor = now).
+- Clock offset ignores one-way latency (tens of ms). Chain: `room.js?v=9`, `main.js?v=66`, `race-bootstrap.js?v=27`. Verified with `node --check` only; needs the room server restarted.
+
+## 2026-09-25 — Smoother remote cars (#111)
+
+- Part of #105. `updateRemoteCar` chased the last `car_state` (~12/s); at 300 km/h samples are ~7 m apart, so the car eased towards a point it had already passed and stuttered.
+- `race-multiplayer.js` (`?v=6`) stamps each sample with `receivedAt`; `core/client/race/main.js` now chases the sample projected forward along its heading by `speed × age` (age capped at 250 ms, so a stalled stream stops the car quickly).
+- Chain: `main.js?v=67`, `race-bootstrap.js?v=28`. Verified with `node --check` only.
+
+## 2026-09-25 — Shared multiplayer results and rematch (#113)
+
+- Part of #105. `core/server/rooms.mjs`: participants carry `finishedAt`; `reportFinish` records the first finish report (server arrival order is the result); `rematch` (host only) puts the room back in `lobby`, keeping drivers and circuit, clearing ready flags, grid, quali times and finishes. `room-server.mjs` handles `report_finish` / `rematch`.
+- `core/client/race/main.js`: in multiplayer `finishRace` reports the finish and shows the room's shared order (finished by `finishedAt`, then "(in gara)" in running order, "N/M arrivati"), re-rendered on every room update. The host's primary button is "Rivincita"; any room back in `lobby` sends every race page to `room.html` (keeping `roomServer`). The old per-browser multiplayer order and "Torna alla home" branch is gone; solo results are unchanged.
+- Chain: `room-client.js?v=8`, `race-multiplayer.js?v=7`, `main.js?v=68`, `race-bootstrap.js?v=29`, `room.js?v=10`. Verified with `node --check` and a node run of finish + rematch in `rooms.mjs`; needs the room server restarted.
+
+## 2026-09-25 — Touch offset in iOS home-screen mode (#115)
 
 - User report: launched from the home screen, the race controls were drawn higher than their tap zone.
 - `race.html`: `viewport-fit=cover` plus `black-translucent` status bar, so the standalone viewport covers the whole screen and the status bar no longer shifts the layout.
