@@ -93,6 +93,12 @@ html.touch #pit-toggle:active,html.touch #view-toggle:active{background:#3a3520}
 html.touch #view-toggle{border-color:#b2c8d566;color:#dbe7ef}
 html.touch #look-back{min-height:44px;border-radius:10px;border:1px solid #b2c8d566;background:#1c2530d9;color:#dbe7ef;font:800 10px system-ui;letter-spacing:.08em;touch-action:none}
 html.touch #look-back.is-held{background:#34536b;color:#fff;border-color:#dbe7ef}
+/* Third-finger free-look pad, clear of wheel and throttle in landscape. */
+#look-around{display:none}
+html.touch #look-around{position:fixed;z-index:125;display:grid;place-items:center;left:50%;bottom:max(130px,env(safe-area-inset-bottom));width:76px;height:76px;transform:translateX(-50%);border:1px solid #b2c8d588;border-radius:50%;background:#172536d9;color:#dbe7ef;pointer-events:auto;touch-action:none;user-select:none;font:700 9px system-ui;letter-spacing:.08em}
+#look-around i{position:absolute;width:24px;height:24px;border:1px solid #dbe7ef;border-radius:50%;background:#517088;transform:translate(var(--look-x,0px),var(--look-y,0px));pointer-events:none}
+#look-around span{position:absolute;bottom:7px;pointer-events:none}
+@media(orientation:portrait){html.touch #look-around{bottom:310px}}
 
 /* Per-driver voice status: transparent, with a thumb-sized local control. */
 .qualifying-timing__name:has(.driver-voice) { display: flex; align-items: center; overflow: visible; }

@@ -97,12 +97,21 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
   let chaseCameraReady = false;
   let cameraHeading = 0;
   let lookingBack = false;
+  let lookYaw = 0, lookPitch = 0;
+  const lookKeys = new Set();
+  let lookPointer = null, lookOriginX = 0, lookOriginY = 0;
+  let touchLookX = 0, touchLookY = 0;
+  const lookPad = document.getElementById("look-around");
   const desiredPosition = new THREE.Vector3();
   const cockpitView = cockpitCar ? prepareCockpitCar(cockpitCar).group : null;
   const eye = new THREE.Vector3();
   const lookTarget = new THREE.Vector3();
 
   window.addEventListener("keydown", (event) => {
+    if (["KeyJ", "KeyL", "KeyI", "KeyK"].includes(event.code)) {
+      if (!event.target.closest?.("input,textarea,select,[contenteditable='true']")) lookKeys.add(event.code);
+      return;
+    }
     if (event.code === "KeyR") {
       if (!event.target.closest?.("input,textarea,select,[contenteditable='true']")) lookingBack = true;
       return;
@@ -116,12 +125,79 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
   });
   window.addEventListener("keyup", (event) => {
     if (event.code === "KeyR") lookingBack = false;
+    lookKeys.delete(event.code);
   });
-  window.addEventListener("blur", () => { lookingBack = false; });
-  window.addEventListener("pagehide", () => { lookingBack = false; });
+  function resetLook() {
+    lookingBack = false;
+    lookYaw = lookPitch = 0;
+    lookKeys.clear();
+    touchLookX = touchLookY = 0;
+    lookPointer = null;
+    lookPad.style.setProperty("--look-x", "0px");
+    lookPad.style.setProperty("--look-y", "0px");
+  }
+  window.addEventListener("blur", resetLook);
+  window.addEventListener("pagehide", resetLook);
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) lookingBack = false;
+    if (document.hidden) resetLook();
   });
+
+  lookPad.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    if (lookPointer !== null) return;
+    lookPointer = event.pointerId;
+    lookOriginX = event.clientX;
+    lookOriginY = event.clientY;
+    lookPad.setPointerCapture(lookPointer);
+  });
+  lookPad.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== lookPointer) return;
+    touchLookX = THREE.MathUtils.clamp((event.clientX - lookOriginX) / 45, -1, 1);
+    touchLookY = THREE.MathUtils.clamp((event.clientY - lookOriginY) / 45, -1, 1);
+    lookPad.style.setProperty("--look-x", `${touchLookX * 19}px`);
+    lookPad.style.setProperty("--look-y", `${touchLookY * 19}px`);
+  });
+  const releaseLook = (event) => {
+    if (event.pointerId !== lookPointer) return;
+    lookPointer = null;
+    touchLookX = touchLookY = 0;
+    lookPad.style.setProperty("--look-x", "0px");
+    lookPad.style.setProperty("--look-y", "0px");
+  };
+  for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
+    lookPad.addEventListener(type, releaseLook);
+  }
+
+  function updateFreeLook(dt) {
+    if (document.hidden || !document.hasFocus()) return;
+    const pad = Array.from(navigator.getGamepads?.() ?? []).find((p) => p && p.connected && p.mapping === "standard");
+    const deadzone = (value) => Math.abs(value) < 0.18 ? 0 : Math.sign(value) * (Math.abs(value) - 0.18) / 0.82;
+    const padX = deadzone(pad?.axes?.[2] ?? 0);
+    const padY = deadzone(pad?.axes?.[3] ?? 0);
+    const keyX = Number(lookKeys.has("KeyL")) - Number(lookKeys.has("KeyJ"));
+    const keyY = Number(lookKeys.has("KeyK")) - Number(lookKeys.has("KeyI"));
+    const x = THREE.MathUtils.clamp(keyX || touchLookX || padX, -1, 1);
+    const y = THREE.MathUtils.clamp(keyY || touchLookY || padY, -1, 1);
+    const response = 1 - Math.exp(-(x || y ? 8 : 5) * dt);
+    lookYaw += (x * 1.5 - lookYaw) * response;
+    lookPitch += (-y * 0.4 - lookPitch) * response;
+  }
+
+  function aimWithFreeLook(target) {
+    if (Math.abs(lookYaw) < 0.001 && Math.abs(lookPitch) < 0.001) {
+      camera.lookAt(target);
+      return;
+    }
+    const dx = target.x - camera.position.x, dz = target.z - camera.position.z;
+    const cos = Math.cos(lookYaw), sin = Math.sin(lookYaw);
+    const distance = Math.hypot(dx, dz);
+    lookTarget.set(
+      camera.position.x + dx * cos + dz * sin,
+      target.y + Math.tan(lookPitch) * distance,
+      camera.position.z + dz * cos - dx * sin
+    );
+    camera.lookAt(lookTarget);
+  }
 
   function updateRearCamera() {
     chaseCameraReady = false;
@@ -187,7 +263,7 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
       1,
       state.z + Math.cos(cameraHeading) * 4
     );
-    camera.lookAt(lookTarget);
+    aimWithFreeLook(lookTarget);
 
     if (state.cameraShake > 0) {
       const shake = state.cameraShake * 0.22;
@@ -213,7 +289,7 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
       eye.y - 20 * COCKPIT_PITCH_DROP,
       eye.z + Math.cos(state.heading) * 20
     );
-    camera.lookAt(lookTarget);
+    aimWithFreeLook(lookTarget);
   }
 
   // TV shot of the box while the crew works (#147), then back to the
@@ -228,6 +304,7 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
   }
 
   function updateCamera(dt) {
+    updateFreeLook(dt);
     if (pitCamera && state.pitState === "servicing") {
       updatePitCamera();
       return;

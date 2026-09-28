@@ -26,7 +26,7 @@
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="core/client/style.css?v=53" />
-  <link rel="stylesheet" href="core/client/race/race-controls.css?v=58" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=59" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -135,7 +135,7 @@
     <div><span class="telemetry-label">LATERALE</span><strong id="lateral-value">0 km/h</strong></div>
   </div>
 
-  <div id="hint">WASD / frecce per guidare, C per la camera, tieni R per guardare dietro — 5 giri contro 9 rivali</div>
+  <div id="hint">WASD / frecce per guidare, C per la camera, R dietro, J/L e I/K per guardarti intorno — 5 giri contro 9 rivali</div>
 
   <div id="penalty-notice" aria-hidden="true">Track limits — +1.0s</div>
 
@@ -153,6 +153,9 @@
   </div>
 
   <div id="touch-controls">
+    <div id="look-around" role="group" aria-label="Guarda intorno: trascina per orientare la visuale">
+      <span>GUARDA</span><i aria-hidden="true"></i>
+    </div>
     <!-- Tilt steering hidden in #83 (the braking map takes its place); the
          code in race-input.js is kept. -->
     <div id="motion-controls" aria-label="Sterzo a movimento" hidden>
@@ -218,7 +221,7 @@
       window.addEventListener("scroll", pin);
     })();
   </script>
-  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=81"></script>
-  <script src="core/client/shared/version.js?v=252" defer></script>
+  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=82"></script>
+  <script src="core/client/shared/version.js?v=255" defer></script>
 </body>
 </html>

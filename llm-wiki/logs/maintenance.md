@@ -1680,3 +1680,8 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Hold R or the independent DIETRO touch button to look behind; release restores the selected camera. Driving inputs remain unchanged.
 - Reset held touch on focus loss, page hide and visibility change. Preserve newer qualifying simulation and bump the full import chain.
 - Syntax and diff checks only; desktop/mobile gameplay remains manual. Merge pending authorization review.
+
+## 2026-09-28 — Free look across devices (#255)
+- Right stick on standard gamepads, I/J/K/L keys and independent touch pad rotate the view; release smoothly recentres it. Rear view and pit camera retain priority.
+- Reset orientation on focus loss; do not poll gamepads while hidden/unfocused. Preserve current simulation, style and cache versions.
+- Syntax and diff checks only; controller, keyboard and touch gameplay remain manual. Merge pending authorization review.
