@@ -1693,3 +1693,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `core/tools/headless-room-bot.mjs`: `state.json` position now follows `race-progress.js` order (server `finishedAt` first, then progress, then grid slot) over every car of the room, not only cars heard in the last 3 s — dropping a quiet car was the likely source of duplicate positions. New field `positionSource` (`server-finish` | `progress`).
 - A rematch that closes the race before the flag no longer loses it: the bot keeps a `lastRace` snapshot (`session.state = finished`, `endedBy: finish | rematch`) in the lobby `state.json`, as `room-bot.mjs` does (#246). Remote cars are cleared at each new session.
 - Open: "h2/h3 stay `racing` after 5 laps" not reproduced; in the lobby the state can no longer look live. Verified with `node --check` only.
+
+## 2026-09-28 — Bots: traffic pace, penalty causes; #241 and #227 closed (#236)
+
+- `driver-providers.js` (v6): the layered driver gets a `traffic` mode — with a car within 10 m and `pace` > 0.92 it drops 0.04 (floor 0.92); not with `station`, and it caps `attack`. Version chain: main v122, race-bootstrap v83.
+- `headless-room-bot.mjs`: a penalised lap logs `penalty` with each excursion's lap progress and cause (`contact` within 1.5 s of a hit, else `limit`), to tell contact from pace and check the 22 s lap.
+- #241 closed without code: wear % is compound-independent; the 68–72% finishes were the layered driver's own wear-based stops (~lap 2.9, before `autoPit` existed), unlogged until #247's `pit` line.
+- #227 closed without code: browser and headless share the same pit code; offline `updatePitStop` runs give 8.3–10.9 s in the lane (6.7–8.4 s lost) + limiter and exit, 10–12 s on Baiadoro. The 7 s browser figure counted one lap of the two the lane spans. The real lever is `PIT_SPEED_LIMIT` / `PIT_LANE.before/after`.
+- Release badge is now a monotonic counter (`concludi` skill updated): v263 for #235, v264 here. Verified with `node --check` only.
