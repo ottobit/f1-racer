@@ -1632,3 +1632,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Replaced the same-wheel out/in animation with four removers, four fitters and two jack mechanics. A separate wheel set is mounted; used wheels remain in the garage, compound markings stay distinct, and geometry is reused across stops.
 - Updated architecture notes and client cache versions. Static syntax and whitespace checks passed; published source tree matched the local implementation. Gameplay, successive stops and mobile fluidity remain manual checks.
 - User authorized conclusion with "Concludi"; no remote crew synchronization or teammate service queue was added.
+
+## 2026-09-28 — Review of #249/#251 and race-camera cache version (#256)
+
+- Reviewed the ChatGPT-authored cycles #249 (helmet, wheel covers) and #251 (team pit bays): `node --check`, `validate-circuits`, Node import of `pit-lane.js` for the headless bot, and client/headless box assignment (both use the driver's team) all pass.
+- Found one defect: #249 changed `race-camera.js` (`COCKPIT_HIDDEN_PARTS`) without bumping its import, so a cached copy could leave the new helmet visible in cockpit view.
+- Fix: `race-camera.js?v=36`, `main.js?v=117`, `race-bootstrap.js?v=78` in `race.html`.
+- #249 history has eight identical "Improve driver helmet" commits; left as is (already on `master`).
+- Verified with `node --check` and `git diff --check` only.
