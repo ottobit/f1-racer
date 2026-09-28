@@ -940,6 +940,17 @@ html.touch #touch-controls {
   text-align: right;
 }
 
+/* The player's pick (#253): tint, bold and an inset bar, so the row reads
+   without relying on colour alone. */
+.menu-standings tr.is-selected td {
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 700;
+}
+
+.menu-standings tr.is-selected td:first-child {
+  box-shadow: inset 4px 0 0 #fff;
+}
+
 #champion-banner {
   max-width: 640px;
   margin: 0 auto 1.5rem;

@@ -193,7 +193,7 @@ function render() {
   document.getElementById("standings-body").innerHTML = standings
     .map(
       (d, i) => `
-        <tr>
+        <tr${d.id === selectedDriverId ? ' class="is-selected" aria-current="true"' : ""}>
           <td>${i + 1}</td>
           <td><span class="team-name" style="${teamStyle(d.team)}">${displayDriverName(d.id)}</span></td>
           <td>${d.points}</td>
