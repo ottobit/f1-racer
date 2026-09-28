@@ -1670,3 +1670,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Known limit: not checked in a browser; the badge could overlap a bottom-centre HUD element in race.
 - Also closed #105 (all items done; the TURN item stays in #106).
 - Verified with `node --check` and `git diff --check` only.
+
+## 2026-09-28 — Kerbs are rideable; off track only past them (#262)
+
+- `core/client/race/race-rules.js`: `createTrackBoundary` takes `kerbWidth`; `grassLimit` (runoff drag start and track-limit counting) moves from the asphalt edge to the kerb's outer edge, i.e. roughly all four wheels off the asphalt. New `kerbWidthFor(circuit)`: 0.95 m, 0.70 m on Marzamemi (track-art.js kerb profiles).
+- On the kerb band a light drag of 1.5% of `grassMaxDecel` (~5% of the lightest grass drag, which was ~67 u/s² right at the asphalt edge before); grass behaviour unchanged past the new limit.
+- `main.js` and `core/tools/headless-room-bot.mjs` pass the circuit's kerb width, so player, AI, simulated AI qualifying and the headless bot share the rule. `?v`: race-rules v3, main v120, race-bootstrap v81; release badge v262.
+- Known limit: AI lines don't use the kerbs, so the player gains ~1 m per side over the bots; AI pace may need its own cycle.
+- Verified with `node --check` and `git diff --check` only.
