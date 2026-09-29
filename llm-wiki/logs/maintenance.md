@@ -1791,3 +1791,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - The architecture remains additive: normal human multiplayer and the existing Room Bot strategy workflow work independently of MCP; all control paths converge on the same browser input/physics pipeline.
 - Added `c4-agent-control.md` with C4 levels 1–4, dynamic and deployment views, plus explicit regression boundaries preserving friends, Room Bot strategy and MCP as coexisting paths.
 - Release badge bumped from v274 to v275 across all HTML entry points. Structural/source review only; remote URL handshake, tool calls and end-to-end driving through an HTTPS tunnel remain runtime verification.
+
+
+## 2026-09-29 — Focused C4 model for MCP subsystem (#298)
+
+- Added `c4-mcp.md` as a focused architectural zoom of the remote MCP path, complementing rather than replacing the existing coexistence C4.
+- The document covers C4 levels 1–4, registration/attach, `f1_observe`, `f1_act`, failure/reconnect semantics, trust boundaries, deployment and source ownership.
+- Explicit invariants preserve the current runtime shape: MCP remains an optional adapter, one token binds one participant, the room server only relays, and browser input/physics remain the single execution path.
+- Linked the new MCP zoom from both `c4-model.md` and `c4-agent-control.md` for discoverability without changing runtime code.
+- Release badge bumped from v275 to v276 across all HTML entry points. Documentation-only cycle; verified structurally against the current file/component names and no browser test was required.
