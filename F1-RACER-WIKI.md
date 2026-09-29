@@ -844,11 +844,34 @@ in all) and then goes neutral; `act()`, `release()` and a human cancel it.
 `step()` now runs on the same controller. A `generation` counter makes stale
 timers no-ops. `getState().control` = `{ mode, steer, throttle, brake,
 leaseRemainingMs, queue }`; `nearbyCars[].remote` marks room participants.
-`pagehide` / a hidden tab release an agent command. With WebMCP
-(`navigator.modelContext.registerTool` or `provideContext`) the same calls
-are the tools `f1_observe`, `f1_act`, `f1_enqueue`, `f1_release`; without it
-nothing changes. Controller checked in Node with stubs; the WebMCP bridge
-is untested in a WebMCP browser.
+`pagehide` / a hidden tab release an agent command.
+
+The controller is now transport-neutral. Native WebMCP registers
+`f1_observe`, `f1_act`, `f1_enqueue`, `f1_release` through
+`document.modelContext` when available (with the older
+`navigator.modelContext` retained as compatibility fallback), but a WebMCP
+browser is **not required**. In multiplayer, `?agent=1` also registers the
+page with the room server's realtime agent relay. The server returns a
+per-participant bearer token, never included in public room state; callers
+may preselect a token with `?agentToken=<secret>` (minimum 16 chars) so an
+external controller already knows it. `room.js` preserves both query params
+when navigating lobby → race.
+
+`core/server/room-server.mjs` relays only four whitelisted `f1_*` calls:
+an external controller sends `agent_attach` with the bearer token, then
+`agent_call { callId, tool, args }`; the server forwards that call only to
+the race socket that registered the token and returns its `agent_result`.
+Controller sockets are not room participants, cannot reserve drivers, and
+lose authority when the race page disconnects/re-registers. The room server
+still performs no driving logic or physics.
+
+`core/tools/agent-mcp-server.mjs` is the browser-independent MCP adapter for
+Claude/Codex/other MCP clients. It exposes the same four tools over stdio and
+forwards them through the WebSocket relay. Configure it with
+`F1_AGENT_SERVER` (the room-server/ngrok URL) and `F1_AGENT_TOKEN`; run it
+with `npm run start:agent-mcp` from `core/`. This gives a normal browser
+the same external-agent control surface as native WebMCP, while preserving
+one underlying driving controller and human-input precedence.
 
 Verified in a real headless browser (Playwright, Chromium): the API appears
 and matches this contract, `getState()` snapshots are JSON-serializable and
