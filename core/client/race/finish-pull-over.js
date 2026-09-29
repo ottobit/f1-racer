@@ -1,5 +1,5 @@
 // Shared post-finish driving plan: physical steering/braking, never teleport.
-export function finishPullOver(car, dt, { centerline, nearestTrackInfo, sideNormal, trackWidth }) {
+export function finishPullOver(car, dt, { centerline, nearestTrackInfo, sideNormal, grassLimit }) {
   const { idx } = nearestTrackInfo(car.x, car.z);
   const point = centerline[idx];
   const normal = sideNormal(point);
@@ -7,7 +7,9 @@ export function finishPullOver(car, dt, { centerline, nearestTrackInfo, sideNorm
   const plan = car.finishPullOver ??= {
     elapsed: 0,
     startOffset: offset,
-    targetOffset: (offset < 0 ? -1 : 1) * Math.min(trackWidth * 0.4, Math.max(0, trackWidth / 2 - 1.2)),
+    // Park beyond the outside edge of the kerb, not on the racing surface.
+    // Keep a little runoff margin so the whole car reads as safely clear.
+    targetOffset: (offset < 0 ? -1 : 1) * (grassLimit + 1.1),
   };
   plan.elapsed += dt;
   const t = Math.min(1, plan.elapsed / 2);

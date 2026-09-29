@@ -1739,3 +1739,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 
 - `race.html` and `free.html`: the hint now says "trascina col mouse per guardarti intorno", matching #278 (the canvas drag no longer exists on touch). Text only, no imports touched, so no `?v` chain; release badge v270.
 - Verified with `git diff --check` only. `modes.html` still does not list free look / L1 / free drive (open).
+
+
+## 2026-09-29 — Finished cars park beyond the kerbs (#282)
+
+- `finish-pull-over.js`: post-finish target now uses the shared outer-kerb boundary (`grassLimit`) and aims about 1.1 m into the runoff, so finished cars clear the racing surface instead of stopping beside/on the kerb.
+- The same behavior is wired for the player, browser AI and headless room bot; movement still uses ordinary steering/braking, never teleportation.
+- Cache chain bumped through `race-ai.js`, `main.js`, `race-bootstrap.js` and `race.html`.
+- Structural review only; final behavior remains for the user's gameplay verification after merge.
