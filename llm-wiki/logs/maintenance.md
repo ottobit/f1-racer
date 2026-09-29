@@ -1756,3 +1756,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Cache versions were bumped through `main.js`, `race-bootstrap.js` and `race.html`.
 - Release badge bumped from v270 to v271 across all HTML entry points.
 - Structural comparison only; gameplay verification remains at roughly 100, 150 and 200 km/h with different kerb/runoff depths.
+
+
+## 2026-09-29 — Montenero competitive redesign (#286)
+
+- `circuits.js`: Montenero was redrawn so it is no longer a compact Colleverde lookalike; the new lap has a faster eastern run into a heavy braking zone, a clearer fast S, a slow western restart and a more asymmetric technical final sector.
+- Track width stays at 11 m to preserve the street-circuit identity; the recommended setup now balances rear wing and suspension for the added straight/braking/traction mix.
+- Browser cache chains were bumped for every client that imports `circuits.js` (menu, garage, room and race paths).
+- Release badge bumped from v271 to v272 across all HTML entry points.
+- Structural source review and geometric pre-check completed; the canonical Node circuit validator could not be executed through the GitHub connector-only environment, so gameplay remains the final validation.
