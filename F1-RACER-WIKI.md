@@ -865,13 +865,23 @@ Controller sockets are not room participants, cannot reserve drivers, and
 lose authority when the race page disconnects/re-registers. The room server
 still performs no driving logic or physics.
 
-`core/tools/agent-mcp-server.mjs` is the browser-independent MCP adapter for
-Claude/Codex/other MCP clients. It exposes the same four tools over stdio and
-forwards them through the WebSocket relay. Configure it with
-`F1_AGENT_SERVER` (the room-server/ngrok URL) and `F1_AGENT_TOKEN`; run it
-with `npm run start:agent-mcp` from `core/`. This gives a normal browser
-the same external-agent control surface as native WebMCP, while preserving
-one underlying driving controller and human-input precedence.
+`core/tools/agent-mcp-common.mjs` now owns the shared tool definitions and
+WebSocket bridge client used by both MCP transports. The local
+`core/tools/agent-mcp-server.mjs` remains the stdio adapter for
+Claude/Codex: configure `F1_AGENT_SERVER` (the room-server/ngrok URL) and
+`F1_AGENT_TOKEN`, then run `npm run start:agent-mcp` from `core/`.
+
+`core/tools/agent-mcp-http.mjs` adds a separate remote Streamable HTTP
+endpoint at `POST /mcp` (default `127.0.0.1:8790`) for remote MCP clients.
+It supports the stateless 2026-07-28 discovery/request shape plus the recent
+legacy initialize handshake, exposes exactly the same four `f1_*` tools,
+and forwards calls through the same WebSocket bridge. `GET /health` reports
+configuration without secrets. Set `F1_MCP_AUTH_TOKEN` to require a Bearer
+token before publishing/tunneling the endpoint; HTTPS termination belongs to
+the reverse proxy/tunnel, not this small Node process. Run it with
+`npm run start:agent-mcp:http`. This means local Claude can keep using
+stdio while a future ChatGPT/custom-MCP surface can point at the remote
+`/mcp` URL without changing the game or room protocol.
 
 Verified in a real headless browser (Playwright, Chromium): the API appears
 and matches this contract, `getState()` snapshots are JSON-serializable and
