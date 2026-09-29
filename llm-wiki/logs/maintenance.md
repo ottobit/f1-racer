@@ -1773,3 +1773,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Box call moved to ~60-70% wear: a stop at lap 1-2 leaves fresh tyres at 100% before the flag in a 5-lap race.
 - Documentation only; verified with `git diff --check`, checked in play in room H32D (5 bots, stops with radio, standings tracked).
 - Findings filed as #288-#292 (Agent API / room-bot); #201 reopened by the user.
+
+
+## 2026-09-29 — Browser-independent realtime agent bridge (#201)
+
+- `agent-api.js`: WebMCP and remote control now dispatch through one `f1_observe` / `f1_act` / `f1_enqueue` / `f1_release` controller; native WebMCP prefers `document.modelContext` with the previous navigator surface kept as compatibility fallback.
+- `room-server.mjs` + multiplayer client adapters: added a bearer-token WebSocket relay scoped to one registered race participant, with a four-tool whitelist, call/result correlation and revocation on page close, leave or bridge replacement.
+- `core/tools/agent-mcp-server.mjs`: added a dependency-free MCP stdio adapter (using existing `ws`) so Claude/Codex can control a normal browser through `F1_AGENT_SERVER` + `F1_AGENT_TOKEN`; lobby/race/rematch preserve agent query parameters.
+- Branch was synchronized with the latest master before PR finalization; no new npm dependency was introduced and cache versions were bumped through room/race entry points.
+- Release badge bumped from v273 to v274 across all HTML entry points. Structural/source review only; live MCP → WebSocket → race round-trip, 10+ consecutive actions, three simultaneous agent sessions and human takeover remain gameplay/runtime verification.
