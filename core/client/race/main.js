@@ -1,4 +1,4 @@
-import { finishPullOver } from "./finish-pull-over.js?v=1";
+import { finishPullOver } from "./finish-pull-over.js?v=2";
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { CIRCUITS, getCircuit, LAPS_PER_RACE, TYRE_LIFE_LAPS } from "../shared/circuits.js?v=39";
 import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=2";
@@ -14,7 +14,7 @@ import { escapeHtml, setupRaceHud } from "./race-hud.js?v=41";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=40";
 import { setupPlayerPhysics } from "./player-physics.js?v=9";
-import { setupRaceAi } from "./race-ai.js?v=30";
+import { setupRaceAi } from "./race-ai.js?v=31";
 import { setupRaceSystems } from "./race-systems.js?v=32";
 import { setupRaceProgress } from "./race-progress.js?v=28";
 import { setupRaceCommands } from "./race-commands.js?v=2";
@@ -923,6 +923,7 @@ const raceSystems = setupRaceSystems({
 const { updateAiCar } = setupRaceAi({
   ai: AI,
   trackWidth: TRACK_WIDTH,
+  grassLimit: GRASS_LIMIT,
   isRace: () => sessionPhase === "race",
   centerline,
   headingOf,
@@ -998,7 +999,7 @@ function showResultsOverlay() {
 }
 
 function driveFinishCoast(dt) {
-  const plan = finishPullOver(state, dt, { centerline, nearestTrackInfo, sideNormal, trackWidth: TRACK_WIDTH });
+  const plan = finishPullOver(state, dt, { centerline, nearestTrackInfo, sideNormal, grassLimit: GRASS_LIMIT });
   setExternalSteer(plan.steer);
   steering.value = plan.steer;
   input.forward = plan.throttle;
@@ -1116,6 +1117,7 @@ function simulateAiFlyingLapMs() {
   const simAi = setupRaceAi({
     ai: AI,
     trackWidth: TRACK_WIDTH,
+    grassLimit: GRASS_LIMIT,
     isRace: () => false,
     centerline,
     headingOf,
