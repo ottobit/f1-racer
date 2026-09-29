@@ -1,4 +1,4 @@
-import { CIRCUITS, LAPS_PER_RACE } from "../shared/circuits.js?v=39";
+import { CIRCUITS, LAPS_PER_RACE } from "../shared/circuits.js?v=40";
 import { computeStandings, resetChampionship } from "../shared/championship.js?v=2";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
 import { liveryById } from "../shared/driver-themes.js?v=28";
