@@ -60,9 +60,9 @@ You decide, live, for every bot (user rule, 2026-09-27): no strategy
 scripts, no loops that apply rules for you. The bot re-reads
 `strategy.json` on every change and writes `state.json` every 2 s.
 
-- Read the race: `node core/tools/bot-watch.mjs [DIR] --timeout 10` waits
+- Read the race: `node core/tools/bot-watch.mjs [DIR] --timeout 5` waits
   until something worth a decision happens (lap, pit state, safety car,
-  wear crossing 50/70/85%, damage) or 10 s pass, then prints one line per
+  wear crossing 50/70/85%, damage) or 5 s pass, then prints one line per
   bot. It only reports.
 - Decide and write each bot's `strategy.json` yourself (whole file, it is
   not merged), always with `"autoPit":false` so the driver never boxes on
@@ -73,6 +73,11 @@ scripts, no loops that apply rules for you. The bot re-reads
   rematches. Never end your turn between lights out and `finished`: a plan
   set before the start and left alone is not live strategy (VSN2 race 1).
   Staying in the turn also keeps a cloud container awake.
+- Loop speed: the real cycle is `--timeout` plus your own tool and thinking
+  time (~10-15 s in practice), so a long timeout only adds dead time. Use
+  `--timeout 5` and keep each turn's writes and reasoning short; if cycles
+  still run longer than ~10 s, drop the extras (skip the per-bot rewrite when
+  nothing changed) rather than raising the timeout.
 - Be present (user rule, 2026-09-29): every check, look at `standings` in
   `state.json` — the human is in it — and at the gap between the human and
   each bot. A bot within ~1.5 s of the human, attacking or defending gets a
