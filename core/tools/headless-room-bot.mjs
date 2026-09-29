@@ -271,7 +271,7 @@ function buildSim(circuitId) {
   const driver = createLayeredProvider({ fast: autopilot, getState: () => snapshot(performance.now()) });
   log("circuit", circuit.id, `${Math.round(trackLength)}m`);
   return {
-    circuit, centerline, trackLength, nearestTrackInfo, gridSlot, tyreWear, driverId,
+    circuit, centerline, trackLength, nearestTrackInfo, gridSlot, tyreWear, driverId, grassLimit,
     state, input, steering, others, integratePlayerMotion, systems,
     advanceProgress, collisions, driver,
   };
@@ -531,7 +531,7 @@ function sendRadio(text) {
 function drive(dt) {
   const { state, input, steering, driver } = sim;
   if (raceState === "finished") {
-    const plan = finishPullOver(state, dt, { ...sim, sideNormal, trackWidth: sim.circuit.width });
+    const plan = finishPullOver(state, dt, { ...sim, sideNormal, grassLimit: sim.grassLimit });
     steering.value = plan.steer;
     input.forward = plan.throttle;
     input.back = plan.brake;
