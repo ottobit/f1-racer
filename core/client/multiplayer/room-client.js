@@ -49,6 +49,7 @@ export function createRoomClient() {
   const connectionListeners = new Set();
   const carStateListeners = new Set();
   const voiceSignalListeners = new Set();
+  const agentCommandListeners = new Set();
   let session = loadSession(); // {roomCode, participantId, reconnectToken}
   let lastRoom = null;
   let pingTimer = null;
@@ -93,6 +94,10 @@ export function createRoomClient() {
     }
     if (msg.type === "voice_signal") {
       voiceSignalListeners.forEach((cb) => cb(msg.from, msg.data));
+      return;
+    }
+    if (msg.type === "agent_command") {
+      agentCommandListeners.forEach((cb) => cb(msg));
       return;
     }
     if (msg.type === "error" && msg.code === "unknown_type" && !msg.reqId) {
@@ -183,6 +188,27 @@ export function createRoomClient() {
   function reportFinish() { return send("report_finish"); }
   function rematch() { return send("rematch"); }
 
+  // Realtime agent bridge (#201): the race page registers its participant
+  // socket as a remotely controllable target. The server returns a bearer
+  // token; a caller that already supplied a >=16-char token can reuse it so
+  // no browser-specific WebMCP support is required.
+  function registerAgentBridge(token = null) {
+    return send("agent_bridge_register", token ? { token } : {});
+  }
+
+  // Results are paired by callId on the relay, not reqId, because the remote
+  // controller owns the request lifecycle.
+  function sendAgentResult(callId, ok, result = null, error = null) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({
+      type: "agent_result",
+      callId,
+      ok: !!ok,
+      result: ok ? result : undefined,
+      error: ok ? undefined : String(error || "Agent command failed").slice(0, 500),
+    }));
+  }
+
   // Fire-and-forget, no reqId/ack — called every frame during a
   // multiplayer qualifying/race session (Stage 2, #44), too frequent to pay
   // the pending-request bookkeeping the other methods use.
@@ -211,6 +237,7 @@ export function createRoomClient() {
   function onConnectionChange(cb) { connectionListeners.add(cb); return () => connectionListeners.delete(cb); }
   function onCarState(cb) { carStateListeners.add(cb); return () => carStateListeners.delete(cb); }
   function onVoiceSignal(cb) { voiceSignalListeners.add(cb); return () => voiceSignalListeners.delete(cb); }
+  function onAgentCommand(cb) { agentCommandListeners.add(cb); return () => agentCommandListeners.delete(cb); }
 
   return {
     createRoom,
@@ -224,6 +251,8 @@ export function createRoomClient() {
     reportQualiTime,
     reportFinish,
     rematch,
+    registerAgentBridge,
+    sendAgentResult,
     sendCarState,
     sendVoiceSignal,
     leaveRoom,
@@ -231,7 +260,9 @@ export function createRoomClient() {
     onConnectionChange,
     onCarState,
     onVoiceSignal,
+    onAgentCommand,
     hasSavedSession: () => !!session,
+    getServerUrl: () => serverUrl(),
     serverNow: () => Date.now() + clockOffsetMs,
     get room() { return lastRoom; },
     get participantId() { return session ? session.participantId : null; },
