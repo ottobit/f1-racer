@@ -38,6 +38,11 @@ node core/tools/bot-fleet.mjs <SERVER> <ROOM> --count 5    # in the background
 - Needs Playwright + Chromium (a global install is fine, the fleet finds
   it). On the player's PC (agent started with `claude remote-control`):
   `npm i -g playwright`, `npx playwright install chromium`.
+- Do not end your turn after the bots join: the host starts the race with
+  no warning and a turn ended in the lobby misses lights out (#293). Write
+  every bot's plan and radio first, then stay in a `bot-watch` loop until
+  the lobby turns into `race` and go on to `finished`. The user never has
+  to tell you the race started.
 - Capacity: 5 bots are smooth for the human, 7 at most on a 4-core box
   (11 → ~30 fps and stutter). `botFps` below ~50 = the bot drives worse.
 - `--gpu` (or `--headed`) on a machine with a real GPU; `state.json`
@@ -55,9 +60,9 @@ You decide, live, for every bot (user rule, 2026-09-27): no strategy
 scripts, no loops that apply rules for you. The bot re-reads
 `strategy.json` on every change and writes `state.json` every 2 s.
 
-- Read the race: `node core/tools/bot-watch.mjs [DIR] --timeout 20` waits
+- Read the race: `node core/tools/bot-watch.mjs [DIR] --timeout 10` waits
   until something worth a decision happens (lap, pit state, safety car,
-  wear crossing 50/70/85%, damage) or 20 s pass, then prints one line per
+  wear crossing 50/70/85%, damage) or 10 s pass, then prints one line per
   bot. It only reports.
 - Decide and write each bot's `strategy.json` yourself (whole file, it is
   not merged), always with `"autoPit":false` so the driver never boxes on
@@ -68,12 +73,20 @@ scripts, no loops that apply rules for you. The bot re-reads
   rematches. Never end your turn between lights out and `finished`: a plan
   set before the start and left alone is not live strategy (VSN2 race 1).
   Staying in the turn also keeps a cloud container awake.
+- Be present (user rule, 2026-09-29): every check, look at `standings` in
+  `state.json` — the human is in it — and at the gap between the human and
+  each bot. A bot within ~1.5 s of the human, attacking or defending gets a
+  `radio` and a pace decision. Radio on every event: lights out, each box
+  call, overtakes, safety car, damage, last lap. After each lap write one
+  line in chat with the human's position and the bots'. Never say you
+  cannot see the human's position.
 - `pit ... armed` in the watch line = the box call is still pending (it
   stays armed until the pit entry, up to a lap): never send `pit` again,
   or the car stops twice. The word after `pace` is the driver's tactical
   mode, which explains a pace different from the one you set.
 - Wear % grows ~33% a lap on every compound; over 5 laps one stop is the
-  baseline. A stop also cuts damage to a quarter.
+  baseline. Call the box at ~60-70% wear: a stop at lap 1-2 leaves the new
+  tyres at 100% before the flag. A stop also cuts damage to a quarter.
 
 `strategy.json` (all keys optional; invalid values are ignored):
 
