@@ -1782,3 +1782,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `core/tools/agent-mcp-server.mjs`: added a dependency-free MCP stdio adapter (using existing `ws`) so Claude/Codex can control a normal browser through `F1_AGENT_SERVER` + `F1_AGENT_TOKEN`; lobby/race/rematch preserve agent query parameters.
 - Branch was synchronized with the latest master before PR finalization; no new npm dependency was introduced and cache versions were bumped through room/race entry points.
 - Release badge bumped from v273 to v274 across all HTML entry points. Structural/source review only; live MCP → WebSocket → race round-trip, 10+ consecutive actions, three simultaneous agent sessions and human takeover remain gameplay/runtime verification.
+
+
+## 2026-09-29 — Remote Streamable HTTP MCP endpoint (#296)
+
+- `agent-mcp-common.mjs` now centralizes the four F1 MCP tools and the WebSocket bridge client; the existing stdio adapter reuses it instead of maintaining a second control implementation.
+- `agent-mcp-http.mjs` adds the primary remote Streamable HTTP `/mcp` path for Claude, ChatGPT and other MCP clients, with optional Bearer auth, origin checks, protocol/header validation and a secret-free `/health` endpoint.
+- The architecture remains additive: normal human multiplayer and the existing Room Bot strategy workflow work independently of MCP; all control paths converge on the same browser input/physics pipeline.
+- Added `c4-agent-control.md` with C4 levels 1–4, dynamic and deployment views, plus explicit regression boundaries preserving friends, Room Bot strategy and MCP as coexisting paths.
+- Release badge bumped from v274 to v275 across all HTML entry points. Structural/source review only; remote URL handshake, tool calls and end-to-end driving through an HTTPS tunnel remain runtime verification.
