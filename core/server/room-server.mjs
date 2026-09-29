@@ -407,6 +407,8 @@ wss.on("connection", (ws) => {
         }
         case "leave_room": {
           requireBound(bound);
+          const bridgeEntry = bridgeForRaceSocket(bound, ws);
+          if (bridgeEntry) detachAgentBridge(bridgeEntry.token, "participant_left");
           const { room } = leaveRoom(store, { roomCode: bound.roomCode, participantId: bound.participantId });
           socketsFor(bound.roomCode).delete(bound.participantId);
           if (!room) clearQualifyingTimer(bound.roomCode);
@@ -424,7 +426,17 @@ wss.on("connection", (ws) => {
           send(ws, { type: "error", reqId, code: "unknown_type", message: `Tipo di messaggio sconosciuto: ${type}` });
       }
     } catch (err) {
-      if (err instanceof RoomError) {
+      // Remote agent calls are correlated by callId rather than reqId. Send
+      // failures on the same channel so MCP callers fail immediately instead
+      // of waiting for their timeout.
+      if (type === "agent_call" && msg?.callId) {
+        send(ws, {
+          type: "agent_result",
+          callId: String(msg.callId).slice(0, 80),
+          ok: false,
+          error: err instanceof RoomError ? err.message : "Errore interno del bridge agente.",
+        });
+      } else if (err instanceof RoomError) {
         send(ws, { type: "error", reqId, code: err.code, message: err.message });
       } else {
         console.error("[room-server] unexpected error", err);
