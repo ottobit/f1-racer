@@ -11,6 +11,7 @@ not blur into one oversized diagram:
 
 - [Solo/local — C4 levels 1 to 4](c4-local.md)
 - [Multiplayer — C4 levels 1 to 4](c4-multiplayer.md)
+- [Agent control coexistence — C4 levels 1 to 4](c4-agent-control.md)
 
 Both detailed documents use the same visual language: people are dark blue,
 systems/containers are blue, code components are light blue, data stores are
@@ -327,31 +328,18 @@ not part of the loop above.
 - Static-module cache busting depends on manually propagated query versions.
 - The room host currently operates Node.js and the public tunnel manually.
 
-## Planned agent integration — not current runtime
+## Agent integration — additive current architecture
 
-The following path is planned and must not be read as already implemented:
+The former planned-agent section has been superseded by the implemented
+continuous-control/relay work in #201 and the remote Streamable HTTP transport
+in #296. The complete C4 view is now kept in
+[Agent control coexistence — C4 levels 1 to 4](c4-agent-control.md).
 
-```mermaid
-flowchart LR
-  model["Codex, Claude or local model"]
-  copilot["Browser Copilot<br/>Generic browser-control core<br/>and F1 adapter"]
-  api["F1 control contract<br/>observe, act, release<br/>with command lease"]
-  game["Browser race runtime"]
-  room["Existing multiplayer protocol"]
+The architectural rule is explicit: MCP is an **optional adapter**, not a new
+game runtime. Human multiplayer and the existing Room Bot/strategy workflow
+remain valid independently of the MCP process; all control paths converge on
+the same browser input/physics pipeline.
 
-  model -->|"Decisions"| copilot
-  copilot -->|"WebMCP or browser adapter"| api
-  api -->|"Same input/physics path"| game
-  game -->|"Ordinary participant state"| room
-```
-
-- F1 Racer issue [#201](https://github.com/ottobit/f1-racer/issues/201)
-  owns the in-game continuous control contract and safety boundary.
-- Browser Copilot issue
-  [#3](https://github.com/ottobit/browser-copilot/issues/3) owns extraction of
-  a generic browser-control core and game-specific adapters.
-- Browser Copilot must not own F1 physics, multiplayer state or racing strategy;
-  it transports and supervises commands chosen by an external driver.
 
 ## Source map
 
