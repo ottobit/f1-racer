@@ -147,6 +147,9 @@ function connectBridge() {
 
       if (msg.type === "agent_detached") {
         rejectPending(new Error(`F1 agent bridge detached: ${msg.reason || "unknown"}`));
+        // Force the next tool call through a fresh agent_attach. This lets a
+        // race-page reload re-register the same caller-provided token.
+        try { ws.close(); } catch {}
         return;
       }
 
