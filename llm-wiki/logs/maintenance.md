@@ -1747,3 +1747,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - The same behavior is wired for the player, browser AI and headless room bot; movement still uses ordinary steering/braking, never teleportation.
 - Cache chain bumped through `race-ai.js`, `main.js`, `race-bootstrap.js` and `race.html`.
 - Structural review only; final behavior remains for the user's gameplay verification after merge.
+
+
+## 2026-09-29 — Progressive kerb and runoff slowdown (#283)
+
+- `race-rules.js`: replaced the old runoff drag peak (240 m/s², with a 28% entry floor) with a progressive 5.4→30 m/s² ramp, and set kerb scrub to 2.2 m/s² so kerbs no longer behave like invisible walls.
+- The slowdown transition now uses smoothstep after the outer kerb edge; barriers and car collisions remain separate impact paths.
+- Cache versions were bumped through `main.js`, `race-bootstrap.js` and `race.html`.
+- Release badge bumped from v270 to v271 across all HTML entry points.
+- Structural comparison only; gameplay verification remains at roughly 100, 150 and 200 km/h with different kerb/runoff depths.

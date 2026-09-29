@@ -99,9 +99,11 @@ export function updateDrsEligibility(cars, trackLength) {
 }
 
 // --- Runoff ------------------------------------------------------------------
-// Running wide costs grip: past the asphalt edge the car is dragged down
-// progressively (front-loaded, see the 0.28 floor) towards a crawl, never
-// snapped back by an invisible wall.
+// Kerbs and runoff must slow the car without behaving like an invisible
+// wall. The old runoff value peaked at 240 m/s²: even its shallow 28% floor
+// was ~6.8 g, enough to make a 100–150 km/h car look as if it stopped on the
+// kerb. Keep the kerb mild and ramp the runoff through plausible arcade
+// deceleration instead; barriers/collisions remain a separate impact path.
 // Outer edge of the painted kerb beyond the asphalt edge (track-art.js
 // kerb profiles): Marzamemi's street kerb is narrower.
 export function kerbWidthFor(circuit) {
@@ -114,9 +116,10 @@ export function kerbWidthFor(circuit) {
 export function createTrackBoundary({ trackWidth, runoffEffect, nearestTrackInfo, kerbWidth = 0.95 }) {
   const kerbStart = trackWidth / 2; // asphalt edge, where the kerb starts
   const grassLimit = kerbStart + kerbWidth; // outer kerb edge: off track past here
-  const wallLimit = grassLimit + 4; // runoff drag ramp length; no hard stop
-  const grassMaxDecel = 240 * (1 - runoffEffect * 0.035); // units/s² of extra drag
-  const kerbDecel = grassMaxDecel * 0.015; // ~5% of the lightest grass drag
+  const runoffRampEnd = grassLimit + 4; // depth at which runoff drag reaches its maximum
+  const runoffMaxDecel = 30 * (1 - runoffEffect * 0.02); // m/s², strong but never a wall
+  const runoffMinFactor = 0.18; // ~5.4 m/s² at the outer edge: progressive entry
+  const kerbDecel = 2.2; // m/s²: vibration/scrub, not an emergency brake
   const crawlSpeed = 8;
   function slow(car, decel) {
     if (car.speed > crawlSpeed) car.speed = Math.max(crawlSpeed, car.speed - decel);
@@ -126,8 +129,12 @@ export function createTrackBoundary({ trackWidth, runoffEffect, nearestTrackInfo
     info = info || nearestTrackInfo(car.x, car.z);
     if (info.dist > grassLimit) {
       const runoffDepth = info.dist - grassLimit;
-      const t = Math.min(runoffDepth / (wallLimit - grassLimit), 1);
-      slow(car, grassMaxDecel * (0.28 + 0.72 * t) * dt);
+      const t = Math.min(runoffDepth / (runoffRampEnd - grassLimit), 1);
+      // Smoothstep avoids a discontinuity exactly as the centre crosses the
+      // outside of the kerb. A brief excursion at racing speed now sheds a
+      // few km/h instead of collapsing immediately to the crawl-speed floor.
+      const ramp = t * t * (3 - 2 * t);
+      slow(car, runoffMaxDecel * (runoffMinFactor + (1 - runoffMinFactor) * ramp) * dt);
     } else if (info.dist > kerbStart) {
       slow(car, kerbDecel * dt);
     }
