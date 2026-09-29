@@ -10,6 +10,7 @@
 // State is in-memory only (see rooms.mjs) and resets on restart. Fine for
 // Stage 1's casual, short-lived rooms; not a database.
 
+import { randomBytes } from "node:crypto";
 import { WebSocketServer } from "ws";
 import {
   createStore,
@@ -51,6 +52,60 @@ const store = createStore();
 // broadcast can reach every socket currently associated with a room.
 // rooms.mjs itself never touches a socket.
 const socketsByRoom = new Map();
+
+// Realtime agent relay (#201). A race page registers its already-bound room
+// socket and gets a bearer token. A separate controller socket can attach
+// with that token and call the same f1_* tools that native WebMCP exposes.
+// The relay never simulates physics and never gains access to another car.
+const AGENT_TOOL_NAMES = new Set(["f1_observe", "f1_act", "f1_enqueue", "f1_release"]);
+const agentBridges = new Map(); // token -> {roomCode, participantId, raceSocket, controllerSocket}
+const agentTokenByParticipant = new Map(); // "ROOM:participant" -> token
+
+function agentParticipantKey(roomCode, participantId) {
+  return `${roomCode}:${participantId}`;
+}
+
+function detachAgentBridge(token, reason = "bridge_closed") {
+  const bridge = agentBridges.get(token);
+  if (!bridge) return;
+  if (bridge.controllerSocket?.readyState === bridge.controllerSocket.OPEN) {
+    send(bridge.controllerSocket, { type: "agent_detached", reason });
+  }
+  agentBridges.delete(token);
+  agentTokenByParticipant.delete(agentParticipantKey(bridge.roomCode, bridge.participantId));
+}
+
+function registerAgentBridge(bound, raceSocket, requestedToken) {
+  requireBound(bound);
+  const key = agentParticipantKey(bound.roomCode, bound.participantId);
+  const oldToken = agentTokenByParticipant.get(key);
+  if (oldToken) detachAgentBridge(oldToken, "bridge_replaced");
+
+  let token = typeof requestedToken === "string" ? requestedToken.trim() : "";
+  if (token && token.length < 16) {
+    throw new RoomError("agent_token_too_short", "Il token agente deve avere almeno 16 caratteri.");
+  }
+  if (!token) token = randomBytes(24).toString("base64url");
+  if (agentBridges.has(token)) {
+    throw new RoomError("agent_token_in_use", "Token agente già in uso.");
+  }
+
+  agentBridges.set(token, {
+    roomCode: bound.roomCode,
+    participantId: bound.participantId,
+    raceSocket,
+    controllerSocket: null,
+  });
+  agentTokenByParticipant.set(key, token);
+  return token;
+}
+
+function bridgeForRaceSocket(bound, raceSocket) {
+  if (!bound) return null;
+  const token = agentTokenByParticipant.get(agentParticipantKey(bound.roomCode, bound.participantId));
+  const bridge = token ? agentBridges.get(token) : null;
+  return bridge && bridge.raceSocket === raceSocket ? { token, bridge } : null;
+}
 
 function socketsFor(roomCode) {
   let map = socketsByRoom.get(roomCode);
@@ -130,6 +185,9 @@ wss.on("connection", (ws) => {
   // Which room/participant this specific socket currently represents, if
   // any — set on create/join/reconnect, cleared on explicit leave.
   let bound = null;
+  // Non-room sockets can attach as one remote controller. Keeping the role
+  // separate prevents an agent connection from masquerading as a racer.
+  let controllerBridgeToken = null;
 
   ws.on("message", (raw) => {
     let msg;
@@ -231,6 +289,90 @@ wss.on("connection", (ws) => {
           broadcastRoom(bound.roomCode, room);
           break;
         }
+
+        // The race page opts into remote control only with ?agent=1. It can
+        // provide its own secret (useful for scripted sessions) or let the
+        // server generate one. The secret is never included in room_state.
+        case "agent_bridge_register": {
+          requireBound(bound);
+          const token = registerAgentBridge(bound, ws, msg.token);
+          send(ws, {
+            type: "agent_bridge_registered",
+            reqId,
+            token,
+            roomCode: bound.roomCode,
+            participantId: bound.participantId,
+          });
+          break;
+        }
+
+        // A remote MCP/client process is deliberately not a room participant.
+        // Possession of the bearer token is its only authority, scoped to the
+        // single race socket that registered that token.
+        case "agent_attach": {
+          if (bound) throw new RoomError("agent_attach_from_racer", "Una socket di gara non può diventare controller agente.");
+          const token = typeof msg.token === "string" ? msg.token.trim() : "";
+          const bridge = agentBridges.get(token);
+          if (!bridge || bridge.raceSocket.readyState !== bridge.raceSocket.OPEN) {
+            throw new RoomError("agent_bridge_not_found", "Bridge agente non disponibile.");
+          }
+          if (controllerBridgeToken && controllerBridgeToken !== token) {
+            const previous = agentBridges.get(controllerBridgeToken);
+            if (previous?.controllerSocket === ws) previous.controllerSocket = null;
+          }
+          if (bridge.controllerSocket && bridge.controllerSocket !== ws && bridge.controllerSocket.readyState === bridge.controllerSocket.OPEN) {
+            send(bridge.controllerSocket, { type: "agent_detached", reason: "controller_replaced" });
+          }
+          bridge.controllerSocket = ws;
+          controllerBridgeToken = token;
+          send(ws, {
+            type: "agent_attached",
+            reqId,
+            roomCode: bridge.roomCode,
+            participantId: bridge.participantId,
+          });
+          break;
+        }
+
+        case "agent_call": {
+          const bridge = controllerBridgeToken ? agentBridges.get(controllerBridgeToken) : null;
+          if (!bridge || bridge.controllerSocket !== ws) {
+            throw new RoomError("agent_not_attached", "Controller agente non collegato.");
+          }
+          if (!AGENT_TOOL_NAMES.has(msg.tool)) {
+            throw new RoomError("agent_tool_invalid", "Tool agente non valido.");
+          }
+          const callId = typeof msg.callId === "string" ? msg.callId.slice(0, 80) : "";
+          if (!callId) throw new RoomError("agent_call_id_required", "callId obbligatorio.");
+          if (bridge.raceSocket.readyState !== bridge.raceSocket.OPEN) {
+            throw new RoomError("agent_bridge_not_found", "Pagina gara non disponibile.");
+          }
+          send(bridge.raceSocket, {
+            type: "agent_command",
+            callId,
+            tool: msg.tool,
+            args: msg.args && typeof msg.args === "object" ? msg.args : {},
+          });
+          break;
+        }
+
+        case "agent_result": {
+          requireBound(bound);
+          const found = bridgeForRaceSocket(bound, ws);
+          if (!found) throw new RoomError("agent_bridge_not_registered", "Bridge agente non registrato.");
+          const controller = found.bridge.controllerSocket;
+          if (controller?.readyState === controller.OPEN) {
+            send(controller, {
+              type: "agent_result",
+              callId: String(msg.callId || "").slice(0, 80),
+              ok: !!msg.ok,
+              result: msg.ok ? msg.result : undefined,
+              error: msg.ok ? undefined : String(msg.error || "Agent command failed").slice(0, 500),
+            });
+          }
+          break;
+        }
+
         // Ephemeral per-frame position broadcast (Stage 2, #44): relayed
         // directly to the room's other sockets, never stored in rooms.mjs —
         // client-authoritative, so the server is just a fan-out relay here,
@@ -292,7 +434,15 @@ wss.on("connection", (ws) => {
   });
 
   ws.on("close", () => {
+    if (controllerBridgeToken) {
+      const bridge = agentBridges.get(controllerBridgeToken);
+      if (bridge?.controllerSocket === ws) bridge.controllerSocket = null;
+      controllerBridgeToken = null;
+    }
     if (!bound) return;
+
+    const bridgeEntry = bridgeForRaceSocket(bound, ws);
+    if (bridgeEntry) detachAgentBridge(bridgeEntry.token, "race_page_closed");
     // A page navigation (room.html -> race.html) can deliver the old
     // socket's close after the new socket's reconnect: that participant is
     // already live on the new socket, so this close must not touch it (#95).
