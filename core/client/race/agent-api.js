@@ -18,8 +18,10 @@
 // Continuous control (#201): `act()` holds a command until the next act(),
 // the lease running out, release() or a human touching a control — no
 // neutral gap between two commands. `enqueue()` plays a short list of
-// timed segments. With WebMCP (`navigator.modelContext`) the same calls are
-// also exposed as the tools f1_observe / f1_act / f1_enqueue / f1_release.
+// timed segments. Native WebMCP is an optional adapter; in multiplayer the
+// same tools can also be reached through the room server's authenticated
+// WebSocket relay, so a normal browser remains controllable by an external
+// MCP client.
 //
 //   await window._ENVIRONMENT_.act({ steer: -0.3, throttle: 1, leaseMs: 1500 });
 //   await window._ENVIRONMENT_.enqueue([{ steer: 0.2, throttle: 1, durationMs: 400 }]);
@@ -53,6 +55,7 @@ export function setupAgentApi({
   isRaining = false,
   circuitName = "",
   nameOf = (id) => id,
+  registerRemoteBridge = null,
 }) {
   const KMH_PER_UNIT = 3.6; // matches race-hud.js's own speed readout
   const DEFAULT_STEP_MS = 500;
@@ -339,19 +342,47 @@ export function setupAgentApi({
     if (document.hidden && controlMode === "agent") release();
   });
 
-  window._ENVIRONMENT_ = { getState, step, act, enqueue, release };
-  registerWebMcpTools({ getState, act, enqueue, release });
+  async function invokeAgentTool(name, args = {}) {
+    switch (name) {
+      case "f1_observe": return getState();
+      case "f1_act": return act(args || {});
+      case "f1_enqueue": return enqueue(args?.segments || []);
+      case "f1_release": return release();
+      default: throw new Error(`f1-agent-api: unknown tool ${name}`);
+    }
+  }
+
+  window._ENVIRONMENT_ = { getState, step, act, enqueue, release, bridge: null };
+  registerWebMcpTools({ invokeAgentTool });
+
+  // Browser-independent realtime bridge (#201). A long, caller-provided
+  // ?agentToken= can be used by automation; otherwise the server generates
+  // a random bearer token and exposes it only on this page's environment.
+  if (registerRemoteBridge) {
+    const requestedToken = new URLSearchParams(location.search).get("agentToken");
+    Promise.resolve(registerRemoteBridge(invokeAgentTool, requestedToken))
+      .then((info) => {
+        window._ENVIRONMENT_.bridge = { status: "ready", ...info };
+        window.dispatchEvent(new CustomEvent("f1-agent-bridge-ready", { detail: info }));
+        console.info("f1-agent-api: realtime bridge ready");
+      })
+      .catch((error) => {
+        window._ENVIRONMENT_.bridge = { status: "error", message: error?.message || String(error) };
+        console.warn("f1-agent-api: realtime bridge registration failed", error);
+      });
+  }
+
   window.dispatchEvent(new CustomEvent("f1-environment-ready"));
 
   return { onHumanInput: handBackToHuman };
 }
 
-// WebMCP bridge (#201): the same controller as window._ENVIRONMENT_, as
-// tools for browsers that expose navigator.modelContext. Only reached with
-// ?agent=1 (this module is not loaded otherwise); without WebMCP nothing
-// changes.
-function registerWebMcpTools({ getState, act, enqueue, release }) {
-  const modelContext = navigator.modelContext;
+// WebMCP adapter (#201): native support is optional. Prefer the current
+// document.modelContext surface, retain navigator.modelContext for older
+// experimental builds, and always dispatch into the same controller used by
+// the realtime WebSocket bridge.
+function registerWebMcpTools({ invokeAgentTool }) {
+  const modelContext = document.modelContext || navigator.modelContext;
   if (!modelContext) return;
   const reply = (value) => ({ content: [{ type: "text", text: JSON.stringify(value) }] });
   const command = {
@@ -364,13 +395,13 @@ function registerWebMcpTools({ getState, act, enqueue, release }) {
       name: "f1_observe",
       description: "Read the race state of the car this page drives.",
       inputSchema: { type: "object", properties: {} },
-      execute: async () => reply(getState()),
+      execute: async () => reply(await invokeAgentTool("f1_observe", {})),
     },
     {
       name: "f1_act",
       description: "Hold steer/throttle/brake until the next f1_act, the lease running out (ms, max 5000), f1_release or a human input.",
       inputSchema: { type: "object", properties: { ...command, leaseMs: { type: "number", minimum: 50, maximum: 5000 } } },
-      execute: async (args) => reply(await act(args || {})),
+      execute: async (args) => reply(await invokeAgentTool("f1_act", args || {})),
     },
     {
       name: "f1_enqueue",
@@ -386,13 +417,13 @@ function registerWebMcpTools({ getState, act, enqueue, release }) {
         },
         required: ["segments"],
       },
-      execute: async (args) => reply(await enqueue(args?.segments || [])),
+      execute: async (args) => reply(await invokeAgentTool("f1_enqueue", args || {})),
     },
     {
       name: "f1_release",
       description: "Drop every agent command at once and hand the car back.",
       inputSchema: { type: "object", properties: {} },
-      execute: async () => reply(release()),
+      execute: async () => reply(await invokeAgentTool("f1_release", {})),
     },
   ];
   try {
