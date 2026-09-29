@@ -12,6 +12,7 @@ not blur into one oversized diagram:
 - [Solo/local — C4 levels 1 to 4](c4-local.md)
 - [Multiplayer — C4 levels 1 to 4](c4-multiplayer.md)
 - [Agent control coexistence — C4 levels 1 to 4](c4-agent-control.md)
+- [MCP subsystem — C4 levels 1 to 4](c4-mcp.md)
 
 Both detailed documents use the same visual language: people are dark blue,
 systems/containers are blue, code components are light blue, data stores are

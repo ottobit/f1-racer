@@ -4,6 +4,8 @@
 > strategy and remote MCP control. The central constraint is coexistence:
 > MCP is an optional adapter and does **not** replace human multiplayer,
 > the existing Room Bot strategy workflow, local physics or the room protocol.
+>
+> For a focused zoom of the MCP path itself, see [MCP subsystem — C4 levels 1 to 4](c4-mcp.md).
 
 ## Visual legend
 
