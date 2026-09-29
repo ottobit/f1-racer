@@ -1,4 +1,4 @@
-import { finishPullOver } from "./finish-pull-over.js?v=1";
+import { finishPullOver } from "./finish-pull-over.js?v=2";
 
 const AI_AVOID_RADIUS = 4.5;
 const AI_AVOID_STRENGTH = 10;
@@ -12,6 +12,7 @@ function progressGapAhead(from, to) {
 export function setupRaceAi({
   ai,
   trackWidth,
+  grassLimit,
   isRace = () => true,
   centerline,
   headingOf,
@@ -106,7 +107,7 @@ export function setupRaceAi({
     }
 
     const finishPlan = car.finishPosition && isRace()
-      ? finishPullOver(car, dt, { centerline, nearestTrackInfo, sideNormal, trackWidth }) : null;
+      ? finishPullOver(car, dt, { centerline, nearestTrackInfo, sideNormal, grassLimit }) : null;
     const aimX = finishPlan?.x ?? (
       target.x +
       lateral.x * (lineOffset + avoidPush * AI_AVOID_STRENGTH * 0.12));
