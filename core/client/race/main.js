@@ -1,6 +1,6 @@
 import { finishPullOver } from "./finish-pull-over.js?v=2";
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { CIRCUITS, getCircuit, LAPS_PER_RACE, TYRE_LIFE_LAPS } from "../shared/circuits.js?v=39";
+import { CIRCUITS, getCircuit, LAPS_PER_RACE, TYRE_LIFE_LAPS } from "../shared/circuits.js?v=40";
 import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=2";
 import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=2";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
