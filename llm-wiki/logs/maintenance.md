@@ -1765,3 +1765,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Browser cache chains were bumped for every client that imports `circuits.js` (menu, garage, room and race paths).
 - Release badge bumped from v271 to v272 across all HTML entry points.
 - Structural source review and geometric pre-check completed; the canonical Node circuit validator could not be executed through the GitHub connector-only environment, so gameplay remains the final validation.
+
+## 2026-09-29 — Racing procedure: lobby watch, human tracking, faster cycle (#293)
+
+- `procedure-racing.md`: after the bots join, the agent must stay in a `bot-watch` loop until the lobby turns into `race` and then until `finished`; the host starts with no warning and a turn ended in the lobby missed lights out (BMXE, RTW2).
+- New "be present" rule: each check reads `standings` (the human is in it), gaps to the bots, radio on every event and one chat line per lap; watch cycle cut to `--timeout 5`, tuned to the agent's own latency.
+- Box call moved to ~60-70% wear: a stop at lap 1-2 leaves fresh tyres at 100% before the flag in a 5-lap race.
+- Documentation only; verified with `git diff --check`, checked in play in room H32D (5 bots, stops with radio, standings tracked).
+- Findings filed as #288-#292 (Agent API / room-bot); #201 reopened by the user.
