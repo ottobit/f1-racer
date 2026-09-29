@@ -978,8 +978,12 @@ if (multiplayer) {
   multiplayer.onRoomUpdate((room) => {
     if (room.sessionPhase !== "lobby") return;
     const params = new URLSearchParams();
-    const roomServer = new URLSearchParams(location.search).get("roomServer");
+    const sourceParams = new URLSearchParams(location.search);
+    const roomServer = sourceParams.get("roomServer");
     if (roomServer) params.set("roomServer", roomServer);
+    if (sourceParams.get("agent") === "1") params.set("agent", "1");
+    const agentToken = sourceParams.get("agentToken");
+    if (agentToken) params.set("agentToken", agentToken);
     location.href = `room.html${params.toString() ? `?${params}` : ""}`;
   });
 }
