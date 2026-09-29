@@ -48,21 +48,18 @@ export const CIRCUITS = [
   {
     id: "montenero",
     name: "Circuito di Montenero",
-    // A technical street layout rather than a flowing high-speed one, for
-    // genuine variety rather than another copy of the same shape at a
-    // different size. (Serramonte later took over as the single tightest/
-    // narrowest circuit in the roster — this is still the tightest *street*
-    // layout, not a mountain pass.) Control points are star-convex around
-    // the origin (each one further
-    // out or in than its neighbours, listed in angle order), which is what
-    // guarantees the closed spline below can't loop back and cross itself
-    // — see the validation script referenced above for the actual numbers
-    // (minimum curvature radius, wall-margin safety, grid slots on track).
+    // Competitive street layout: no longer a scaled-down Colleverde. The
+    // eastern side is a long acceleration zone into a heavy braking corner;
+    // the north-middle pair forms a fast S, and the western loop tightens
+    // into a slow restart before the technical final sector. It stays narrow
+    // and wall-close, but now offers several distinct attack/preparation
+    // zones instead of one continuous sequence of similarly paced bends.
     width: 11,
-    recommendedSetup: { frontWing:"high", rearWing:"high", floor:"high", brakes:"aggressive", suspension:"soft", reason:"Carico e trazione per il tracciato stretto, nervoso e ricco di ripartenze." },
+    recommendedSetup: { frontWing:"high", rearWing:"balanced", floor:"high", brakes:"aggressive", suspension:"balanced", reason:"Carico anteriore per la esse, stabilità in staccata e trazione per il tornante senza sacrificare il rettilineo principale." },
     points: [
-      [130, 0], [95, 55], [35, 61], [0, 55], [-38, 65], [-87, 50],
-      [-120, 0], [-87, -50], [-33, -56], [0, -50], [38, -65], [95, -55],
+      [165, -10], [165, 58], [120, 98], [58, 92], [18, 68], [-32, 102],
+      [-108, 88], [-150, 55], [-160, 10], [-138, -32], [-86, -45],
+      [-35, -30], [-5, -78], [62, -108], [128, -72],
     ],
   },
   {
