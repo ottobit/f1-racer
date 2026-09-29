@@ -1,4 +1,4 @@
-import { createRoomClient } from "./room-client.js?v=8";
+import { createRoomClient } from "./room-client.js?v=9";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
 import { liveryById } from "../shared/driver-themes.js?v=28";
 import { CIRCUITS } from "../shared/circuits.js?v=40";
@@ -147,8 +147,15 @@ function goToRace(room) {
   if (navigatedToRace || !room.circuitId) return;
   navigatedToRace = true;
   const params = new URLSearchParams({ circuit: room.circuitId, difficulty: room.difficulty, room: room.code });
-  const roomServer = new URLSearchParams(location.search).get("roomServer");
+  const sourceParams = new URLSearchParams(location.search);
+  const roomServer = sourceParams.get("roomServer");
   if (roomServer) params.set("roomServer", roomServer);
+  // Agent sessions must survive lobby -> race navigation. A caller can
+  // preselect a strong bearer token so an external MCP bridge already knows
+  // how to attach before the race page is opened.
+  if (sourceParams.get("agent") === "1") params.set("agent", "1");
+  const agentToken = sourceParams.get("agentToken");
+  if (agentToken) params.set("agentToken", agentToken);
   location.href = `race.html?${params.toString()}`;
 }
 
