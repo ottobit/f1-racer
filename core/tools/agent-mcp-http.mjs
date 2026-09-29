@@ -11,9 +11,10 @@
 //   F1_MCP_PORT=8790                                  optional
 //   F1_MCP_HOST=127.0.0.1                             optional
 //   F1_MCP_AUTH_TOKEN=<bearer secret>                 strongly recommended when tunneled
+//   F1_MCP_ALLOWED_ORIGINS=https://client.example     optional, comma-separated
 //
 // Endpoint:
-//   POST /mcp       MCP Streamable HTTP (2026-07-28 + recent legacy handshake)
+//   POST /mcp       MCP Streamable HTTP URL for Claude/ChatGPT/other remote clients
 //   GET  /health    process/configuration status, no secrets
 //
 // The HTTP transport is stateless. The only live state is the WebSocket
@@ -34,6 +35,12 @@ import {
 const PORT = Number(process.env.F1_MCP_PORT) || 8790;
 const HOST = (process.env.F1_MCP_HOST || "127.0.0.1").trim();
 const AUTH_TOKEN = (process.env.F1_MCP_AUTH_TOKEN || "").trim();
+const ALLOWED_ORIGINS = new Set(
+  (process.env.F1_MCP_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+);
 const MAX_BODY_BYTES = 1024 * 1024;
 
 const bridge = new AgentBridgeClient({
@@ -71,6 +78,19 @@ function authenticated(req) {
   if (!AUTH_TOKEN) return true;
   const header = String(req.headers.authorization || "");
   return header === `Bearer ${AUTH_TOKEN}`;
+}
+
+function validOrigin(req) {
+  const origin = String(req.headers.origin || "").trim();
+  if (!origin) return true;
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  const host = String(req.headers.host || "").trim();
+  return origin === `https://${host}` || origin === `http://${host}`;
+}
+
+function validAccept(req) {
+  const accept = String(req.headers.accept || "").toLowerCase();
+  return accept.includes("application/json") && accept.includes("text/event-stream");
 }
 
 function sendJson(res, status, body, extraHeaders = {}) {
@@ -180,10 +200,10 @@ async function handleRpc(message, req) {
   }
 
   if (message.method === "ping") {
-    return {
-      status: 200,
-      body: jsonRpcResult(message.id, modern ? modernResult({ resultType: "complete" }) : {}),
-    };
+    if (modern) {
+      return { status: 200, body: jsonRpcError(message.id, -32601, "Method not found: ping") };
+    }
+    return { status: 200, body: jsonRpcResult(message.id, {}) };
   }
 
   if (message.method === "tools/list") {
@@ -241,17 +261,18 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === "OPTIONS") {
-    sendEmpty(res, 204, {
-      "Allow": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept, MCP-Protocol-Version, Mcp-Method, Mcp-Name",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-    });
+  if (req.method !== "POST") {
+    sendJson(res, 405, { error: "Method not allowed" }, { "Allow": "POST" });
     return;
   }
 
-  if (req.method !== "POST") {
-    sendJson(res, 405, { error: "Method not allowed" }, { "Allow": "POST, OPTIONS" });
+  if (!validOrigin(req)) {
+    sendJson(res, 403, jsonRpcError(null, -32002, "Forbidden origin"));
+    return;
+  }
+
+  if (!validAccept(req)) {
+    sendJson(res, 406, jsonRpcError(null, -32003, "Accept must include application/json and text/event-stream"));
     return;
   }
 
