@@ -120,6 +120,32 @@ export function setupMultiplayer() {
       client.reportQualiTime(timeMs).catch(() => {});
     },
 
+    // Browser-independent agent transport (#201). Native WebMCP is just one
+    // adapter; this path lets an external MCP process call the exact same
+    // controller through the room server's WebSocket relay.
+    async registerAgentBridge(execute, token = null) {
+      const unsubscribe = client.onAgentCommand(async (msg) => {
+        try {
+          const result = await execute(msg.tool, msg.args || {});
+          client.sendAgentResult(msg.callId, true, result);
+        } catch (error) {
+          client.sendAgentResult(msg.callId, false, null, error?.message || error);
+        }
+      });
+      try {
+        const res = await client.registerAgentBridge(token);
+        return {
+          serverUrl: client.getServerUrl(),
+          token: res.token,
+          roomCode: res.roomCode,
+          participantId: res.participantId,
+        };
+      } catch (error) {
+        unsubscribe();
+        throw error;
+      }
+    },
+
     getVoiceState(driverId) {
       const participant = latestRoom.participants.find((p) => driverId === "player"
         ? p.participantId === client.participantId : p.driverId === driverId);
