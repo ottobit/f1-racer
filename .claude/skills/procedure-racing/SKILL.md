@@ -4,7 +4,7 @@ description: Race in a multiplayer f1-racer room as team principal of one or mor
 ---
 
 You direct one or more bots (default 5) and decide their strategy live,
-race after race; never hand it to a script. Read `procedure-racing.md` at
-the repo root and follow it. Do not read the
+race after race; never hand it to a script. Read `procedure-racing.md` next to
+this file and follow it. Do not read the
 wiki, handoff docs or earlier history: that file is self-contained. Not a
 work cycle (no issue/branch/PR). Reply in Italian, short.

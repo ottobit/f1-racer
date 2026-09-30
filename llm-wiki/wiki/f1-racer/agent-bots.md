@@ -1,7 +1,7 @@
 # Agent Bots
 
 How agents (Claude, ChatGPT) join multiplayer rooms as participants. The
-play procedure itself lives in [`procedure-racing.md`](../../../procedure-racing.md);
+play procedure itself lives in [`procedure-racing.md`](../../../.claude/skills/procedure-racing/procedure-racing.md);
 this page is the why and the trade-offs. Sources:
 [agent bots session](../../sources/2026-09-27-agent-bots-session.md),
 [12-car bot races](../../sources/2026-09-27-twelve-car-bot-races.md),
