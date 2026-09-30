@@ -71,7 +71,7 @@ Periodically check for:
 
 ## Local Policy
 
-For this repository, keep `F1-RACER-WIKI.md` as the compact
+For this repository, keep `docs/F1-RACER-WIKI.md` as the compact
 technical handoff, and use this LLM Wiki as the broader memory system that
 connects architecture, decisions, roadmap and external patterns.
 ## Session workflow (user rules)
@@ -95,7 +95,7 @@ connects architecture, decisions, roadmap and external patterns.
   - no browser/Playwright tests — syntax checks only; the user plays on
     `master` and reports (browser tests only if the user asks);
   - docs: one entry in `logs/maintenance.md` per cycle; touch `wiki/`
-    pages, `F1-RACER-WIKI.md` or `RELEASE-CHECKLIST.md` only when
+    pages, `docs/F1-RACER-WIKI.md` or `docs/RELEASE-CHECKLIST.md` only when
     architecture or a decision changes;
   - no scheduled check-ins (no CI here); the platform auto-subscribes
     the session when a PR is created — leave it, don't spend a call
@@ -103,6 +103,6 @@ connects architecture, decisions, roadmap and external patterns.
   - short replies: what was done, what the user must decide.
 - Play sessions: whenever the user wants to play/race against agents
   (inferred from intent, any wording, a room-server URL or a room code),
-  read only `procedure-racing.md` at the repo root and follow it — no wiki,
+  read only `.claude/skills/procedure-racing/procedure-racing.md` and follow it — no wiki,
   no issue/branch/PR. Your role there needs no explaining: you direct one
   or more bots (default 5) and decide their strategy live yourself.

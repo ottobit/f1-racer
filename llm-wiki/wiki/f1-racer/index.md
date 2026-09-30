@@ -27,8 +27,8 @@ browser game built with plain HTML/CSS/JavaScript and Three.js.
 
 ## Entry Points
 
-- Technical handoff: [`F1-RACER-WIKI.md`](../../../F1-RACER-WIKI.md)
-- Development procedure: [`procedure.md`](../../../procedure.md)
+- Technical handoff: [`docs/F1-RACER-WIKI.md`](../../../docs/F1-RACER-WIKI.md)
+- Development procedure: [`docs/procedure.md`](../../../docs/procedure.md)
 - Architecture page: [architecture.md](architecture.md)
 - C4 model — game and multiplayer: [c4-model.md](c4-model.md)
 - C4 solo/local — levels 1 to 4: [c4-local.md](c4-local.md)

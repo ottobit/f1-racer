@@ -10,7 +10,7 @@ multi-file/PR support and documented fallback limits.
 Which path applies depends on whether the session has a real local git
 clone and shell access (Claude Code CLI/web) or only a GitHub contents-API
 connector (e.g. a ChatGPT Work session without shell access — see
-`WORK-HANDOFF.md`).
+`docs/WORK-HANDOFF.md`).
 
 ### Path A — local git clone (default whenever available)
 
@@ -23,7 +23,7 @@ operate, and it is patch-based by construction:
   size: a one-line fix in `main.js` (57 KB) or `style.css` (35 KB) costs
   roughly the size of that line, not the whole file.
 - `git status` / `git diff --check` before commit are the structural
-  check, per `procedure.md`.
+  check, per `docs/procedure.md`.
 - Concurrency protection comes from git itself: `git push` is rejected
   non-fast-forward if `origin/master` moved since the branch was created,
   which forces an explicit fetch + merge/rebase instead of silently

@@ -13,7 +13,7 @@
   delivery (rooms, then race sync, then voice, each its own PR). #36
   (rooms/driver reservation) and #44 (qualifying/race sync, client-
   authoritative, host picks circuit/difficulty, no AI padding) are both
-  built and verified — see `F1-RACER-WIKI.md`'s "Multiplayer" section and
+  built and verified — see `docs/F1-RACER-WIKI.md`'s "Multiplayer" section and
   `architecture.md`'s matching sections for the module map and protocol.
   This is the project's first-ever backend (`core/server/rooms.mjs` +
   `core/server/room-server.mjs`); the shipped static site itself (race/garage/
@@ -21,7 +21,7 @@
   dependency on its own. Explicitly still out of scope: voice/WebRTC/SFU,
   and — for #44 specifically — a multiplayer race actually driven to its
   finish line in a real test (qualifying→racing transition and live sync
-  are verified; the finish line isn't, see `RELEASE-CHECKLIST.md`). The
+  are verified; the finish line isn't, see `docs/RELEASE-CHECKLIST.md`). The
   user chose **Render** for hosting when it's time to go live (already used
   it before, plans to self-ping the free tier to avoid its 15-minute sleep
   — flagged to them that the free tier's ~750 free instance-hours/month is
@@ -30,7 +30,7 @@
   usage on the account; not something to solve from inside this repo), and
   on 2026-09-23 verified real cross-device `wss://` reachability themselves
   (a real phone + a real PC through an `ngrok http` tunnel, not Render
-  itself yet) — see `decisions.md`. `RELEASE-CHECKLIST.md`'s former blanket
+  itself yet) — see `decisions.md`. `docs/RELEASE-CHECKLIST.md`'s former blanket
   "no backend/server dependency" release gate has been scoped to solo/local
   play accordingly — see that file.
 - [#8](https://github.com/ottobit/f1-racer/issues/8): resolved by PR #9,
@@ -38,7 +38,7 @@
   #8" (Italian) in the PR body doesn't trigger GitHub's auto-close keyword
   parsing — English "Closes #N" is required, a lesson this wiki already
   recorded once for issue-closing comments and evidently missed for a PR
-  body. `core/client/race/agent-api.js` / `window._ENVIRONMENT_` — see `F1-RACER-WIKI.md`'s
+  body. `core/client/race/agent-api.js` / `window._ENVIRONMENT_` — see `docs/F1-RACER-WIKI.md`'s
   Agent API section. Independently re-verified in a real headless browser
   before closing (not just re-reading the code): state snapshot shape,
   mutation isolation, input clamping, concurrent-step rejection, and that a
@@ -90,7 +90,7 @@
   if it happens): resolved. Added `pianalago`, `serramonte`, `baiadoro` —
   all procedurally generated and validated with #6's tool rather than
   hand-placed, all passing with zero issues. Every circuit in the roster
-  now has a distinct width, 9 through 17. See `F1-RACER-WIKI.md`'s track
+  now has a distinct width, 9 through 17. See `docs/F1-RACER-WIKI.md`'s track
   system section for each one's identity.
 - [#26](https://github.com/ottobit/f1-racer/issues/26): resolved. The three
   #5 circuits' first geometry was too smooth/round; reworked with a
@@ -114,7 +114,7 @@
 - Keep livery and cockpit theme data centralized in `core/client/shared/driver-themes.js`.
 - Keep car presentation details in `core/client/shared/car-model.js`, `core/client/race/race-car-view.js`,
   `core/client/garage/showroom.js` and garage-specific preview code.
-- Update this LLM Wiki and `F1-RACER-WIKI.md` when architecture
+- Update this LLM Wiki and `docs/F1-RACER-WIKI.md` when architecture
   or user-facing decisions change.
 
 ## Manual Verification Notes

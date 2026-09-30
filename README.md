@@ -80,7 +80,7 @@ Serve `https`/`wss` anche se siete tutti in casa: la pagina su GitHub Pages è
 
 ## Memoria di progetto
 
-`F1-RACER-WIKI.md` è l'handoff tecnico compatto; `llm-wiki/` la memoria estesa (architettura, decisioni, roadmap). `WORK-HANDOFF.md` è il punto di ingresso per una nuova sessione agente. `procedure.md` è il flusso di lavoro obbligatorio (issue → branch → PR → `Concludi`).
+`docs/F1-RACER-WIKI.md` è l'handoff tecnico compatto; `llm-wiki/` la memoria estesa (architettura, decisioni, roadmap). `docs/WORK-HANDOFF.md` è il punto di ingresso per una nuova sessione agente. `docs/procedure.md` è il flusso di lavoro obbligatorio (issue → branch → PR → `Concludi`).
 
 ## Origine
 
