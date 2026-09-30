@@ -1800,3 +1800,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Explicit invariants preserve the current runtime shape: MCP remains an optional adapter, one token binds one participant, the room server only relays, and browser input/physics remain the single execution path.
 - Linked the new MCP zoom from both `c4-model.md` and `c4-agent-control.md` for discoverability without changing runtime code.
 - Release badge bumped from v275 to v276 across all HTML entry points. Documentation-only cycle; verified structurally against the current file/component names and no browser test was required.
+
+## 2026-09-30 — Maintainer docs moved out of the repo root (#300)
+
+- `F1-RACER-WIKI.md`, `RELEASE-CHECKLIST.md`, `WORK-HANDOFF.md` and `procedure.md` moved to `docs/` (`git mv`, history kept); `procedure-racing.md` moved next to its skill in `.claude/skills/procedure-racing/`.
+- Division criterion: the root keeps only what a convention or external service expects there (HTML pages, `CLAUDE.md`, `README.md`, `LICENSE`, `package.json`, `manifest.webmanifest`); the rest is grouped by audience.
+- All references updated (`README.md`, `llm-wiki/` pages and `AGENTS.md`, `SKILL.md`, comments in `core/server/rooms.mjs` and `core/tools/validate-circuits.mjs`); `logs/` left untouched (append-only). `architecture.md` no longer claims the docs stay at the root.
+- HTML pages stay in the root on purpose: moving them would break shared URLs (`room.html?roomServer=...`) and every relative import.
+- Release badge bumped from v276 to v277 across all HTML entry points. Verified with `node --check` on the two touched JS files, `git diff --check` and a final `grep` for stale paths; no game code changed.
