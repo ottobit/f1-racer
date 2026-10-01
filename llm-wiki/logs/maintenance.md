@@ -1808,3 +1808,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - All references updated (`README.md`, `llm-wiki/` pages and `AGENTS.md`, `SKILL.md`, comments in `core/server/rooms.mjs` and `core/tools/validate-circuits.mjs`); `logs/` left untouched (append-only). `architecture.md` no longer claims the docs stay at the root.
 - HTML pages stay in the root on purpose: moving them would break shared URLs (`room.html?roomServer=...`) and every relative import.
 - Release badge bumped from v276 to v277 across all HTML entry points. Verified with `node --check` on the two touched JS files, `git diff --check` and a final `grep` for stale paths; no game code changed.
+
+## 2026-10-01 — Stable race progress with the car off track (#290)
+
+- `core/client/race/race-progress.js`: `advanceProgress` ignores raw-progress steps above 5% of a lap per frame (dt is capped at 0.1 s, so they are projection hops, not movement); it only resyncs `prevRawProgress`, leaving laps and `totalProgress` untouched.
+- Cause: with the car stopped or far from the asphalt, the nearest-centerline index hopped between segments, so `totalProgress` swung and `position` flipped between P1 and P2.
+- Side effect: the first call for remote cars (start from `prevRawProgress: 0`) no longer accumulates a spurious jump.
+- `?vNN` chain bumped up to `race.html`; release badge v277 → v278.
+- Verified with `node --check` and `git diff --check` only; to confirm in game with the agent car off track.
