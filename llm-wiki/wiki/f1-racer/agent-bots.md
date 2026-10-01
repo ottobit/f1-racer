@@ -6,7 +6,8 @@ this page is the why and the trade-offs. Sources:
 [agent bots session](../../sources/2026-09-27-agent-bots-session.md),
 [12-car bot races](../../sources/2026-09-27-twelve-car-bot-races.md),
 [browser bot capacity](../../sources/2026-09-27-browser-bot-capacity.md),
-[race VSN2 from the player's PC](../../sources/2026-09-28-race-vsn2-local-pc.md).
+[race VSN2 from the player's PC](../../sources/2026-09-28-race-vsn2-local-pc.md),
+[Ollama Jev decision models](../../sources/2026-10-01-ollama-jev-decision-models.md).
 
 ## Browser bot vs headless bot
 
@@ -124,6 +125,42 @@ What the first agent-managed races taught (source: race VSN2):
   car through `window._ENVIRONMENT_` from `<dir>/cmd.json` (`act`, `enqueue`,
   `radio`, `release`); `state.json` is the Agent API `getState()`, rewritten
   every 500 ms. Single bot only (`bot-fleet` keeps the layered driver).
+
+## Local decision models — Ollama `/v1/systemone` (#307, Open)
+
+Ollama 0.35 runs Jev-style decision models (`nimble` 9B, `tev1`,
+`tev1:0.8b`): typed questions over a JSON state, answered with
+probabilities by scoring single-token candidates, without generating text.
+Contract and mechanism are in the
+[source note](../../sources/2026-10-01-ollama-jev-decision-models.md).
+Nothing is integrated yet; this is the candidate fit.
+
+- **Tactical layer, not driving.** At ~91 ms per question (reported, M5 Max)
+  it cannot replace steering or throttle, which the layered driver and
+  Agent API `act` own per frame. It fits the gap VSN2 exposed: decisions
+  every 0.5–2 s that the agent skipped when it stopped watching. The agent
+  would set the policy (the questions and the thresholds) and the model
+  would answer each tick.
+- **Questions that map onto existing commands:**
+  - `pit_now` (`noul`) → `pit:true`, gated by `pit none` and `armed` so the
+    box is never called twice;
+  - `mode` (`choice`: attack/defend/conserve);
+  - `pace` (`score` over levels) → the requested pace.
+- **State:** the compact `getState()` JSON that `room-bot --agent` already
+  writes to `state.json`. It stays far below the 64 KiB limit, but every
+  question re-sends it, so keep it small and the question count to 2–3.
+- **Where it runs:** Node side on the player's PC (`room-bot`/`bot-fleet`
+  calling `localhost:11434`), never in the browser game: GitHub Pages
+  players don't have Ollama, and a page calling localhost needs CORS
+  (`OLLAMA_ORIGINS`).
+- **Open:**
+  - zero-shot quality on racing state (the models were pitched for triage
+    and routing);
+  - which model the PC's GPU can run (a GT 640 is unlikely to run 9B fast;
+    `tev1:0.8b` might run on CPU);
+  - CPU contention with the bots, already suspected in VSN2;
+  - it cannot be tried from the cloud container, which has no GPU and no
+    egress to `ollama.com`.
 
 ## Running on the player's PC (#244, VSN2)
 
