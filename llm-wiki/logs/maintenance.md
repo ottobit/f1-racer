@@ -1830,3 +1830,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Not a defect: `headingErrorRad` is continuous (wraps only at ±pi) but its reference is the track direction at the nearest sample, so it legitimately changes sign through a left-to-right corner. Signs derived from `steering.js` (`yaw = -steer ...`) and `track-geometry.js` (`sideNormal`).
 - No behaviour change; `?vNN` chain bumped up to `race.html`; release badge v279 → v280.
 - Verified with `node --check` and `git diff --check` only.
+
+## 2026-10-01 — Agent API: f1_radio for the agent car (#288)
+
+- `core/client/race/agent-api.js`: `radio(text)` on `window._ENVIRONMENT_` and the WebMCP tool `f1_radio` (trimmed to 80 characters like `strategy.json`, error on empty text); `main.js` passes a `sendRadio` callback that shows the banner and calls `multiplayer.sendRadio`.
+- `core/tools/agent-mcp-common.mjs` / `agent-mcp-http.mjs` expose `f1_radio` in the MCP bridge; `core/server/room-server.mjs` adds it to `AGENT_TOOL_NAMES` (the room server must be restarted to accept it).
+- `docs/F1-RACER-WIKI.md`, `c4-mcp.md` and `c4-agent-control.md` list the fifth tool; `?vNN` chain bumped up to `race.html`; release badge v280 → v281.
+- Verified with `node --check` on every touched file and `git diff --check`; to confirm in a room by calling `f1_radio` from an MCP client.
