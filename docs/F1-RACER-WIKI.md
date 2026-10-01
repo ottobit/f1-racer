@@ -808,6 +808,9 @@ window._ENVIRONMENT_.release();                                                 
 mutating the returned object cannot affect internal state: session
 phase/state, `speedKmh`, lap/laps, race position, `totalProgress`,
 `lateralOffsetMeters` and `headingErrorRad` from the ideal line, `onTrack`,
+`returnHeadingErrorRad` (off track only: heading error towards the nearest
+centerline point, `null` on track; the off-track speed floor of ~29 km/h is
+the shared runoff `crawlSpeed`, same for player and AI),
 damage/tyre/DRS status, a `nextCorner` heuristic (direction/distance/
 curvature — the largest heading change found within a fixed lookahead window
 over the same centerline samples the AI steers by, not a real geometric

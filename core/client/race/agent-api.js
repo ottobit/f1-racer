@@ -140,6 +140,7 @@ export function setupAgentApi({
     const order = currentRaceOrder();
     const position = order.findIndex((entry) => entry.driverId === "player") + 1;
     const idealHeading = headingOf(centerline[info.idx]);
+    const onTrack = info.dist <= grassLimit;
     const sessionPhase = getSessionPhase();
     const raceState = getRaceState();
     const finished = raceState === "finished";
@@ -156,7 +157,11 @@ export function setupAgentApi({
       totalProgress: round3(state.totalProgress),
       lateralOffsetMeters: round1(lateralOffset(state.x, state.z, info)),
       headingErrorRad: round3(wrapAngle(state.heading - idealHeading)),
-      onTrack: info.dist <= grassLimit,
+      onTrack,
+      // Off track only: heading minus the bearing to the nearest centerline
+      // point (same sign as headingErrorRad), so steering it to 0 drives back
+      // to the asphalt. null while on track (#292).
+      returnHeadingErrorRad: onTrack ? null : round3(wrapAngle(state.heading - Math.atan2(info.x - state.x, info.z - state.z))),
       damagePct: Math.round((state.damage || 0) * 100),
       tyreCompound: state.tyreCompound,
       tyreWearPct: Math.round(clamp01((state.tyreProgress || 0) / tyreLifeLaps) * 100),
