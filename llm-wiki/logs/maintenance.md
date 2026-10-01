@@ -1837,3 +1837,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `core/tools/agent-mcp-common.mjs` / `agent-mcp-http.mjs` expose `f1_radio` in the MCP bridge; `core/server/room-server.mjs` adds it to `AGENT_TOOL_NAMES` (the room server must be restarted to accept it).
 - `docs/F1-RACER-WIKI.md`, `c4-mcp.md` and `c4-agent-control.md` list the fifth tool; `?vNN` chain bumped up to `race.html`; release badge v280 → v281.
 - Verified with `node --check` on every touched file and `git diff --check`; to confirm in a room by calling `f1_radio` from an MCP client.
+
+## 2026-10-01 — room-bot --agent mode (#291)
+
+- `core/tools/room-bot.mjs`: `--agent` opens `race.html?agent=1` instead of `?driver=layered`, applies `<dir>/cmd.json` (`act`, `enqueue`, `radio`, `release`) through `window._ENVIRONMENT_`, and writes the Agent API `getState()` to `state.json` every 500 ms (2 s in the default mode); the pit-transition log (#247) works in both modes.
+- `bot-fleet.mjs` is unchanged: the fleet keeps the layered driver and its own strategy loop. `wiki/f1-racer/agent-bots.md` documents the option.
+- Not done: the 6–15 fps of a single bot is not investigated (no browser here); `state.json` already reports `botFps` for a test on the player's PC with `--gpu`/`--headed`.
+- Release badge v281 → v282; verified with `node --check` and `git diff --check` only.

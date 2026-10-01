@@ -6,7 +6,14 @@
 //
 //   node core/tools/room-bot.mjs <roomServerUrl> <ROOM> [--name Claude] [--dir /tmp/bot]
 //   node core/tools/room-bot.mjs <roomServerUrl> <ROOM> --names a,b,c [--dir /tmp/bots]
-//   ... [--gpu] [--headed]
+//   ... [--gpu] [--headed] [--agent]
+//
+// --agent (#291) opens race.html with ?agent=1 instead of ?driver=layered: the
+// car is driven through window._ENVIRONMENT_ (the Agent API, #176/#201). Write
+// one JSON object to <dir>/cmd.json whenever you want to act: {"act": {steer,
+// throttle, brake, leaseMs}}, {"enqueue": [segments]}, {"radio": "text"} or
+// {"release": true}. state.json then holds the Agent API getState() and is
+// rewritten every 500 ms (not 2 s) because the steering loop is tight.
 //
 // --names (#233) runs several bots in one Chromium, one isolated context
 // each, with files in <dir>/<name>/. Bots render with ?gfx=low in a small
@@ -56,6 +63,8 @@ const proxy = process.env.HTTPS_PROXY ? new URL(process.env.HTTPS_PROXY) : null;
 const stamp = () => new Date().toISOString().slice(11, 19);
 const GPU = args.includes("--gpu");
 const HEADED = args.includes("--headed");
+const AGENT = args.includes("--agent");
+const STATE_EVERY_MS = AGENT ? 500 : 2000;
 
 // --- WebSocket relay (proxied sandboxes only) ------------------------------
 // Every browser connection gets its own upstream tunnel, so one relay serves
@@ -130,6 +139,7 @@ async function runBot({ name, dir }) {
   fs.mkdirSync(dir, { recursive: true });
   const strategyFile = path.join(dir, "strategy.json");
   const stateFile = path.join(dir, "state.json");
+  const cmdFile = path.join(dir, "cmd.json");
   const log = (...a) => console.log(stamp(), ...(BOTS.length > 1 ? [`[${name}]`] : []), ...a);
 
   const ctx = await browser.newContext({
@@ -147,6 +157,7 @@ async function runBot({ name, dir }) {
   const page = await ctx.newPage();
   page.on("pageerror", (err) => log("pageerror", err.message));
   let lastStrategy = "";
+  let lastCmd = "";
   let freshPage = false;
   page.on("framenavigated", (frame) => {
     if (frame !== page.mainFrame()) return;
@@ -158,8 +169,9 @@ async function runBot({ name, dir }) {
     freshPage = true;
     // The room page sends everyone to race.html; the bot needs its driver
     // and the cheapest graphics profile.
-    if (url.pathname.endsWith("race.html") && !url.searchParams.has("driver")) {
-      url.searchParams.set("driver", "layered");
+    if (url.pathname.endsWith("race.html") && !url.searchParams.has("driver") && !url.searchParams.has("agent")) {
+      if (AGENT) url.searchParams.set("agent", "1");
+      else url.searchParams.set("driver", "layered");
       url.searchParams.set("gfx", "low");
       page.goto(url.href).catch((err) => log("goto", err.message));
     }
@@ -206,12 +218,27 @@ async function runBot({ name, dir }) {
             timestamp: lastStateAt, session: { phase: "room", state: entryVisible ? "joining" : "lobby" }, lastRace,
           }, null, 1));
         }
-      } else if (await page.evaluate(() => !!window._DRIVER_).catch(() => false)) {
+      } else if (await page.evaluate((agent) => !!(agent ? window._ENVIRONMENT_ : window._DRIVER_), AGENT).catch(() => false)) {
         if (!gpuRenderer) {
           gpuRenderer = await page.evaluate(webglRenderer).catch(() => "unknown");
           log("gpu", gpuRenderer);
         }
-        const raw = fs.existsSync(strategyFile) ? fs.readFileSync(strategyFile, "utf8") : "";
+        const rawCmd = AGENT && fs.existsSync(cmdFile) ? fs.readFileSync(cmdFile, "utf8") : "";
+        if (rawCmd && rawCmd !== lastCmd) {
+          lastCmd = rawCmd;
+          try {
+            const cmd = JSON.parse(rawCmd);
+            await page.evaluate(async (c) => {
+              const env = window._ENVIRONMENT_;
+              if (c.release) env.release();
+              if (c.act) await env.act(c.act);
+              if (c.enqueue) await env.enqueue(c.enqueue);
+              if (typeof c.radio === "string") env.radio(c.radio);
+            }, cmd);
+            log("cmd", rawCmd.trim());
+          } catch (err) { log("bad cmd.json", err.message); }
+        }
+        const raw = !AGENT && fs.existsSync(strategyFile) ? fs.readFileSync(strategyFile, "utf8") : "";
         if (raw && raw !== lastStrategy) {
           lastStrategy = raw;
           try {
@@ -222,12 +249,12 @@ async function runBot({ name, dir }) {
             log("strategy", raw.trim());
           } catch (err) { log("bad strategy.json", err.message); }
         }
-        if (Date.now() - lastStateAt > 2000) {
-          const state = await page.evaluate(() => ({
-            ...window._DRIVER_.getState(),
-            targets: window._DRIVER_.getTargets(),
+        if (Date.now() - lastStateAt > STATE_EVERY_MS) {
+          const state = await page.evaluate((agent) => ({
+            ...(agent ? window._ENVIRONMENT_ : window._DRIVER_).getState(),
+            ...(agent ? {} : { targets: window._DRIVER_.getTargets() }),
             frames: window.__botFrames,
-          }));
+          }), AGENT);
           const now = Date.now();
           const botFps = lastFrames !== null && state.frames >= lastFrames
             ? Math.round(((state.frames - lastFrames) * 1000) / (now - lastStateAt))
@@ -242,7 +269,7 @@ async function runBot({ name, dir }) {
           };
           // Every box-call transition, to find stops nobody asked for (#247).
           const pit = `${state.pit?.requested ? "armed" : "-"}/${state.pit?.state}`;
-          if (pit !== lastPit) {
+          if (state.pit && pit !== lastPit) {
             if (lastPit) log("pit", pit, `lap ${state.lap} wear ${state.tyreWearPct}% ${state.tyreCompound} strategy ${lastStrategy.trim() || "-"}`);
             lastPit = pit;
           }

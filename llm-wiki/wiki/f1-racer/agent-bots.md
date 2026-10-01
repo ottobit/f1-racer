@@ -120,6 +120,10 @@ What the first agent-managed races taught (source: race VSN2):
   was lost.
 - **Unrequested stops** (b3, b4 with `autoPit:false`): cause not found.
   `room-bot` now logs every `pit` transition (#247). Open.
+- **`room-bot --agent`** (#291): opens `race.html?agent=1` and drives the
+  car through `window._ENVIRONMENT_` from `<dir>/cmd.json` (`act`, `enqueue`,
+  `radio`, `release`); `state.json` is the Agent API `getState()`, rewritten
+  every 500 ms. Single bot only (`bot-fleet` keeps the layered driver).
 
 ## Running on the player's PC (#244, VSN2)
 
