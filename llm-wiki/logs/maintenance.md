@@ -1823,3 +1823,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - The ~29 km/h floor off track is the shared runoff `crawlSpeed` (8 m/s) in `race-rules.js`, identical for player and AI: kept as intended. `MAX_QUEUE_MS` unchanged.
 - `docs/F1-RACER-WIKI.md` documents the new field and the floor; `?vNN` chain bumped up to `race.html`; release badge v278 → v279.
 - Verified with `node --check` and `git diff --check` only; to confirm in game by steering an agent back from the grass using the new field.
+
+## 2026-10-01 — Agent API: sign contract documented (#289)
+
+- `core/client/race/agent-api.js`: file header and `f1_get_state` description now state the signs: `steer` +1 = right, `lateralOffsetMeters` > 0 = left of the centerline, `headingErrorRad` > 0 = nose left of the track direction; positive error is fixed by positive steer.
+- Not a defect: `headingErrorRad` is continuous (wraps only at ±pi) but its reference is the track direction at the nearest sample, so it legitimately changes sign through a left-to-right corner. Signs derived from `steering.js` (`yaw = -steer ...`) and `track-geometry.js` (`sideNormal`).
+- No behaviour change; `?vNN` chain bumped up to `race.html`; release badge v279 → v280.
+- Verified with `node --check` and `git diff --check` only.

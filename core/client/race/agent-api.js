@@ -34,6 +34,17 @@
 // (gap-based, see updateDrsEligibility in main.js), not a manual control
 // for player or AI, so there is no `drs` action — only the read-only
 // `drsActive` status in getState().
+// Sign contract of getState() (#289) — one convention, steer +1 = right:
+//   steer                +1 turns right (heading decreases), -1 turns left.
+//   lateralOffsetMeters  > 0 = car is LEFT of the centerline, < 0 = right.
+//   headingErrorRad      car heading minus the centerline direction at the
+//                        nearest sample, wrapped to (-pi, pi]; > 0 = nose
+//                        points left of the track direction. It is continuous
+//                        (only wraps at +-pi) but its reference rotates with
+//                        the track, so through a left-to-right corner it
+//                        legitimately goes from negative to positive.
+//   returnHeadingErrorRad same sign, relative to the way back to the track.
+// Positive error on either axis is corrected by a positive (right) steer.
 export function setupAgentApi({
   state,
   aiCars,
@@ -398,7 +409,7 @@ function registerWebMcpTools({ invokeAgentTool }) {
   const tools = [
     {
       name: "f1_observe",
-      description: "Read the race state of the car this page drives.",
+      description: "Read the race state of the car this page drives. Signs: steer +1 = right; lateralOffsetMeters > 0 = left of the centerline; headingErrorRad > 0 = nose left of the track direction (positive error is fixed by positive steer).",
       inputSchema: { type: "object", properties: {} },
       execute: async () => reply(await invokeAgentTool("f1_observe", {})),
     },
