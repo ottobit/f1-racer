@@ -52,7 +52,7 @@ flowchart LR
 The MCP subsystem turns standard MCP tool calls into commands for exactly one
 browser participant:
 
-`f1_observe` · `f1_act` · `f1_enqueue` · `f1_release`
+`f1_observe` · `f1_act` · `f1_enqueue` · `f1_radio` · `f1_release`
 
 It does **not**:
 
@@ -201,6 +201,7 @@ flowchart LR
 | `f1_observe` | Builds and returns a fresh snapshot; no control mutation |
 | `f1_act` | Applies steer/throttle/brake immediately under a bounded lease |
 | `f1_enqueue` | Applies a bounded queue of short driving segments |
+| `f1_radio` | Sends a short radio message (max 80 chars) shown to the whole room (#288) |
 | `f1_release` | Drops the agent command and returns external control to neutral |
 
 ## Dynamic view — registration and attachment

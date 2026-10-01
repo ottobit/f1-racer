@@ -52,6 +52,16 @@ export const MCP_TOOLS = [
     },
   },
   {
+    name: "f1_radio",
+    description: "Send a short radio message (max 80 characters) shown to everyone in the room.",
+    inputSchema: {
+      type: "object",
+      properties: { text: { type: "string", maxLength: 80 } },
+      required: ["text"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "f1_release",
     description: "Drop the agent command immediately and return the car to neutral/human control.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },

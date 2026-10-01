@@ -850,7 +850,7 @@ leaseRemainingMs, queue }`; `nearbyCars[].remote` marks room participants.
 `pagehide` / a hidden tab release an agent command.
 
 The controller is now transport-neutral. Native WebMCP registers
-`f1_observe`, `f1_act`, `f1_enqueue`, `f1_release` through
+`f1_observe`, `f1_act`, `f1_enqueue`, `f1_radio`, `f1_release` through
 `document.modelContext` when available (with the older
 `navigator.modelContext` retained as compatibility fallback), but a WebMCP
 browser is **not required**. In multiplayer, `?agent=1` also registers the
