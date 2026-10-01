@@ -1,3 +1,8 @@
+// Largest raw-progress step a car can make in one frame (dt <= 0.1 s). A
+// bigger step is the nearest-centerline projection hopping to another part
+// of the track (a car stopped or far off the asphalt), not real movement.
+const MAX_PROGRESS_STEP = 0.05;
+
 export function setupRaceProgress({
   state,
   aiCars,
@@ -12,6 +17,13 @@ export function setupRaceProgress({
 
   function advanceProgress(car, rawProgress) {
     const previousRaw = car.prevRawProgress;
+    let jump = rawProgress - previousRaw;
+    if (jump < -0.5) jump += 1;
+    else if (jump > 0.5) jump -= 1;
+    if (Math.abs(jump) > MAX_PROGRESS_STEP) {
+      car.prevRawProgress = rawProgress;
+      return false;
+    }
     if (rawProgress > 0.42 && rawProgress < 0.58) car.lapCheckpointPassed = true;
     const previousToFinish = (previousRaw - finishProgress + 1) % 1;
     const currentToFinish = (rawProgress - finishProgress + 1) % 1;
