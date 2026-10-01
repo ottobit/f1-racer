@@ -1816,3 +1816,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Side effect: the first call for remote cars (start from `prevRawProgress: 0`) no longer accumulates a spurious jump.
 - `?vNN` chain bumped up to `race.html`; release badge v277 → v278.
 - Verified with `node --check` and `git diff --check` only; to confirm in game with the agent car off track.
+
+## 2026-10-01 — Agent API: return heading when off track (#292)
+
+- `core/client/race/agent-api.js`: `getState()` adds `returnHeadingErrorRad` (heading minus bearing to the nearest centerline point, same sign as `headingErrorRad`; `null` on track) so an agent knows which way to steer back.
+- The ~29 km/h floor off track is the shared runoff `crawlSpeed` (8 m/s) in `race-rules.js`, identical for player and AI: kept as intended. `MAX_QUEUE_MS` unchanged.
+- `docs/F1-RACER-WIKI.md` documents the new field and the floor; `?vNN` chain bumped up to `race.html`; release badge v278 → v279.
+- Verified with `node --check` and `git diff --check` only; to confirm in game by steering an agent back from the grass using the new field.
