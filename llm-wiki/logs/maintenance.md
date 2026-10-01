@@ -1844,3 +1844,15 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `bot-fleet.mjs` is unchanged: the fleet keeps the layered driver and its own strategy loop. `wiki/f1-racer/agent-bots.md` documents the option.
 - Not done: the 6–15 fps of a single bot is not investigated (no browser here); `state.json` already reports `botFps` for a test on the player's PC with `--gpu`/`--headed`.
 - Release badge v281 → v282; verified with `node --check` and `git diff --check` only.
+
+## 2026-10-01 — Ingest Ollama Jev-style decision models (#307)
+
+- New source note `llm-wiki/sources/2026-10-01-ollama-jev-decision-models.md`:
+  `/v1/systemone` contract (`noul`/`choice`/`score`, limits) and mechanism
+  (logit scoring of single-token candidates, one row per question).
+- Built from the Ollama source at `1abe35e`; `ollama.com` is blocked by the
+  container's egress proxy, so press-only facts (models, 91 ms) are marked
+  unverified.
+- `wiki/f1-racer/agent-bots.md`: Open section on the candidate fit, a tactical
+  layer for bots (pit/mode/pace), Node side on the player's PC, not driving.
+- Docs only; release badge v283.
