@@ -57,7 +57,7 @@ const socketsByRoom = new Map();
 // socket and gets a bearer token. A separate controller socket can attach
 // with that token and call the same f1_* tools that native WebMCP exposes.
 // The relay never simulates physics and never gains access to another car.
-const AGENT_TOOL_NAMES = new Set(["f1_observe", "f1_act", "f1_enqueue", "f1_release"]);
+const AGENT_TOOL_NAMES = new Set(["f1_observe", "f1_act", "f1_enqueue", "f1_radio", "f1_release"]);
 const agentBridges = new Map(); // token -> {roomCode, participantId, raceSocket, controllerSocket}
 const agentTokenByParticipant = new Map(); // "ROOM:participant" -> token
 

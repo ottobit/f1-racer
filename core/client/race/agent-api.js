@@ -26,6 +26,10 @@
 //   await window._ENVIRONMENT_.act({ steer: -0.3, throttle: 1, leaseMs: 1500 });
 //   await window._ENVIRONMENT_.enqueue([{ steer: 0.2, throttle: 1, durationMs: 400 }]);
 //
+// Radio (#288): `radio(text)` (tool `f1_radio`) shows a banner and relays it
+// to the room, max 80 characters, like the strategy drivers' radio.
+//   window._ENVIRONMENT_.radio("Box box, tyres gone");
+//
 // Known limitation: pedals are digital in this game (input.forward/back are
 // booleans, not an analog throttle/brake channel) — `throttle`/`brake` are
 // accepted as 0..1 per the MVP contract but thresholded to on/off under the
@@ -67,9 +71,11 @@ export function setupAgentApi({
   circuitName = "",
   nameOf = (id) => id,
   registerRemoteBridge = null,
+  sendRadio = () => {},
 }) {
   const KMH_PER_UNIT = 3.6; // matches race-hud.js's own speed readout
   const DEFAULT_STEP_MS = 500;
+  const RADIO_MAX_CHARS = 80;
   const MAX_STEP_MS = 3000; // safe upper bound: no step can pin an input forever
   const DEFAULT_LEASE_MS = 1000;
   const MAX_LEASE_MS = 5000; // no act() can pin an input for longer
@@ -358,17 +364,27 @@ export function setupAgentApi({
     if (document.hidden && controlMode === "agent") release();
   });
 
+  // Radio call (#288): short text shown as the room banner and relayed to the
+  // other participants, same limit as strategy.json's `radio`.
+  function radio(text) {
+    const message = String(text ?? "").trim().slice(0, RADIO_MAX_CHARS);
+    if (!message) throw new Error("f1-agent-api: radio needs a non-empty text");
+    sendRadio(message);
+    return { ok: true, text: message };
+  }
+
   async function invokeAgentTool(name, args = {}) {
     switch (name) {
       case "f1_observe": return getState();
       case "f1_act": return act(args || {});
       case "f1_enqueue": return enqueue(args?.segments || []);
       case "f1_release": return release();
+      case "f1_radio": return radio(args?.text);
       default: throw new Error(`f1-agent-api: unknown tool ${name}`);
     }
   }
 
-  window._ENVIRONMENT_ = { getState, step, act, enqueue, release, bridge: null };
+  window._ENVIRONMENT_ = { getState, step, act, enqueue, release, radio, bridge: null };
   registerWebMcpTools({ invokeAgentTool });
 
   // Browser-independent realtime bridge (#201). A long, caller-provided
@@ -434,6 +450,12 @@ function registerWebMcpTools({ invokeAgentTool }) {
         required: ["segments"],
       },
       execute: async (args) => reply(await invokeAgentTool("f1_enqueue", args || {})),
+    },
+    {
+      name: "f1_radio",
+      description: "Send a short radio message (max 80 characters) shown to everyone in the room.",
+      inputSchema: { type: "object", properties: { text: { type: "string", maxLength: 80 } }, required: ["text"] },
+      execute: async (args) => reply(await invokeAgentTool("f1_radio", args || {})),
     },
     {
       name: "f1_release",

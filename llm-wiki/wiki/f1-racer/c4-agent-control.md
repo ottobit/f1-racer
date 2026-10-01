@@ -219,7 +219,7 @@ sequenceDiagram
   Note over B,R: Browser joined as an ordinary room participant
   B->>R: agent_bridge_register(token)
   C->>M: tools/list
-  M-->>C: f1_observe, f1_act, f1_enqueue, f1_release
+  M-->>C: f1_observe, f1_act, f1_enqueue, f1_radio, f1_release
   C->>M: tools/call f1_observe
   M->>R: agent_attach(token), agent_call
   R->>B: agent_command(f1_observe)

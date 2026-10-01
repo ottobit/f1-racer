@@ -178,7 +178,7 @@ async function handleRpc(message, req) {
         resultType: "complete",
         supportedVersions: [MODERN_PROTOCOL_VERSION],
         capabilities: { tools: {} },
-        instructions: "Control exactly one F1 Racer participant through f1_observe, f1_act, f1_enqueue and f1_release.",
+        instructions: "Control exactly one F1 Racer participant through f1_observe, f1_act, f1_enqueue, f1_radio and f1_release.",
         ttlMs: 300000,
         cacheScope: "private",
       })),
