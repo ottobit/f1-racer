@@ -787,13 +787,17 @@ banked oval, no rivals, qualifying, race, lap limit or results. Home has a
   banking and that the autopilot laps inside the road.
 - Limits: not run in a browser (look, feel, mobile touch drag untested); the
   outside edge is a wall, there is no runoff on the high side.
-- Cinquino (#311): `free.html?car=cinquino` (its own home card) swaps the F1
-  for a brown 1960s city car. `shared/city-car-model.js` builds it from
-  extruded side profiles with the `buildCar` contract (wheels, steering
-  pivots, driver wheel), so the race view and cockpit camera drive it as is;
-  `free/city-car.js` gives `free-sim` its parameters (~140 km/h, 0-100 in
-  ~10 s, softer brakes and turn rate). Free drive only: no garage, race or
-  room sees it. Generic shape, no badges or lettering.
+- Vehicles and rivals (#311, #313): a select under the circuit name picks
+  the car (F1, Cinquino, Spider, Pulmino, Muscle; saved in
+  `f1racer-free-car`, `?car=` wins) and reloads. `shared/vehicle-models.js`
+  builds the road cars from extruded side profiles with the `buildCar`
+  contract plus an optional `cockpitEye` (read by `race-camera.js`; the van's
+  cab sits high and forward). `free/vehicles.js` holds each car's physics
+  (115-317 km/h) and `RIVAL_SLOTS`. The other four cars line up just ahead
+  and start on your first throttle: each is its own `createFreeSim` driven
+  by `createAutopilotProvider`, on an inside lane (the slow cars run wide in
+  the turns: outside lanes left the road). No contact between cars. Generic
+  shapes, no badges. `validate-free-oval.mjs` laps every car on every lane.
 
 ## Agent API (`window._ENVIRONMENT_`)
 
