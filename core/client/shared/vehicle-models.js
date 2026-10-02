@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
-// Free-drive vehicles (#311, #313): round period road cars, not F1 cars.
+// Road cars (#311, #313, #315): round period road cars, not F1 cars.
 // Every builder returns buildCar()'s contract (car-model.js) — {group,
 // wheels, steeringPivots, driverSteeringWheel, wheelRadius} — plus an
 // optional cockpitEye (model units) for race-camera.js, so applyCarToMesh()
@@ -20,6 +20,30 @@ function extrudeAcross(shape, width, bevel) {
   geometry.rotateY(-Math.PI / 2);
   geometry.translate(width / 2, 0, 0);
   return geometry;
+}
+
+// Rounds an extruded body, which is otherwise flat-sided: narrows it towards
+// nose and tail in plan view (`pinch`, by (z/halfLength)^4), pulls the sides
+// in above `shoulder` up to `top` (`tumble`, tumblehome) and tucks the sill
+// below `sill`. Returns the same x mapping so trim can sit on the surface.
+function bodyShaper({ halfLength, pinch = 0, shoulder = .5, top = .9, tumble = 0, sill = .4, tuck = 0 }) {
+  const factor = (y, z) => {
+    const zn = Math.min(Math.abs(z) / halfLength, 1);
+    let f = 1 - pinch * zn ** 4;
+    if (y > shoulder) f *= 1 - tumble * Math.min((y - shoulder) / (top - shoulder), 1);
+    if (y < sill) f *= 1 - tuck * Math.min((sill - y) / .15, 1);
+    return f;
+  };
+  return {
+    x: (x, y, z) => x * factor(y, z),
+    apply(geometry) {
+      const pos = geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) pos.setX(i, pos.getX(i) * factor(pos.getY(i), pos.getZ(i)));
+      pos.needsUpdate = true;
+      geometry.computeVertexNormals();
+      return geometry;
+    },
+  };
 }
 
 // Path commands: [x, y] is lineTo, [cx, cy, x, y] is quadraticCurveTo.
@@ -144,58 +168,166 @@ function createKit(detail) {
   return { group, segments, mats, mesh, box, rod, roundLamp, wheels, steeringWheel, finish };
 }
 
-// Cinquino (#311): round 1960s city car, rear engine, canvas sunroof.
+// Cinquino (#311, #315): round 1960s city car, rear engine, canvas roof
+// rolled back. The shaper gives it the bubble plan and tumblehome; trim is
+// placed through shape.x() so it sits on the curved sides.
 function buildCinquino({ primary = 0x5c371f } = {}, { scale = 1, detail = false } = {}) {
   const k = createKit(detail);
   const { mats, mesh, box, rod } = k;
   const paint = paintMaterial(primary, 'primary');
-  const R = .3, BEVEL = .08, WIDTH = 1.15;
-  mesh(extrudeAcross(outline([-1.26, .28], [
-    [-1.36, .3, -1.35, .5], [-1.33, .74, -1.05, .77], [.55, .77],
-    [.98, .76, 1.22, .6], [1.36, .5, 1.34, .38], [1.32, .28, 1.22, .28],
-  ], { bottom: .28, axles: [.88, -.88], wheelRadius: R, radius: .42 }), WIDTH, BEVEL), paint).name = 'cityBody';
-  mesh(extrudeAcross(outline([-.93, .78], [[-.72, 1.2], [-.66, 1.27, -.5, 1.27], [.1, 1.28], [.2, 1.28, .26, 1.2], [.56, .78]]), .98, .06), mats.glass).name = 'cityGlass';
-  mesh(extrudeAcross(outline([-.72, 1.17], [[-.66, 1.27], [-.6, 1.31, -.48, 1.31], [.1, 1.32], [.22, 1.31, .27, 1.17]]), 1.02, .05), paint).name = 'roof';
-  box(.7, .02, .72, new THREE.MeshStandardMaterial({ color: 0x3a2c21, roughness: .95 }), [0, 1.36, -.2]).name = 'roofCanvas';
+  const R = .27, BEVEL = .08, WIDTH = 1.18;
+  const shape = bodyShaper({ halfLength: 1.46, pinch: .3, shoulder: .5, top: .86, tumble: .1, sill: .42, tuck: .08 });
+  const glassShape = bodyShaper({ halfLength: 1.0, pinch: .12, shoulder: .8, top: 1.3, tumble: .14 });
+  mesh(shape.apply(extrudeAcross(outline([-1.24, .26], [
+    [-1.38, .27, -1.37, .48], [-1.35, .74, -1.0, .78], [.5, .78],
+    [.96, .77, 1.22, .62], [1.38, .52, 1.36, .38], [1.33, .26, 1.2, .26],
+  ], { bottom: .26, axles: [.88, -.88], wheelRadius: R, radius: .39 }), WIDTH, BEVEL)), paint).name = 'cityBody';
+  mesh(glassShape.apply(extrudeAcross(outline([-.93, .79], [[-.74, 1.2], [-.68, 1.29, -.5, 1.3], [.08, 1.31], [.22, 1.31, .28, 1.2], [.56, .79]]), .98, .06)), mats.glass).name = 'cityGlass';
+  mesh(glassShape.apply(extrudeAcross(outline([-.74, 1.18], [[-.68, 1.3], [-.6, 1.36, -.46, 1.36], [.1, 1.37], [.24, 1.35, .29, 1.18]]), 1.0, .05)), paint).name = 'roof';
+  // Canvas sunroof, rolled back in a bundle over the rear seats.
+  box(.62, .015, .56, new THREE.MeshStandardMaterial({ color: 0x15100c, roughness: .95 }), [0, 1.415, -.12]).name = 'roofOpening';
+  const roll = mesh(new THREE.CylinderGeometry(.055, .055, .66, k.segments), new THREE.MeshStandardMaterial({ color: 0x3a2c21, roughness: .95 }), [0, 1.44, -.43]);
+  roll.name = 'roofCanvas';
+  roll.rotation.z = Math.PI / 2;
 
-  const sideX = WIDTH / 2 + BEVEL;
+  const sideAt = (y, z) => shape.x(WIDTH / 2 + BEVEL, y, z);
   for (const side of [-1, 1]) {
-    rod([side * .55, .84, .6], [side * .52, 1.27, .24], .035, paint);
-    rod([side * .56, .84, -.3], [side * .54, 1.3, -.3], .03, paint);
-    rod([side * .56, .84, -.93], [side * .53, 1.24, -.7], .04, paint);
-    rod([side * (sideX + .005), .8, -1.0], [side * (sideX + .005), .8, .62], .012, mats.chrome);
-    box(.03, .03, .12, mats.chrome, [side * (sideX + .01), .7, -.15]).name = 'doorHandle';
-    const mirror = mesh(new THREE.SphereGeometry(.06, 12, 8), mats.chrome, [side * .74, .92, .52]);
+    rod([side * glassShape.x(.55, .84, .6), .84, .6], [side * glassShape.x(.55, 1.29, .25), 1.29, .25], .035, paint);
+    rod([side * glassShape.x(.56, .84, -.3), .84, -.3], [side * glassShape.x(.56, 1.33, -.3), 1.33, -.3], .03, paint);
+    rod([side * glassShape.x(.56, .84, -.93), .84, -.93], [side * glassShape.x(.56, 1.25, -.72), 1.25, -.72], .04, paint);
+    // Chrome belt line and door handle on the curved flank.
+    const belt = [];
+    for (let z = -1.0; z <= .62; z += .18) belt.push([side * (sideAt(.78, z) + .006), .78, z]);
+    for (let n = 1; n < belt.length; n++) rod(belt[n - 1], belt[n], .011, mats.chrome);
+    box(.03, .03, .12, mats.chrome, [side * (sideAt(.68, -.15) + .01), .68, -.15]).name = 'doorHandle';
+    const mirror = mesh(new THREE.SphereGeometry(.055, 12, 8), mats.chrome, [side * .7, .93, .5]);
     mirror.scale.set(1, .75, .55);
-    rod([side * .63, .85, .55], [side * .72, .92, .52], .012, mats.chrome);
-    k.roundLamp(side * .42, .58, 1.36);
-    const indicator = mesh(new THREE.SphereGeometry(.04, 10, 8), mats.amber, [side * .44, .4, 1.41]);
+    rod([side * (sideAt(.84, .52) - .02), .84, .53], [side * .69, .93, .5], .011, mats.chrome);
+    // Big round headlamps standing proud on the front wings.
+    k.roundLamp(side * .4, .6, 1.33, .12);
+    const indicator = mesh(new THREE.SphereGeometry(.035, 10, 8), mats.amber, [side * .36, .42, 1.42]);
     indicator.scale.set(1.5, .8, .6);
-    rod([side * .05, .5, 1.44], [side * .3, .54, 1.41], .014, mats.chrome).name = 'frontMoustache';
-    box(.07, .15, .04, mats.tail, [side * .5, .56, -1.41]).name = 'tailLamp';
+    // The chrome "moustache": two swept whiskers from the nose badge.
+    rod([side * .05, .5, 1.45], [side * .2, .55, 1.43], .016, mats.chrome).name = 'frontMoustache';
+    rod([side * .2, .55, 1.43], [side * .3, .52, 1.4], .014, mats.chrome).name = 'frontMoustache';
+    box(.06, .14, .04, mats.tail, [side * .38, .56, -1.43]).name = 'tailLamp';
   }
-  const badge = mesh(new THREE.CylinderGeometry(.05, .05, .02, k.segments), mats.chrome, [0, .49, 1.445]);
+  const badge = mesh(new THREE.CylinderGeometry(.05, .05, .02, k.segments), mats.chrome, [0, .5, 1.455]);
   badge.rotation.x = Math.PI / 2;
-  for (const z of [1.47, -1.47]) {
-    rod([-.55, .3, z], [.55, .3, z], .028, mats.chrome);
-    for (const side of [-1, 1]) rod([side * .55, .3, z], [side * .66, .3, z - Math.sign(z) * .16], .026, mats.chrome);
+  // Slim bumpers hugging the narrow nose and tail.
+  for (const z of [1.5, -1.5]) {
+    rod([-.42, .3, z], [.42, .3, z], .026, mats.chrome);
+    for (const side of [-1, 1]) rod([side * .42, .3, z], [side * .52, .3, z - Math.sign(z) * .14], .024, mats.chrome);
   }
-  for (let i = 0; i < 5; i++) box(.42, .014, .02, mats.dark, [0, .55 + i * .035, -1.42 + i * .004]).name = 'engineSlat';
-  const exhaust = mesh(new THREE.CylinderGeometry(.035, .035, .16, 10), mats.chrome, [.3, .24, -1.38]);
+  for (let i = 0; i < 6; i++) box(.4, .012, .02, mats.dark, [0, .52 + i * .032, -1.44 + i * .003]).name = 'engineSlat';
+  const exhaust = mesh(new THREE.CylinderGeometry(.03, .03, .14, 10), mats.chrome, [.26, .22, -1.4]);
   exhaust.rotation.x = Math.PI / 2;
 
-  // The body is solid up to the belt line (y ~.85): dashboard and wheel sit
+  // The body is solid up to the belt line (y ~.86): dashboard and wheel sit
   // above it, on the centreline in front of the default cockpit eye.
-  box(1.0, .06, .1, paint, [0, .88, .52]).name = 'dashboard';
-  box(.26, .05, .06, mats.dark, [0, .93, .49]).name = 'dashboardBinnacle';
-  const driverSteeringWheel = k.steeringWheel({ pos: [0, .9, .42], tilt: -.6, column: [[0, .87, .44], [0, .82, .55]] });
+  box(.96, .06, .1, paint, [0, .89, .52]).name = 'dashboard';
+  box(.22, .05, .06, mats.dark, [0, .94, .49]).name = 'dashboardBinnacle';
+  const driverSteeringWheel = k.steeringWheel({ pos: [0, .91, .42], tilt: -.6, rim: mats.ivory, column: [[0, .88, .44], [0, .83, .55]] });
   for (const side of [-1, 1]) {
-    box(.4, .1, .42, mats.seat, [side * .28, .45, -.2]).name = 'seat';
-    const back = box(.4, .5, .08, mats.seat, [side * .28, .72, -.43]);
+    box(.4, .1, .42, mats.seat, [side * .27, .45, -.2]).name = 'seat';
+    const back = box(.38, .5, .08, mats.seat, [side * .27, .74, -.43]);
     back.name = 'seatBack';
     back.rotation.x = -.15;
   }
-  const parts = k.wheels({ x: .6, front: .88, rear: -.88, radius: R, whitewall: true });
+  const parts = k.wheels({ x: .56, front: .88, rear: -.88, radius: R, width: .15, whitewall: true });
+  return k.finish({ ...parts, driverSteeringWheel }, scale, R);
+}
+
+// Pandina (#315): boxy early-1980s city car. Flat panels, tall glasshouse,
+// grey plastic bumpers and side strips, square lamps, upright tail.
+function buildPandina({ primary = 0xf1f1ee } = {}, { scale = 1, detail = false } = {}) {
+  const k = createKit(detail);
+  const { mats, mesh, box, rod } = k;
+  const paint = paintMaterial(primary, 'primary');
+  const plastic = new THREE.MeshStandardMaterial({ color: 0x3b4046, roughness: .85 });
+  const R = .29, BEVEL = .05, WIDTH = 1.36;
+  const shape = bodyShaper({ halfLength: 1.7, pinch: .04 });
+  mesh(shape.apply(extrudeAcross(outline([-1.6, .27], [
+    [-1.65, .28, -1.65, .4], [-1.65, .84], [.7, .84], [1.55, .74], [1.66, .72, 1.66, .6],
+    [1.66, .36], [1.66, .27, 1.56, .27],
+  ], { bottom: .27, axles: [1.05, -1.0], wheelRadius: R, radius: .4 }), WIDTH, BEVEL)), paint).name = 'pandinaBody';
+  mesh(extrudeAcross(outline([-1.62, .86], [[-1.6, 1.36], [.35, 1.38], [.78, .86]]), 1.28, .05), mats.glass).name = 'pandinaGlass';
+  mesh(extrudeAcross(outline([-1.62, 1.32], [[-1.62, 1.42], [.36, 1.44], [.42, 1.34]]), 1.32, .05), paint).name = 'roof';
+  const sideX = WIDTH / 2 + BEVEL;
+  for (const side of [-1, 1]) {
+    rod([side * .68, .88, .76], [side * .67, 1.38, .37], .045, paint);
+    rod([side * .69, .88, -.15], [side * .68, 1.4, -.15], .04, paint);
+    box(.04, .5, .32, paint, [side * .68, 1.13, -1.42]).name = 'cPillar';
+    box(.035, .15, 2.7, plastic, [side * (sideX + .012), .4, .03]).name = 'sideStrip';
+    box(.03, .04, .14, plastic, [side * (sideX + .01), .74, -.2]).name = 'doorHandle';
+    const mirror = box(.05, .1, .12, plastic, [side * .78, .98, .66]);
+    mirror.name = 'mirror';
+    // Square headlamps and vertical rear lamp clusters.
+    box(.26, .13, .03, mats.lens, [side * .48, .62, 1.7]).name = 'headLamp';
+    box(.08, .1, .03, mats.amber, [side * .69, .62, 1.69]).name = 'indicator';
+    box(.12, .24, .04, mats.tail, [side * .58, .62, -1.69]).name = 'tailLamp';
+  }
+  // Grey grille between the lamps, wraparound plastic bumpers.
+  box(.58, .13, .025, plastic, [0, .62, 1.7]).name = 'grille';
+  for (let i = 0; i < 4; i++) box(.54, .012, .03, mats.dark, [0, .575 + i * .03, 1.71]).name = 'grilleSlat';
+  box(1.5, .18, .12, plastic, [0, .36, 1.68]).name = 'bumper';
+  box(1.5, .18, .12, plastic, [0, .36, -1.68]).name = 'bumper';
+  box(.3, .08, .02, mats.dark, [0, .5, -1.7]).name = 'plateRecess';
+  // Shelf dashboard, upright wheel; the eye sits higher in the tall cabin.
+  box(1.24, .07, .2, plastic, [0, .96, .62]).name = 'dashboard';
+  const driverSteeringWheel = k.steeringWheel({ pos: [0, 1.0, .4], tilt: -.5, radius: .15, column: [[0, .97, .42], [0, .92, .58]] });
+  for (const side of [-1, 1]) {
+    const back = box(.42, .48, .08, mats.seat, [side * .32, .98, -.45]);
+    back.name = 'seatBack';
+    back.rotation.x = -.15;
+  }
+  const parts = k.wheels({ x: .64, front: 1.05, rear: -1.0, radius: R, hubMaterial: plastic });
+  return k.finish({ ...parts, driverSteeringWheel }, scale, R, [0, 1.12, -.1]);
+}
+
+// Familiare (#315): 1960s estate with wood side panels and a roof rack.
+function buildFamiliare({ primary = 0x2f6b4a } = {}, { scale = 1, detail = false } = {}) {
+  const k = createKit(detail);
+  const { mats, mesh, box, rod } = k;
+  const paint = paintMaterial(primary, 'primary');
+  const wood = new THREE.MeshStandardMaterial({ color: 0x9a6a3a, roughness: .6 });
+  const trim = new THREE.MeshStandardMaterial({ color: 0xe6d6b0, roughness: .5 });
+  const R = .3, BEVEL = .07, WIDTH = 1.3;
+  const shape = bodyShaper({ halfLength: 1.92, pinch: .1, shoulder: .55, top: .89, tumble: .05 });
+  mesh(shape.apply(extrudeAcross(outline([-1.75, .28], [
+    [-1.85, .3, -1.85, .48], [-1.83, .78], [-1.7, .82], [.6, .82], [1.2, .78],
+    [1.7, .7, 1.82, .52], [1.86, .36, 1.76, .28],
+  ], { bottom: .28, axles: [1.15, -1.05], wheelRadius: R, radius: .42 }), WIDTH, BEVEL)), paint).name = 'familiareBody';
+  mesh(extrudeAcross(outline([-1.8, .84], [[-1.78, 1.3], [.2, 1.32], [.68, .84]]), 1.2, .05), mats.glass).name = 'familiareGlass';
+  mesh(extrudeAcross(outline([-1.8, 1.27], [[-1.8, 1.36], [.2, 1.39], [.28, 1.28]]), 1.26, .05), paint).name = 'roof';
+  const sideAt = (y, z) => shape.x(WIDTH / 2 + BEVEL, y, z);
+  for (const side of [-1, 1]) {
+    for (const [z0, z1, top] of [[.66, .22, 1.31], [-.3, -.3, 1.37], [-1.0, -1.0, 1.37], [-1.76, -1.76, 1.36]]) {
+      rod([side * .64, .86, z0], [side * .62, top, z1], .04, paint);
+    }
+    // Wood panel framed in cream along each flank.
+    box(.02, .26, 2.9, wood, [side * (sideAt(.6, -.2) + .012), .6, -.2]).name = 'woodPanel';
+    for (const y of [.46, .74]) box(.026, .03, 2.92, trim, [side * (sideAt(y, -.2) + .016), y, -.2]).name = 'woodFrame';
+    k.roundLamp(side * .5, .58, 1.82, .1);
+    box(.06, .14, .04, mats.tail, [side * .58, .64, -1.91]).name = 'tailLamp';
+    const mirror = mesh(new THREE.SphereGeometry(.055, 12, 8), mats.chrome, [side * .74, .92, .6]);
+    mirror.scale.set(1, .75, .55);
+    // Roof rack rails.
+    rod([side * .5, 1.47, -1.6], [side * .5, 1.47, .0], .018, mats.chrome);
+    for (const z of [-1.6, 0]) rod([side * .5, 1.42, z], [side * .5, 1.47, z], .015, mats.chrome);
+  }
+  for (const z of [-1.3, -.8, -.3]) rod([-.5, 1.47, z], [.5, 1.47, z], .015, mats.chrome);
+  for (let i = 0; i < 3; i++) rod([-.36, .38 + i * .05, 1.88], [.36, .38 + i * .05, 1.88], .012, mats.chrome);
+  for (const z of [1.94, -1.93]) rod([-.66, .3, z], [.66, .3, z], .028, mats.chrome);
+  box(.96, .06, .1, paint, [0, .89, .55]).name = 'dashboard';
+  const driverSteeringWheel = k.steeringWheel({ pos: [0, .93, .42], tilt: -.6, radius: .15, column: [[0, .9, .45], [0, .85, .56]] });
+  for (const side of [-1, 1]) {
+    const back = box(.42, .46, .08, mats.seat, [side * .3, .95, -.45]);
+    back.name = 'seatBack';
+    back.rotation.x = -.15;
+  }
+  box(1.1, .42, .08, mats.seat, [0, .95, -1.1]).name = 'bench';
+  const parts = k.wheels({ x: .63, front: 1.15, rear: -1.05, radius: R, whitewall: true });
   return k.finish({ ...parts, driverSteeringWheel }, scale, R);
 }
 
@@ -336,7 +468,7 @@ function buildMuscle({ primary = 0xf2b705, secondary = 0x111111 } = {}, { scale 
   return k.finish({ ...parts, driverSteeringWheel }, scale, R, [0, 1.0, -.3]);
 }
 
-const BUILDERS = { cinquino: buildCinquino, spider: buildSpider, pulmino: buildPulmino, muscle: buildMuscle };
+const BUILDERS = { cinquino: buildCinquino, pandina: buildPandina, spider: buildSpider, pulmino: buildPulmino, muscle: buildMuscle, familiare: buildFamiliare };
 export const ROAD_VEHICLE_IDS = Object.keys(BUILDERS);
 
 // colors: { primary, secondary? }; opts: { scale, detail }.

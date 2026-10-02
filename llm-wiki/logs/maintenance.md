@@ -1899,3 +1899,15 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Verified: validator green, headless renders of the fleet and of
   `free.html` (grid, start, chase, cockpit), no console errors. Feel and
   mobile untested. Badge v286.
+
+## 2026-10-02 — Classic cars: Pandina, Familiare, rounder Cinquino (#315)
+
+- `shared/vehicle-models.js`: `bodyShaper()` deforms an extruded body
+  (plan pinch, tumblehome, sill tuck) so the Cinquino reads as a bubble;
+  new Pandina (boxy 1980s) and Familiare (1960s wood-panelled estate).
+- `shared/road-cars.js` (new): road-car names, colours and physics, shared
+  with the coming Classiche race (#315 cycle B); `free/vehicles.js` adds the
+  F1 and six rival lanes.
+- `validate-free-oval.mjs`: 7 cars x 6 lanes, 0 s off the road.
+- Verified with headless renders (fleet, free drive grid/chase/cockpit), no
+  console errors. Feel untested. Badge v287.

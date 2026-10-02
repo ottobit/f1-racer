@@ -787,17 +787,20 @@ banked oval, no rivals, qualifying, race, lap limit or results. Home has a
   banking and that the autopilot laps inside the road.
 - Limits: not run in a browser (look, feel, mobile touch drag untested); the
   outside edge is a wall, there is no runoff on the high side.
-- Vehicles and rivals (#311, #313): a select under the circuit name picks
-  the car (F1, Cinquino, Spider, Pulmino, Muscle; saved in
-  `f1racer-free-car`, `?car=` wins) and reloads. `shared/vehicle-models.js`
-  builds the road cars from extruded side profiles with the `buildCar`
-  contract plus an optional `cockpitEye` (read by `race-camera.js`; the van's
-  cab sits high and forward). `free/vehicles.js` holds each car's physics
-  (115-317 km/h) and `RIVAL_SLOTS`. The other four cars line up just ahead
-  and start on your first throttle: each is its own `createFreeSim` driven
-  by `createAutopilotProvider`, on an inside lane (the slow cars run wide in
-  the turns: outside lanes left the road). No contact between cars. Generic
-  shapes, no badges. `validate-free-oval.mjs` laps every car on every lane.
+- Vehicles and rivals (#311, #313, #315): a select under the circuit name
+  picks the car (F1, Cinquino, Pandina, Spider, Pulmino, Muscle, Familiare;
+  saved in `f1racer-free-car`, `?car=` wins) and reloads.
+  `shared/vehicle-models.js` builds the road cars from extruded side profiles
+  (`bodyShaper` rounds plan and tumblehome after extrusion) with the
+  `buildCar` contract plus an optional `cockpitEye` (read by `race-camera.js`;
+  the van's cab sits high and forward). `shared/road-cars.js` holds each road
+  car's name, colours and physics (115-250 km/h; shared with the coming
+  Classiche race); `free/vehicles.js` adds the F1 and `RIVAL_SLOTS`. All the
+  other cars line up just ahead and start on your first throttle: each is
+  its own `createFreeSim` driven by `createAutopilotProvider`, on an inside
+  lane (the slow cars run wide in the turns: outside lanes left the road).
+  No contact between cars. Generic shapes, no badges.
+  `validate-free-oval.mjs` laps every car on every lane.
 
 ## Agent API (`window._ENVIRONMENT_`)
 
