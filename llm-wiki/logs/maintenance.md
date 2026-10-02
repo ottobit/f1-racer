@@ -1925,3 +1925,18 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Verified headless: home swipe and link, classic quali tower and mixed
   grid with nameplates, plain F1 race unchanged; no console errors. A full
   race and the feel are untested. Badge v288.
+
+## 2026-10-02 — Per-car engine sounds (#319)
+
+- `core/client/race/race-audio.js`: `ENGINE_PROFILES` (f1, cinquino,
+  pandina, spider, pulmino, muscle, familiare) with revs, firings per
+  revolution, firing-wave timbre, mix levels and gearbox (8 gears F1, 4–5
+  road). `setupRaceAudio({ engine, field })` returns a profile-bound
+  `gearInfo`; the exported `gearInfo` keeps the F1 gearbox by default.
+- F1 output verified identical to the previous module (mocked AudioContext,
+  9023 parameter updates compared byte for byte).
+- `free.js` voices the chosen vehicle; `main.js` voices the Classiche
+  player's car, the grid chorus as a small four ("pandina"), and skips the
+  exhaust flames for road cars (the flame is placed on the F1 tailpipe).
+- Limits: timbre judged only numerically (road fundamentals 15–47 Hz at
+  idle, carried by 28–56 harmonics); needs an in-game listen.
