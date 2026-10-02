@@ -1856,3 +1856,15 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `wiki/f1-racer/agent-bots.md`: Open section on the candidate fit, a tactical
   layer for bots (pit/mode/pace), Node side on the player's PC, not driving.
 - Docs only; release badge v283.
+
+## 2026-10-02 — Raw note: System One decision models discussion (#309)
+
+- New `llm-wiki/sources/raw/2026-10-02-system-one-discussion.md`: the chat on
+  what a System One model is (LLM logit classifier, one prefill per question),
+  who supplies the options (the caller's code), and the Pac-Man and
+  car-dodging claims vs pacman-arena numbers (greedy beat every model;
+  384–668 ms median).
+- Fit recorded: no steering; overtake side at 3–10 Hz or a slow tactical
+  layer; a ready POST to `/v1/systemone` with `nimble` for the user's PC.
+- Not run: the container blocks the Ollama registry and has no GPU.
+- Raw only; synthesis already in #307. Release badge v284.
