@@ -1064,6 +1064,8 @@ html{scroll-behavior:smooth}
 .home-command--multiplayer::before{background:radial-gradient(circle at 80% 30%,rgba(62,185,220,.14),transparent 35%),linear-gradient(125deg,#151923,#0c0e13)}
 /* Help shortcut to the game modes guide (#123): small round "?" in the hero corner. */
 .f1-home-hero{position:relative}.home-help{position:absolute;top:max(1rem,env(safe-area-inset-top));right:1.25rem;display:grid;place-items:center;width:40px;height:40px;border:1px solid rgba(255,255,255,.28);border-radius:50%;color:#fff;font-weight:800;font-size:1.1rem;text-decoration:none;background:rgba(255,255,255,.04);transition:border-color .15s,background .15s}.home-help:hover,.home-help:focus-visible{border-color:#e10600;background:rgba(225,6,0,.18);outline:none}
+/* Cinquino (#311): the brown city-car card for free drive. */
+.home-command--cinquino{grid-column:1/-1;min-height:104px;border-color:rgba(176,116,70,.65)}.home-command--cinquino::before{background:radial-gradient(circle at 82% 40%,rgba(196,128,74,.28),transparent 33%),linear-gradient(125deg,#2c1a10,#120e0c 70%)}.home-command--cinquino .home-command-index{color:#d9b48f}.home-command--cinquino .home-command-arrow{background:#6b4226}
 .home-command:hover{transform:translateY(-2px);border-color:#fff}.home-command:focus-visible{outline:2px solid #fff;outline-offset:4px}
 .home-command-index{grid-column:1/-1;font-size:.65rem;font-weight:900;letter-spacing:.16em;color:#d5a5a7}.home-command--multiplayer .home-command-index{color:#91a3b9}
 .home-command-copy{align-self:end;display:flex;flex-direction:column;gap:5px}.home-command-copy strong{font-size:clamp(1.35rem,3vw,2rem);letter-spacing:-.035em}.home-command-copy small{color:#afb5c0;font-size:.75rem}

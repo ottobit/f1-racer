@@ -787,6 +787,13 @@ banked oval, no rivals, qualifying, race, lap limit or results. Home has a
   banking and that the autopilot laps inside the road.
 - Limits: not run in a browser (look, feel, mobile touch drag untested); the
   outside edge is a wall, there is no runoff on the high side.
+- Cinquino (#311): `free.html?car=cinquino` (its own home card) swaps the F1
+  for a brown 1960s city car. `shared/city-car-model.js` builds it from
+  extruded side profiles with the `buildCar` contract (wheels, steering
+  pivots, driver wheel), so the race view and cockpit camera drive it as is;
+  `free/city-car.js` gives `free-sim` its parameters (~140 km/h, 0-100 in
+  ~10 s, softer brakes and turn rate). Free drive only: no garage, race or
+  room sees it. Generic shape, no badges or lettering.
 
 ## Agent API (`window._ENVIRONMENT_`)
 
