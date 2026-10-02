@@ -31,7 +31,7 @@ import { steeringYaw } from "./steering.js?v=8";
 import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=43";
 import { buildPitLane } from "../shared/pit-lane.js?v=3";
 import { setupPitCrew } from "./pit-crew.js?v=4";
-import { gearInfo, setupRaceAudio } from "./race-audio.js?v=3";
+import { setupRaceAudio } from "./race-audio.js?v=4";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
 import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=4";
@@ -841,9 +841,14 @@ const raceAudio = setupRaceAudio({
     return "idle";
   },
   getThrottle: () => (input.forward ? 1 : 0),
+  // Each car its own engine (#319); the Classiche field is voiced as a
+  // generic small four.
+  engine: PLAYER_ROAD_CAR ?? "f1",
+  field: CLASSIC ? "pandina" : "f1",
 });
-const { updateEngineSound, playShiftClick, updateAmbientChorus } = raceAudio;
-const updateExhaust = setupExhaustPops({
+const { gearInfo, updateEngineSound, playShiftClick, updateAmbientChorus } = raceAudio;
+// No flames for road cars: the flame sits on the F1's tailpipe.
+const updateExhaust = PLAYER_ROAD_CAR ? () => {} : setupExhaustPops({
   carGroup: playerCar.group,
   state,
   input,

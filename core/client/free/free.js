@@ -12,7 +12,7 @@ import { headingOf, offsetEdge, sideNormal } from "../shared/track-geometry.js?v
 import { setupRaceInput } from "../race/race-input.js?v=58";
 import { setupRaceCamera } from "../race/race-camera.js?v=41";
 import { createAutopilotProvider } from "../race/driver-providers.js?v=6";
-import { gearInfo, setupRaceAudio } from "../race/race-audio.js?v=3";
+import { setupRaceAudio } from "../race/race-audio.js?v=4";
 import { surfaceTexture } from "../race/track-art.js?v=43";
 import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=4";
 import { FREE_OVAL } from "./oval.js?v=1";
@@ -269,7 +269,12 @@ const raceCamera = setupRaceCamera({
 });
 
 // --- Engine sound: armed by the first key or tap (browsers block audio before) ---
-const raceAudio = setupRaceAudio({ getPhase: () => "driving", getThrottle: () => (input.forward ? 1 : 0) });
+const raceAudio = setupRaceAudio({
+  getPhase: () => "driving",
+  getThrottle: () => (input.forward ? 1 : 0),
+  engine: vehicleId, // each car its own engine (#319)
+});
+const { gearInfo } = raceAudio;
 let audioArmed = false;
 function armAudio() {
   if (audioArmed) return;
