@@ -295,7 +295,8 @@ export function setupRaceCamera({ scene, camera, state, playerCar, carMaxSpeed, 
     mirrorCar(playerCar, cockpitCar);
     cockpitView.updateMatrixWorld(true);
     aimForearms(cockpitCar);
-    cockpitView.localToWorld(eye.copy(COCKPIT_EYE));
+    // Road cars (#313) carry their own eye: a van's cab sits high and forward.
+    cockpitView.localToWorld(eye.copy(cockpitCar.cockpitEye ?? COCKPIT_EYE));
     camera.position.copy(eye);
     // Look down the road, pitched so the wheel and gloves stay in frame.
     const viewHeading = state.heading - lookYaw;
