@@ -1940,3 +1940,17 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
   exhaust flames for road cars (the flame is placed on the F1 tailpipe).
 - Limits: timbre judged only numerically (road fundamentals 15–47 Hz at
   idle, carried by 28–56 harmonics); needs an in-game listen.
+
+## 2026-10-02 — Classiche one-make races, 1960s van (#321)
+
+- `core/client/race/main.js`: Classiche rivals all drive the player's car
+  (`roadCar: CLASSIC_DRIVER.car`) in their own colours, so AI pace and lap
+  estimates are equal; the grid chorus uses the player's engine profile.
+- `core/client/home/menu.js`: driver card reads "Monomarca <car>";
+  `classic-series.js` comment documents the one-make rule.
+- `core/client/shared/vehicle-models.js` (`buildPulmino`): split-window
+  rear-engined van look — two-tone V on the nose, plain round disc (no
+  badge), split windscreen post, engine louvres and lid. Same dimensions,
+  wheels and cockpit eye.
+- Verified with `node --check` / `git diff --check` only; looks need an
+  in-game check. Next: road-car garage (setup, colours, showroom).
