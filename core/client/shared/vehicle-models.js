@@ -386,7 +386,9 @@ function buildSpider({ primary = 0xb3121b } = {}, { scale = 1, detail = false } 
   return k.finish({ ...parts, driverSteeringWheel }, scale, R, [0, 1.0, -.45]);
 }
 
-// Pulmino: two-tone 1960s forward-control van, flat nose, big windows.
+// Pulmino (#321): the split-window 1960s rear-engined van — two-tone body,
+// a big V on the nose, a plain round disc (no badge), split windscreen and
+// engine louvres behind the rear wheels.
 function buildPulmino({ primary = 0x7fb3d5, secondary = 0xf2efe6 } = {}, { scale = 1, detail = false } = {}) {
   const k = createKit(detail);
   const { mats, mesh, box, rod } = k;
@@ -413,6 +415,29 @@ function buildPulmino({ primary = 0x7fb3d5, secondary = 0xf2efe6 } = {}, { scale
     rod([side * .75, 1.0, 1.5], [side * .85, 1.1, 1.45], .012, mats.chrome);
   }
   for (const z of [1.76, -1.76]) rod([-.72, .32, z], [.72, .32, z], .03, mats.chrome);
+  // Nose: the V in the upper colour, the round disc at its point, and the
+  // centre post of the split windscreen.
+  const vee = new THREE.Shape();
+  vee.moveTo(-.62, .86);
+  vee.lineTo(-.44, .86);
+  vee.lineTo(0, .6);
+  vee.lineTo(.44, .86);
+  vee.lineTo(.62, .86);
+  vee.lineTo(0, .5);
+  vee.closePath();
+  mesh(new THREE.ShapeGeometry(vee), white, [0, 0, 1.645]).name = 'noseVee';
+  const disc = mesh(new THREE.CylinderGeometry(.1, .1, .03, 24), mats.chrome, [0, .5, 1.65]);
+  disc.rotation.x = Math.PI / 2;
+  disc.name = 'noseDisc';
+  rod([0, .9, 1.61], [0, 1.47, 1.5], .03, white);
+  // Engine louvres behind the rear wheels, and the engine lid at the back.
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 5; i++) {
+      box(.02, .025, .3, mats.dark, [side * .715, .78 - i * .06, -1.38]).name = 'louvre';
+    }
+  }
+  box(.9, .32, .02, paint, [0, .58, -1.66]).name = 'engineLid';
+  rod([-.1, .6, -1.68], [.1, .6, -1.68], .015, mats.chrome);
   // Cab: big flat wheel, white dash, front seats; benches behind.
   box(1.3, .08, .14, white, [0, .95, 1.42]).name = 'dashboard';
   const driverSteeringWheel = k.steeringWheel({ pos: [0, 1.1, 1.22], tilt: -1.05, radius: .17, column: [[0, 1.08, 1.25], [0, .95, 1.45]] });

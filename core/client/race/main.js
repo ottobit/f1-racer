@@ -8,7 +8,7 @@ import { liveryById } from "../shared/driver-themes.js?v=28";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=30";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
-import { buildRoadVehicle } from "../shared/vehicle-models.js?v=2";
+import { buildRoadVehicle } from "../shared/vehicle-models.js?v=3";
 import { ROAD_CARS } from "../shared/road-cars.js?v=1";
 import { CLASSIC_ROSTER, classicDriverById, loadClassicDriverId } from "../shared/classic-series.js?v=2";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=38";

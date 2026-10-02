@@ -17,7 +17,7 @@ import { surfaceTexture } from "../race/track-art.js?v=43";
 import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=4";
 import { FREE_OVAL } from "./oval.js?v=1";
 import { createFreeSim } from "./free-sim.js?v=3";
-import { buildRoadVehicle } from "../shared/vehicle-models.js?v=2";
+import { buildRoadVehicle } from "../shared/vehicle-models.js?v=3";
 import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=2";
 
 const CAR_SCALE = 0.55;
