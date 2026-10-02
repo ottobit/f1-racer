@@ -10,6 +10,7 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
 import { buildRoadVehicle } from "../shared/vehicle-models.js?v=3";
 import { ROAD_CARS } from "../shared/road-cars.js?v=1";
+import { roadColors, roadSetupParams } from "../shared/road-garage.js?v=1";
 import { CLASSIC_ROSTER, classicDriverById, loadClassicDriverId } from "../shared/classic-series.js?v=2";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=38";
 import { setupRaceInput } from "./race-input.js?v=58";
@@ -108,9 +109,10 @@ const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom"
 
 // Player car limits (top speed, accel, braking, turn rate) live in
 // race-rules.js, shared with the headless room bot (#214).
-const CAR = CLASSIC ? roadCarParams(CLASSIC_DRIVER.car) : playerCarParams(GARAGE_EFFECTS, isRaining);
+// Classiche: the player's road-car garage setup on top (#323); rivals stock.
+const CAR = CLASSIC ? roadSetupParams(CLASSIC_DRIVER.car, roadCarParams(CLASSIC_DRIVER.car)) : playerCarParams(GARAGE_EFFECTS, isRaining);
 // A period car's own limits, with the same rain penalties as the F1; no
-// garage effects (#317).
+// garage effects here (#317).
 function roadCarParams(carId) {
   const params = ROAD_CARS[carId].params();
   if (!isRaining) return params;
@@ -550,7 +552,7 @@ function buildCar(color, { detail = false, roadCar = null } = {}) {
     detail,
   });
 }
-const PLAYER_COLORS = CLASSIC ? CLASSIC_DRIVER.colors : PLAYER_LIVERY;
+const PLAYER_COLORS = CLASSIC ? roadColors(CLASSIC_DRIVER.car, { ...ROAD_CARS[CLASSIC_DRIVER.car].colors, ...CLASSIC_DRIVER.colors }) : PLAYER_LIVERY;
 const PLAYER_ROAD_CAR = CLASSIC ? CLASSIC_DRIVER.car : null;
 
 // Player car

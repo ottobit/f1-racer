@@ -1,6 +1,11 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { buildCar, createStudioEnvironment } from '../shared/car-model.js?v=36';
 import { createFrameLimiter } from '../shared/graphics-profiles.js?v=4';
+import { buildRoadVehicle } from '../shared/vehicle-models.js?v=3';
+
+// Road cars (#323) are ~3.5 units long against the F1's ~5: a bigger scale
+// fills the same plinth.
+const ROAD_SHOWROOM_SCALE=1.6;
 
 const SHOWROOM_VIEWS={
   hero:[.72,.34,10.4],
@@ -17,7 +22,9 @@ const SHOWROOM_VIEWS={
 // instead of the showroom silently ignoring it and always paying full DPR
 // and a 2048 shadow map. Falls back to the old viewport-only heuristic if a
 // caller doesn't pass one, so this stays a strict addition.
-export function createShowroom(host, { livery, graphicsProfile, onFrame } = {}) {
+// vehicle: 'f1' (default) or a road-car id (road-cars.js), then colors
+// { primary, secondary? } paints it; repaint() changes them live.
+export function createShowroom(host, { livery, vehicle = 'f1', colors = {}, graphicsProfile, onFrame } = {}) {
   const compact=matchMedia('(max-width: 760px)').matches;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const profile=graphicsProfile || { dprCap: compact?1.5:2, shadowsEnabled: true, shadowMapSize: compact?1024:2048 };
@@ -31,7 +38,9 @@ export function createShowroom(host, { livery, graphicsProfile, onFrame } = {}) 
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x080d14);scene.fog=new THREE.FogExp2(0x080d14,.035);
   const camera=new THREE.PerspectiveCamera(36,1,.1,80);
   const env=createStudioEnvironment(renderer);scene.environment=env.texture;
-  const car=buildCar(livery || 0xbd1024,{detail:true,showDriver:false,scale:1.15}).group;car.position.y=.13;scene.add(car);
+  const road=vehicle!=='f1';
+  const car=road?buildRoadVehicle(vehicle,colors,{detail:true,scale:ROAD_SHOWROOM_SCALE}).group:buildCar(livery || 0xbd1024,{detail:true,showDriver:false,scale:1.15}).group;
+  car.position.y=.13;scene.add(car);
   scene.add(new THREE.HemisphereLight(0xbfd6ff,0x10151d,1.4));
   const key=new THREE.SpotLight(0xe8f2ff,110,25,.65,.65,1.5);key.position.set(2,7,4);key.castShadow=profile.shadowsEnabled;key.shadow.mapSize.set(profile.shadowMapSize,profile.shadowMapSize);key.shadow.bias=-.0003;key.shadow.normalBias=.025;scene.add(key);
   const rim=new THREE.PointLight(0x679dff,28,14,2);rim.position.set(-4,3,-3);scene.add(rim);
@@ -56,7 +65,7 @@ export function createShowroom(host, { livery, graphicsProfile, onFrame } = {}) 
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(7,1.75),new THREE.MeshBasicMaterial({map:signMap}));sign.position.set(0,3,-7.72);scene.add(sign);
   let azimuth=.72,elevation=.34,distance=10.4,auto=false,pointer=null,lastX=0,lastY=0;
   function updateCamera(){const d=distance*(Math.max(1, .95 / camera.aspect));camera.position.set(Math.sin(azimuth)*Math.cos(elevation)*d,.6+Math.sin(elevation)*d,Math.cos(azimuth)*Math.cos(elevation)*d);camera.lookAt(0,.65,0);}
-  const canvas=renderer.domElement;canvas.setAttribute('aria-label','Monoposto 3D: trascina per orbitare, usa i pulsanti per cambiare vista');
+  const canvas=renderer.domElement;canvas.setAttribute('aria-label',(road?'Auto 3D':'Monoposto 3D')+': trascina per orbitare, usa i pulsanti per cambiare vista');
   canvas.addEventListener('pointerdown',e=>{if(pointer!==null)return;pointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(pointer);});
   canvas.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;azimuth-=(e.clientX-lastX)*.008;elevation=THREE.MathUtils.clamp(elevation+(e.clientY-lastY)*.004,.1,1.15);lastX=e.clientX;lastY=e.clientY;});
   const release=e=>{if(e.pointerId===pointer)pointer=null;};canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);canvas.addEventListener('lostpointercapture',release);
@@ -66,10 +75,12 @@ export function createShowroom(host, { livery, graphicsProfile, onFrame } = {}) 
   let previous=0;
   renderer.setAnimationLoop(time=>{if(!frameGate(time))return;const dt=Math.min((time-previous)/1000,.05);previous=time;if(document.hidden)return;if(auto&&pointer===null&&!reduced.matches)azimuth+=dt*.18;updateCamera();renderer.render(scene,camera);if(onFrame)onFrame(dt);});
   function focusPart(part) {
-    const views={frontWing:[.48,.36,8.8],rearWing:[Math.PI,.34,6.65],floor:[2.4,.22,7.4],brakes:[1.25,.28,8.6],suspension:[.6,.62,8.6]};
-    [azimuth,elevation,distance]=views[part];auto=false;
+    const views={frontWing:[.48,.36,8.8],rearWing:[Math.PI,.34,6.65],floor:[2.4,.22,7.4],brakes:[1.25,.28,8.6],suspension:[.6,.62,8.6],tyres:[1.25,.28,8.6],gearing:[Math.PI,.3,6.8],paint:SHOWROOM_VIEWS.hero};
+    [azimuth,elevation,distance]=views[part]||SHOWROOM_VIEWS.hero;auto=false;
     document.getElementById('garage-orbit').setAttribute('aria-pressed','false');
     document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed','false'));
   }
-  return {car,renderer,focusPart};
+  // Road cars only: paint roles are tagged by vehicle-models.js paintMaterial.
+  function repaint(next){car.traverse(o=>{const role=o.isMesh&&o.material.userData.carPaintRole;if(role&&next[role]!==undefined)o.material.color.set(next[role]);});}
+  return {car,renderer,focusPart,repaint};
 }

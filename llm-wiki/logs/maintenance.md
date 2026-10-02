@@ -1954,3 +1954,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
   wheels and cockpit eye.
 - Verified with `node --check` / `git diff --check` only; looks need an
   in-game check. Next: road-car garage (setup, colours, showroom).
+
+## 2026-10-02 — Road-car garage: setup, paint, showroom (#323)
+
+- New `core/client/shared/road-garage.js`: per-car setup (tyres, gearing, brakes, suspension; 3 variants, ±2–8% trade-off multipliers on maxSpeed/accel/brakeDecel/maxTurnRate) and paint (primary; secondary on Pulmino and Muscle), stored in `f1racer-road-garage-v1`; corrupt values fall back to stock.
+- Garage: car picker (F1 + 6 road cars, `?car=`; default = Classiche driver's car when that series is the home pick). New `garage/road-garage-ui.js` drives the road-car pane; `showroom.js` builds road cars via `buildRoadVehicle` with live `repaint()`. F1 garage unchanged (wrapped in `mountF1Garage`).
+- Applied to the player only: Classiche race (`race/main.js` `roadSetupParams` + `roadColors`) and free drive (`free/free.js`); rivals stay stock. Note: in one-make Classiche this gives the player a small edge.
+- Verified with `node --check` and a Node script (fake localStorage, corrupt JSON, params per car); not play-tested. Badge 291.

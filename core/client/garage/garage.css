@@ -72,3 +72,11 @@
  .garage-page .garage-car-panel{position:relative;height:100%;min-height:0;max-height:none;border-bottom:0;border-right:1px solid #344554}
  .garage-page .garage-config{height:100%;overflow-y:auto;overscroll-behavior:contain;padding-right:max(16px,env(safe-area-inset-right))}
 }
+/* Car picker and road-car paint swatches (#323). */
+.garage-car-picker{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 0;font-size:9px;letter-spacing:.13em;color:#97adbe}
+.garage-car-picker select{flex:1;max-width:200px;min-height:36px;padding:0 10px;border:1px solid #2c3846;border-radius:2px;background:#121c27;color:#edf7ff;font-size:12px}
+.garage-paint>div{grid-template-columns:repeat(6,1fr)!important}
+.garage-paint .garage-swatch-own{grid-column:span 2}
+.garage-paint .garage-swatch{min-height:38px;border:1px solid #2c3846;border-radius:2px;padding:0}
+.garage-paint .garage-swatch.active{outline:2px solid #edf7ff;outline-offset:2px}
+@media(max-width:760px),(orientation:landscape) and (max-height:520px){.garage-car-picker{font-size:11px}.garage-car-picker select{min-height:44px;font-size:14px}.garage-paint .garage-swatch{min-height:44px}}
