@@ -1868,3 +1868,16 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
   layer; a ready POST to `/v1/systemone` with `nimble` for the user's PC.
 - Not run: the container blocks the Ollama registry and has no GPU.
 - Raw only; synthesis already in #307. Release badge v284.
+
+## 2026-10-02 — Cinquino city car in free drive (#311)
+
+- New `core/client/shared/city-car-model.js`: a brown 1960s city car from
+  extruded side profiles, with the `buildCar` contract so `applyCarToMesh`
+  and the cockpit camera work unchanged. No badges or lettering.
+- New `core/client/free/city-car.js` (~140 km/h, 0-100 in ~10 s);
+  `free-sim.js` takes an optional `car`; `free.js` switches on
+  `?car=cinquino`. The race chain is untouched.
+- Home card "Guida libera · Cinquino" (full row); `style.css` v55 on every
+  page.
+- Verified with headless SwiftShader renders (3 angles, chase and cockpit on
+  `free.html`), no console errors. Feel and mobile not tested. Badge v285.
