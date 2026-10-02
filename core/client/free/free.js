@@ -1,5 +1,5 @@
 // Free drive (#274): your car on a wide banked oval, no qualifying, no race,
-// no lap limit, no results. Pick the car (#313); the other four lap on their
+// no lap limit, no results. Pick the car (#313); all the others lap on their
 // own, each on its lane and pace, just for company. Separate page from the
 // race (race.html) and from multiplayer, on purpose: it shares the physics,
 // input, camera and car model, not the session flow.
@@ -17,8 +17,8 @@ import { surfaceTexture } from "../race/track-art.js?v=43";
 import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=4";
 import { FREE_OVAL } from "./oval.js?v=1";
 import { createFreeSim } from "./free-sim.js?v=3";
-import { buildRoadVehicle } from "../shared/vehicle-models.js?v=1";
-import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=1";
+import { buildRoadVehicle } from "../shared/vehicle-models.js?v=2";
+import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=2";
 
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
