@@ -1881,3 +1881,21 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
   page.
 - Verified with headless SwiftShader renders (3 angles, chase and cockpit on
   `free.html`), no console errors. Feel and mobile not tested. Badge v285.
+
+## 2026-10-02 — Free drive: pick the car, race four rivals (#313)
+
+- The Cinquino's own home card (#311) is gone: free drive keeps one card and
+  a car select (F1, Cinquino, Spider, Pulmino, Muscle; `?car=` or the saved
+  `f1racer-free-car`). The track was always the existing `FREE_OVAL`.
+- `shared/vehicle-models.js` replaces `city-car-model.js`: a shared kit and
+  one builder per road car, `buildCar` contract plus optional `cockpitEye`,
+  now read by `race-camera.js` (v41, chain bumped to `race.html`).
+- `free/vehicles.js`: per-car physics (115-317 km/h) and `RIVAL_SLOTS`. The
+  other four cars line up ahead and start on the first throttle, each a
+  `createFreeSim` driven by `createAutopilotProvider`; no car contact.
+- `validate-free-oval.mjs` laps every car on every lane. It showed slow cars
+  running wide on the oval (outside lanes left the road), so rivals use
+  inside lanes only.
+- Verified: validator green, headless renders of the fleet and of
+  `free.html` (grid, start, chase, cockpit), no console errors. Feel and
+  mobile untested. Badge v286.
