@@ -224,6 +224,24 @@ unshifted spline origin. Finish order is locked per car at the configured race
 distance. AI cars must not perform invisible stops on the racing surface; an
 automatic AI pit strategy can return only with a modeled pit lane.
 
+## Classiche series (#315, #317)
+
+A second solo series beside F1: period road cars (Cinquino, Pandina,
+Spider, Pulmino, Muscle, Familiare; `shared/road-cars.js`) driven by twelve
+made-up drivers, two per car (`shared/classic-series.js`). The home driver
+card swipes between the F1 page and the Classiche page; the last pick sets
+the series (`f1racer-series`) and the race link adds `&series=classic`.
+
+- Solo only: a room always races F1s (multiplayer ignores `series`).
+- No championship points: Classiche results show and offer a rematch, the
+  F1 standings are untouched; the F1 driver lock does not apply.
+- Mixed field on purpose: each car keeps its own physics and AI limits
+  (`race-ai.js` reads `car.ai`), so qualifying sorts by car as much as by
+  driver.
+- No DRS or ERS for period cars; pits, tyres, laps and damage are shared.
+- Collision sizes stay the F1's for every car (Open: the van looks bigger
+  than its contact circle).
+
 ## Driver Names
 
 The custom friend names currently assigned across teams are:

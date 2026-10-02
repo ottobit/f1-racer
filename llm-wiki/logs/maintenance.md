@@ -1911,3 +1911,17 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `validate-free-oval.mjs`: 7 cars x 6 lanes, 0 s off the road.
 - Verified with headless renders (fleet, free drive grid/chase/cockpit), no
   console errors. Feel untested. Badge v287.
+
+## 2026-10-02 — Classiche series: period-car race (#317)
+
+- Home: the driver card swipes between F1 and Classiche (12 made-up drivers,
+  two per road car, `shared/classic-series.js`); a Classiche pick sets
+  `f1racer-series` and the circuit link adds `&series=classic`.
+- `race/main.js` behind `CLASSIC` (solo only): the player's road car and
+  physics, eleven classic rivals with per-car AI limits (`race-ai.js` reads
+  `car.ai`), one simulated quali lap per kind of car, DRS/ERS off and
+  hidden, no championship points ("Rivincita").
+- Decision recorded in `wiki/f1-racer/decisions.md`; docs section added.
+- Verified headless: home swipe and link, classic quali tower and mixed
+  grid with nameplates, plain F1 race unchanged; no console errors. A full
+  race and the feel are untested. Badge v288.

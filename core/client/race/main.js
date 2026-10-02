@@ -8,13 +8,16 @@ import { liveryById } from "../shared/driver-themes.js?v=28";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=30";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
+import { buildRoadVehicle } from "../shared/vehicle-models.js?v=2";
+import { ROAD_CARS } from "../shared/road-cars.js?v=1";
+import { CLASSIC_ROSTER, classicDriverById, loadClassicDriverId } from "../shared/classic-series.js?v=1";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=38";
 import { setupRaceInput } from "./race-input.js?v=58";
 import { escapeHtml, setupRaceHud } from "./race-hud.js?v=41";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=41";
 import { setupPlayerPhysics } from "./player-physics.js?v=9";
-import { setupRaceAi } from "./race-ai.js?v=31";
+import { setupRaceAi } from "./race-ai.js?v=32";
 import { setupRaceSystems } from "./race-systems.js?v=32";
 import { setupRaceProgress } from "./race-progress.js?v=29";
 import { setupRaceCommands } from "./race-commands.js?v=2";
@@ -66,6 +69,11 @@ const MY_ROOM_DRIVER_ID = multiplayer
   : null;
 const SELECTED_DRIVER_ID = MY_ROOM_DRIVER_ID || loadSelectedDriverId();
 const PLAYER_LIVERY = playerLivery(SELECTED_DRIVER_ID);
+// Classiche (#317): ?series=classic races period road cars instead of F1s.
+// Solo only (a room always races F1s); no championship points, no DRS/ERS.
+const CLASSIC = !multiplayer && new URLSearchParams(location.search).get("series") === "classic";
+const CLASSIC_DRIVER = CLASSIC ? classicDriverById(loadClassicDriverId()) : null;
+if (CLASSIC) document.documentElement.classList.add("series-classic");
 
 /*
  * F1 Racer — championship mode: a fixed-lap race against two AI rivals on
@@ -100,7 +108,14 @@ const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom"
 
 // Player car limits (top speed, accel, braking, turn rate) live in
 // race-rules.js, shared with the headless room bot (#214).
-const CAR = playerCarParams(GARAGE_EFFECTS, isRaining);
+const CAR = CLASSIC ? roadCarParams(CLASSIC_DRIVER.car) : playerCarParams(GARAGE_EFFECTS, isRaining);
+// A period car's own limits, with the same rain penalties as the F1; no
+// garage effects (#317).
+function roadCarParams(carId) {
+  const params = ROAD_CARS[carId].params();
+  if (!isRaining) return params;
+  return { ...params, maxSpeed: params.maxSpeed * RAIN_MAX_SPEED_MULTIPLIER, maxTurnRate: params.maxTurnRate * RAIN_TURN_RATE_MULTIPLIER };
+}
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
 
@@ -125,6 +140,17 @@ const AI = {
   cornerLookahead: 22, // samples used to preview upcoming bends
   brakeDecel: 68,
 };
+// Classiche (#317): a rival's limits from its own car, in the same AI/player
+// ratios as the F1 (74.4/88 top speed, 14/16 accel, 68/75 brakes).
+function classicAiParams(carId) {
+  const car = roadCarParams(carId);
+  return {
+    ...AI,
+    maxSpeed: car.maxSpeed * (74.4 / 88) * diffPreset.speedMul,
+    accel: car.accel * (14 / 16) * diffPreset.accelMul,
+    brakeDecel: car.brakeDecel * (68 / 75),
+  };
+}
 
 // Tyres, ERS and pit constants live in race-rules.js (#214). The player can
 // box in the real pit lane (#147); AI cars stay out.
@@ -505,7 +531,18 @@ function addGridBoxMarking(slot, number) {
 }
 
 // Shared visual model; race physics and collision dimensions remain independent.
-function buildCar(color, { detail = false } = {}) {
+function buildCar(color, { detail = false, roadCar = null } = {}) {
+  if (roadCar) {
+    // Classiche (#317): the period car, with the F1's studio reflections.
+    const model = buildRoadVehicle(roadCar, color, { scale: CAR_SCALE, detail });
+    model.group.traverse((object) => {
+      if (object.isMesh) {
+        object.material.envMap = carEnvironment.texture;
+        object.material.envMapIntensity = 0.65;
+      }
+    });
+    return model;
+  }
   return buildRaceCar(color, {
     scale: CAR_SCALE,
     environmentTexture: carEnvironment.texture,
@@ -513,16 +550,18 @@ function buildCar(color, { detail = false } = {}) {
     detail,
   });
 }
+const PLAYER_COLORS = CLASSIC ? CLASSIC_DRIVER.colors : PLAYER_LIVERY;
+const PLAYER_ROAD_CAR = CLASSIC ? CLASSIC_DRIVER.car : null;
 
 // Player car
-const playerCar = buildCar(PLAYER_LIVERY);
+const playerCar = buildCar(PLAYER_COLORS, { roadCar: PLAYER_ROAD_CAR });
 // Make the player's car easier to read in chase view without changing the
 // shared car geometry, wheel metadata, physics or collision dimensions.
 playerCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
 scene.add(playerCar.group);
 // Cockpit view (#139): an unbatched copy of the player's car, seen from
 // inside the helmet; race-camera.js mirrors the player car onto it.
-const cockpitCar = buildCar(PLAYER_LIVERY, { detail: true });
+const cockpitCar = buildCar(PLAYER_COLORS, { detail: true, roadCar: PLAYER_ROAD_CAR });
 cockpitCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
 cockpitCar.group.visible = false;
 scene.add(cockpitCar.group);
@@ -545,7 +584,11 @@ const AI_DRIVERS = multiplayer
       participantId,
       livery: liveryById(DRIVER_ROSTER.find((d) => d.id === driverId).team),
     }))
-  : DRIVER_ROSTER
+  : CLASSIC
+    ? CLASSIC_ROSTER
+      .filter((driver) => driver.id !== CLASSIC_DRIVER.id)
+      .map((driver) => ({ id: driver.id, livery: driver.colors, roadCar: driver.car }))
+    : DRIVER_ROSTER
       .filter((driver) => driver.id !== SELECTED_DRIVER_ID)
       .map((driver) => ({ id: driver.id, livery: liveryById(driver.team) }));
 
@@ -564,7 +607,7 @@ const TRACK_LENGTH = trackCurve.getLength();
 const gridSlot = createGridSlot({ centerline, trackWidth: TRACK_WIDTH, trackLength: TRACK_LENGTH, headingOf, sideNormal });
 const AI_GRID_SLOTS = GRID_SLOTS.slice(1);
 const aiCars = AI_DRIVERS.map((driver, i) => {
-  const model = buildCar(driver.livery);
+  const model = buildCar(driver.livery, { roadCar: driver.roadCar });
   scene.add(model.group);
   const slot = AI_GRID_SLOTS[i];
   const pos = gridSlot(slot.row, slot.lane);
@@ -598,6 +641,9 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     // for solo play's real AI entries.
     isRemote: !!multiplayer,
     participantId: driver.participantId ?? null,
+    // Classiche (#317): race-ai.js drives it with its own car's limits.
+    ai: driver.roadCar ? classicAiParams(driver.roadCar) : undefined,
+    roadCar: driver.roadCar ?? null,
   };
 });
 
@@ -811,7 +857,8 @@ const updateExhaust = setupExhaustPops({
 // Weather badge stays on the circuit name in every phase; the "Qualifica"
 // suffix only applies until the race itself starts (see finishQualifying).
 function circuitLabel() {
-  return isRaining ? `${circuit.name} · 🌧️ Pioggia` : circuit.name;
+  const name = CLASSIC ? `Classiche · ${circuit.name}` : circuit.name;
+  return isRaining ? `${name} · 🌧️ Pioggia` : name;
 }
 
 // Generated once: the tower and the real grid consume the same result set.
@@ -822,12 +869,22 @@ function circuitLabel() {
 const AI_FLYING_LAP_MS = multiplayer
   ? 0
   : simulateAiFlyingLapMs() || (TRACK_LENGTH / AI.maxSpeed) * 1000 * 1.35;
+// Classiche (#317): one simulated flying lap per kind of car.
+const classicLapMs = new Map();
+function aiFlyingLapMsFor(driver) {
+  if (!driver.roadCar) return AI_FLYING_LAP_MS;
+  if (!classicLapMs.has(driver.roadCar)) {
+    const ai = classicAiParams(driver.roadCar);
+    classicLapMs.set(driver.roadCar, simulateAiFlyingLapMs(ai) || (TRACK_LENGTH / ai.maxSpeed) * 1000 * 1.35);
+  }
+  return classicLapMs.get(driver.roadCar);
+}
 const AI_QUALIFYING_RESULTS = multiplayer
   ? []
   : AI_DRIVERS.map((driver) => ({
       id: driver.id,
-      name: displayDriverName(driver.id),
-      time: synthesizeAiQualiTime(AI_FLYING_LAP_MS),
+      name: displayName(driver.id),
+      time: synthesizeAiQualiTime(aiFlyingLapMsFor(driver)),
     })).sort((a, b) => a.time - b.time);
 
 function multiplayerQualifyingRivals() {
@@ -845,6 +902,7 @@ function displayName(driverId) {
     const participant = multiplayer.room.participants.find((p) => p.driverId === id);
     if (participant?.nickname) return participant.nickname;
   }
+  if (CLASSIC) return driverId === "player" ? CLASSIC_DRIVER.name : classicDriverById(driverId)?.name ?? driverId;
   return displayDriverName(driverId);
 }
 
@@ -1044,6 +1102,14 @@ function finishRace() {
     .join("");
 
   const nextLink = document.getElementById("results-next");
+  if (CLASSIC) {
+    // Classiche (#317): no points, the F1 championship is untouched.
+    document.getElementById("results-points").textContent = "Classiche · nessun punto";
+    nextLink.href = location.href;
+    nextLink.textContent = "Rivincita";
+    showResultsOverlay();
+    return;
+  }
   // Solo only: multiplayer returned above with the room's shared results,
   // which never touch the solo championship.
   const state2 = recordRaceResult(circuit.id, order);
@@ -1071,7 +1137,7 @@ const pitCrew = setupPitCrew({
   scene,
   pitLane,
   playerCar,
-  suitColor: PLAYER_LIVERY.primary,
+  suitColor: PLAYER_COLORS.primary,
   serviceMs: PIT_SERVICE_MS,
 });
 const raceCamera = setupRaceCamera({
@@ -1115,11 +1181,11 @@ const { integratePlayerMotion } = setupPlayerPhysics({
 // instead of the old flat "length / top speed x 1.35" guess, which ignored
 // how twisty a circuit is. Every AI shares the same parameters, so the lap
 // is simulated once and each driver gets a small personal spread on top.
-function simulateAiFlyingLapMs() {
+function simulateAiFlyingLapMs(ai = AI) {
   const SIM_DT = 1 / 60;
   const SIM_MAX_SECONDS = 600;
   const simAi = setupRaceAi({
-    ai: AI,
+    ai,
     trackWidth: TRACK_WIDTH,
     grassLimit: GRASS_LIMIT,
     isRace: () => false,
@@ -1338,6 +1404,8 @@ function update(dt) {
 
   updateDrsEligibility([state, ...aiCars], TRACK_LENGTH);
   raceSystems.updateEnergyRecovery([state, ...aiCars], dt);
+  // Classiche (#317): period cars have neither DRS nor ERS.
+  if (CLASSIC) for (const car of [state, ...aiCars]) car.drsActive = car.ersActive = false;
 
   // In the pit lane (#147) the autopilot drives the player and the rest of
   // the field keeps racing; no player physics, grass drag or contact.
