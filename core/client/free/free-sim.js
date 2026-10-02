@@ -13,8 +13,9 @@ const START_INDEX = 0;
 
 // `curve` is a closed three.js CatmullRomCurve3 through circuit.points;
 // `input` and `steering` are the controls the physics reads (the page's own
-// setupRaceInput objects, or plain ones in Node).
-export function createFreeSim({ circuit, curve, effects, input = { forward: false, back: false, left: false, right: false }, steering = { value: 0 } }) {
+// setupRaceInput objects, or plain ones in Node); `car` overrides the F1's
+// parameters (same shape as playerCarParams).
+export function createFreeSim({ circuit, curve, effects, input = { forward: false, back: false, left: false, right: false }, steering = { value: 0 }, car: carParams = null }) {
   const centerline = sampleCenterline(curve, CENTERLINE_SAMPLES);
   const visualCenterline = sampleCenterline(curve, CENTERLINE_SAMPLES * 4);
   const trackLength = curve.getLength();
@@ -25,7 +26,8 @@ export function createFreeSim({ circuit, curve, effects, input = { forward: fals
     maxBankDeg: circuit.maxBankDeg,
     sideNormal,
   });
-  const car = playerCarParams(effects, false);
+  // The F1 by default; free.js passes the Cinquino's own parameters (#311).
+  const car = carParams ?? playerCarParams(effects, false);
   const { grassLimit, applyTrackBoundary } = createTrackBoundary({
     trackWidth: circuit.width,
     runoffEffect: effects.runoff,

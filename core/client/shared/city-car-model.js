@@ -69,7 +69,7 @@ function roofOutline() {
   return s;
 }
 
-export function buildCityCar(color = 0x6b4226, { scale = 1, detail = false } = {}) {
+export function buildCityCar(color = 0x5c371f, { scale = 1, detail = false } = {}) {
   const primary = typeof color === 'object' ? color.primary : color;
   const group = new THREE.Group();
   const paint = new THREE.MeshPhysicalMaterial({ color: primary, metalness: .3, roughness: .3, clearcoat: 1, clearcoatRoughness: .12 });
@@ -143,21 +143,23 @@ export function buildCityCar(color = 0x6b4226, { scale = 1, detail = false } = {
   exhaust.rotation.x = Math.PI / 2;
 
   // Interior for the cockpit view: dashboard, thin wheel, two seats. The
-  // wheel sits on the centreline in front of the cockpit eye (race-camera.js).
-  box(1.1, .1, .18, paint, [0, .84, .5]).name = 'dashboard';
-  box(.5, .05, .1, dark, [0, .9, .48]).name = 'dashboardBinnacle';
+  // body is solid up to the belt line (y ~.85), so the dashboard and the
+  // wheel sit above it, on the centreline in front of the cockpit eye
+  // (race-camera.js).
+  box(1.0, .06, .1, paint, [0, .88, .52]).name = 'dashboard';
+  box(.26, .05, .06, dark, [0, .93, .49]).name = 'dashboardBinnacle';
   const driverSteeringWheel = new THREE.Group();
   driverSteeringWheel.name = 'cityCarSteeringWheel';
-  driverSteeringWheel.position.set(0, .86, .3);
-  driverSteeringWheel.rotation.x = -.45;
+  driverSteeringWheel.position.set(0, .9, .42);
+  driverSteeringWheel.rotation.x = -.6;
   group.add(driverSteeringWheel);
-  const rim = mesh(new THREE.TorusGeometry(.16, .014, 8, segments), rubber, [0, 0, 0], driverSteeringWheel);
+  const rim = mesh(new THREE.TorusGeometry(.14, .012, 8, segments), rubber, [0, 0, 0], driverSteeringWheel);
   rim.rotation.x = Math.PI / 2;
   for (let i = 0; i < 3; i++) {
     const a = -Math.PI / 2 + i * Math.PI * 2 / 3;
-    rod([0, 0, 0], [Math.cos(a) * .15, 0, Math.sin(a) * .15], .008, chrome, driverSteeringWheel);
+    rod([0, 0, 0], [Math.cos(a) * .13, 0, Math.sin(a) * .13], .007, chrome, driverSteeringWheel);
   }
-  rod([0, .82, .32], [0, .7, .55], .016, dark);
+  rod([0, .87, .44], [0, .82, .55], .014, dark);
   for (const side of [-1, 1]) {
     box(.4, .1, .42, seat, [side * .28, .45, -.2]).name = 'seat';
     const back = box(.4, .5, .08, seat, [side * .28, .72, -.43]);

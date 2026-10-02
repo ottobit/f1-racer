@@ -14,7 +14,9 @@ import { gearInfo, setupRaceAudio } from "../race/race-audio.js?v=3";
 import { surfaceTexture } from "../race/track-art.js?v=43";
 import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=4";
 import { FREE_OVAL } from "./oval.js?v=1";
-import { createFreeSim } from "./free-sim.js?v=1";
+import { createFreeSim } from "./free-sim.js?v=2";
+import { buildCityCar } from "../shared/city-car-model.js?v=1";
+import { CITY_CAR_COLOR, CITY_CAR_ID, cityCarParams } from "./city-car.js?v=1";
 
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
@@ -25,6 +27,8 @@ const circuit = FREE_OVAL;
 const graphicsProfile = loadGraphicsProfile();
 const effects = setupEffects(loadGarageSetup());
 const livery = playerLivery(loadSelectedDriverId());
+// ?car=cinquino (#311): the brown city car instead of the F1.
+const isCityCar = new URLSearchParams(location.search).get("car") === CITY_CAR_ID;
 
 // --- Scene ------------------------------------------------------------------
 const scene = new THREE.Scene();
@@ -86,7 +90,7 @@ scene.add(ground);
 // --- Controls and simulation -------------------------------------------------
 const { input, steering, updateSteeringInput } = setupRaceInput();
 const curve = new THREE.CatmullRomCurve3(circuit.points.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, "catmullrom", circuit.curveTension);
-const sim = createFreeSim({ circuit, curve, effects, input, steering });
+const sim = createFreeSim({ circuit, curve, effects, input, steering, car: isCityCar ? cityCarParams() : null });
 const { state, banking, visualCenterline } = sim;
 
 // --- Banked road ---------------------------------------------------------------
@@ -183,10 +187,22 @@ scene.add(stripMesh([{ from: 0, to: 3, d1: half, d2: -half, lift: 0.03 }], paint
 scene.add(wallMesh(half, concrete), wallMesh(-half, concrete));
 
 // --- Car -------------------------------------------------------------------------
-function buildCar(detail) {
-  const model = buildRaceCar(livery, {
-    scale: CAR_SCALE, environmentTexture: carEnvironment.texture, envMapIntensity: 0.65, detail,
+// Same studio reflections buildRaceCar() gives the F1.
+function withEnvironment(model) {
+  model.group.traverse((object) => {
+    if (object.isMesh) {
+      object.material.envMap = carEnvironment.texture;
+      object.material.envMapIntensity = 0.65;
+    }
   });
+  return model;
+}
+function buildCar(detail) {
+  const model = isCityCar
+    ? withEnvironment(buildCityCar(CITY_CAR_COLOR, { scale: CAR_SCALE, detail }))
+    : buildRaceCar(livery, {
+      scale: CAR_SCALE, environmentTexture: carEnvironment.texture, envMapIntensity: 0.65, detail,
+    });
   model.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
   model.group.rotation.order = "YXZ"; // heading, then pitch, then roll
   scene.add(model.group);
@@ -238,6 +254,7 @@ const speedEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearEl = document.getElementById("gear-value");
 const bankEl = document.getElementById("bank-value");
+if (isCityCar) document.getElementById("circuit-name").textContent = "Guida libera · Cinquino sull'ovale";
 let lastGear = null;
 function updateHud() {
   const ratio = Math.abs(state.speed) / sim.car.maxSpeed;
