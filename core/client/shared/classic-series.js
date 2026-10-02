@@ -2,6 +2,8 @@
 // two per road car (shared/road-cars.js), each pair in its own colours like
 // F1 team-mates. Picking one on home switches the series; race.html reads
 // ?series=classic. Solo only: no championship points, no multiplayer.
+// One-make races (#321): the driver picks the car, and the other eleven
+// drivers race that same car in their own colours.
 export const CLASSIC_ROSTER = [
   { id: "classic-gino", name: "Nonno Gino", car: "cinquino", colors: { primary: 0x5c371f } },
   { id: "classic-pina", name: "Zia Pina", car: "cinquino", colors: { primary: 0xe8dcc0 } },

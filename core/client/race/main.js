@@ -10,7 +10,7 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
 import { buildRoadVehicle } from "../shared/vehicle-models.js?v=2";
 import { ROAD_CARS } from "../shared/road-cars.js?v=1";
-import { CLASSIC_ROSTER, classicDriverById, loadClassicDriverId } from "../shared/classic-series.js?v=1";
+import { CLASSIC_ROSTER, classicDriverById, loadClassicDriverId } from "../shared/classic-series.js?v=2";
 import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=38";
 import { setupRaceInput } from "./race-input.js?v=58";
 import { escapeHtml, setupRaceHud } from "./race-hud.js?v=41";
@@ -587,7 +587,8 @@ const AI_DRIVERS = multiplayer
   : CLASSIC
     ? CLASSIC_ROSTER
       .filter((driver) => driver.id !== CLASSIC_DRIVER.id)
-      .map((driver) => ({ id: driver.id, livery: driver.colors, roadCar: driver.car }))
+      // One-make (#321): every rival drives the player's car, in its own colours.
+      .map((driver) => ({ id: driver.id, livery: driver.colors, roadCar: CLASSIC_DRIVER.car }))
     : DRIVER_ROSTER
       .filter((driver) => driver.id !== SELECTED_DRIVER_ID)
       .map((driver) => ({ id: driver.id, livery: liveryById(driver.team) }));
@@ -844,7 +845,7 @@ const raceAudio = setupRaceAudio({
   // Each car its own engine (#319); the Classiche field is voiced as a
   // generic small four.
   engine: PLAYER_ROAD_CAR ?? "f1",
-  field: CLASSIC ? "pandina" : "f1",
+  field: PLAYER_ROAD_CAR ?? "f1",
 });
 const { gearInfo, updateEngineSound, playShiftClick, updateAmbientChorus } = raceAudio;
 // No flames for road cars: the flame sits on the F1's tailpipe.
