@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { FREE_OVAL } from "../client/free/oval.js";
 import { createBanking, poseOnSurface } from "../client/free/banking.js";
 import { createFreeSim } from "../client/free/free-sim.js";
+import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS } from "../client/free/vehicles.js";
 import { createAutopilotProvider } from "../client/race/driver-providers.js";
 import { DEFAULT_SETUP, setupEffects } from "../client/shared/garage-setup.js";
 import { headingOf, nearestTrackInfo, sampleCenterline, sideNormal } from "../client/shared/track-geometry.js";
@@ -85,6 +86,34 @@ for (const pace of [0.9, 1]) {
     prev = f;
   }
   check(laps >= 3 && off === 0, `autopilot pace ${pace}: ${laps} laps in 120 s, ${off.toFixed(1)} s off the road`);
+}
+
+// Every free-drive vehicle (#313) laps on the rival lanes and paces free.js
+// uses, from a spread start: inside the road all the way.
+const effects = setupEffects(DEFAULT_SETUP);
+for (const id of VEHICLE_IDS) {
+  for (const { line, pace } of RIVAL_SLOTS) {
+    const sim = createFreeSim({ circuit, curve, effects, car: VEHICLES[id].params(effects), startFraction: 0.4 });
+    const ap = createAutopilotProvider({
+      centerline: sim.centerline, headingOf, sideNormal, nearestTrackInfo: sim.nearestTrackInfo,
+      maxSpeed: sim.car.maxSpeed, findCar: () => null, trackLength: sim.trackLength,
+    });
+    let progress = 0;
+    let prevIdx = null;
+    let off = 0;
+    for (let t = 0; t < 240; t += 1 / 60) {
+      const out = ap.decide(sim.state, 1 / 60, { pace, line, ers: false, station: null });
+      sim.steering.value = out.steer;
+      sim.input.forward = out.throttle > 0 && !(out.brake > 0);
+      sim.input.back = out.brake > 0;
+      const info = sim.step(1 / 60);
+      if (info.dist > sim.grassLimit) off += 1 / 60;
+      const n = sim.centerline.length;
+      if (prevIdx !== null) progress += ((info.idx - prevIdx + n * 1.5) % n - n / 2) / n;
+      prevIdx = info.idx;
+    }
+    check(progress >= 1.5 && off === 0, `${id} line ${line} pace ${pace}: ${progress.toFixed(1)} laps in 240 s, ${off.toFixed(1)} s off the road`);
+  }
 }
 
 if (failures.length) process.exit(1);

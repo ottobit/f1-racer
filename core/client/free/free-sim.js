@@ -14,8 +14,9 @@ const START_INDEX = 0;
 // `curve` is a closed three.js CatmullRomCurve3 through circuit.points;
 // `input` and `steering` are the controls the physics reads (the page's own
 // setupRaceInput objects, or plain ones in Node); `car` overrides the F1's
-// parameters (same shape as playerCarParams).
-export function createFreeSim({ circuit, curve, effects, input = { forward: false, back: false, left: false, right: false }, steering = { value: 0 }, car: carParams = null }) {
+// parameters (same shape as playerCarParams); `startFraction` (0-1) places
+// the car that far round the lap.
+export function createFreeSim({ circuit, curve, effects, input = { forward: false, back: false, left: false, right: false }, steering = { value: 0 }, car: carParams = null, startFraction = 0 }) {
   const centerline = sampleCenterline(curve, CENTERLINE_SAMPLES);
   const visualCenterline = sampleCenterline(curve, CENTERLINE_SAMPLES * 4);
   const trackLength = curve.getLength();
@@ -35,7 +36,8 @@ export function createFreeSim({ circuit, curve, effects, input = { forward: fals
     kerbWidth: 0.3,
   });
 
-  const start = centerline[START_INDEX];
+  // Rivals (#313) start spread round the lap.
+  const start = centerline[(START_INDEX + Math.round(startFraction * centerline.length)) % centerline.length];
   const state = {
     x: start.x, z: start.z, heading: headingOf(start), speed: 0,
     lateralSpeed: 0, yawRate: 0, damage: 0,

@@ -1,5 +1,6 @@
-// Free drive (#274): one car on a wide banked oval, nothing else — no rivals,
-// no qualifying, no race, no lap limit, no results. Separate page from the
+// Free drive (#274): your car on a wide banked oval, no qualifying, no race,
+// no lap limit, no results. Pick the car (#313); the other four lap on their
+// own, each on its lane and pace, just for company. Separate page from the
 // race (race.html) and from multiplayer, on purpose: it shares the physics,
 // input, camera and car model, not the session flow.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
@@ -7,16 +8,17 @@ import { loadSelectedDriverId } from "../shared/driver-selection.js?v=2";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=30";
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
 import { applyCarToMesh, buildRaceCar } from "../race/race-car-view.js?v=38";
-import { offsetEdge } from "../shared/track-geometry.js?v=39";
+import { headingOf, offsetEdge, sideNormal } from "../shared/track-geometry.js?v=39";
 import { setupRaceInput } from "../race/race-input.js?v=58";
-import { setupRaceCamera } from "../race/race-camera.js?v=40";
+import { setupRaceCamera } from "../race/race-camera.js?v=41";
+import { createAutopilotProvider } from "../race/driver-providers.js?v=6";
 import { gearInfo, setupRaceAudio } from "../race/race-audio.js?v=3";
 import { surfaceTexture } from "../race/track-art.js?v=43";
 import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=4";
 import { FREE_OVAL } from "./oval.js?v=1";
-import { createFreeSim } from "./free-sim.js?v=2";
-import { buildCityCar } from "../shared/city-car-model.js?v=1";
-import { CITY_CAR_COLOR, CITY_CAR_ID, cityCarParams } from "./city-car.js?v=1";
+import { createFreeSim } from "./free-sim.js?v=3";
+import { buildRoadVehicle } from "../shared/vehicle-models.js?v=1";
+import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=1";
 
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
@@ -27,8 +29,10 @@ const circuit = FREE_OVAL;
 const graphicsProfile = loadGraphicsProfile();
 const effects = setupEffects(loadGarageSetup());
 const livery = playerLivery(loadSelectedDriverId());
-// ?car=cinquino (#311): the brown city car instead of the F1.
-const isCityCar = new URLSearchParams(location.search).get("car") === CITY_CAR_ID;
+const vehicleId = loadVehicleId();
+const RIVAL_F1_COLOR = 0x2a62c9;
+// Rivals line up just ahead of you, one lane each, so the start is a start.
+const RIVAL_GRID_GAP = 0.008; // of a lap (~20 units)
 
 // --- Scene ------------------------------------------------------------------
 const scene = new THREE.Scene();
@@ -90,7 +94,7 @@ scene.add(ground);
 // --- Controls and simulation -------------------------------------------------
 const { input, steering, updateSteeringInput } = setupRaceInput();
 const curve = new THREE.CatmullRomCurve3(circuit.points.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, "catmullrom", circuit.curveTension);
-const sim = createFreeSim({ circuit, curve, effects, input, steering, car: isCityCar ? cityCarParams() : null });
+const sim = createFreeSim({ circuit, curve, effects, input, steering, car: VEHICLES[vehicleId].params(effects) });
 const { state, banking, visualCenterline } = sim;
 
 // --- Banked road ---------------------------------------------------------------
@@ -197,27 +201,62 @@ function withEnvironment(model) {
   });
   return model;
 }
-function buildCar(detail) {
-  const model = isCityCar
-    ? withEnvironment(buildCityCar(CITY_CAR_COLOR, { scale: CAR_SCALE, detail }))
-    : buildRaceCar(livery, {
+function buildCar(id, { detail = false, color = livery } = {}) {
+  const model = id === "f1"
+    ? buildRaceCar(color, {
       scale: CAR_SCALE, environmentTexture: carEnvironment.texture, envMapIntensity: 0.65, detail,
-    });
+    })
+    : withEnvironment(buildRoadVehicle(id, VEHICLES[id].colors, { scale: CAR_SCALE, detail }));
   model.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
   model.group.rotation.order = "YXZ"; // heading, then pitch, then roll
   scene.add(model.group);
   return model;
 }
-const playerCar = buildCar(false);
-const cockpitCar = buildCar(true);
+const playerCar = buildCar(vehicleId);
+const cockpitCar = buildCar(vehicleId, { detail: true });
 cockpitCar.group.visible = false;
 
 // Banked pose (free-sim.js): the physics stays 2D, the car rides the road.
-function poseCar() {
-  applyCarToMesh(playerCar, state.x, state.z, state.heading, state.speed, dt, steering.value);
-  playerCar.group.position.y = state.y;
-  playerCar.group.rotation.x = -state.pitch;
-  playerCar.group.rotation.z = state.roll;
+function poseCar(model, carState, steer) {
+  applyCarToMesh(model, carState.x, carState.z, carState.heading, carState.speed, dt, steer);
+  model.group.position.y = carState.y;
+  model.group.rotation.x = -carState.pitch;
+  model.group.rotation.z = carState.roll;
+}
+
+// --- Rivals (#313): the other cars, each its own free-sim driven by the
+// race autopilot (as core/tools/validate-free-oval.mjs laps it). No contact
+// between cars in free drive; the lanes keep them apart.
+const rivals = VEHICLE_IDS.filter((id) => id !== vehicleId).map((id, i) => {
+  const rivalSim = createFreeSim({ circuit, curve, effects, car: VEHICLES[id].params(effects), startFraction: RIVAL_GRID_GAP * (i + 1) });
+  const pilot = createAutopilotProvider({
+    centerline: rivalSim.centerline, headingOf, sideNormal, nearestTrackInfo: rivalSim.nearestTrackInfo,
+    maxSpeed: rivalSim.car.maxSpeed, findCar: () => null, trackLength: rivalSim.trackLength,
+  });
+  const slot = RIVAL_SLOTS[i % RIVAL_SLOTS.length];
+  return {
+    sim: rivalSim, pilot, steer: 0,
+    model: buildCar(id, { color: RIVAL_F1_COLOR }),
+    targets: { pace: slot.pace, line: slot.line, ers: false, station: null },
+  };
+});
+// The grid waits for your first touch of the throttle.
+let rivalsStarted = false;
+function updateRivals() {
+  if (input.forward) rivalsStarted = true;
+  for (const rival of rivals) {
+    if (!rivalsStarted) {
+      poseCar(rival.model, rival.sim.state, 0);
+      continue;
+    }
+    const out = rival.pilot.decide(rival.sim.state, dt, rival.targets);
+    rival.steer = out.steer;
+    rival.sim.steering.value = out.steer;
+    rival.sim.input.forward = out.throttle > 0 && !(out.brake > 0);
+    rival.sim.input.back = out.brake > 0;
+    rival.sim.step(dt);
+    poseCar(rival.model, rival.sim.state, rival.steer);
+  }
 }
 
 const raceCamera = setupRaceCamera({
@@ -254,7 +293,19 @@ const speedEl = document.getElementById("speed-value");
 const speedFillEl = document.getElementById("speed-fill");
 const gearEl = document.getElementById("gear-value");
 const bankEl = document.getElementById("bank-value");
-if (isCityCar) document.getElementById("circuit-name").textContent = "Guida libera · Cinquino sull'ovale";
+document.getElementById("circuit-name").textContent = `Guida libera · ${VEHICLES[vehicleId].label}`;
+
+// Car picker (#313): a native select (compact, the phone's own picker);
+// the choice is saved and the page reloads with ?car=, the simplest way to
+// rebuild the car, its physics and the rivals.
+const pickerEl = document.getElementById("car-select");
+for (const id of VEHICLE_IDS) pickerEl.add(new Option(VEHICLES[id].label, id, false, id === vehicleId));
+pickerEl.addEventListener("change", () => {
+  saveVehicleId(pickerEl.value);
+  const params = new URLSearchParams(location.search);
+  params.set("car", pickerEl.value);
+  location.search = params.toString();
+});
 let lastGear = null;
 function updateHud() {
   const ratio = Math.abs(state.speed) / sim.car.maxSpeed;
@@ -282,7 +333,8 @@ function animate(now = performance.now()) {
   dt = Math.min(clock.getDelta(), 0.1);
   updateSteeringInput(dt);
   sim.step(dt);
-  poseCar();
+  poseCar(playerCar, state, steering.value);
+  updateRivals();
   raceCamera.updateCamera(dt);
   raceCamera.updateSpeedFov(dt);
   updateHud();
