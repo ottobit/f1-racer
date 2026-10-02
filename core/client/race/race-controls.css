@@ -115,3 +115,5 @@ button.driver-voice:focus-visible { outline: 2px solid white; outline-offset: 2p
 .driver-voice.is-speaking { filter: drop-shadow(0 0 3px #86e4b3); animation: voice-pulse .7s ease-in-out infinite alternate; }
 @keyframes voice-pulse { to { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .driver-voice.is-speaking { animation: none; } }
+/* Classiche (#317): period cars have neither DRS nor ERS. */
+html.series-classic #drs-indicator,html.series-classic #ers-indicator{display:none}

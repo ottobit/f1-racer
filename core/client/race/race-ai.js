@@ -10,7 +10,7 @@ function progressGapAhead(from, to) {
 }
 
 export function setupRaceAi({
-  ai,
+  ai: baseAi,
   trackWidth,
   grassLimit,
   isRace = () => true,
@@ -31,7 +31,7 @@ export function setupRaceAi({
     let maxTurnStep = 0;
     let previousHeading = headingOf(centerline[startIdx]);
 
-    for (let step = 1; step <= ai.cornerLookahead; step++) {
+    for (let step = 1; step <= baseAi.cornerLookahead; step++) {
       const idx = (startIdx + step) % centerline.length;
       const heading = headingOf(centerline[idx]);
       let delta = heading - previousHeading;
@@ -50,6 +50,8 @@ export function setupRaceAi({
   }
 
   function updateAiCar(car, dt, allCars) {
+    // Classiche (#317): each period car brings its own limits.
+    const ai = car.ai ?? baseAi;
     const info = nearestTrackInfo(car.x, car.z);
     const profile = aiCornerProfile(info.idx);
     const speedRatio = Math.min(Math.abs(car.speed) / ai.maxSpeed, 1);
