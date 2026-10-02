@@ -18,6 +18,7 @@ import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-prof
 import { FREE_OVAL } from "./oval.js?v=1";
 import { createFreeSim } from "./free-sim.js?v=3";
 import { buildRoadVehicle } from "../shared/vehicle-models.js?v=3";
+import { roadColors, roadSetupParams } from "../shared/road-garage.js?v=1";
 import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=2";
 
 const CAR_SCALE = 0.55;
@@ -94,7 +95,12 @@ scene.add(ground);
 // --- Controls and simulation -------------------------------------------------
 const { input, steering, updateSteeringInput } = setupRaceInput();
 const curve = new THREE.CatmullRomCurve3(circuit.points.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, "catmullrom", circuit.curveTension);
-const sim = createFreeSim({ circuit, curve, effects, input, steering, car: VEHICLES[vehicleId].params(effects) });
+// A road car brings its garage setup (#323); the F1 its own (effects).
+const playerParams = VEHICLES[vehicleId].params(effects);
+const sim = createFreeSim({
+  circuit, curve, effects, input, steering,
+  car: vehicleId === "f1" ? playerParams : roadSetupParams(vehicleId, playerParams),
+});
 const { state, banking, visualCenterline } = sim;
 
 // --- Banked road ---------------------------------------------------------------
@@ -201,19 +207,21 @@ function withEnvironment(model) {
   });
   return model;
 }
-function buildCar(id, { detail = false, color = livery } = {}) {
+function buildCar(id, { detail = false, color = livery, paint = VEHICLES[id].colors } = {}) {
   const model = id === "f1"
     ? buildRaceCar(color, {
       scale: CAR_SCALE, environmentTexture: carEnvironment.texture, envMapIntensity: 0.65, detail,
     })
-    : withEnvironment(buildRoadVehicle(id, VEHICLES[id].colors, { scale: CAR_SCALE, detail }));
+    : withEnvironment(buildRoadVehicle(id, paint, { scale: CAR_SCALE, detail }));
   model.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
   model.group.rotation.order = "YXZ"; // heading, then pitch, then roll
   scene.add(model.group);
   return model;
 }
-const playerCar = buildCar(vehicleId);
-const cockpitCar = buildCar(vehicleId, { detail: true });
+// Your road car in its garage paint (#323); rivals in stock colours.
+const playerPaint = vehicleId === "f1" ? undefined : roadColors(vehicleId);
+const playerCar = buildCar(vehicleId, { paint: playerPaint });
+const cockpitCar = buildCar(vehicleId, { detail: true, paint: playerPaint });
 cockpitCar.group.visible = false;
 
 // Banked pose (free-sim.js): the physics stays 2D, the car rides the road.
