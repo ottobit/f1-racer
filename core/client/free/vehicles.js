@@ -1,7 +1,7 @@
 // Free-drive garage (#311, #313, #315): the F1 plus every road car
 // (shared/road-cars.js), the saved pick and the rivals' lanes. The F1 keeps
 // the race's own physics.
-import { playerCarParams } from "../race/race-rules.js?v=3";
+import { playerCarParams } from "../race/race-rules.js?v=4";
 import { ROAD_CARS } from "../shared/road-cars.js?v=1";
 
 export const VEHICLES = {

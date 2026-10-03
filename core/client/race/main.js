@@ -1,11 +1,11 @@
 import { finishPullOver } from "./finish-pull-over.js?v=2";
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { CIRCUITS, getCircuit, LAPS_PER_RACE, TYRE_LIFE_LAPS } from "../shared/circuits.js?v=40";
-import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=2";
-import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=2";
-import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
+import { CIRCUITS, getCircuit, LAPS_PER_RACE, QUALIFYING_DURATION_MS, TYRE_LIFE_LAPS } from "../../shared/circuits.js?v=41";
+import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=3";
+import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
+import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
-import { DEFAULT_SETUP, loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=30";
+import { DEFAULT_SETUP, loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=31";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
 import { buildRoadVehicle } from "../shared/vehicle-models.js?v=4";
@@ -50,7 +50,7 @@ import {
   ERS_SPEED_MULTIPLIER, ERS_DRAIN_PER_SECOND, ERS_RECHARGE_PER_SECOND, PIT_SPEED_LIMIT, PIT_SERVICE_MS,
   START_FINISH_OFFSET, DRS_SPEED_MULTIPLIER, updateDrsEligibility, createTrackBoundary, kerbWidthFor, GRID_SLOTS,
   createGridSlot, CAR_RADIUS, DAMAGE_MIN_IMPACT_SPEED, DAMAGE_PER_IMPACT_SPEED, DAMAGE_MAX_SPEED_PENALTY,
-} from "./race-rules.js?v=4";
+} from "./race-rules.js?v=5";
 
 const GARAGE_SETUP = loadGarageSetup();
 const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
@@ -774,7 +774,6 @@ let raceState = "countdown";
 // "qualifying" -> "race" (raceState then takes over exactly as before).
 let sessionPhase = "qualifying";
 let qualiState = "countdown"; // "countdown" -> "running"
-const QUALIFYING_DURATION_MS = 60000;
 let qualiTimeRemainingMs = QUALIFYING_DURATION_MS;
 let qualiBestTime = null;
 

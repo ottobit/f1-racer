@@ -1,8 +1,8 @@
 import { createRoomClient } from "./room-client.js?v=10";
 import { isLocalHost, roomServerUrl, wakeRoomServer } from "./room-server.js?v=1";
-import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
+import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
-import { CIRCUITS } from "../shared/circuits.js?v=40";
+import { CIRCUITS } from "../../shared/circuits.js?v=41";
 
 const DIFFICULTY_LABELS = { facile: "Facile", normale: "Normale", difficile: "Difficile" };
 

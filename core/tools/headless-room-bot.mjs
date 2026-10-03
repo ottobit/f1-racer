@@ -21,8 +21,8 @@ import path from "node:path";
 import tls from "node:tls";
 import * as THREE from "three";
 import { WebSocket } from "ws";
-import { CIRCUITS, LAPS_PER_RACE, TYRE_LIFE_LAPS, getCircuit } from "../client/shared/circuits.js";
-import { DRIVER_ROSTER, driverById } from "../client/shared/driver-roster.js";
+import { CIRCUITS, LAPS_PER_RACE, TYRE_LIFE_LAPS, getCircuit } from "../shared/circuits.js";
+import { DRIVER_ROSTER, driverById } from "../shared/driver-roster.js";
 import { DEFAULT_SETUP, setupEffects } from "../client/shared/garage-setup.js";
 import { buildPitLane } from "../client/shared/pit-lane.js";
 import {

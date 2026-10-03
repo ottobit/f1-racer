@@ -11,7 +11,7 @@
 //   node core/tools/calibrate-ai.mjs --check   # print gaps, write nothing
 import fs from "node:fs";
 import * as THREE from "three";
-import { CIRCUITS } from "../client/shared/circuits.js";
+import { CIRCUITS } from "../shared/circuits.js";
 import { ROAD_CARS } from "../client/shared/road-cars.js";
 import { DEFAULT_SETUP, setupEffects } from "../client/shared/garage-setup.js";
 import { headingOf, nearestTrackInfo, sampleCenterline, sideNormal } from "../client/shared/track-geometry.js";

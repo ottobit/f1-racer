@@ -1,4 +1,5 @@
-// Circuit definitions shared between the menu and the race page. Control
+// Circuit definitions and race format, shared by the browser and the room
+// server (core/shared/: no DOM, no three). Control
 // points are hand-placed and should be checked before being added here —
 // run `node tools/validate-circuits.mjs <id>` (see #6), which verifies
 // closure, winding, segment length, min curvature radius and minimum
@@ -10,6 +11,9 @@ export const LAPS_PER_RACE = 5;
 // after this many laps, so a car that never boxes runs the last laps of a
 // race on dead tyres.
 export const TYRE_LIFE_LAPS = 3;
+// Qualifying length: the race page's own timer and the room server's
+// (which times multiplayer qualifying out for every client) both use it.
+export const QUALIFYING_DURATION_MS = 60000;
 
 export const CIRCUITS = [
   {

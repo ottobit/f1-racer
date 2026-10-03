@@ -23,7 +23,7 @@
 // Exit code is 1 if any circuit has an unsuppressed issue, 0 otherwise.
 
 import * as THREE from "three";
-import { CIRCUITS } from "../client/shared/circuits.js";
+import { CIRCUITS } from "../shared/circuits.js";
 import { sampleCenterline, headingOf, sideNormal, nearestTrackInfo } from "../client/shared/track-geometry.js";
 import { buildPitLane, PIT_LANE } from "../client/shared/pit-lane.js";
 

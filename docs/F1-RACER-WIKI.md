@@ -164,7 +164,7 @@ The model now has a lightweight dynamic layer: explicit lateral velocity, finite
 
 ## 6. Track system
 
-Circuit geometry is defined in `core/client/shared/circuits.js`.
+Circuit geometry is defined in `core/shared/circuits.js`.
 
 The runtime builds a centerline sampled into track points and uses Catmull-Rom spline geometry.
 
@@ -194,7 +194,7 @@ the first six's hand-placed points, all three were generated procedurally
 low-amplitude one for Pianalago's sweeps, higher-frequency corners for
 Serramonte's hairpins, one dominant long-straight harmonic for Baiadoro) and
 accepted only once `core/tools/validate-circuits.mjs` (#6) reported zero errors
-and warnings — see each entry's comment in `core/client/shared/circuits.js` for the exact
+and warnings — see each entry's comment in `core/shared/circuits.js` for the exact
 command. Every circuit in the roster now has a distinct integer width, 9
 through 17. Serramonte is now the tightest/narrowest circuit overall
 (Montenero's comment was updated to stop claiming that superlative); Baiadoro
@@ -225,7 +225,7 @@ than importing three.js itself, so the exact same rules run both in
 `package.json`, a dev-only dependency never shipped with the static site).
 
 `node tools/validate-circuits.mjs [ids...] [--svg [outDir]]` (#6) checks
-every circuit in `core/client/shared/circuits.js` for a broken closure, a self-crossing or
+every circuit in `core/shared/circuits.js` for a broken closure, a self-crossing or
 reversed loop, degenerate/oversized sampled segments, corners tighter than
 the runtime's own wall margin (`width/2 + 4`, same formula as `WALL_LIMIT`
 in `core/client/race/main.js` — a corner this tight is also where a kerb ribbon would
@@ -682,7 +682,7 @@ and pen can still swipe from the rest of the circuit card.
 
 ## Unique grid and exposed Garage cockpit
 
-`core/client/shared/driver-roster.js` defines ten identities: the nine supplied friend names plus
+`core/shared/driver-roster.js` defines ten identities: the nine supplied friend names plus
 Eddy Nitro. The selected identity becomes the player; `core/client/race/main.js` filters it out
 before building the other nine cars, eliminating duplicate names while keeping
 a full ten-car grid. Championship scoring normalizes the runtime `player` slot
@@ -947,7 +947,7 @@ Every function takes a `store` plus plain data and returns plain data, so
 it's directly unit-testable (`createStore`, `createRoom`, `joinRoom`,
 `reconnectParticipant`, `reserveDriver`/`releaseDriver`, `setReady`,
 `startRace`, `leaveRoom`, `markDisconnected`, `toPublicRoom`). Reservable
-driver ids are exactly `core/client/shared/driver-roster.js`'s ten `rival-*` entries — the
+driver ids are exactly `core/shared/driver-roster.js`'s ten `rival-*` entries — the
 client-only `"player"` pseudo-id `core/client/shared/driver-selection.js` uses for solo play is
 never a valid room driverId; solo and room identity are deliberately
 independent, neither reads nor writes the other's `localStorage` key.

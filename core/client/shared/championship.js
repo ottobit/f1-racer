@@ -4,8 +4,8 @@
 
 const STORAGE_KEY = "f1racer-championship-v1";
 
-import { DRIVER_ROSTER } from "./driver-roster.js?v=2";
-import { loadSelectedDriverId } from "./driver-selection.js?v=2";
+import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
+import { loadSelectedDriverId } from "./driver-selection.js?v=3";
 
 export const DRIVERS = DRIVER_ROSTER;
 

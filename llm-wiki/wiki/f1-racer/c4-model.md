@@ -349,7 +349,8 @@ the same browser input/physics pipeline.
 | Static entry points | `index.html`, `garage.html`, `room.html`, `race.html`, `modes.html` |
 | Race composition root | `core/client/race/main.js` |
 | Race modules | `core/client/race/*.js` |
-| Shared game/domain data | `core/client/shared/*.js` |
+| Shared game/domain data (browser) | `core/client/shared/*.js` |
+| Shared with the room server | `core/shared/circuits.js`, `driver-roster.js` |
 | Lobby and browser protocol | `core/client/multiplayer/room.js`, `room-client.js` |
 | Race multiplayer bridge | `core/client/multiplayer/race-bootstrap.js`, `race-multiplayer.js` |
 | Voice mesh | `core/client/multiplayer/voice-chat.js` |
