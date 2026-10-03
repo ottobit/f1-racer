@@ -25,11 +25,12 @@ function extrudeAcross(shape, width, bevel) {
 // Rounds an extruded body, which is otherwise flat-sided: narrows it towards
 // nose and tail in plan view (`pinch`, by (z/halfLength)^4), pulls the sides
 // in above `shoulder` up to `top` (`tumble`, tumblehome) and tucks the sill
-// below `sill`. Returns the same x mapping so trim can sit on the surface.
-function bodyShaper({ halfLength, pinch = 0, shoulder = .5, top = .9, tumble = 0, sill = .4, tuck = 0 }) {
+// below `sill`; `waist` narrows it around waistZ (a "coke-bottle" flank).
+// Returns the same x mapping so trim can sit on the surface.
+function bodyShaper({ halfLength, pinch = 0, shoulder = .5, top = .9, tumble = 0, sill = .4, tuck = 0, waist = 0, waistZ = 0, waistLength = 1 }) {
   const factor = (y, z) => {
     const zn = Math.min(Math.abs(z) / halfLength, 1);
-    let f = 1 - pinch * zn ** 4;
+    let f = 1 - pinch * zn ** 4 - waist * Math.exp(-(((z - waistZ) / waistLength) ** 2));
     if (y > shoulder) f *= 1 - tumble * Math.min((y - shoulder) / (top - shoulder), 1);
     if (y < sill) f *= 1 - tuck * Math.min((sill - y) / .15, 1);
     return f;
@@ -524,19 +525,22 @@ function buildPulmino({ primary = 0x7fb3d5, secondary = 0xf2efe6 } = {}, { scale
   return k.finish({ ...parts, driverSteeringWheel }, scale, R, [0, 1.42, .62]);
 }
 
-// Muscle: long-bonnet fastback coupé with stripes and a bonnet scoop.
+// Muscle (#325): long-bonnet fastback coupé with stripes. Coke-bottle
+// flanks, ducktail, quad lamps set in the grille, louvred rear glass.
 function buildMuscle({ primary = 0xf2b705, secondary = 0x111111 } = {}, { scale = 1, detail = false } = {}) {
   const k = createKit(detail);
   const { mats, mesh, box, rod } = k;
   const paint = paintMaterial(primary, 'primary');
   const stripe = paintMaterial(secondary, 'secondary');
   const R = .34, BEVEL = .08, WIDTH = 1.5;
-  mesh(extrudeAcross(outline([-2.05, .3], [
+  const shape = bodyShaper({ halfLength: 2.25, pinch: .15, shoulder: .55, top: .84, tumble: .06, sill: .42, tuck: .06, waist: .05, waistZ: -.1, waistLength: .8 });
+  mesh(shape.apply(extrudeAcross(outline([-2.05, .3], [
     [-2.15, .32, -2.13, .5], [-2.1, .74], [-1.5, .76], [.6, .76], [2.0, .72],
     [2.2, .71, 2.2, .5], [2.18, .3, 2.05, .3],
-  ], { bottom: .3, axles: [1.45, -1.3], wheelRadius: R, radius: .47 }), WIDTH, BEVEL), paint).name = 'muscleBody';
+  ], { bottom: .3, axles: [1.45, -1.3], wheelRadius: R, radius: .47 }), WIDTH, BEVEL)), paint).name = 'muscleBody';
   mesh(extrudeAcross(outline([-1.55, .78], [[-.55, 1.18], [.1, 1.2], [.62, .78]]), 1.26, .06), mats.glass).name = 'muscleGlass';
   mesh(extrudeAcross(outline([-.62, 1.14], [[-.5, 1.24], [.08, 1.26], [.18, 1.14]]), 1.28, .05), paint).name = 'roof';
+  const sideAt = (y, z) => shape.x(WIDTH / 2 + BEVEL, y, z);
   for (const side of [-1, 1]) {
     rod([side * .66, .82, .6], [side * .62, 1.22, .12], .04, paint);
     rod([side * .67, .82, -1.45], [side * .62, 1.2, -.6], .07, paint);
@@ -547,18 +551,45 @@ function buildMuscle({ primary = 0xf2b705, secondary = 0x111111 } = {}, { scale 
     bonnetStripe.rotation.x = .03;
     box(.16, .012, .62, stripe, [side * .14, 1.315, -.2]).name = 'stripe';
     box(.16, .012, .5, stripe, [side * .14, .85, -1.8]).name = 'stripe';
-    k.roundLamp(side * .5, .54, 2.25, .085);
+    // Quad lamps, sunk in the grille.
+    k.roundLamp(side * .56, .5, 2.26, .075);
+    k.roundLamp(side * .37, .5, 2.26, .075);
     const mirror = mesh(new THREE.SphereGeometry(.055, 12, 8), mats.chrome, [side * .78, .9, .5]);
     mirror.scale.set(1, .75, .55);
     const pipe = mesh(new THREE.CylinderGeometry(.045, .045, .18, 10), mats.chrome, [side * .5, .25, -2.2]);
     pipe.rotation.x = Math.PI / 2;
+    k.seam([[side * (sideAt(.38, .55) + .004), .38, .55], [side * (sideAt(.8, .55) + .002), .8, .55]]);
+    k.seam([[side * (sideAt(.38, -.7) + .004), .38, -.7], [side * (sideAt(.8, -.7) + .002), .8, -.7]]);
+    k.wiper([side * .3, .86, .6], [side * .3 + .25, .92, .52]);
   }
   box(.36, .07, .5, paint, [0, .87, 1.05]).name = 'bonnetScoop';
-  box(1.25, .18, .03, mats.dark, [0, .5, 2.27]).name = 'grille';
+  box(1.25, .18, .03, mats.dark, [0, .5, 2.255]).name = 'grille';
   rod([-.64, .6, 2.28], [.64, .6, 2.28], .012, mats.chrome);
   rod([-.64, .4, 2.28], [.64, .4, 2.28], .012, mats.chrome);
   box(1.2, .08, .03, mats.tail, [0, .62, -2.22]).name = 'tailLamp';
-  for (const z of [2.33, -2.28]) rod([-.78, .33, z], [.78, .33, z], .032, mats.chrome);
+  for (const z of [2.33, -2.28]) rod([-.7, .33, z], [.7, .33, z], .032, mats.chrome);
+  // Ducktail lip on the deck and a dark chin spoiler under the nose.
+  const ducktail = box(1.2, .04, .26, paint, [0, .85, -2.02]);
+  ducktail.name = 'ducktail';
+  ducktail.rotation.x = .3;
+  box(1.3, .05, .16, mats.dark, [0, .27, 2.16]).name = 'chinSpoiler';
+  if (detail) {
+    // Louvres over the fastback glass, scoop mouth, fuel cap.
+    const slope = Math.atan2(1.18 - .78, 1.0);
+    for (let i = 0; i < 6; i++) {
+      const t = .12 + i * .13;
+      const louvre = box(1.0, .012, .07, mats.dark, [0, .78 + .4 * t + .075, -1.55 + t]);
+      louvre.rotation.x = -slope;
+      louvre.name = 'louvre';
+    }
+    box(.28, .04, .02, mats.dark, [0, .88, 1.3]).name = 'scoopMouth';
+    const cap = mesh(new THREE.CylinderGeometry(.05, .05, .02, 16), mats.chrome, [sideAt(.68, -1.75) + .01, .68, -1.75]);
+    cap.rotation.z = Math.PI / 2;
+    cap.name = 'fuelCap';
+  }
+  k.seam([[-.55, .842, .6], [.55, .842, .6]]);
+  k.seam([[-.55, .842, -1.55], [.55, .842, -1.55]]);
+  k.plate(.46, -2.235, -1);
   box(1.3, .07, .12, mats.dark, [0, .84, .52]).name = 'dashboard';
   const driverSteeringWheel = k.steeringWheel({ pos: [0, .9, .2], tilt: -.55, radius: .15, column: [[0, .87, .23], [0, .82, .48]] });
   for (const side of [-1, 1]) {
