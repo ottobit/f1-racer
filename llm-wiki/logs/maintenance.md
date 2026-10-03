@@ -1999,3 +1999,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Client: new `core/client/multiplayer/room-server.js` picks the server (`?roomServer=`, else local server on a localhost page, else `HOSTED_ROOM_SERVER` = `wss://f1-racer-rooms.onrender.com`); home and room page ping `/health` on load.
 - Decisions: keep-awake stays inside the server (no paid Render cron), all day: ~744 of the 750 free hours/month, no room for a second free service. Iterations in this cycle: self-ping window, external cron, then node-cron all day.
 - Verified locally (health 200, 426, room creation over WS, cron hits /health, `npm ci --omit=dev`); Render build and start seen in its logs (old master code until this merge). This session's network blocks onrender.com, so `/health` on the live URL is for the user to check. Badge 334.
+
+## 2026-10-03 — core/shared: the room server stops importing the client (#335)
+
+- R0 of the refactor plan (before R1 `Vehicle`, R2 `Series`). `circuits.js` and `driver-roster.js` moved from `core/client/shared/` to `core/shared/`: pure modules (no DOM, no three, no packages) loaded unchanged by the browser and by `core/server/rooms.mjs`.
+- `QUALIFYING_DURATION_MS` now lives in `core/shared/circuits.js`, ending its deliberate duplication in `main.js` and `rooms.mjs` (which re-exports it for `room-server.mjs`).
+- New `core/tools/check-boundaries.mjs` (`npm run check:boundaries`): `server/` and `shared/` never import `client/`; `shared/` imports only `shared/`. Browser-only shared code stays in `core/client/shared/`.
+- Decision: everything stays under `core/` (user's #46 rule), not a root-level `client/`/`server/` split as first proposed.
+- Verified: `node --check`, every relative import resolves, boundary check passes (and fails on a planted import), room server starts, `validate:circuits` passes. `?v` chain bumped to the pages; wiki paths updated. Badge 336.
