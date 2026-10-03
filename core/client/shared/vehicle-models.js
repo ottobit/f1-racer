@@ -362,7 +362,8 @@ function buildPandina({ primary = 0xf1f1ee } = {}, { scale = 1, detail = false }
   return k.finish({ ...parts, driverSteeringWheel }, scale, R, [0, 1.12, -.1]);
 }
 
-// Familiare (#315): 1960s estate with wood side panels and a roof rack.
+// Familiare (#315, #325): 1960s estate with wood side panels, a roof rack,
+// small tail fins with tall lamps and an oval chrome grille.
 function buildFamiliare({ primary = 0x2f6b4a } = {}, { scale = 1, detail = false } = {}) {
   const k = createKit(detail);
   const { mats, mesh, box, rod } = k;
@@ -386,7 +387,13 @@ function buildFamiliare({ primary = 0x2f6b4a } = {}, { scale = 1, detail = false
     box(.02, .26, 2.9, wood, [side * (sideAt(.6, -.2) + .012), .6, -.2]).name = 'woodPanel';
     for (const y of [.46, .74]) box(.026, .03, 2.92, trim, [side * (sideAt(y, -.2) + .016), y, -.2]).name = 'woodFrame';
     k.roundLamp(side * .5, .58, 1.82, .1);
-    box(.06, .14, .04, mats.tail, [side * .58, .64, -1.91]).name = 'tailLamp';
+    box(.07, .26, .04, mats.tail, [side * .58, .68, -1.91]).name = 'tailLamp';
+    // Small fin along each rear wing, outboard of the glass.
+    const fin = mesh(extrudeAcross(outline([-1.9, .84], [[-1.3, .84], [-1.88, .98]]), .04, .01), paint, [side * .66, 0, 0]);
+    fin.name = 'tailFin';
+    // Door shut lines over the wood (which stands .02 proud), wipers.
+    for (const z of [.62, -.3, -1.0]) k.seam([[side * (sideAt(.34, z) + .026), .34, z], [side * (sideAt(.84, z) + .026), .84, z]]);
+    k.wiper([side * .3, .94, .66], [side * .08, 1.018, .578]);
     const mirror = mesh(new THREE.SphereGeometry(.055, 12, 8), mats.chrome, [side * .74, .92, .6]);
     mirror.scale.set(1, .75, .55);
     // Roof rack rails.
@@ -394,7 +401,21 @@ function buildFamiliare({ primary = 0x2f6b4a } = {}, { scale = 1, detail = false
     for (const z of [-1.6, 0]) rod([side * .5, 1.42, z], [side * .5, 1.47, z], .015, mats.chrome);
   }
   for (const z of [-1.3, -.8, -.3]) rod([-.5, 1.47, z], [.5, 1.47, z], .015, mats.chrome);
-  for (let i = 0; i < 3; i++) rod([-.36, .38 + i * .05, 1.88], [.36, .38 + i * .05, 1.88], .012, mats.chrome);
+  // Oval grille: dark mouth, chrome surround and bars on the nose surface.
+  const mouth = mesh(new THREE.CylinderGeometry(.2, .2, .02, k.segments), mats.dark, [0, .43, 1.9]);
+  mouth.rotation.x = Math.PI / 2;
+  mouth.scale.set(2, 1, .5);
+  const surround = mesh(new THREE.TorusGeometry(.2, .014, 6, k.segments), mats.chrome, [0, .43, 1.915]);
+  surround.scale.set(2, .5, 1);
+  for (let i = 0; i < 3; i++) rod([-.34, .39 + i * .04, 1.915], [.34, .39 + i * .04, 1.915], .01, mats.chrome);
+  // Tailgate shut lines and handle, rear plate, a suitcase on the rack.
+  k.seam([[-.48, .86, -1.925], [-.48, .4, -1.925], [.48, .4, -1.925], [.48, .86, -1.925]]);
+  k.plate(.46, -1.93, -1, .3);
+  if (detail) {
+    box(.16, .03, .03, mats.chrome, [0, .58, -1.935]).name = 'tailgateHandle';
+    box(.7, .22, .45, new THREE.MeshStandardMaterial({ color: 0x6b4426, roughness: .7 }), [0, 1.6, -.9]).name = 'suitcase';
+    for (const x of [-.2, .2]) box(.05, .225, .455, mats.dark, [x, 1.6, -.9]).name = 'suitcaseStrap';
+  }
   for (const z of [1.94, -1.93]) rod([-.66, .3, z], [.66, .3, z], .028, mats.chrome);
   box(.96, .06, .1, paint, [0, .89, .55]).name = 'dashboard';
   const driverSteeringWheel = k.steeringWheel({ pos: [0, .93, .42], tilt: -.6, radius: .15, column: [[0, .9, .45], [0, .85, .56]] });
