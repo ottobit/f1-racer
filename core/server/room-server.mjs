@@ -6,7 +6,7 @@
 // Opt-in, separate process — never imported by race.html/garage.html/
 // index.html. Run from inside core/ with `npm run start:room-server`
 // (PORT, ROOM_GRACE_MS, ROOM_QUALI_MS env vars optional). Provider-neutral
-// (#333, deploy/README.md): one HTTP server carries the WebSocket upgrade and
+// (#333, service/README.md): one HTTP server carries the WebSocket upgrade and
 // a GET /health for the host's health check and a keep-awake pinger.
 //
 // State is in-memory only (see rooms.mjs) and resets on restart. Fine for
@@ -180,6 +180,43 @@ const httpServer = createServer((req, res) => {
   res.end("Upgrade Required");
 });
 const wss = new WebSocketServer({ server: httpServer });
+
+// Keep-awake (#333), opt-in for hosts that put an idle service to sleep:
+// with KEEP_AWAKE_URL set, the server calls its own public /health every 10
+// minutes while the local time (KEEP_AWAKE_TZ, default UTC) is inside
+// KEEP_AWAKE_WINDOW ("HH:MM-HH:MM", may cross midnight; default all day).
+// The call goes out and back in through the host, so it counts as traffic.
+// Outside the window it stops and the host may let the service sleep; the
+// next visitor (or the pages' own wake-up ping) wakes it again.
+const KEEP_AWAKE_URL = (process.env.KEEP_AWAKE_URL || "").replace(/\/+$/, "");
+const KEEP_AWAKE_EVERY_MS = 10 * 60 * 1000;
+function parseWindow(text) {
+  const match = /^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/.exec((text || "00:00-24:00").trim());
+  if (!match) return null;
+  const [, h1, m1, h2, m2] = match.map(Number);
+  return { start: h1 * 60 + m1, end: h2 * 60 + m2 };
+}
+function minutesIn(timeZone, date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(date);
+  const value = (type) => Number(parts.find((part) => part.type === type)?.value);
+  return value("hour") * 60 + value("minute");
+}
+function insideWindow(now, { start, end }) {
+  return start <= end ? now >= start && now < end : now >= start || now < end;
+}
+if (KEEP_AWAKE_URL) {
+  const window = parseWindow(process.env.KEEP_AWAKE_WINDOW);
+  const timeZone = process.env.KEEP_AWAKE_TZ || "UTC";
+  if (!window) {
+    console.error(`[room-server] KEEP_AWAKE_WINDOW "${process.env.KEEP_AWAKE_WINDOW}" is not HH:MM-HH:MM; keep-awake off`);
+  } else {
+    console.log(`[room-server] keep-awake ${KEEP_AWAKE_URL}/health every 10 min, ${process.env.KEEP_AWAKE_WINDOW || "all day"} ${timeZone}`);
+    setInterval(() => {
+      if (!insideWindow(minutesIn(timeZone), window)) return;
+      fetch(`${KEEP_AWAKE_URL}/health`, { cache: "no-store" }).catch((err) => console.error("[room-server] keep-awake ping failed:", err.message));
+    }, KEEP_AWAKE_EVERY_MS);
+  }
+}
 httpServer.listen(PORT, () => {
   console.log(`[room-server] listening on :${PORT} (ws + GET /health; grace ${GRACE_MS}ms, qualifying ${QUALI_MS}ms, heartbeat ${HEARTBEAT_MS}ms)`);
 });

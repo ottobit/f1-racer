@@ -1,6 +1,6 @@
 // Which room server a page talks to (#333). The public site (GitHub Pages)
-// uses the hosted one (HOSTED_ROOM_SERVER: wherever deploy/ puts the
-// server, today Render; see deploy/README.md); a page served from this
+// uses the hosted one (HOSTED_ROOM_SERVER: wherever service/ puts the
+// server, today Render; see service/README.md); a page served from this
 // computer uses the local server (npm run start:room-server). ?roomServer=
 // overrides both and accepts what ngrok prints (https://...) or a bare host
 // too (#99): http(s) maps to ws(s), no scheme means wss.

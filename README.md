@@ -30,10 +30,10 @@ le connessioni a un server `ws://` non cifrato. Il provider dà `https` di suo.
 ### Mettere online il server
 
 Il server non dipende dal provider: il contratto (porta, avvio, `/health`) e
-la configurazione di ogni provider stanno in [`deploy/`](deploy/README.md).
-Oggi è su Render (`deploy/render/render.yaml`, piano gratuito). Contro lo
-spegnimento del piano gratuito serve un monitor esterno su `/health` ogni
-5-10 minuti; i passi sono in `deploy/README.md`.
+la configurazione di ogni provider stanno in [`service/`](service/README.md).
+Oggi è su Render (`service/render/render.yaml`, piano gratuito): il server
+resta sveglio da solo dalle 9:00 alle 3:00, ora italiana; fuori fascia si
+addormenta e lo sveglia il primo visitatore (circa un minuto di attesa).
 
 ### Server sul tuo computer (sviluppo, o senza server online)
 
