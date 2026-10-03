@@ -1,5 +1,7 @@
 # Render Blueprint (#333): the multiplayer room server. The game itself stays
-# on GitHub Pages; this only runs core/server/room-server.mjs.
+# on GitHub Pages; this only runs core/server/room-server.mjs. Point Render's
+# Blueprint at this file (deploy/render/render.yaml); the provider-neutral
+# contract it follows is in deploy/README.md. rootDir is relative to the repo.
 services:
   - type: web
     name: f1-racer-rooms

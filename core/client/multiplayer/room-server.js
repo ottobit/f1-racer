@@ -1,6 +1,7 @@
 // Which room server a page talks to (#333). The public site (GitHub Pages)
-// uses the hosted one on Render; a page served from this computer uses the
-// local server (npm run start:room-server). ?roomServer= overrides both and
+// uses the hosted one (HOSTED_ROOM_SERVER: wherever deploy/ puts the
+// server, today Render; see deploy/README.md); a page served from this
+// computer uses the local server (npm run start:room-server). ?roomServer= overrides both and
 // accepts what ngrok prints (https://...) or a bare host too (#99): http(s)
 // maps to ws(s), no scheme means wss.
 export const HOSTED_ROOM_SERVER = "wss://f1-racer-rooms.onrender.com";
@@ -20,8 +21,8 @@ export function roomServerUrl(search = location.search) {
   return `wss://${raw}`;
 }
 
-// The free Render plan sleeps after 15 idle minutes and takes ~1 min to
-// wake: a page that will need the server pings /health as soon as it
+// A free hosting plan (Render's today) sleeps after 15 idle minutes and
+// takes ~1 min to wake: a page that will need the server pings /health as soon as it
 // opens, so the room is ready by the time the player creates or joins it.
 export function wakeRoomServer() {
   const url = roomServerUrl().replace(/^ws/i, "http").replace(/\/+$/, "");

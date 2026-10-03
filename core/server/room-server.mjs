@@ -5,9 +5,9 @@
 //
 // Opt-in, separate process — never imported by race.html/garage.html/
 // index.html. Run from inside core/ with `npm run start:room-server`
-// (PORT, ROOM_GRACE_MS, ROOM_QUALI_MS env vars optional). Hosted on Render
-// (#333, render.yaml): one HTTP server carries the WebSocket upgrade and a
-// GET /health for Render's health check and the keep-awake pinger.
+// (PORT, ROOM_GRACE_MS, ROOM_QUALI_MS env vars optional). Provider-neutral
+// (#333, deploy/README.md): one HTTP server carries the WebSocket upgrade and
+// a GET /health for the host's health check and a keep-awake pinger.
 //
 // State is in-memory only (see rooms.mjs) and resets on restart. Fine for
 // Stage 1's casual, short-lived rooms; not a database.

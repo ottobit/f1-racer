@@ -20,32 +20,22 @@ llm-wiki/             memoria di progetto mantenuta con pattern LLM Wiki
 ## Multiplayer: il server delle stanze
 
 Il gioco è statico (GitHub Pages); le stanze multiplayer passano da un piccolo
-server WebSocket, `core/server/room-server.mjs`, pubblicato su
-[Render](https://render.com/). Dal sito pubblico il gioco lo usa da solo:
+server WebSocket, `core/server/room-server.mjs`, pubblicato online (oggi su
+[Render](https://render.com/)). Dal sito pubblico il gioco lo usa da solo:
 basta aprire `room.html`, creare la stanza e mandare il **link di invito**.
 
 Serve `https`/`wss`: la pagina su GitHub Pages è `https://` e il browser blocca
-le connessioni a un server `ws://` non cifrato. Render dà `https` di suo.
+le connessioni a un server `ws://` non cifrato. Il provider dà `https` di suo.
 
-### Mettere online il server (una volta sola)
+### Mettere online il server
 
-1. Su Render: **New → Blueprint**, collega questo repository. Render legge
-   `render.yaml` e crea il servizio `f1-racer-rooms` (piano gratuito,
-   Francoforte, cartella `core/`, controllo di salute su `/health`).
-2. Controlla l'indirizzo che Render assegna. Se non è
-   `https://f1-racer-rooms.onrender.com` (nome già preso), aggiorna
-   `HOSTED_ROOM_SERVER` in `core/client/multiplayer/room-server.js`.
-3. Contro lo spegnimento: il piano gratuito si addormenta dopo 15 minuti senza
-   traffico e il risveglio dura circa un minuto. Crea un monitor gratuito
-   (per esempio [UptimeRobot](https://uptimerobot.com/) o
-   [cron-job.org](https://cron-job.org/)) che chiami
-   `https://f1-racer-rooms.onrender.com/health` ogni 5-10 minuti. Le 750 ore
-   gratuite al mese bastano per un servizio sempre acceso. In più la home e la
-   pagina stanza "svegliano" il server appena si aprono.
+Il server non dipende dal provider: il contratto (porta, avvio, `/health`) e
+la configurazione di ogni provider stanno in [`deploy/`](deploy/README.md).
+Oggi è su Render (`deploy/render/render.yaml`, piano gratuito). Contro lo
+spegnimento del piano gratuito serve un monitor esterno su `/health` ogni
+5-10 minuti; i passi sono in `deploy/README.md`.
 
-Ogni push su `master` rilancia il server (`autoDeploy`).
-
-### Server sul tuo computer (sviluppo, o senza Render)
+### Server sul tuo computer (sviluppo, o senza server online)
 
 1. Installa [Node.js](https://nodejs.org/), poi da `f1-racer/`:
 
