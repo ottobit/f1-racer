@@ -1985,3 +1985,9 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - New `core/client/race/ai-parity.js` + generated `ai-parity-table.js`: rivals take the player's stock limits (rain penalties included) plus per-circuit, per-car tuning. `core/tools/calibrate-ai.mjs` (`npm run calibrate:ai`) finds the player physics' best lap (autopilot, pace swept 0.55-2.0) and bisects severity, then a steering or pace multiplier where the AI's simpler model can't carry the speed. 63 entries, all within ±1.2%. Re-run it when a circuit changes.
 - `core/client/race/main.js`: F1 and Classiche rivals both use `rivalAiParams`; difficulty Normale = parity, Facile/Difficile ±5%. Garage setup stays the player's own.
 - Known limit: the reference is the autopilot, not a human. Verified with `node --check` and the tool's per-entry gaps; not play-tested. Badge 294.
+
+## 2026-10-03 — Release badge = PR number (#331)
+
+- `.claude/skills/concludi/SKILL.md` step 3: the badge (`shared/version.js?v=` on every page) is the cycle PR's number, or master's badge + 1 when the PR number is not above it, so it never goes down (a lower number would stop telling a stale cached page from a fresh one).
+- `core/client/shared/version.js` comment and `llm-wiki/AGENTS.md` state the same rule (the comment still said "issue number").
+- First applied here: badge 294 → 332 (PR #332). Verified with `node --check` / `git diff --check`.
