@@ -122,7 +122,7 @@ function createKit(detail) {
     ].map(([r, y]) => new THREE.Vector2(r, y));
     return new THREE.LatheGeometry(profile, segments);
   }
-  function wheels({ x, front, rear, radius, width = .17, hub = 'cap', hubMaterial = mats.chrome, whitewall = false }) {
+  function wheels({ x, front, rear, radius, width = .17, hub = 'cap', hubMaterial = mats.chrome, rimMaterial = null, whitewall = false }) {
     const steeringPivots = [];
     const list = [[x, front], [-x, front], [x, rear], [-x, rear]].map(([px, pz], index) => {
       const pivot = new THREE.Group();
@@ -136,7 +136,7 @@ function createKit(detail) {
       const side = Math.sign(px);
       const face = side * width / 2;
       if (detail) {
-        const rim = mesh(new THREE.CylinderGeometry(radius * .65, radius * .65, width * .84, segments), hub === 'wire' ? mats.dark : hubMaterial, [0, 0, 0], wheel);
+        const rim = mesh(new THREE.CylinderGeometry(radius * .65, radius * .65, width * .84, segments), rimMaterial ?? (hub === 'wire' ? mats.dark : hubMaterial), [0, 0, 0], wheel);
         rim.rotation.z = Math.PI / 2;
         rim.name = 'rim';
       }
@@ -464,34 +464,49 @@ function buildSpider({ primary = 0xb3121b } = {}, { scale = 1, detail = false } 
   return k.finish({ ...parts, driverSteeringWheel }, scale, R, [0, 1.0, -.45]);
 }
 
-// Pulmino (#321): the split-window 1960s rear-engined van — two-tone body,
-// a big V on the nose, a plain round disc (no badge), split windscreen and
-// engine louvres behind the rear wheels.
+// Pulmino (#321, #325): the split-window 1960s rear-engined van — two-tone
+// body, a big V on the nose, a plain round disc (no badge), split
+// windscreen and engine louvres behind the rear wheels. The box is pinched
+// a little in plan and the roof rounded; the nose trim sits on the bevelled
+// surface (outline + BEVEL), not inside it.
 function buildPulmino({ primary = 0x7fb3d5, secondary = 0xf2efe6 } = {}, { scale = 1, detail = false } = {}) {
   const k = createKit(detail);
   const { mats, mesh, box, rod } = k;
   const paint = paintMaterial(primary, 'primary');
   const white = paintMaterial(secondary, 'secondary');
   const R = .3, BEVEL = .08, WIDTH = 1.42;
-  mesh(extrudeAcross(outline([-1.55, .28], [
+  const shape = bodyShaper({ halfLength: 1.72, pinch: .06 });
+  const roofShape = bodyShaper({ halfLength: 1.65, pinch: .06, shoulder: 1.5, top: 1.8, tumble: .12 });
+  mesh(shape.apply(extrudeAcross(outline([-1.55, .28], [
     [-1.64, .28, -1.64, .42], [-1.64, .86], [1.6, .86], [1.62, .42], [1.62, .28, 1.5, .28],
-  ], { bottom: .28, axles: [1.05, -1.0], wheelRadius: R, radius: .43 }), WIDTH, BEVEL), paint).name = 'vanBody';
-  mesh(extrudeAcross(outline([-1.62, .86], [[-1.6, 1.5], [1.48, 1.5], [1.6, .86]]), 1.36, .06), mats.glass).name = 'vanGlass';
-  mesh(extrudeAcross(outline([-1.6, 1.46], [[-1.6, 1.6], [-1.58, 1.72, -1.4, 1.72], [1.25, 1.72], [1.46, 1.72, 1.48, 1.58], [1.49, 1.46]]), 1.42, .08), white).name = 'roof';
+  ], { bottom: .28, axles: [1.05, -1.0], wheelRadius: R, radius: .43 }), WIDTH, BEVEL)), paint).name = 'vanBody';
+  mesh(shape.apply(extrudeAcross(outline([-1.62, .86], [[-1.6, 1.5], [1.48, 1.5], [1.6, .86]]), 1.36, .06)), mats.glass).name = 'vanGlass';
+  mesh(roofShape.apply(extrudeAcross(outline([-1.6, 1.46], [[-1.6, 1.6], [-1.58, 1.72, -1.4, 1.72], [1.25, 1.72], [1.46, 1.72, 1.48, 1.58], [1.49, 1.46]]), 1.42, .08)), white).name = 'roof';
+  const sideAt = (y, z) => shape.x(WIDTH / 2 + BEVEL, y, z);
+  const pillarX = (z) => shape.x(.74, 1.2, z);
   // White window pillars and a white waist band: the two-tone look.
   for (const side of [-1, 1]) {
-    const x = side * .74;
-    rod([x, .9, 1.62], [side * .72, 1.5, 1.49], .04, white);
-    for (const z of [.65, -.1, -.85, -1.6]) rod([x, .9, z], [x, 1.5, z], .045, white);
-    rod([side * .79, .88, -1.62], [side * .79, .88, 1.62], .03, white);
+    rod([side * pillarX(1.62), .9, 1.62], [side * pillarX(1.49), 1.5, 1.49], .04, white);
+    for (const z of [.65, -.1, -.85, -1.6]) rod([side * pillarX(z), .9, z], [side * pillarX(z), 1.5, z], .045, white);
+    // Three straight runs: the plan pinch only bites near nose and tail.
+    const band = [-1.62, -1.2, 1.2, 1.62].map((z) => [side * (sideAt(.88, z) + .01), .88, z]);
+    for (let n = 1; n < band.length; n++) rod(band[n - 1], band[n], .03, white).name = 'waistBand';
     k.roundLamp(side * .55, .62, 1.69);
     const indicator = mesh(new THREE.SphereGeometry(.04, 10, 8), mats.amber, [side * .62, .44, 1.71]);
     indicator.scale.set(1.5, .8, .6);
-    box(.08, .16, .04, mats.tail, [side * .62, .62, -1.73]).name = 'tailLamp';
+    box(.08, .16, .04, mats.tail, [side * .6, .62, -1.73]).name = 'tailLamp';
     const mirror = mesh(new THREE.SphereGeometry(.07, 12, 8), mats.chrome, [side * .86, 1.1, 1.45]);
     mirror.scale.set(.6, 1, .5);
     rod([side * .75, 1.0, 1.5], [side * .85, 1.1, 1.45], .012, mats.chrome);
+    // Cab door shut lines on both sides; wipers parked along the screen.
+    for (const z of [1.48, .72]) k.seam([[side * (sideAt(.36, z) + .004), .36, z], [side * (sideAt(.84, z) + .004), .84, z]]);
+    k.wiper([side * .6, .93, 1.665], [side * .18, .96, 1.66]);
+    // Bumper overriders.
+    if (detail) for (const z of [1.76, -1.76]) rod([side * .42, .24, z], [side * .42, .44, z], .02, mats.chrome).name = 'overrider';
   }
+  // Two-leaf side loading door on the right (-x), with its handle.
+  for (const z of [.5, -.05, -.6]) k.seam([[-(sideAt(.36, z) + .004), .36, z], [-(sideAt(.84, z) + .004), .84, z]]);
+  if (detail) box(.03, .03, .12, mats.chrome, [-(sideAt(.7, -.12) + .012), .7, -.12]).name = 'doorHandle';
   for (const z of [1.76, -1.76]) rod([-.72, .32, z], [.72, .32, z], .03, mats.chrome);
   // Nose: the V in the upper colour, the round disc at its point, and the
   // centre post of the split windscreen.
@@ -503,25 +518,27 @@ function buildPulmino({ primary = 0x7fb3d5, secondary = 0xf2efe6 } = {}, { scale
   vee.lineTo(.62, .86);
   vee.lineTo(0, .5);
   vee.closePath();
-  mesh(new THREE.ShapeGeometry(vee), white, [0, 0, 1.645]).name = 'noseVee';
-  const disc = mesh(new THREE.CylinderGeometry(.1, .1, .03, 24), mats.chrome, [0, .5, 1.65]);
+  mesh(new THREE.ShapeGeometry(vee), white, [0, 0, 1.705]).name = 'noseVee';
+  const disc = mesh(new THREE.CylinderGeometry(.1, .1, .03, 24), mats.chrome, [0, .5, 1.71]);
   disc.rotation.x = Math.PI / 2;
   disc.name = 'noseDisc';
-  rod([0, .9, 1.61], [0, 1.47, 1.5], .03, white);
+  rod([0, .92, 1.665], [0, 1.47, 1.555], .03, white);
   // Engine louvres behind the rear wheels, and the engine lid at the back.
   for (const side of [-1, 1]) {
     for (let i = 0; i < 5; i++) {
-      box(.02, .025, .3, mats.dark, [side * .715, .78 - i * .06, -1.38]).name = 'louvre';
+      box(.02, .025, .3, mats.dark, [side * (sideAt(.78 - i * .06, -1.38) + .005), .78 - i * .06, -1.38]).name = 'louvre';
     }
   }
-  box(.9, .32, .02, paint, [0, .58, -1.66]).name = 'engineLid';
-  rod([-.1, .6, -1.68], [.1, .6, -1.68], .015, mats.chrome);
+  box(.9, .32, .02, paint, [0, .58, -1.725]).name = 'engineLid';
+  rod([-.1, .6, -1.74], [.1, .6, -1.74], .015, mats.chrome);
+  k.plate(.4, -1.73, -1);
   // Cab: big flat wheel, white dash, front seats; benches behind.
   box(1.3, .08, .14, white, [0, .95, 1.42]).name = 'dashboard';
   const driverSteeringWheel = k.steeringWheel({ pos: [0, 1.1, 1.22], tilt: -1.05, radius: .17, column: [[0, 1.08, 1.25], [0, .95, 1.45]] });
   for (const side of [-1, 1]) box(.45, .5, .08, mats.seat, [side * .35, 1.12, .42]).name = 'seatBack';
   for (const z of [-.3, -1.0]) box(1.2, .4, .08, mats.seat, [0, 1.06, z]).name = 'bench';
-  const parts = k.wheels({ x: .66, front: 1.05, rear: -1.0, radius: R, hubMaterial: white });
+  // Painted wheels with big chrome hubcaps.
+  const parts = k.wheels({ x: .66, front: 1.05, rear: -1.0, radius: R, hubMaterial: mats.chrome, rimMaterial: white });
   return k.finish({ ...parts, driverSteeringWheel }, scale, R, [0, 1.42, .62]);
 }
 
