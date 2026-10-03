@@ -1991,3 +1991,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `.claude/skills/concludi/SKILL.md` step 3: the badge (`shared/version.js?v=` on every page) is the cycle PR's number, or master's badge + 1 when the PR number is not above it, so it never goes down (a lower number would stop telling a stale cached page from a fresh one).
 - `core/client/shared/version.js` comment and `llm-wiki/AGENTS.md` state the same rule (the comment still said "issue number").
 - First applied here: badge 294 → 332 (PR #332). Verified with `node --check` / `git diff --check`.
+
+## 2026-10-03 — Room server hosted on Render (#333)
+
+- `core/server/room-server.mjs`: one HTTP server carries the WebSocket and `GET /health` (200); other GETs still answer 426. In-process keep-awake: `node-cron` pings `KEEP_AWAKE_URL/health` on `KEEP_AWAKE_CRON` (default `*/10 * * * *`) in `KEEP_AWAKE_TZ`; off without the URL. `ws` and `node-cron` are runtime dependencies.
+- Provider-neutral layout: `service/README.md` is the hosting contract (core/, npm ci, start command, PORT, HTTP+WS, /health, single in-memory instance), `service/render/render.yaml` mirrors the live Render service `f1-racer-rooms` (free, Frankfurt, auto-deploy from master; created via Render's API, no rootDir). `database/README.md` states the same rules for a future database (none today).
+- Client: new `core/client/multiplayer/room-server.js` picks the server (`?roomServer=`, else local server on a localhost page, else `HOSTED_ROOM_SERVER` = `wss://f1-racer-rooms.onrender.com`); home and room page ping `/health` on load.
+- Decisions: keep-awake stays inside the server (no paid Render cron), all day: ~744 of the 750 free hours/month, no room for a second free service. Iterations in this cycle: self-ping window, external cron, then node-cron all day.
+- Verified locally (health 200, 426, room creation over WS, cron hits /health, `npm ci --omit=dev`); Render build and start seen in its logs (old master code until this merge). This session's network blocks onrender.com, so `/health` on the live URL is for the user to check. Badge 334.

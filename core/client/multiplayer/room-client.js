@@ -7,21 +7,12 @@
 // f1racer-selected-driver-v1 (solo play) and championship state: joining a
 // room never touches, and is never touched by, the solo flow.
 
+import { roomServerUrl } from "./room-server.js?v=1";
+
 const SESSION_KEY = "f1racer-room-session-v1";
-const DEFAULT_ROOM_SERVER_URL = "ws://localhost:8787";
 const REQUEST_TIMEOUT_MS = 8000;
 const PING_INTERVAL_MS = 15000;
 
-// ?roomServer= accepts what ngrok prints (https://...) or a bare host too
-// (#99): http(s) maps to ws(s), no scheme means wss.
-function serverUrl() {
-  const raw = (new URLSearchParams(location.search).get("roomServer") || "").trim();
-  if (!raw) return DEFAULT_ROOM_SERVER_URL;
-  if (/^https:\/\//i.test(raw)) return raw.replace(/^https:/i, "wss:");
-  if (/^http:\/\//i.test(raw)) return raw.replace(/^http:/i, "ws:");
-  if (/^wss?:\/\//i.test(raw)) return raw;
-  return `wss://${raw}`;
-}
 
 function loadSession() {
   try {
@@ -125,7 +116,7 @@ export function createRoomClient() {
   function connect() {
     return new Promise((resolve, reject) => {
       manuallyClosed = false;
-      ws = new WebSocket(serverUrl());
+      ws = new WebSocket(roomServerUrl());
       ws.addEventListener("open", () => {
         notifyConnection("connected");
         pingTimer = setInterval(() => { send("ping").catch(() => {}); }, PING_INTERVAL_MS);
@@ -262,7 +253,7 @@ export function createRoomClient() {
     onVoiceSignal,
     onAgentCommand,
     hasSavedSession: () => !!session,
-    getServerUrl: () => serverUrl(),
+    getServerUrl: () => roomServerUrl(),
     serverNow: () => Date.now() + clockOffsetMs,
     get room() { return lastRoom; },
     get participantId() { return session ? session.participantId : null; },

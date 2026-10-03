@@ -10,8 +10,11 @@
     "start:agent-mcp": "node tools/agent-mcp-server.mjs",
     "start:agent-mcp:http": "node tools/agent-mcp-http.mjs"
   },
-  "devDependencies": {
-    "three": "0.160.0",
+  "dependencies": {
+    "node-cron": "3.0.3",
     "ws": "8.18.0"
+  },
+  "devDependencies": {
+    "three": "0.160.0"
   }
 }

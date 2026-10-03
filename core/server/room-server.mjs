@@ -5,12 +5,16 @@
 //
 // Opt-in, separate process — never imported by race.html/garage.html/
 // index.html. Run from inside core/ with `npm run start:room-server`
-// (PORT, ROOM_GRACE_MS, ROOM_QUALI_MS env vars optional).
+// (PORT, ROOM_GRACE_MS, ROOM_QUALI_MS env vars optional). Provider-neutral
+// (#333, service/README.md): one HTTP server carries the WebSocket upgrade and
+// a GET /health for the host's health check and the keep-awake cron below.
 //
 // State is in-memory only (see rooms.mjs) and resets on restart. Fine for
 // Stage 1's casual, short-lived rooms; not a database.
 
 import { randomBytes } from "node:crypto";
+import { createServer } from "node:http";
+import cron from "node-cron";
 import { WebSocketServer } from "ws";
 import {
   createStore,
@@ -164,8 +168,44 @@ function scheduleQualifyingEnd(roomCode) {
   qualifyingTimers.set(roomCode, timer);
 }
 
-const wss = new WebSocketServer({ port: PORT });
-console.log(`[room-server] listening on ws://localhost:${PORT} (grace ${GRACE_MS}ms, qualifying ${QUALI_MS}ms, heartbeat ${HEARTBEAT_MS}ms)`);
+// Plain HTTP: /health answers 200 (any origin may ping it); everything else
+// keeps the old "Upgrade Required", which tells a human the server is up.
+const httpServer = createServer((req, res) => {
+  const path = (req.url || "").split("?")[0];
+  if (req.method === "GET" && path === "/health") {
+    res.writeHead(200, { "content-type": "text/plain", "access-control-allow-origin": "*", "cache-control": "no-store" });
+    res.end("ok");
+    return;
+  }
+  res.writeHead(426, { "content-type": "text/plain" });
+  res.end("Upgrade Required");
+});
+const wss = new WebSocketServer({ server: httpServer });
+
+// Keep-awake (#333), for hosts that put an idle service to sleep: with
+// KEEP_AWAKE_URL set (the server's public https://… address), an in-process
+// cron calls its own /health so the host sees traffic. KEEP_AWAKE_CRON is a
+// cron pattern (default every 10 minutes, all day) read in KEEP_AWAKE_TZ
+// (default UTC). If the host still puts the service to sleep (a restart, a
+// pattern with gaps) the cron sleeps with it: the next visitor wakes it.
+const KEEP_AWAKE_URL = (process.env.KEEP_AWAKE_URL || "").replace(/\/+$/, "");
+const KEEP_AWAKE_CRON = process.env.KEEP_AWAKE_CRON || "*/10 * * * *";
+const KEEP_AWAKE_TZ = process.env.KEEP_AWAKE_TZ || "UTC";
+if (KEEP_AWAKE_URL) {
+  if (!cron.validate(KEEP_AWAKE_CRON)) {
+    console.error(`[room-server] KEEP_AWAKE_CRON "${KEEP_AWAKE_CRON}" is not a cron pattern; keep-awake off`);
+  } else {
+    cron.schedule(KEEP_AWAKE_CRON, () => {
+      fetch(`${KEEP_AWAKE_URL}/health`, { cache: "no-store" })
+        .catch((err) => console.error("[room-server] keep-awake ping failed:", err.message));
+    }, { timezone: KEEP_AWAKE_TZ });
+    console.log(`[room-server] keep-awake ${KEEP_AWAKE_URL}/health on "${KEEP_AWAKE_CRON}" ${KEEP_AWAKE_TZ}`);
+  }
+}
+
+httpServer.listen(PORT, () => {
+  console.log(`[room-server] listening on :${PORT} (ws + GET /health; grace ${GRACE_MS}ms, qualifying ${QUALI_MS}ms, heartbeat ${HEARTBEAT_MS}ms)`);
+});
 
 const heartbeat = setInterval(() => {
   for (const ws of wss.clients) {

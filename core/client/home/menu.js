@@ -5,6 +5,7 @@ import { liveryById } from "../shared/driver-themes.js?v=28";
 import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=2";
 import { CLASSIC_ROSTER, loadClassicDriverId, loadSeries, saveClassicDriverId, saveSeries } from "../shared/classic-series.js?v=2";
 import { ROAD_CARS } from "../shared/road-cars.js?v=1";
+import { wakeRoomServer } from "../multiplayer/room-server.js?v=1";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
 
@@ -330,3 +331,7 @@ render();
 // Open on the page of the series you race.
 if (series === "classic") seriesPages.scrollLeft = seriesPages.clientWidth;
 markSeriesTab();
+
+// Wake the hosted room server early (#333): a free Render instance takes
+// about a minute after a nap, and Multigiocatore is one tap away.
+wakeRoomServer();

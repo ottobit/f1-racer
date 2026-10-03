@@ -1,4 +1,5 @@
-import { createRoomClient } from "./room-client.js?v=9";
+import { createRoomClient } from "./room-client.js?v=10";
+import { isLocalHost, roomServerUrl, wakeRoomServer } from "./room-server.js?v=1";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
 import { liveryById } from "../shared/driver-themes.js?v=28";
 import { CIRCUITS } from "../shared/circuits.js?v=40";
@@ -170,10 +171,10 @@ el.raceStarted.addEventListener("click", (e) => {
 const NICKNAME_KEY = "f1racer-room-nickname-v1";
 const pageParams = new URLSearchParams(location.search);
 const inviteCode = (pageParams.get("join") || "").trim().toUpperCase();
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+wakeRoomServer();
 
 function isLocalUrl(url) {
-  try { return LOCAL_HOSTS.has(new URL(url).hostname); } catch { return false; }
+  try { return isLocalHost(new URL(url).hostname); } catch { return false; }
 }
 
 function inviteLink(code) {
@@ -186,9 +187,8 @@ function inviteLink(code) {
 
 // Why a friend could not use this link, or "" when it looks reachable.
 function inviteWarning() {
-  if (LOCAL_HOSTS.has(location.hostname)) return "Attenzione: il link punta a questo computer (localhost), gli amici non lo aprono. Apri il gioco dal sito pubblico.";
-  const roomServer = pageParams.get("roomServer");
-  if (!roomServer || isLocalUrl(roomServer)) return "Attenzione: il server della stanza è locale, gli amici non lo raggiungono. Apri la pagina con ?roomServer=https://… (l'URL di ngrok).";
+  if (isLocalHost(location.hostname)) return "Attenzione: il link punta a questo computer (localhost), gli amici non lo aprono. Apri il gioco dal sito pubblico.";
+  if (isLocalUrl(roomServerUrl())) return "Attenzione: il server della stanza è locale, gli amici non lo raggiungono. Togli ?roomServer per usare il server pubblico.";
   return "";
 }
 
