@@ -8,7 +8,7 @@ import {
 import { createShowroom } from "./showroom.js?v=44";
 import { mountRoadGarage } from "./road-garage-ui.js?v=3";
 import { VEHICLES, vehicleById } from "../shared/vehicle.js?v=1";
-import { classicDriverById, loadClassicDriverId, loadSeries } from "../shared/classic-series.js?v=2";
+import { SERIES, loadSeries } from "../shared/series.js?v=1";
 import { getCircuit } from "../../shared/circuits.js?v=41";
 import { loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=4";
@@ -25,7 +25,8 @@ const targetCircuit = getCircuit(requestedCircuit || storedCircuit);
 function garageVehicle() {
   const fromUrl = vehicleById(new URLSearchParams(location.search).get("car"));
   if (fromUrl) return fromUrl;
-  return vehicleById(loadSeries() === "classic" ? classicDriverById(loadClassicDriverId()).car : "f1");
+  const series = loadSeries();
+  return series.vehicle(series.loadDriverId());
 }
 const vehicle = garageVehicle();
 // Same device-signal profile the race applies to its renderer (#2).
@@ -46,8 +47,7 @@ pickerEl.addEventListener("change", () => {
 if (vehicle === VEHICLES.f1) mountF1Garage();
 else {
   // A Classiche driver's colours on their own car; the car's otherwise.
-  const driver = classicDriverById(loadClassicDriverId());
-  const baseColors = { ...vehicle.colors, ...(driver.car === vehicle.id ? driver.colors : {}) };
+  const baseColors = SERIES.classic.baseColors(SERIES.classic.loadDriverId(), vehicle);
   const { renderer } = mountRoadGarage(vehicle, { baseColors, graphicsProfile, onFrame });
   diagnostics = setupDiagnosticsOverlay({ renderer, graphicsProfileId: graphicsProfile.id });
 }

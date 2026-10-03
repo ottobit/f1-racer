@@ -300,6 +300,16 @@ one builder per `kind`), so `vehicle.js` stays three-free and Node tools
 (`calibrate-ai.mjs`, `validate-free-oval.mjs`) load it. The F1 and road
 garages stay separate UIs (different parts).
 
+**Series (#341):** a solo race runs as a `Series` (`client/shared/series.js`):
+`F1Series` and `ClassicSeries`, registry `SERIES` / `seriesById()`, home's
+pick via `loadSeries()` / `saveSeries()`. The series answers who the player
+drives (`loadDriverId()`, `vehicle()`, `playerColors()`), the field
+(`rivals()`), `driverName()`, `raceTitle()`, `awardsPoints`, `drsErs` and the
+home link (`query`, `launchLabel`); `race/main.js`, `home/menu.js` and
+`garage/garage.js` no longer branch on `"classic"`. A room is always
+`SERIES.f1`. `classic-series.js` keeps only the Classiche roster and driver
+pick.
+
 **Boundary rule (#335):** the backend never imports the frontend.
 `server/` and `shared/` import only `shared/`, node built-ins and (server
 only) npm packages; `client/` and `tools/` may import anything.
