@@ -2046,3 +2046,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `home/menu.js`: standings, banner, circuit status, rival count, title and reset follow the current series; each series locks its driver while its season is under way (Classiche one-make: the car too). `race/main.js` records into `RACE_SERIES.championship`; "Prossimo circuito" keeps the series.
 - Wiki ingest + lint: decisions/architecture/F1-RACER-WIKI updated; stale `index.md` (driver names) and `c4-local.md` (`recordRaceResult`) fixed; no broken links.
 - Verified without a browser: `node --check`; Node test of points, lock and next circuit. Badge 346.
+
+## 2026-10-03 — Rivals drive their car's race settings (#349)
+
+- Removed the #329 parity table (`race/ai-parity-table.js`) and its calibrator (`tools/calibrate-ai.mjs`, npm `calibrate:ai`): it raised some rivals up to +25% over their car's top speed to match the player's best possible lap (Altomare Classiche +17-20%), so the player could not catch the field.
+- `race/ai-parity.js` → `race/rival-ai.js` (`rivalAiFromCar`): car stock limits, rain included, one fixed corner severity (0.48); difficulty scales pace ±5% around the car's own.
+- `race/main.js`: "Prossimo circuito" carries `&difficulty=`; a race link without it falls back to the difficulty saved on home (`f1racer-difficulty`). Home and multiplayer already passed it.
+- Known limit: with one corner severity for every circuit, rival pace may be uneven across tracks; adjust the severity, not lap-time calibration.
+- `core/package.json` changed, so the room-server deploy runs on merge (server code unchanged). Verified with `node --check` only. Badge 350.
