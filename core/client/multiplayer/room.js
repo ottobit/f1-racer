@@ -11,8 +11,10 @@ const el = {
   view: document.getElementById("room-view"),
   nickname: document.getElementById("room-nickname"),
   createBtn: document.getElementById("room-create-btn"),
+  codeInput: document.getElementById("room-code-input"),
   joinBtn: document.getElementById("room-join-btn"),
   entryStatus: document.getElementById("room-entry-status"),
+  codeDisplay: document.getElementById("room-code-display"),
   leaveBtn: document.getElementById("room-leave-btn"),
   shareBtn: document.getElementById("room-share-btn"),
   shareStatus: document.getElementById("room-share-status"),
@@ -70,6 +72,7 @@ function renderRoom(room) {
     return;
   }
   showView(true);
+  el.codeDisplay.textContent = room.code;
   el.participantCount.textContent = `(${room.participants.length}/${room.maxParticipants})`;
 
   const me = room.participants.find((p) => p.participantId === client.participantId);
@@ -191,8 +194,10 @@ function rememberNickname() {
   try { localStorage.setItem(NICKNAME_KEY, el.nickname.value.trim()); } catch { /* storage unavailable */ }
 }
 
-el.createBtn.hidden = !!inviteCode;
-el.joinBtn.hidden = !inviteCode;
+if (inviteCode) {
+  el.codeInput.value = inviteCode;
+  el.entryStatus.textContent = `Invito alla stanza ${inviteCode}: scrivi il tuo nome e premi Entra.`;
+}
 
 el.shareBtn.addEventListener("click", async () => {
   const room = client.room;
@@ -242,12 +247,16 @@ el.createBtn.addEventListener("click", async () => {
 });
 
 el.joinBtn.addEventListener("click", async () => {
-  if (!inviteCode) return;
   el.entryStatus.textContent = "";
+  const code = el.codeInput.value.trim().toUpperCase();
+  if (!code) {
+    el.entryStatus.textContent = "Inserisci un codice stanza.";
+    return;
+  }
   el.joinBtn.disabled = true;
   try {
     rememberNickname();
-    await client.joinRoom(inviteCode, el.nickname.value);
+    await client.joinRoom(code, el.nickname.value);
   } catch (err) {
     el.entryStatus.textContent = err.message;
   } finally {
@@ -298,7 +307,7 @@ el.startBtn.addEventListener("click", async () => {
 // nothing was saved, so a first-time visitor never opens a connection
 // before choosing to create or join.
 // An invite to a different room wins over the saved one: leave it so the
-// link-only invite entry flow is shown.
+// entry form (code prefilled) is shown.
 client.tryResume()
   .then((room) => {
     if (room && inviteCode && room.code !== inviteCode) return client.leaveRoom();
