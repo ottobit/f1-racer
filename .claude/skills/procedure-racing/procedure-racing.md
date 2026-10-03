@@ -75,7 +75,7 @@ scripts, no loops that apply rules for you. The bot re-reads
   Staying in the turn also keeps a cloud container awake.
 - Loop speed: the real cycle is `--timeout` plus your own tool and thinking
   time (~10-15 s in practice), so a long timeout only adds dead time. Use
-  `--timeout 5` and keep each turn's writes and reasoning short; if cycles
+  `--timeout 5` and keep each turn's writes short; if cycles
   still run longer than ~10 s, drop the extras (skip the per-bot rewrite when
   nothing changed) rather than raising the timeout.
 - Be present (user rule, 2026-09-29): every check, look at `standings` in
