@@ -300,7 +300,7 @@ the player's garage, `stockColors()`, `paint()`, `showroomScale`,
 `playerDetail`, `exhaustFlames`) instead of branching on `id === "f1"`. The
 3D model is built by `client/shared/vehicle-view.js` (`buildVehicleModel`,
 one builder per `kind`), so `vehicle.js` stays three-free and Node tools
-(`calibrate-ai.mjs`, `validate-free-oval.mjs`) load it. The F1 and road
+(`validate-free-oval.mjs`) load it. The F1 and road
 garages stay separate UIs (different parts).
 
 **Series (#341):** a solo race runs as a `Series` (`client/shared/series.js`):

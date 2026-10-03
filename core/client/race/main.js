@@ -18,7 +18,7 @@ import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=41";
 import { setupPlayerPhysics } from "./player-physics.js?v=9";
 import { setupRaceAi } from "./race-ai.js?v=33";
-import { aiFromCar, aiTuning } from "./ai-parity.js?v=1";
+import { rivalAiFromCar } from "./rival-ai.js?v=1";
 import { setupRaceSystems } from "./race-systems.js?v=32";
 import { setupRaceProgress } from "./race-progress.js?v=29";
 import { setupRaceCommands } from "./race-commands.js?v=2";
@@ -117,28 +117,36 @@ const CAR = PLAYER_VEHICLE.playerParams(isRaining);
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
 
-// AI difficulty: chosen on the circuit menu (menu.js), carried here as a
-// query param. Normale is parity (#329); the others shift the rivals' pace
-// 5% either way. Turn rate is left alone, so a harder AI out-paces you
-// rather than out-cornering you.
+// AI difficulty: chosen on home (menu.js) and saved there; the circuit
+// link and multiplayer carry it as a query param. A link without it (e.g.
+// "Prossimo circuito") falls back to the saved choice (#349), so the pick
+// holds for the whole championship. Normale is the cars' own pace; the
+// others shift the rivals' pace 5% either way. Turn rate is left alone, so
+// a harder AI out-paces you rather than out-cornering you.
 const DIFFICULTY_PRESETS = {
   facile: { speedMul: 0.95, accelMul: 0.95 },
   normale: { speedMul: 1, accelMul: 1 },
   difficile: { speedMul: 1.05, accelMul: 1.05 },
 };
-const difficulty = new URLSearchParams(location.search).get("difficulty");
-const diffPreset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.normale;
+function savedDifficulty() {
+  try {
+    return localStorage.getItem("f1racer-difficulty");
+  } catch (e) {
+    return null;
+  }
+}
+const difficulty = [new URLSearchParams(location.search).get("difficulty"), savedDifficulty()]
+  .find((id) => Object.hasOwn(DIFFICULTY_PRESETS, id ?? "")) ?? "normale";
+const diffPreset = DIFFICULTY_PRESETS[difficulty];
 
-// Rivals at parity (#329): the player's stock car (default garage setup,
-// same rain penalties) driven by the race AI, tuned per circuit and car so
-// its flying lap matches the player's best (ai-parity.js). The player's own
-// garage setup stays theirs alone.
-// One set per car (#339): every F1 rival shares AI, a Classiche rival
-// (#317) gets its own car's.
+// Rivals drive their car's race settings (#349): its stock limits, same
+// rain penalties, no garage setup and no tuning against the player's laps
+// (rival-ai.js). One set per car (#339): every F1 rival shares AI, a
+// Classiche rival (#317) gets its own car's.
 const rivalAiByCar = new Map();
 function rivalAi(vehicle) {
   if (!rivalAiByCar.has(vehicle.id)) {
-    const ai = aiFromCar(vehicle.stockParams(isRaining), aiTuning(circuit.id, vehicle.id));
+    const ai = rivalAiFromCar(vehicle.stockParams(isRaining));
     rivalAiByCar.set(vehicle.id, { ...ai, maxSpeed: ai.maxSpeed * diffPreset.speedMul, accel: ai.accel * diffPreset.accelMul });
   }
   return rivalAiByCar.get(vehicle.id);
@@ -1082,7 +1090,7 @@ function finishRace() {
   document.getElementById("results-points").textContent = `+${points} punti · ${RACE_SERIES.label}`;
   const nextCircuitId = championship.nextUnraced(CIRCUITS, state2);
   if (nextCircuitId) {
-    nextLink.href = `race.html?circuit=${nextCircuitId}${RACE_SERIES.query}`;
+    nextLink.href = `race.html?circuit=${nextCircuitId}&difficulty=${difficulty}${RACE_SERIES.query}`;
     nextLink.textContent = "Prossimo circuito";
   } else {
     nextLink.href = "index.html";

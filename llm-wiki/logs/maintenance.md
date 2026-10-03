@@ -1594,7 +1594,6 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Open: residual network jump; final `tyreWearPct` 100% on softs and
   68–72% on mediums/hards regardless of stops (new issue).
 
-
 ## 2026-09-27 — Wiki: Chromium sharing and GPU impact (#242)
 
 - `wiki/f1-racer/agent-bots.md`: new subsection "What is shared inside Chromium" under the many-browser-bots section; it replaces the one-line sharing bullet.
@@ -1740,14 +1739,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `race.html` and `free.html`: the hint now says "trascina col mouse per guardarti intorno", matching #278 (the canvas drag no longer exists on touch). Text only, no imports touched, so no `?v` chain; release badge v270.
 - Verified with `git diff --check` only. `modes.html` still does not list free look / L1 / free drive (open).
 
-
 ## 2026-09-29 — Finished cars park beyond the kerbs (#282)
 
 - `finish-pull-over.js`: post-finish target now uses the shared outer-kerb boundary (`grassLimit`) and aims about 1.1 m into the runoff, so finished cars clear the racing surface instead of stopping beside/on the kerb.
 - The same behavior is wired for the player, browser AI and headless room bot; movement still uses ordinary steering/braking, never teleportation.
 - Cache chain bumped through `race-ai.js`, `main.js`, `race-bootstrap.js` and `race.html`.
 - Structural review only; final behavior remains for the user's gameplay verification after merge.
-
 
 ## 2026-09-29 — Progressive kerb and runoff slowdown (#283)
 
@@ -1756,7 +1753,6 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Cache versions were bumped through `main.js`, `race-bootstrap.js` and `race.html`.
 - Release badge bumped from v270 to v271 across all HTML entry points.
 - Structural comparison only; gameplay verification remains at roughly 100, 150 and 200 km/h with different kerb/runoff depths.
-
 
 ## 2026-09-29 — Montenero competitive redesign (#286)
 
@@ -1774,7 +1770,6 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Documentation only; verified with `git diff --check`, checked in play in room H32D (5 bots, stops with radio, standings tracked).
 - Findings filed as #288-#292 (Agent API / room-bot); #201 reopened by the user.
 
-
 ## 2026-09-29 — Browser-independent realtime agent bridge (#201)
 
 - `agent-api.js`: WebMCP and remote control now dispatch through one `f1_observe` / `f1_act` / `f1_enqueue` / `f1_release` controller; native WebMCP prefers `document.modelContext` with the previous navigator surface kept as compatibility fallback.
@@ -1783,7 +1778,6 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Branch was synchronized with the latest master before PR finalization; no new npm dependency was introduced and cache versions were bumped through room/race entry points.
 - Release badge bumped from v273 to v274 across all HTML entry points. Structural/source review only; live MCP → WebSocket → race round-trip, 10+ consecutive actions, three simultaneous agent sessions and human takeover remain gameplay/runtime verification.
 
-
 ## 2026-09-29 — Remote Streamable HTTP MCP endpoint (#296)
 
 - `agent-mcp-common.mjs` now centralizes the four F1 MCP tools and the WebSocket bridge client; the existing stdio adapter reuses it instead of maintaining a second control implementation.
@@ -1791,7 +1785,6 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - The architecture remains additive: normal human multiplayer and the existing Room Bot strategy workflow work independently of MCP; all control paths converge on the same browser input/physics pipeline.
 - Added `c4-agent-control.md` with C4 levels 1–4, dynamic and deployment views, plus explicit regression boundaries preserving friends, Room Bot strategy and MCP as coexisting paths.
 - Release badge bumped from v274 to v275 across all HTML entry points. Structural/source review only; remote URL handshake, tool calls and end-to-end driving through an HTTPS tunnel remain runtime verification.
-
 
 ## 2026-09-29 — Focused C4 model for MCP subsystem (#298)
 
@@ -2047,7 +2040,6 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Wiki ingest + lint: decisions/architecture/F1-RACER-WIKI updated; stale `index.md` (driver names) and `c4-local.md` (`recordRaceResult`) fixed; no broken links.
 - Verified without a browser: `node --check`; Node test of points, lock and next circuit. Badge 346.
 
-
 ## 2026-10-04 — Multiplayer lobby host/guest roles (#347)
 
 - `room.html`: clarified the lobby copy so the host owns circuit, difficulty and qualifying/race format while invited players complete only their personal choices and readiness.
@@ -2055,3 +2047,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Server authority remains unchanged: `set_circuit` and `start_race` are still host-only; no multiplayer protocol, physics, voice or MCP behavior changed.
 - The earlier shared-settings interpretation was fully removed from the final diff; only the lobby UI and its module cache version remain changed.
 - Release badge set from v346 to v348 across all HTML entry points. Structural review only; manual two-browser host/guest verification remains the recommended gameplay check.
+
+## 2026-10-03 — Rivals drive their car's race settings (#349)
+
+- Removed the #329 parity table (`race/ai-parity-table.js`) and its calibrator (`tools/calibrate-ai.mjs`, npm `calibrate:ai`): it raised some rivals up to +25% over their car's top speed to match the player's best possible lap (Altomare Classiche +17-20%), so the player could not catch the field.
+- `race/ai-parity.js` → `race/rival-ai.js` (`rivalAiFromCar`): car stock limits, rain included, one fixed corner severity (0.48); difficulty scales pace ±5% around the car's own.
+- `race/main.js`: "Prossimo circuito" carries `&difficulty=`; a race link without it falls back to the difficulty saved on home (`f1racer-difficulty`). Home and multiplayer already passed it.
+- Known limit: with one corner severity for every circuit, rival pace may be uneven across tracks; adjust the severity, not lap-time calibration.
+- `core/package.json` changed, so the room-server deploy runs on merge (server code unchanged). Verified with `node --check` only. Badge 350.

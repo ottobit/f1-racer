@@ -6,7 +6,6 @@
   "scripts": {
     "validate:circuits": "node tools/validate-circuits.mjs",
     "check:boundaries": "node tools/check-boundaries.mjs",
-    "calibrate:ai": "node tools/calibrate-ai.mjs",
     "start:room-server": "node server/room-server.mjs",
     "start:agent-mcp": "node tools/agent-mcp-server.mjs",
     "start:agent-mcp:http": "node tools/agent-mcp-http.mjs"
