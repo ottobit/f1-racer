@@ -16,9 +16,12 @@ deciding for you, no plan set once and left alone. Default fleet: 5 bots
 
 ## Inputs (ask only for what's missing)
 
-- `SERVER`: room-server URL, e.g. `https://xxxx.ngrok-free.app`, or
-  `ws://localhost:8787` when you run on the same PC as the room server. A
-  plain GET answering "Upgrade Required" means it is up (WebSocket server).
+- `SERVER`: room-server URL. Default: the hosted one,
+  `https://f1-racer-rooms.onrender.com` (`HOSTED_ROOM_SERVER` in
+  `core/client/multiplayer/room-server.js`); else what the user gives
+  (`https://xxxx.ngrok-free.app`, or `ws://localhost:8787` on the same PC).
+  `GET /health` answering `ok` means it is up; the free plan can take ~1 min
+  to wake from a nap, so ping it before starting the fleet.
 - `ROOM`: 4-letter room code. The server cannot list rooms: the user creates
   the room on `room.html?roomServer=<SERVER>` and hosts/starts the race.
 

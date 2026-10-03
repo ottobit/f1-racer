@@ -17,62 +17,57 @@ assets/               asset condivisi (stile base, immagini)
 llm-wiki/             memoria di progetto mantenuta con pattern LLM Wiki
 ```
 
-## Multiplayer: avviare il server delle stanze
+## Multiplayer: il server delle stanze
 
-Il gioco è statico e non ha un server sempre acceso. Per correre con gli amici
-(fino a 10, solo piloti umani, con chat vocale) una persona, l'**host**, fa
-girare sul proprio computer il server delle stanze e lo espone su internet con
-[ngrok](https://ngrok.com/). Gli altri giocatori non installano niente: aprono
-il link di invito.
+Il gioco è statico (GitHub Pages); le stanze multiplayer passano da un piccolo
+server WebSocket, `core/server/room-server.mjs`, pubblicato su
+[Render](https://render.com/). Dal sito pubblico il gioco lo usa da solo:
+basta aprire `room.html`, creare la stanza e mandare il **link di invito**.
 
-Serve `https`/`wss` anche se siete tutti in casa: la pagina su GitHub Pages è
-`https://` e il browser blocca le connessioni a un server `ws://` non cifrato.
+Serve `https`/`wss`: la pagina su GitHub Pages è `https://` e il browser blocca
+le connessioni a un server `ws://` non cifrato. Render dà `https` di suo.
 
-### Una volta sola
+### Mettere online il server (una volta sola)
 
-1. Installa [Node.js](https://nodejs.org/) e [ngrok](https://ngrok.com/download)
-   (account gratuito; collega il token come indicato da ngrok).
-2. Clona e installa:
+1. Su Render: **New → Blueprint**, collega questo repository. Render legge
+   `render.yaml` e crea il servizio `f1-racer-rooms` (piano gratuito,
+   Francoforte, cartella `core/`, controllo di salute su `/health`).
+2. Controlla l'indirizzo che Render assegna. Se non è
+   `https://f1-racer-rooms.onrender.com` (nome già preso), aggiorna
+   `HOSTED_ROOM_SERVER` in `core/client/multiplayer/room-server.js`.
+3. Contro lo spegnimento: il piano gratuito si addormenta dopo 15 minuti senza
+   traffico e il risveglio dura circa un minuto. Crea un monitor gratuito
+   (per esempio [UptimeRobot](https://uptimerobot.com/) o
+   [cron-job.org](https://cron-job.org/)) che chiami
+   `https://f1-racer-rooms.onrender.com/health` ogni 5-10 minuti. Le 750 ore
+   gratuite al mese bastano per un servizio sempre acceso. In più la home e la
+   pagina stanza "svegliano" il server appena si aprono.
+
+Ogni push su `master` rilancia il server (`autoDeploy`).
+
+### Server sul tuo computer (sviluppo, o senza Render)
+
+1. Installa [Node.js](https://nodejs.org/), poi da `f1-racer/`:
 
    ```sh
-   git clone https://github.com/ottobit/f1-racer.git
-   cd f1-racer
    npm install
-   ```
-
-   Il `package.json` della cartella principale installa anche le dipendenze di
-   `core/`: tutti i comandi si lanciano da `f1-racer/`.
-
-### Ogni sessione di gioco
-
-1. Avvia il server (da `f1-racer/`) e lascia il terminale aperto:
-
-   ```sh
    npm start
    ```
 
-   Deve stampare `listening on ws://localhost:8787`.
-2. In un secondo terminale apri il tunnel e copia l'indirizzo `https://…`:
-
-   ```sh
-   ngrok http 8787
-   ```
-
-3. Apri la stanza passando quell'indirizzo:
-
-   ```
-   https://ottobit.github.io/f1-racer/room.html?roomServer=https://abcd-1234.ngrok-free.app
-   ```
-
-4. Crea la stanza e manda agli amici il **link di invito**: contiene già codice
-   stanza e server. Da lì il flusso è spiegato nel "?" della pagina stanza.
+   Deve stampare `listening on :8787`. Una pagina aperta da `localhost` usa
+   questo server da sola.
+2. Per farlo raggiungere dagli amici esponilo con
+   [ngrok](https://ngrok.com/) (`ngrok http 8787`) e apri la stanza con
+   `room.html?roomServer=https://abcd-1234.ngrok-free.app`: il link di invito
+   porta con sé il server.
 
 ### Da sapere
 
-- Il PC dell'host resta acceso con entrambi i terminali aperti; se il server si
-  ferma, le stanze spariscono (stato solo in memoria).
+- Le stanze vivono solo in memoria: un riavvio o un nuovo deploy del server le
+  cancella.
 - Con ngrok gratuito l'indirizzo cambia a ogni avvio: serve un nuovo invito.
-- Se la stanza avvisa "il server della stanza è locale", manca `?roomServer=…`.
+- Se la stanza avvisa "il server della stanza è locale", la pagina usa un
+  server su `localhost`: togli `?roomServer` per usare quello pubblico.
 - Chi perde la connessione ha 30 secondi per rientrare con lo stesso pilota
   (`ROOM_GRACE_MS`); porta configurabile con `PORT`.
 - La voce è WebRTC peer-to-peer: su reti molto chiuse può non collegarsi, la
