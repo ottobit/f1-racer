@@ -2007,3 +2007,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - New `core/tools/check-boundaries.mjs` (`npm run check:boundaries`): `server/` and `shared/` never import `client/`; `shared/` imports only `shared/`. Browser-only shared code stays in `core/client/shared/`.
 - Decision: everything stays under `core/` (user's #46 rule), not a root-level `client/`/`server/` split as first proposed.
 - Verified: `node --check`, every relative import resolves, boundary check passes (and fails on a planted import), room server starts, `validate:circuits` passes. `?v` chain bumped to the pages; wiki paths updated. Badge 336.
+
+## 2026-10-03 — Room server redeploy via deploy hook (#337)
+
+- Render's auto-deploy needs its GitHub App, which the user does not want; pushes to master left the old server live (deploys of #334 and #336 were triggered by hand).
+- New `.github/workflows/deploy-room-server.yml`: on master pushes touching `core/server/**`, `core/shared/**` or `core/package*.json` (or a manual run) it POSTs the provider's deploy hook. Provider-neutral secret name `ROOM_SERVER_DEPLOY_HOOK` (Render: service → Settings → Deploy Hook), set by the user; without it the job only warns.
+- `service/README.md` documents it. Render's connector cannot read or create deploy hooks, so that half stays manual.
+- Verified: YAML parses; `git diff --check`. Badge 338.
