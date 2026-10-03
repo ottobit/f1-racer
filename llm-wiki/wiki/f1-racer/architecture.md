@@ -289,6 +289,17 @@ core/
   tools/          validate-circuits.mjs, check-boundaries.mjs, ...
 ```
 
+**Vehicles (#339):** every drivable car is a `Vehicle` object
+(`client/shared/vehicle.js`): `F1Car` and `RoadCar` (one per entry in
+`road-cars.js`), registry `VEHICLES` / `vehicleById()`. Callers ask the car
+(`stockParams(isRaining)` for rivals, `playerParams(isRaining, garage)` with
+the player's garage, `stockColors()`, `paint()`, `showroomScale`,
+`playerDetail`, `exhaustFlames`) instead of branching on `id === "f1"`. The
+3D model is built by `client/shared/vehicle-view.js` (`buildVehicleModel`,
+one builder per `kind`), so `vehicle.js` stays three-free and Node tools
+(`calibrate-ai.mjs`, `validate-free-oval.mjs`) load it. The F1 and road
+garages stay separate UIs (different parts).
+
 **Boundary rule (#335):** the backend never imports the frontend.
 `server/` and `shared/` import only `shared/`, node built-ins and (server
 only) npm packages; `client/` and `tools/` may import anything.

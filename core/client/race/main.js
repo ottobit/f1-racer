@@ -5,14 +5,13 @@ import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?
 import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
-import { DEFAULT_SETUP, loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=31";
+import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=31";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
-import { buildRoadVehicle } from "../shared/vehicle-models.js?v=4";
-import { ROAD_CARS } from "../shared/road-cars.js?v=1";
-import { roadColors, roadSetupParams } from "../shared/road-garage.js?v=1";
+import { VEHICLES, vehicleById } from "../shared/vehicle.js?v=1";
+import { buildVehicleModel } from "../shared/vehicle-view.js?v=1";
 import { CLASSIC_ROSTER, classicDriverById, loadClassicDriverId } from "../shared/classic-series.js?v=2";
-import { applyCarToMesh, buildRaceCar } from "./race-car-view.js?v=38";
+import { applyCarToMesh } from "./race-car-view.js?v=39";
 import { setupRaceInput } from "./race-input.js?v=58";
 import { escapeHtml, setupRaceHud } from "./race-hud.js?v=41";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
@@ -46,7 +45,7 @@ import {
   nearestTrackInfo as nearestPointOnCenterline,
 } from "../shared/track-geometry.js?v=39";
 import {
-  RAIN_TURN_RATE_MULTIPLIER, RAIN_MAX_SPEED_MULTIPLIER, playerCarParams, TYRE_COMPOUNDS, createTyreModel,
+  TYRE_COMPOUNDS, createTyreModel,
   ERS_SPEED_MULTIPLIER, ERS_DRAIN_PER_SECOND, ERS_RECHARGE_PER_SECOND, PIT_SPEED_LIMIT, PIT_SERVICE_MS,
   START_FINISH_OFFSET, DRS_SPEED_MULTIPLIER, updateDrsEligibility, createTrackBoundary, kerbWidthFor, GRID_SLOTS,
   createGridSlot, CAR_RADIUS, DAMAGE_MIN_IMPACT_SPEED, DAMAGE_PER_IMPACT_SPEED, DAMAGE_MAX_SPEED_PENALTY,
@@ -108,17 +107,11 @@ const graphicsProfile = loadGraphicsProfile();
 
 const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom", circuit.curveTension ?? 0.5);
 
-// Player car limits (top speed, accel, braking, turn rate) live in
-// race-rules.js, shared with the headless room bot (#214).
-// Classiche: the player's road-car garage setup on top (#323); rivals stock.
-const CAR = CLASSIC ? roadSetupParams(CLASSIC_DRIVER.car, roadCarParams(CLASSIC_DRIVER.car)) : playerCarParams(GARAGE_EFFECTS, isRaining);
-// A period car's own limits, with the same rain penalties as the F1; no
-// garage effects here (#317).
-function roadCarParams(carId) {
-  const params = ROAD_CARS[carId].params();
-  if (!isRaining) return params;
-  return { ...params, maxSpeed: params.maxSpeed * RAIN_MAX_SPEED_MULTIPLIER, maxTurnRate: params.maxTurnRate * RAIN_TURN_RATE_MULTIPLIER };
-}
+// The player's car (#339): the Classiche driver's period car, else the F1.
+// Its limits (vehicle.js) are the car's stock ones, rain applied, plus the
+// player's garage setup for that car (#323); rivals drive stock.
+const PLAYER_VEHICLE = vehicleById(CLASSIC ? CLASSIC_DRIVER.car : "f1");
+const CAR = PLAYER_VEHICLE.playerParams(isRaining);
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
 
@@ -138,15 +131,17 @@ const diffPreset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.normale;
 // same rain penalties) driven by the race AI, tuned per circuit and car so
 // its flying lap matches the player's best (ai-parity.js). The player's own
 // garage setup stays theirs alone.
-function rivalAiParams(carId, car) {
-  const ai = aiFromCar(car, aiTuning(circuit.id, carId));
-  return { ...ai, maxSpeed: ai.maxSpeed * diffPreset.speedMul, accel: ai.accel * diffPreset.accelMul };
+// One set per car (#339): every F1 rival shares AI, a Classiche rival
+// (#317) gets its own car's.
+const rivalAiByCar = new Map();
+function rivalAi(vehicle) {
+  if (!rivalAiByCar.has(vehicle.id)) {
+    const ai = aiFromCar(vehicle.stockParams(isRaining), aiTuning(circuit.id, vehicle.id));
+    rivalAiByCar.set(vehicle.id, { ...ai, maxSpeed: ai.maxSpeed * diffPreset.speedMul, accel: ai.accel * diffPreset.accelMul });
+  }
+  return rivalAiByCar.get(vehicle.id);
 }
-const AI = rivalAiParams("f1", playerCarParams(setupEffects(DEFAULT_SETUP), isRaining));
-// Classiche (#317): a rival's limits from its own car, same parity rule.
-function classicAiParams(carId) {
-  return rivalAiParams(carId, roadCarParams(carId));
-}
+const AI = rivalAi(VEHICLES.f1);
 
 // Tyres, ERS and pit constants live in race-rules.js (#214). The player can
 // box in the real pit lane (#147); AI cars stay out.
@@ -526,38 +521,22 @@ function addGridBoxMarking(slot, number) {
   scene.add(group);
 }
 
-// Shared visual model; race physics and collision dimensions remain independent.
-function buildCar(color, { detail = false, roadCar = null } = {}) {
-  if (roadCar) {
-    // Classiche (#317): the period car, with the F1's studio reflections.
-    const model = buildRoadVehicle(roadCar, color, { scale: CAR_SCALE, detail });
-    model.group.traverse((object) => {
-      if (object.isMesh) {
-        object.material.envMap = carEnvironment.texture;
-        object.material.envMapIntensity = 0.65;
-      }
-    });
-    return model;
-  }
-  return buildRaceCar(color, {
-    scale: CAR_SCALE,
-    environmentTexture: carEnvironment.texture,
-    envMapIntensity: 0.65,
-    detail,
-  });
+// Shared visual model (vehicle-view.js), with the studio reflections; race
+// physics and collision dimensions remain independent.
+function buildCar(vehicle, colors, { detail = false } = {}) {
+  return buildVehicleModel(vehicle, colors, { scale: CAR_SCALE, detail, environmentTexture: carEnvironment.texture });
 }
-const PLAYER_COLORS = CLASSIC ? roadColors(CLASSIC_DRIVER.car, { ...ROAD_CARS[CLASSIC_DRIVER.car].colors, ...CLASSIC_DRIVER.colors }) : PLAYER_LIVERY;
-const PLAYER_ROAD_CAR = CLASSIC ? CLASSIC_DRIVER.car : null;
+// Classiche: the driver's colours under the car's garage paint (#323).
+const PLAYER_COLORS = CLASSIC ? PLAYER_VEHICLE.paint({ ...PLAYER_VEHICLE.colors, ...CLASSIC_DRIVER.colors }) : PLAYER_LIVERY;
 
-// Player car (a period car keeps its detail trim, #325: one car, no batching)
-const playerCar = buildCar(PLAYER_COLORS, { roadCar: PLAYER_ROAD_CAR, detail: Boolean(PLAYER_ROAD_CAR) });
+const playerCar = buildCar(PLAYER_VEHICLE, PLAYER_COLORS, { detail: PLAYER_VEHICLE.playerDetail });
 // Make the player's car easier to read in chase view without changing the
 // shared car geometry, wheel metadata, physics or collision dimensions.
 playerCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
 scene.add(playerCar.group);
 // Cockpit view (#139): an unbatched copy of the player's car, seen from
 // inside the helmet; race-camera.js mirrors the player car onto it.
-const cockpitCar = buildCar(PLAYER_COLORS, { detail: true, roadCar: PLAYER_ROAD_CAR });
+const cockpitCar = buildCar(PLAYER_VEHICLE, PLAYER_COLORS, { detail: true });
 cockpitCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
 cockpitCar.group.visible = false;
 scene.add(cockpitCar.group);
@@ -579,15 +558,16 @@ const AI_DRIVERS = multiplayer
       id: driverId,
       participantId,
       livery: liveryById(DRIVER_ROSTER.find((d) => d.id === driverId).team),
+      vehicle: VEHICLES.f1,
     }))
   : CLASSIC
     ? CLASSIC_ROSTER
       .filter((driver) => driver.id !== CLASSIC_DRIVER.id)
       // One-make (#321): every rival drives the player's car, in its own colours.
-      .map((driver) => ({ id: driver.id, livery: driver.colors, roadCar: CLASSIC_DRIVER.car }))
+      .map((driver) => ({ id: driver.id, livery: driver.colors, vehicle: PLAYER_VEHICLE }))
     : DRIVER_ROSTER
       .filter((driver) => driver.id !== SELECTED_DRIVER_ID)
-      .map((driver) => ({ id: driver.id, livery: liveryById(driver.team) }));
+      .map((driver) => ({ id: driver.id, livery: liveryById(driver.team), vehicle: VEHICLES.f1 }));
 
 // --- DRS ---------------------------------------------------------------
 //
@@ -604,7 +584,7 @@ const TRACK_LENGTH = trackCurve.getLength();
 const gridSlot = createGridSlot({ centerline, trackWidth: TRACK_WIDTH, trackLength: TRACK_LENGTH, headingOf, sideNormal });
 const AI_GRID_SLOTS = GRID_SLOTS.slice(1);
 const aiCars = AI_DRIVERS.map((driver, i) => {
-  const model = buildCar(driver.livery, { roadCar: driver.roadCar });
+  const model = buildCar(driver.vehicle, driver.livery);
   scene.add(model.group);
   const slot = AI_GRID_SLOTS[i];
   const pos = gridSlot(slot.row, slot.lane);
@@ -638,9 +618,9 @@ const aiCars = AI_DRIVERS.map((driver, i) => {
     // for solo play's real AI entries.
     isRemote: !!multiplayer,
     participantId: driver.participantId ?? null,
-    // Classiche (#317): race-ai.js drives it with its own car's limits.
-    ai: driver.roadCar ? classicAiParams(driver.roadCar) : undefined,
-    roadCar: driver.roadCar ?? null,
+    // race-ai.js drives it with its own car's limits (Classiche, #317).
+    ai: rivalAi(driver.vehicle),
+    vehicle: driver.vehicle,
   };
 });
 
@@ -691,7 +671,7 @@ let ghostLap = loadGhost(circuit.id); // { lapTimeMs, samples: [{t, x, z, headin
 let currentLapSamples = [];
 let lastGhostSampleT = -Infinity;
 
-const ghostCar = buildCar(0xffffff);
+const ghostCar = buildCar(VEHICLES.f1, 0xffffff);
 ghostCar.group.visible = false;
 ghostCar.group.traverse((obj) => {
   if (obj.isMesh) {
@@ -839,12 +819,11 @@ const raceAudio = setupRaceAudio({
   getThrottle: () => (input.forward ? 1 : 0),
   // Each car its own engine (#319); the Classiche field is voiced as a
   // generic small four.
-  engine: PLAYER_ROAD_CAR ?? "f1",
-  field: PLAYER_ROAD_CAR ?? "f1",
+  engine: PLAYER_VEHICLE.id,
+  field: PLAYER_VEHICLE.id,
 });
 const { gearInfo, updateEngineSound, playShiftClick, updateAmbientChorus } = raceAudio;
-// No flames for road cars: the flame sits on the F1's tailpipe.
-const updateExhaust = PLAYER_ROAD_CAR ? () => {} : setupExhaustPops({
+const updateExhaust = !PLAYER_VEHICLE.exhaustFlames ? () => {} : setupExhaustPops({
   carGroup: playerCar.group,
   state,
   input,
@@ -867,25 +846,22 @@ function circuitLabel() {
 // below reads live participant times instead, since those change over the
 // session; solo keeps this static list, built once.
 // Fallback if the sim never closes a lap: the old flat estimate.
-const AI_FLYING_LAP_MS = multiplayer
-  ? 0
-  : simulateAiFlyingLapMs() || (TRACK_LENGTH / AI.maxSpeed) * 1000 * 1.35;
-// Classiche (#317): one simulated flying lap per kind of car.
-const classicLapMs = new Map();
-function aiFlyingLapMsFor(driver) {
-  if (!driver.roadCar) return AI_FLYING_LAP_MS;
-  if (!classicLapMs.has(driver.roadCar)) {
-    const ai = classicAiParams(driver.roadCar);
-    classicLapMs.set(driver.roadCar, simulateAiFlyingLapMs(ai) || (TRACK_LENGTH / ai.maxSpeed) * 1000 * 1.35);
+// One simulated flying lap per car (Classiche, #317).
+const aiLapMsByCar = new Map();
+function aiFlyingLapMs(vehicle) {
+  if (!aiLapMsByCar.has(vehicle.id)) {
+    const ai = rivalAi(vehicle);
+    aiLapMsByCar.set(vehicle.id, simulateAiFlyingLapMs(ai) || (TRACK_LENGTH / ai.maxSpeed) * 1000 * 1.35);
   }
-  return classicLapMs.get(driver.roadCar);
+  return aiLapMsByCar.get(vehicle.id);
 }
+const AI_FLYING_LAP_MS = multiplayer ? 0 : aiFlyingLapMs(VEHICLES.f1);
 const AI_QUALIFYING_RESULTS = multiplayer
   ? []
   : AI_DRIVERS.map((driver) => ({
       id: driver.id,
       name: displayName(driver.id),
-      time: synthesizeAiQualiTime(aiFlyingLapMsFor(driver)),
+      time: synthesizeAiQualiTime(aiFlyingLapMs(driver.vehicle)),
     })).sort((a, b) => a.time - b.time);
 
 function multiplayerQualifyingRivals() {

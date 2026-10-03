@@ -12,11 +12,11 @@
 import fs from "node:fs";
 import * as THREE from "three";
 import { CIRCUITS } from "../shared/circuits.js";
-import { ROAD_CARS } from "../client/shared/road-cars.js";
+import { VEHICLES, VEHICLE_IDS } from "../client/shared/vehicle.js";
 import { DEFAULT_SETUP, setupEffects } from "../client/shared/garage-setup.js";
 import { headingOf, nearestTrackInfo, sampleCenterline, sideNormal } from "../client/shared/track-geometry.js";
 import {
-  RAIN_MAX_SPEED_MULTIPLIER, RAIN_TURN_RATE_MULTIPLIER, createTrackBoundary, createTyreModel, kerbWidthFor, playerCarParams,
+  createTrackBoundary, createTyreModel, kerbWidthFor,
 } from "../client/race/race-rules.js";
 import { setupRaceAi } from "../client/race/race-ai.js";
 import { setupPlayerPhysics } from "../client/race/player-physics.js";
@@ -30,11 +30,9 @@ const DT = 1 / 60;
 const CHECK = process.argv.includes("--check");
 const ONLY = process.argv.find((a) => a.startsWith("--only="))?.slice(7).split(",");
 
+// Each car stock, as the rivals drive it (vehicle.js, #339).
 function carParams(carId, isRaining) {
-  if (carId === "f1") return playerCarParams(EFFECTS, isRaining);
-  const params = ROAD_CARS[carId].params();
-  if (!isRaining) return params;
-  return { ...params, maxSpeed: params.maxSpeed * RAIN_MAX_SPEED_MULTIPLIER, maxTurnRate: params.maxTurnRate * RAIN_TURN_RATE_MULTIPLIER };
+  return VEHICLES[carId].stockParams(isRaining);
 }
 
 function buildTrack(circuit) {
@@ -157,7 +155,7 @@ function calibrate(track, params, target) {
 }
 
 const table = {};
-const cars = ["f1", ...Object.keys(ROAD_CARS)];
+const cars = VEHICLE_IDS;
 for (const circuit of CIRCUITS.filter((c) => !ONLY || ONLY.includes(c.id))) {
   const track = buildTrack(circuit);
   table[circuit.id] = {};

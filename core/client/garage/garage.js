@@ -5,9 +5,9 @@ import {
   saveGarageSetup,
   setupEffects,
 } from "../shared/garage-setup.js?v=31";
-import { createShowroom } from "./showroom.js?v=43";
-import { mountRoadGarage } from "./road-garage-ui.js?v=2";
-import { ROAD_CARS } from "../shared/road-cars.js?v=1";
+import { createShowroom } from "./showroom.js?v=44";
+import { mountRoadGarage } from "./road-garage-ui.js?v=3";
+import { VEHICLES, vehicleById } from "../shared/vehicle.js?v=1";
 import { classicDriverById, loadClassicDriverId, loadSeries } from "../shared/classic-series.js?v=2";
 import { getCircuit } from "../../shared/circuits.js?v=41";
 import { loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
@@ -23,9 +23,9 @@ const targetCircuit = getCircuit(requestedCircuit || storedCircuit);
 // Which car is in the garage (#323): ?car= wins, else the Classiche
 // driver's car when that series is the home's pick, else the F1.
 function garageVehicle() {
-  const fromUrl = new URLSearchParams(location.search).get("car");
-  if (fromUrl === "f1" || ROAD_CARS[fromUrl]) return fromUrl;
-  return loadSeries() === "classic" ? classicDriverById(loadClassicDriverId()).car : "f1";
+  const fromUrl = vehicleById(new URLSearchParams(location.search).get("car"));
+  if (fromUrl) return fromUrl;
+  return vehicleById(loadSeries() === "classic" ? classicDriverById(loadClassicDriverId()).car : "f1");
 }
 const vehicle = garageVehicle();
 // Same device-signal profile the race applies to its renderer (#2).
@@ -35,19 +35,19 @@ const onFrame = (dt) => diagnostics?.update(dt);
 
 // Car picker: reload with ?car=, the simplest way to rebuild the showroom.
 const pickerEl = document.getElementById("garage-car-select");
-pickerEl.add(new Option("F1", "f1", false, vehicle === "f1"));
-for (const [id, car] of Object.entries(ROAD_CARS)) pickerEl.add(new Option(car.label, id, false, id === vehicle));
+for (const car of Object.values(VEHICLES)) pickerEl.add(new Option(car.label, car.id, false, car === vehicle));
 pickerEl.addEventListener("change", () => {
   const params = new URLSearchParams(location.search);
   params.set("car", pickerEl.value);
   location.search = params.toString();
 });
 
-if (vehicle === "f1") mountF1Garage();
+// The F1 and the period cars have different garages (parts, paint).
+if (vehicle === VEHICLES.f1) mountF1Garage();
 else {
   // A Classiche driver's colours on their own car; the car's otherwise.
   const driver = classicDriverById(loadClassicDriverId());
-  const baseColors = { ...ROAD_CARS[vehicle].colors, ...(driver.car === vehicle ? driver.colors : {}) };
+  const baseColors = { ...vehicle.colors, ...(driver.car === vehicle.id ? driver.colors : {}) };
   const { renderer } = mountRoadGarage(vehicle, { baseColors, graphicsProfile, onFrame });
   diagnostics = setupDiagnosticsOverlay({ renderer, graphicsProfileId: graphicsProfile.id });
 }
@@ -55,7 +55,7 @@ else {
 function mountF1Garage() {
   let setup = loadGarageSetup();
   const { car, renderer, focusPart } = createShowroom(document.getElementById("garage-canvas"), {
-    livery: playerLivery(loadSelectedDriverId()),
+    colors: playerLivery(loadSelectedDriverId()),
     graphicsProfile,
     onFrame,
   });
