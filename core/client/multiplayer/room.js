@@ -28,7 +28,9 @@ const el = {
   readyCheckbox: document.getElementById("room-ready-checkbox"),
   startBtn: document.getElementById("room-start-btn"),
   raceStarted: document.getElementById("room-race-started"),
-  sessionFields: document.getElementById("room-session-fields"),
+  sessionTitle: document.getElementById("room-session-title"),
+  sessionHint: document.getElementById("room-session-hint"),
+  circuitHost: document.getElementById("room-circuit-host"),
   circuitSelect: document.getElementById("room-circuit-select"),
   difficultySelect: document.getElementById("room-difficulty-select"),
   qualifyingCheckbox: document.getElementById("room-qualifying-checkbox"),
@@ -110,8 +112,14 @@ function renderRoom(room) {
   el.readyCheckbox.checked = !!me?.ready;
 
   const inLobby = room.sessionPhase === "lobby";
-  el.sessionFields.hidden = !inLobby;
-  if (inLobby) {
+  el.sessionTitle.textContent = isHost ? "Configura la sessione" : "Sessione scelta dall'host";
+  el.sessionHint.textContent = inLobby
+    ? (isHost
+      ? "Scegli circuito, difficoltà e formato. Gli invitati gestiscono solo le proprie scelte."
+      : "Tu scegli nome, pilota e quando sei pronto. Circuito, difficoltà e formato li decide l'host.")
+    : "";
+  el.circuitHost.hidden = !isHost || !inLobby;
+  if (isHost && inLobby) {
     if (el.circuitSelect.value !== (room.circuitId || "")) el.circuitSelect.value = room.circuitId || "";
     if (el.difficultySelect.value !== room.difficulty) el.difficultySelect.value = room.difficulty;
     el.qualifyingCheckbox.checked = room.qualifying !== false;
