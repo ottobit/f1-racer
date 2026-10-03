@@ -2055,3 +2055,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `race/main.js`: "Prossimo circuito" carries `&difficulty=`; a race link without it falls back to the difficulty saved on home (`f1racer-difficulty`). Home and multiplayer already passed it.
 - Known limit: with one corner severity for every circuit, rival pace may be uneven across tracks; adjust the severity, not lap-time calibration.
 - `core/package.json` changed, so the room-server deploy runs on merge (server code unchanged). Verified with `node --check` only. Badge 350.
+
+
+## 2026-10-04 — Explicit multiplayer session format (#351)
+
+- `room.html`: removed the redundant red helper text from the session panel and replaced the pre-checked qualifying toggle with an explicit Format selector: Qualifica + gara or Solo gara.
+- `core/client/multiplayer/room.js`: treats an unset format as a real third state, keeps the guest summary neutral, and disables Avvia until the host has selected the format.
+- `core/server/rooms.mjs`: new rooms now start with `qualifying: null`; `startRace` rejects a session with no explicit format so the rule is enforced server-side as well as in the UI.
+- Host authority is unchanged: circuit, difficulty, format and session start remain host-only; invited players stay read-only for session setup.
+- Release badge set from v350 to v352 across all HTML entry points. Structural/source review only; manual two-browser verification remains the recommended gameplay check.
