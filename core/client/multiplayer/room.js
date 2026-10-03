@@ -28,7 +28,7 @@ const el = {
   readyCheckbox: document.getElementById("room-ready-checkbox"),
   startBtn: document.getElementById("room-start-btn"),
   raceStarted: document.getElementById("room-race-started"),
-  circuitHost: document.getElementById("room-circuit-host"),
+  sessionFields: document.getElementById("room-session-fields"),
   circuitSelect: document.getElementById("room-circuit-select"),
   difficultySelect: document.getElementById("room-difficulty-select"),
   qualifyingCheckbox: document.getElementById("room-qualifying-checkbox"),
@@ -110,8 +110,8 @@ function renderRoom(room) {
   el.readyCheckbox.checked = !!me?.ready;
 
   const inLobby = room.sessionPhase === "lobby";
-  el.circuitHost.hidden = !isHost || !inLobby;
-  if (isHost && inLobby) {
+  el.sessionFields.hidden = !inLobby;
+  if (inLobby) {
     if (el.circuitSelect.value !== (room.circuitId || "")) el.circuitSelect.value = room.circuitId || "";
     if (el.difficultySelect.value !== room.difficulty) el.difficultySelect.value = room.difficulty;
     el.qualifyingCheckbox.checked = room.qualifying !== false;
