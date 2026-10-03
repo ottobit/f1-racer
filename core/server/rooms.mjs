@@ -162,10 +162,8 @@ export function setReady(store, { roomCode, participantId, ready }) {
 
 export function setCircuit(store, { roomCode, participantId, circuitId, difficulty, qualifying }) {
   const room = findRoom(store, roomCode);
-  // Session setup is collaborative while the room is still in the lobby:
-  // every real participant may change the shared circuit/difficulty/format.
-  // Host authority remains intentionally limited to starting/rematching.
   findParticipant(room, participantId);
+  if (room.hostParticipantId !== participantId) throw new RoomError("not_host", "Solo l'host può scegliere il circuito.");
   if (room.sessionPhase !== "lobby") throw new RoomError("race_started", "La gara è già iniziata.");
   if (!VALID_CIRCUIT_IDS.has(circuitId)) throw new RoomError("invalid_circuit", "Circuito non valido.");
   if (difficulty !== undefined && !VALID_DIFFICULTIES.has(difficulty)) {
