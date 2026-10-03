@@ -1969,3 +1969,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Fixed trim buried inside the bevelled body: Pulmino nose V, disc and engine lid; Familiare grille bars. Also fixed the Pandina side strip running across the wheel openings and the Spider bumper ends sticking out.
 - The player's period car now builds with `detail` in race and free drive (chase view); the AI field stays plain (+0–6 meshes per car).
 - Verified with a Node script (local three, CDN URL mapped): wheel positions, `wheelRadius` and `cockpitEye` unchanged, length within 3%. Not play-tested; badge 292. Next: Classiche rivals with setups.
+
+## 2026-10-03 — Instruction files: prompt-audit fixes (#327)
+
+- `.claude/skills/concludi/SKILL.md`: the reply step announces `v<R>` (release number), matching step 3, instead of the issue number.
+- `.claude/skills/procedure-racing/procedure-racing.md`: the stop command kills `bot-fleet.mjs` / `room-bot.mjs` (the fleet serves :8080 itself; there is no `python http.server`); dropped "(#224 closed)" and "reasoning" from the loop-speed line (thinking depth is the agent's effort setting).
+- `llm-wiki/AGENTS.md`: the Concludi rule no longer cites the auto-close it superseded.
+- Left as is: `core/client/shared/version.js:1-2` still says the badge is the issue number (a comment-only fix would need a version bump).
+- Verified with `git diff --check`; the new stop command needs a check at the next race. Badge 293.
