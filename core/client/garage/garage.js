@@ -5,8 +5,8 @@ import {
   saveGarageSetup,
   setupEffects,
 } from "../shared/garage-setup.js?v=30";
-import { createShowroom } from "./showroom.js?v=42";
-import { mountRoadGarage } from "./road-garage-ui.js?v=1";
+import { createShowroom } from "./showroom.js?v=43";
+import { mountRoadGarage } from "./road-garage-ui.js?v=2";
 import { ROAD_CARS } from "../shared/road-cars.js?v=1";
 import { classicDriverById, loadClassicDriverId, loadSeries } from "../shared/classic-series.js?v=2";
 import { getCircuit } from "../shared/circuits.js?v=40";

@@ -110,6 +110,17 @@ function createKit(detail) {
     lamp.scale.set(1, .5, 1);
   }
   // Wheels: index 0-1 front (steering pivots), 2-3 rear, as in car-model.js.
+  // With detail the tyre is a lathed profile (rounded shoulders, a rim
+  // inside) and 'wire' hubs get their spokes; without, plain cylinders.
+  function tyreGeometry(radius, width) {
+    if (!detail) return new THREE.CylinderGeometry(radius, radius, width, segments);
+    const hw = width / 2, rim = radius * .64;
+    const profile = [
+      [rim, -hw * .86], [radius * .84, -hw], [radius * .96, -hw * .9], [radius, -hw * .62],
+      [radius, hw * .62], [radius * .96, hw * .9], [radius * .84, hw], [rim, hw * .86],
+    ].map(([r, y]) => new THREE.Vector2(r, y));
+    return new THREE.LatheGeometry(profile, segments);
+  }
   function wheels({ x, front, rear, radius, width = .17, hub = 'cap', hubMaterial = mats.chrome, whitewall = false }) {
     const steeringPivots = [];
     const list = [[x, front], [-x, front], [x, rear], [-x, rear]].map(([px, pz], index) => {
@@ -119,13 +130,31 @@ function createKit(detail) {
       const wheel = new THREE.Group();
       pivot.add(wheel);
       if (index < 2) steeringPivots.push(pivot);
-      const tyre = mesh(new THREE.CylinderGeometry(radius, radius, width, segments), mats.rubber, [0, 0, 0], wheel);
+      const tyre = mesh(tyreGeometry(radius, width), mats.rubber, [0, 0, 0], wheel);
       tyre.rotation.z = Math.PI / 2;
       const side = Math.sign(px);
       const face = side * width / 2;
-      const cap = mesh(new THREE.SphereGeometry(radius * .57, segments, 10, 0, Math.PI * 2, 0, Math.PI / 2), hubMaterial, [face, 0, 0], wheel);
-      cap.rotation.z = -side * Math.PI / 2;
-      cap.scale.set(1, .28, 1);
+      if (detail) {
+        const rim = mesh(new THREE.CylinderGeometry(radius * .65, radius * .65, width * .84, segments), hub === 'wire' ? mats.dark : hubMaterial, [0, 0, 0], wheel);
+        rim.rotation.z = Math.PI / 2;
+        rim.name = 'rim';
+      }
+      if (hub === 'wire' && detail) {
+        // Wire wheel: chrome rim band, laced spokes, a two-eared knock-off.
+        const band = mesh(new THREE.TorusGeometry(radius * .62, .016, 6, segments), mats.chrome, [face * .96, 0, 0], wheel);
+        band.rotation.y = Math.PI / 2;
+        for (let i = 0; i < 16; i++) {
+          const a = i / 16 * Math.PI * 2, inner = i % 2 ? .3 : -.3;
+          rod([face * inner, Math.cos(a + .2) * .035, Math.sin(a + .2) * .035], [face * .95, Math.cos(a) * radius * .6, Math.sin(a) * radius * .6], .005, mats.chrome, wheel);
+        }
+        const nut = mesh(new THREE.CylinderGeometry(.035, .045, .05, 8), mats.chrome, [face + side * .02, 0, 0], wheel);
+        nut.rotation.z = Math.PI / 2;
+        box(.025, .15, .03, mats.chrome, [face + side * .04, 0, 0], wheel).name = 'knockOff';
+      } else {
+        const cap = mesh(new THREE.SphereGeometry(radius * .57, segments, 10, 0, Math.PI * 2, 0, Math.PI / 2), hub === 'wire' ? mats.chrome : hubMaterial, [face, 0, 0], wheel);
+        cap.rotation.z = -side * Math.PI / 2;
+        cap.scale.set(1, hub === 'flat' ? .12 : .28, 1);
+      }
       if (hub === 'spinner') box(.03, .16, .03, mats.chrome, [face + side * .05, 0, 0], wheel).name = 'knockOff';
       if (hub === 'mag') {
         for (let i = 0; i < 5; i++) {
@@ -140,6 +169,22 @@ function createKit(detail) {
       return wheel;
     });
     return { wheels: list, steeringPivots };
+  }
+  // Detail-only trim (player car, cockpit, showroom; not the AI field):
+  // a dark panel gap along points, a wiper from base to tip, a blank plate
+  // facing +z (dir 1) or -z (dir -1).
+  function seam(points, r = .006) {
+    if (!detail) return;
+    for (let n = 1; n < points.length; n++) rod(points[n - 1], points[n], r, mats.dark).name = 'seam';
+  }
+  function wiper(base, tip) {
+    if (!detail) return;
+    rod(base, tip, .008, mats.dark).name = 'wiper';
+  }
+  function plate(y, z, dir = 1, w = .36) {
+    if (!detail) return;
+    box(w + .03, .13, .012, mats.dark, [0, y, z]).name = 'plateFrame';
+    box(w, .1, .012, mats.ivory, [0, y, z + dir * .004]).name = 'plate';
   }
   // Thin period steering wheel with three spokes; returns the turning group.
   function steeringWheel({ pos, tilt, radius = .14, rim = mats.rubber, column }) {
@@ -165,7 +210,7 @@ function createKit(detail) {
       ...(cockpitEye ? { cockpitEye: new THREE.Vector3(...cockpitEye) } : {}),
     };
   }
-  return { group, segments, mats, mesh, box, rod, roundLamp, wheels, steeringWheel, finish };
+  return { group, segments, detail, mats, mesh, box, rod, roundLamp, wheels, seam, wiper, plate, steeringWheel, finish };
 }
 
 // Cinquino (#311, #315): round 1960s city car, rear engine, canvas roof

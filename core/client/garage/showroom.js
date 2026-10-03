@@ -1,7 +1,7 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { buildCar, createStudioEnvironment } from '../shared/car-model.js?v=36';
 import { createFrameLimiter } from '../shared/graphics-profiles.js?v=4';
-import { buildRoadVehicle } from '../shared/vehicle-models.js?v=3';
+import { buildRoadVehicle } from '../shared/vehicle-models.js?v=4';
 
 // Road cars (#323) are ~3.5 units long against the F1's ~5: a bigger scale
 // fills the same plinth.
