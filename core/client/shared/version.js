@@ -1,6 +1,7 @@
 // Release badge: shows the ?v of this script's own URL, which every HTML page
-// sets to the issue number of the last released cycle. If the badge shows an
-// old number, the browser is still serving a cached copy of the page.
+// sets to the number of the last merged cycle PR (never lower than before;
+// see the concludi skill). If the badge shows an old number, the browser is
+// still serving a cached copy of the page.
 (() => {
   const script = document.currentScript;
   const version = script && new URL(script.src).searchParams.get("v");
