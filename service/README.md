@@ -40,11 +40,13 @@ contratto va bene. Ogni provider ha la sua sottocartella con i file specifici
 
 ## Provider
 
-- `render/render.yaml` — Blueprint di Render: piano gratuito, Francoforte,
+- `render/render.yaml` — configurazione del servizio Render
+  `f1-racer-rooms` (`https://f1-racer-rooms.onrender.com`): piano gratuito, Francoforte,
   deploy automatico da `master`; il cron interno lo tiene sveglio 24 ore su
   24 (circa 744 delle 750 ore gratuite al mese per account). Su Render: **New → Blueprint**, indica il
-  percorso `service/render/render.yaml`. In alternativa crea un **Web Service**
-  a mano con i valori della tabella qui sopra.
+  percorso `service/render/render.yaml`. Il servizio attuale è stato creato
+  dall'API di Render con gli stessi valori (comandi lanciati dalla cartella
+  principale del repo: `cd core && npm ci`, `node core/server/room-server.mjs`).
 
 Per cambiare provider: aggiungi una cartella (`service/<provider>/`) con la sua
 configurazione, aggiorna `HOSTED_ROOM_SERVER`; il codice del server non cambia.
