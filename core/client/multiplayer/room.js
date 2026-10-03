@@ -298,7 +298,7 @@ el.startBtn.addEventListener("click", async () => {
 // nothing was saved, so a first-time visitor never opens a connection
 // before choosing to create or join.
 // An invite to a different room wins over the saved one: leave it so the
-// entry form (code prefilled) shows up.
+// link-only invite entry flow is shown.
 client.tryResume()
   .then((room) => {
     if (room && inviteCode && room.code !== inviteCode) return client.leaveRoom();
