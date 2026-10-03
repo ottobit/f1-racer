@@ -42,11 +42,19 @@ contratto va bene. Ogni provider ha la sua sottocartella con i file specifici
 
 - `render/render.yaml` — configurazione del servizio Render
   `f1-racer-rooms` (`https://f1-racer-rooms.onrender.com`): piano gratuito, Francoforte,
-  deploy automatico da `master`; il cron interno lo tiene sveglio 24 ore su
+  deploy da `master` tramite deploy hook (vedi sotto); il cron interno lo tiene sveglio 24 ore su
   24 (circa 744 delle 750 ore gratuite al mese per account). Su Render: **New → Blueprint**, indica il
   percorso `service/render/render.yaml`. Il servizio attuale è stato creato
   dall'API di Render con gli stessi valori (comandi lanciati dalla cartella
   principale del repo: `cd core && npm ci`, `node core/server/room-server.mjs`).
+
+**Deploy a ogni push (#337).** Il repository non è collegato alla GitHub App
+del provider: `.github/workflows/deploy-room-server.yml` chiama il deploy
+hook a ogni push su `master` che tocca `core/server/`, `core/shared/` o
+`core/package*.json` (anche a mano: Actions → Deploy room server → Run).
+L'URL del hook sta nel secret di repository `ROOM_SERVER_DEPLOY_HOOK`
+(Render: servizio → Settings → Deploy Hook). Senza secret il job avvisa e
+non fa nulla.
 
 Per cambiare provider: aggiungi una cartella (`service/<provider>/`) con la sua
 configurazione, aggiorna `HOSTED_ROOM_SERVER`; il codice del server non cambia.
