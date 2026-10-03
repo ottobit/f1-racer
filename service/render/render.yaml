@@ -17,11 +17,12 @@ services:
       - key: NODE_VERSION
         value: "20"
       # The free plan sleeps after 15 idle minutes: the server's own cron
-      # pings /health every 10 minutes from 9:00 to 3:00 Italian time.
+      # pings /health every 10 minutes, all day (~744 of the 750 free hours
+      # a month: no room for a second free service on this account).
       # Update the URL if Render assigns a different address.
       - key: KEEP_AWAKE_URL
         value: https://f1-racer-rooms.onrender.com
       - key: KEEP_AWAKE_CRON
-        value: "*/10 9-23,0-2 * * *"
+        value: "*/10 * * * *"
       - key: KEEP_AWAKE_TZ
         value: Europe/Rome

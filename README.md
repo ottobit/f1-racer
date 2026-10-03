@@ -32,9 +32,9 @@ le connessioni a un server `ws://` non cifrato. Il provider dà `https` di suo.
 Il server non dipende dal provider: il contratto (porta, avvio, `/health`) e
 la configurazione di ogni provider stanno in [`service/`](service/README.md).
 Oggi è su Render (`service/render/render.yaml`, piano gratuito): un cron
-interno al server chiama il proprio `/health` ogni 10 minuti dalle 9:00 alle
-3:00, ora italiana; fuori fascia si addormenta e lo sveglia il primo
-visitatore (circa un minuto di attesa).
+interno al server chiama il proprio `/health` ogni 10 minuti, così resta
+sveglio 24 ore su 24 (circa 744 delle 750 ore gratuite al mese: non c'è
+spazio per un secondo servizio gratuito sullo stesso account).
 
 ### Server sul tuo computer (sviluppo, o senza server online)
 

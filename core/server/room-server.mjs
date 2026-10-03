@@ -185,11 +185,11 @@ const wss = new WebSocketServer({ server: httpServer });
 // Keep-awake (#333), for hosts that put an idle service to sleep: with
 // KEEP_AWAKE_URL set (the server's public https://… address), an in-process
 // cron calls its own /health so the host sees traffic. KEEP_AWAKE_CRON is a
-// cron pattern (default every 10 minutes from 9:00 to 2:50) read in
-// KEEP_AWAKE_TZ (default UTC). Once the host puts the service to sleep
-// outside those hours the cron sleeps with it: the next visitor wakes it.
+// cron pattern (default every 10 minutes, all day) read in KEEP_AWAKE_TZ
+// (default UTC). If the host still puts the service to sleep (a restart, a
+// pattern with gaps) the cron sleeps with it: the next visitor wakes it.
 const KEEP_AWAKE_URL = (process.env.KEEP_AWAKE_URL || "").replace(/\/+$/, "");
-const KEEP_AWAKE_CRON = process.env.KEEP_AWAKE_CRON || "*/10 9-23,0-2 * * *";
+const KEEP_AWAKE_CRON = process.env.KEEP_AWAKE_CRON || "*/10 * * * *";
 const KEEP_AWAKE_TZ = process.env.KEEP_AWAKE_TZ || "UTC";
 if (KEEP_AWAKE_URL) {
   if (!cron.validate(KEEP_AWAKE_CRON)) {

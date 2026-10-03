@@ -30,18 +30,19 @@ contratto va bene. Ogni provider ha la sua sottocartella con i file specifici
    | Variabile | Significato |
    |---|---|
    | `KEEP_AWAKE_URL` | indirizzo pubblico `https://…` del server; senza, il cron è spento |
-   | `KEEP_AWAKE_CRON` | pattern cron (predefinito `*/10 9-23,0-2 * * *`: ogni 10 minuti dalle 9:00 alle 2:50) |
+   | `KEEP_AWAKE_CRON` | pattern cron (predefinito `*/10 * * * *`: ogni 10 minuti, tutto il giorno) |
    | `KEEP_AWAKE_TZ` | fuso orario del pattern (predefinito `UTC`) |
 
-   Il server chiama il proprio `/health` secondo il pattern. Fuori orario il
-   provider lo addormenta e il cron dorme con lui: lo risveglia il primo
-   visitatore (home e pagina stanza chiamano `/health` appena si aprono).
+   Il server chiama il proprio `/health` secondo il pattern. Se il provider lo
+   addormenta comunque (riavvio, pattern con buchi) il cron dorme con lui: lo
+   risveglia il primo visitatore (home e pagina stanza chiamano `/health`
+   appena si aprono).
 
 ## Provider
 
 - `render/render.yaml` — Blueprint di Render: piano gratuito, Francoforte,
-  deploy automatico da `master`; il cron interno lo tiene sveglio dalle 9:00
-  alle 3:00, ora italiana. Su Render: **New → Blueprint**, indica il
+  deploy automatico da `master`; il cron interno lo tiene sveglio 24 ore su
+  24 (circa 744 delle 750 ore gratuite al mese per account). Su Render: **New → Blueprint**, indica il
   percorso `service/render/render.yaml`. In alternativa crea un **Web Service**
   a mano con i valori della tabella qui sopra.
 
