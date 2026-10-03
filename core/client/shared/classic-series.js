@@ -4,6 +4,7 @@
 // ?series=classic. Solo only: no championship points, no multiplayer.
 // One-make races (#321): the driver picks the car, and the other eleven
 // drivers race that same car in their own colours.
+// The series itself (pick, rules, field): series.js (#341).
 export const CLASSIC_ROSTER = [
   { id: "classic-gino", name: "Nonno Gino", car: "cinquino", colors: { primary: 0x5c371f } },
   { id: "classic-pina", name: "Zia Pina", car: "cinquino", colors: { primary: 0xe8dcc0 } },
@@ -19,7 +20,6 @@ export const CLASSIC_ROSTER = [
   { id: "classic-rina", name: "Rina Picnic", car: "familiare", colors: { primary: 0x9fc3d8 } },
 ];
 
-const SERIES_KEY = "f1racer-series";
 const CLASSIC_DRIVER_KEY = "f1racer-classic-driver";
 
 export function classicDriverById(id) {
@@ -38,15 +38,6 @@ function save(key, value) {
   try {
     localStorage.setItem(key, value);
   } catch {}
-}
-
-// "f1" | "classic"; home's last pick.
-export function loadSeries() {
-  return load(SERIES_KEY) === "classic" ? "classic" : "f1";
-}
-
-export function saveSeries(series) {
-  save(SERIES_KEY, series === "classic" ? "classic" : "f1");
 }
 
 export function loadClassicDriverId() {

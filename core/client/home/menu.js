@@ -3,7 +3,8 @@ import { computeStandings, resetChampionship } from "../shared/championship.js?v
 import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
 import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=3";
-import { CLASSIC_ROSTER, loadClassicDriverId, loadSeries, saveClassicDriverId, saveSeries } from "../shared/classic-series.js?v=2";
+import { CLASSIC_ROSTER, loadClassicDriverId, saveClassicDriverId } from "../shared/classic-series.js?v=3";
+import { SERIES, loadSeries, saveSeries } from "../shared/series.js?v=1";
 import { VEHICLES } from "../shared/vehicle.js?v=1";
 import { wakeRoomServer } from "../multiplayer/room-server.js?v=1";
 
@@ -160,7 +161,7 @@ document.getElementById("driver-select").addEventListener("click", (e) => {
   if (!btn || driverLocked) return;
   selectedDriverId = btn.dataset.driverId;
   saveSelectedDriverId(selectedDriverId);
-  series = "f1";
+  series = SERIES.f1;
   saveSeries(series);
   render();
 });
@@ -169,7 +170,7 @@ document.getElementById("driver-select").addEventListener("click", (e) => {
 // Never locked: these races score no championship points.
 function renderClassicDriverSelect() {
   document.getElementById("classic-driver-select").innerHTML = CLASSIC_ROSTER.map((driver, index) => {
-    const active = series === "classic" && driver.id === classicDriverId;
+    const active = series === SERIES.classic && driver.id === classicDriverId;
     const style = `--team:${hex(driver.colors.primary)};--team2:${hex(driver.colors.secondary ?? driver.colors.primary)}`;
     return `
       <button
@@ -182,8 +183,8 @@ function renderClassicDriverSelect() {
       ><span>${String(index + 1).padStart(2, "0")}</span><strong>${driver.name}<small>Monomarca ${VEHICLES[driver.car].label}</small></strong></button>
     `;
   }).join("");
-  document.getElementById("series-tab-f1").classList.toggle("is-series", series === "f1");
-  document.getElementById("series-tab-classic").classList.toggle("is-series", series === "classic");
+  document.getElementById("series-tab-f1").classList.toggle("is-series", series === SERIES.f1);
+  document.getElementById("series-tab-classic").classList.toggle("is-series", series === SERIES.classic);
 }
 
 document.getElementById("classic-driver-select").addEventListener("click", (e) => {
@@ -191,7 +192,7 @@ document.getElementById("classic-driver-select").addEventListener("click", (e) =
   if (!btn) return;
   classicDriverId = btn.dataset.classicId;
   saveClassicDriverId(classicDriverId);
-  series = "classic";
+  series = SERIES.classic;
   saveSeries(series);
   render();
 });
@@ -268,7 +269,7 @@ function render() {
             <h2>${circuit.name}</h2>
             <p>${personality.note}</p>
             <div class="circuit-facts"><span><b>${LAPS_PER_RACE}</b> giri</span><span><b>${DRIVER_ROSTER.length - 1}</b> rivali</span><span>${circuit.weather === "pioggia" ? "🌧️ Bagnato" : "☀️ Asciutto"}</span></div>
-            <div class="circuit-launch"><span class="circuit-status">${status}</span><a class="circuit-race-link" href="race.html?circuit=${circuit.id}&difficulty=${difficulty}${series === "classic" ? "&series=classic" : ""}">${series === "classic" ? "CLASSICHE →" : "SCENDI IN PISTA →"}</a></div>
+            <div class="circuit-launch"><span class="circuit-status">${status}</span><a class="circuit-race-link" href="race.html?circuit=${circuit.id}&difficulty=${difficulty}${series.query}">${series.launchLabel}</a></div>
           </div>
         </div>
       </article>
@@ -329,7 +330,7 @@ document.getElementById("reset-btn").addEventListener("click", () => {
 
 render();
 // Open on the page of the series you race.
-if (series === "classic") seriesPages.scrollLeft = seriesPages.clientWidth;
+if (series === SERIES.classic) seriesPages.scrollLeft = seriesPages.clientWidth;
 markSeriesTab();
 
 // Wake the hosted room server early (#333): a free Render instance takes

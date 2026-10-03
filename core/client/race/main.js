@@ -2,15 +2,15 @@ import { finishPullOver } from "./finish-pull-over.js?v=2";
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { CIRCUITS, getCircuit, LAPS_PER_RACE, QUALIFYING_DURATION_MS, TYRE_LIFE_LAPS } from "../../shared/circuits.js?v=41";
 import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=3";
-import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
+import { loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=31";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
-import { VEHICLES, vehicleById } from "../shared/vehicle.js?v=1";
+import { VEHICLES } from "../shared/vehicle.js?v=1";
 import { buildVehicleModel } from "../shared/vehicle-view.js?v=1";
-import { CLASSIC_ROSTER, classicDriverById, loadClassicDriverId } from "../shared/classic-series.js?v=2";
+import { SERIES, seriesById } from "../shared/series.js?v=1";
 import { applyCarToMesh } from "./race-car-view.js?v=39";
 import { setupRaceInput } from "./race-input.js?v=58";
 import { escapeHtml, setupRaceHud } from "./race-hud.js?v=41";
@@ -70,11 +70,13 @@ const MY_ROOM_DRIVER_ID = multiplayer
   : null;
 const SELECTED_DRIVER_ID = MY_ROOM_DRIVER_ID || loadSelectedDriverId();
 const PLAYER_LIVERY = playerLivery(SELECTED_DRIVER_ID);
-// Classiche (#317): ?series=classic races period road cars instead of F1s.
-// Solo only (a room always races F1s); no championship points, no DRS/ERS.
-const CLASSIC = !multiplayer && new URLSearchParams(location.search).get("series") === "classic";
-const CLASSIC_DRIVER = CLASSIC ? classicDriverById(loadClassicDriverId()) : null;
-if (CLASSIC) document.documentElement.classList.add("series-classic");
+// The series (#341): ?series=classic races the Classiche (#317), period
+// road cars; a room always races F1s. The player's driver is the room's
+// reservation, else the series' own pick (PLAYER_LIVERY above stays the F1
+// driver's: it dresses the pit lane in every series).
+const RACE_SERIES = multiplayer ? SERIES.f1 : seriesById(new URLSearchParams(location.search).get("series"));
+const PLAYER_DRIVER_ID = MY_ROOM_DRIVER_ID || RACE_SERIES.loadDriverId();
+document.documentElement.classList.add(`series-${RACE_SERIES.id}`);
 
 /*
  * F1 Racer — championship mode: a fixed-lap race against two AI rivals on
@@ -107,10 +109,10 @@ const graphicsProfile = loadGraphicsProfile();
 
 const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom", circuit.curveTension ?? 0.5);
 
-// The player's car (#339): the Classiche driver's period car, else the F1.
+// The player's car (#339): the series' car for the player's driver.
 // Its limits (vehicle.js) are the car's stock ones, rain applied, plus the
 // player's garage setup for that car (#323); rivals drive stock.
-const PLAYER_VEHICLE = vehicleById(CLASSIC ? CLASSIC_DRIVER.car : "f1");
+const PLAYER_VEHICLE = RACE_SERIES.vehicle(PLAYER_DRIVER_ID);
 const CAR = PLAYER_VEHICLE.playerParams(isRaining);
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
@@ -527,7 +529,7 @@ function buildCar(vehicle, colors, { detail = false } = {}) {
   return buildVehicleModel(vehicle, colors, { scale: CAR_SCALE, detail, environmentTexture: carEnvironment.texture });
 }
 // Classiche: the driver's colours under the car's garage paint (#323).
-const PLAYER_COLORS = CLASSIC ? PLAYER_VEHICLE.paint({ ...PLAYER_VEHICLE.colors, ...CLASSIC_DRIVER.colors }) : PLAYER_LIVERY;
+const PLAYER_COLORS = RACE_SERIES.playerColors(PLAYER_DRIVER_ID);
 
 const playerCar = buildCar(PLAYER_VEHICLE, PLAYER_COLORS, { detail: PLAYER_VEHICLE.playerDetail });
 // Make the player's car easier to read in chase view without changing the
@@ -560,14 +562,7 @@ const AI_DRIVERS = multiplayer
       livery: liveryById(DRIVER_ROSTER.find((d) => d.id === driverId).team),
       vehicle: VEHICLES.f1,
     }))
-  : CLASSIC
-    ? CLASSIC_ROSTER
-      .filter((driver) => driver.id !== CLASSIC_DRIVER.id)
-      // One-make (#321): every rival drives the player's car, in its own colours.
-      .map((driver) => ({ id: driver.id, livery: driver.colors, vehicle: PLAYER_VEHICLE }))
-    : DRIVER_ROSTER
-      .filter((driver) => driver.id !== SELECTED_DRIVER_ID)
-      .map((driver) => ({ id: driver.id, livery: liveryById(driver.team), vehicle: VEHICLES.f1 }));
+  : RACE_SERIES.rivals(PLAYER_DRIVER_ID);
 
 // --- DRS ---------------------------------------------------------------
 //
@@ -837,7 +832,7 @@ const updateExhaust = !PLAYER_VEHICLE.exhaustFlames ? () => {} : setupExhaustPop
 // Weather badge stays on the circuit name in every phase; the "Qualifica"
 // suffix only applies until the race itself starts (see finishQualifying).
 function circuitLabel() {
-  const name = CLASSIC ? `Classiche · ${circuit.name}` : circuit.name;
+  const name = RACE_SERIES.raceTitle(circuit.name);
   return isRaining ? `${name} · 🌧️ Pioggia` : name;
 }
 
@@ -879,8 +874,7 @@ function displayName(driverId) {
     const participant = multiplayer.room.participants.find((p) => p.driverId === id);
     if (participant?.nickname) return participant.nickname;
   }
-  if (CLASSIC) return driverId === "player" ? CLASSIC_DRIVER.name : classicDriverById(driverId)?.name ?? driverId;
-  return displayDriverName(driverId);
+  return RACE_SERIES.driverName(driverId, PLAYER_DRIVER_ID);
 }
 
 function isDriverDisconnected(driverId) {
@@ -1079,9 +1073,9 @@ function finishRace() {
     .join("");
 
   const nextLink = document.getElementById("results-next");
-  if (CLASSIC) {
+  if (!RACE_SERIES.awardsPoints) {
     // Classiche (#317): no points, the F1 championship is untouched.
-    document.getElementById("results-points").textContent = "Classiche · nessun punto";
+    document.getElementById("results-points").textContent = `${RACE_SERIES.label} · nessun punto`;
     nextLink.href = location.href;
     nextLink.textContent = "Rivincita";
     showResultsOverlay();
@@ -1382,7 +1376,7 @@ function update(dt) {
   updateDrsEligibility([state, ...aiCars], TRACK_LENGTH);
   raceSystems.updateEnergyRecovery([state, ...aiCars], dt);
   // Classiche (#317): period cars have neither DRS nor ERS.
-  if (CLASSIC) for (const car of [state, ...aiCars]) car.drsActive = car.ersActive = false;
+  if (!RACE_SERIES.drsErs) for (const car of [state, ...aiCars]) car.drsActive = car.ersActive = false;
 
   // In the pit lane (#147) the autopilot drives the player and the rest of
   // the field keeps racing; no player physics, grass drag or contact.
