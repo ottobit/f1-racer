@@ -2046,3 +2046,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `home/menu.js`: standings, banner, circuit status, rival count, title and reset follow the current series; each series locks its driver while its season is under way (Classiche one-make: the car too). `race/main.js` records into `RACE_SERIES.championship`; "Prossimo circuito" keeps the series.
 - Wiki ingest + lint: decisions/architecture/F1-RACER-WIKI updated; stale `index.md` (driver names) and `c4-local.md` (`recordRaceResult`) fixed; no broken links.
 - Verified without a browser: `node --check`; Node test of points, lock and next circuit. Badge 346.
+
+
+## 2026-10-04 — Multiplayer lobby host/guest roles (#347)
+
+- `room.html`: clarified the lobby copy so the host owns circuit, difficulty and qualifying/race format while invited players complete only their personal choices and readiness.
+- `core/client/multiplayer/room.js`: added role-aware session title/help; host controls stay editable only for the host, guests keep a read-only summary of the chosen session.
+- Server authority remains unchanged: `set_circuit` and `start_race` are still host-only; no multiplayer protocol, physics, voice or MCP behavior changed.
+- The earlier shared-settings interpretation was fully removed from the final diff; only the lobby UI and its module cache version remain changed.
+- Release badge set from v346 to v348 across all HTML entry points. Structural review only; manual two-browser host/guest verification remains the recommended gameplay check.
