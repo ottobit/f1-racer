@@ -1,17 +1,19 @@
 // Series (#341): what a solo race is run as, F1 or Classiche (#317), and
 // everything that differs between them: who the player drives, in which
-// colours, the rival field, driver names, points, DRS/ERS and the race link.
+// colours, the rival field, driver names, championship, DRS/ERS and the
+// race link.
 // A room always races F1s (race-multiplayer.js).
 import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { displayDriverName, loadSelectedDriverId } from "./driver-selection.js?v=3";
 import { liveryById } from "./driver-themes.js?v=28";
 import { playerLivery } from "./garage-setup.js?v=31";
-import { CLASSIC_ROSTER, classicDriverById, loadClassicDriverId } from "./classic-series.js?v=3";
+import { CLASSIC_ROSTER, classicDriverById, loadClassicDriverId } from "./classic-series.js?v=4";
 import { VEHICLES, vehicleById } from "./vehicle.js?v=1";
+import { CHAMPIONSHIPS } from "./championship.js?v=4";
 
 export class Series {
-  constructor({ id, label, launchLabel, query, awardsPoints, drsErs }) {
-    Object.assign(this, { id, label, launchLabel, query, awardsPoints, drsErs });
+  constructor({ id, label, launchLabel, query, championship, drsErs }) {
+    Object.assign(this, { id, label, launchLabel, query, championship, drsErs });
   }
 
   // The driver id the player last picked for this series.
@@ -24,13 +26,15 @@ export class Series {
   rivals(_playerDriverId) { throw new Error("not implemented"); }
   // driverId may be "player".
   driverName(_driverId, _playerDriverId) { throw new Error("not implemented"); }
+  // A roster driver's { primary, secondary? } (standings stripe).
+  driverColors(_driverId) { throw new Error("not implemented"); }
 
   raceTitle(circuitName) { return circuitName; }
 }
 
 class F1Series extends Series {
   constructor() {
-    super({ id: "f1", label: "F1", launchLabel: "SCENDI IN PISTA →", query: "", awardsPoints: true, drsErs: true });
+    super({ id: "f1", label: "F1", launchLabel: "SCENDI IN PISTA →", query: "", championship: CHAMPIONSHIPS.f1, drsErs: true });
   }
 
   loadDriverId() { return loadSelectedDriverId(); }
@@ -42,12 +46,16 @@ class F1Series extends Series {
       .map((driver) => ({ id: driver.id, livery: liveryById(driver.team), vehicle: VEHICLES.f1 }));
   }
   driverName(driverId) { return displayDriverName(driverId); }
+  driverColors(driverId) {
+    const livery = liveryById(DRIVER_ROSTER.find((driver) => driver.id === driverId).team);
+    return { primary: livery.primary, secondary: livery.secondary };
+  }
 }
 
-// Solo only, no championship points, period cars without DRS/ERS.
+// Solo only, its own championship (#345), period cars without DRS/ERS.
 class ClassicSeries extends Series {
   constructor() {
-    super({ id: "classic", label: "Classiche", launchLabel: "CLASSICHE →", query: "&series=classic", awardsPoints: false, drsErs: false });
+    super({ id: "classic", label: "Classiche", launchLabel: "CLASSICHE →", query: "&series=classic", championship: CHAMPIONSHIPS.classic, drsErs: false });
   }
 
   loadDriverId() { return loadClassicDriverId(); }
@@ -71,6 +79,7 @@ class ClassicSeries extends Series {
   driverName(driverId, playerDriverId) {
     return classicDriverById(driverId === "player" ? playerDriverId : driverId)?.name ?? driverId;
   }
+  driverColors(driverId) { return classicDriverById(driverId).colors; }
   raceTitle(circuitName) { return `Classiche · ${circuitName}`; }
 }
 

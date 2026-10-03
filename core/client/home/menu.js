@@ -1,10 +1,9 @@
 import { CIRCUITS, LAPS_PER_RACE } from "../../shared/circuits.js?v=41";
-import { computeStandings, resetChampionship } from "../shared/championship.js?v=3";
 import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
-import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=3";
-import { CLASSIC_ROSTER, loadClassicDriverId, saveClassicDriverId } from "../shared/classic-series.js?v=3";
-import { SERIES, loadSeries, saveSeries } from "../shared/series.js?v=1";
+import { SELECTABLE_DRIVER_IDS, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=3";
+import { CLASSIC_ROSTER, loadClassicDriverId, saveClassicDriverId } from "../shared/classic-series.js?v=4";
+import { SERIES, loadSeries, saveSeries } from "../shared/series.js?v=2";
 import { VEHICLES } from "../shared/vehicle.js?v=1";
 import { wakeRoomServer } from "../multiplayer/room-server.js?v=1";
 
@@ -13,9 +12,11 @@ const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
 // Team colours as CSS custom properties (#151): the livery's two colours
 // drive a thin stripe on the driver picker and the standings.
 const hex = (value) => `#${value.toString(16).padStart(6, "0")}`;
+function colorStyle({ primary, secondary }) {
+  return `--team:${hex(primary)};--team2:${hex(secondary ?? primary)}`;
+}
 function teamStyle(teamId) {
-  const livery = liveryById(teamId);
-  return `--team:${hex(livery.primary)};--team2:${hex(livery.secondary)}`;
+  return colorStyle(liveryById(teamId));
 }
 
 function positionLabel(order) {
@@ -131,9 +132,10 @@ document.getElementById("difficulty-select").addEventListener("click", (e) => {
   render();
 });
 
-// The driver is locked while a championship is under way (#155): from the
-// first result until the last race, or until the reset.
+// The driver is locked while that series' championship is under way (#155,
+// #345): from the first result until the last race, or until the reset.
 let driverLocked = false;
+let classicDriverLocked = false;
 
 function renderDriverSelect() {
   document.getElementById("driver-lock-note").textContent = driverLocked
@@ -158,7 +160,7 @@ function renderDriverSelect() {
 
 document.getElementById("driver-select").addEventListener("click", (e) => {
   const btn = e.target.closest("[data-driver-id]");
-  if (!btn || driverLocked) return;
+  if (!btn || (driverLocked && btn.dataset.driverId !== selectedDriverId)) return;
   selectedDriverId = btn.dataset.driverId;
   saveSelectedDriverId(selectedDriverId);
   series = SERIES.f1;
@@ -167,11 +169,9 @@ document.getElementById("driver-select").addEventListener("click", (e) => {
 });
 
 // Classiche (#317): the driver card's second page, the period-car drivers.
-// Never locked: these races score no championship points.
 function renderClassicDriverSelect() {
   document.getElementById("classic-driver-select").innerHTML = CLASSIC_ROSTER.map((driver, index) => {
     const active = series === SERIES.classic && driver.id === classicDriverId;
-    const style = `--team:${hex(driver.colors.primary)};--team2:${hex(driver.colors.secondary ?? driver.colors.primary)}`;
     return `
       <button
         type="button"
@@ -179,7 +179,8 @@ function renderClassicDriverSelect() {
         data-classic-id="${driver.id}"
         role="radio"
         aria-checked="${active}"
-        style="${style}"
+        style="${colorStyle(driver.colors)}"
+        ${classicDriverLocked && driver.id !== classicDriverId ? "disabled" : ""}
       ><span>${String(index + 1).padStart(2, "0")}</span><strong>${driver.name}<small>Monomarca ${VEHICLES[driver.car].label}</small></strong></button>
     `;
   }).join("");
@@ -189,7 +190,7 @@ function renderClassicDriverSelect() {
 
 document.getElementById("classic-driver-select").addEventListener("click", (e) => {
   const btn = e.target.closest("[data-classic-id]");
-  if (!btn) return;
+  if (!btn || (classicDriverLocked && btn.dataset.classicId !== classicDriverId)) return;
   classicDriverId = btn.dataset.classicId;
   saveClassicDriverId(classicDriverId);
   series = SERIES.classic;
@@ -212,8 +213,12 @@ seriesTabs.forEach((tab, i) => tab.addEventListener("click", () => {
 
 function render() {
   renderDifficulty();
-  const { standings, allRaced, state } = computeStandings(CIRCUITS);
-  driverLocked = !allRaced && CIRCUITS.some((circuit) => state.raceResults[circuit.id]);
+  // Home shows the championship of the series "Scendi in pista" races (#345).
+  const { championship } = series;
+  const { standings, allRaced, state } = championship.standings(CIRCUITS);
+  const playerId = series.loadDriverId();
+  driverLocked = SERIES.f1.championship.inProgress(CIRCUITS);
+  classicDriverLocked = SERIES.classic.championship.inProgress(CIRCUITS);
   renderDriverSelect();
   renderClassicDriverSelect();
 
@@ -237,19 +242,20 @@ function render() {
     const champion = standings[0];
     bannerEl.hidden = false;
     bannerEl.textContent =
-      champion.id === selectedDriverId
-        ? `🏆 Hai vinto il campionato del mondo con ${displayDriverName("player")}!`
-        : `Campionato concluso: vince ${champion.name}. Azzera e riprova.`;
+      champion.id === playerId
+        ? `🏆 Hai vinto il campionato ${series === SERIES.f1 ? "del mondo" : series.label} con ${series.driverName("player", playerId)}!`
+        : `Campionato ${series.label} concluso: vince ${champion.name}. Azzera e riprova.`;
   } else {
     bannerEl.hidden = true;
   }
 
+  document.getElementById("championship-title").textContent = `Campionato ${series.label}`;
   document.getElementById("standings-body").innerHTML = standings
     .map(
       (d, i) => `
-        <tr${d.id === selectedDriverId ? ' class="is-selected" aria-current="true"' : ""}>
+        <tr${d.id === playerId ? ' class="is-selected" aria-current="true"' : ""}>
           <td>${i + 1}</td>
-          <td><span class="team-name" style="${teamStyle(d.team)}">${displayDriverName(d.id)}</span></td>
+          <td><span class="team-name" style="${colorStyle(series.driverColors(d.id))}">${series.driverName(d.id, playerId)}</span></td>
           <td>${d.points}</td>
         </tr>
       `
@@ -268,7 +274,7 @@ function render() {
             <div class="circuit-meta"><span>${personality.type}</span><span>${personality.level}</span></div>
             <h2>${circuit.name}</h2>
             <p>${personality.note}</p>
-            <div class="circuit-facts"><span><b>${LAPS_PER_RACE}</b> giri</span><span><b>${DRIVER_ROSTER.length - 1}</b> rivali</span><span>${circuit.weather === "pioggia" ? "🌧️ Bagnato" : "☀️ Asciutto"}</span></div>
+            <div class="circuit-facts"><span><b>${LAPS_PER_RACE}</b> giri</span><span><b>${championship.roster.length - 1}</b> rivali</span><span>${circuit.weather === "pioggia" ? "🌧️ Bagnato" : "☀️ Asciutto"}</span></div>
             <div class="circuit-launch"><span class="circuit-status">${status}</span><a class="circuit-race-link" href="race.html?circuit=${circuit.id}&difficulty=${difficulty}${series.query}">${series.launchLabel}</a></div>
           </div>
         </div>
@@ -322,8 +328,8 @@ viewport.addEventListener("click", (e) => {
 }, true);
 
 document.getElementById("reset-btn").addEventListener("click", () => {
-  if (confirm("Azzerare punti e risultati del campionato?")) {
-    resetChampionship();
+  if (confirm(`Azzerare punti e risultati del campionato ${series.label}?`)) {
+    series.championship.reset();
     render();
   }
 });
