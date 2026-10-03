@@ -376,7 +376,9 @@ function buildFamiliare({ primary = 0x2f6b4a } = {}, { scale = 1, detail = false
   return k.finish({ ...parts, driverSteeringWheel }, scale, R);
 }
 
-// Spider: open two-seat 1960s roadster, long bonnet, roll hoop.
+// Spider (#325): open two-seat 1960s roadster. Rounded plan and flanks,
+// crested wings over the wheels, faired headlamps, twin headrest humps
+// behind the seats, wire wheels.
 function buildSpider({ primary = 0xb3121b } = {}, { scale = 1, detail = false } = {}) {
   const k = createKit(detail);
   const { mats, mesh, box, rod } = k;
@@ -384,10 +386,27 @@ function buildSpider({ primary = 0xb3121b } = {}, { scale = 1, detail = false } 
   const leather = new THREE.MeshStandardMaterial({ color: 0x2a1a14, roughness: .75 });
   const wood = new THREE.MeshStandardMaterial({ color: 0x7a4a22, roughness: .5 });
   const R = .31, BEVEL = .07, WIDTH = 1.3;
-  mesh(extrudeAcross(outline([-1.8, .27], [
+  const shape = bodyShaper({ halfLength: 2.0, pinch: .22, shoulder: .45, top: .75, tumble: .08, sill: .4, tuck: .08 });
+  mesh(shape.apply(extrudeAcross(outline([-1.8, .27], [
     [-1.95, .29, -1.93, .47], [-1.9, .66, -1.6, .68], [.4, .68], [1.0, .66],
     [1.75, .62, 1.9, .46], [1.98, .34, 1.86, .27],
-  ], { bottom: .27, axles: [1.2, -1.15], wheelRadius: R, radius: .43 }), WIDTH, BEVEL), paint).name = 'spiderBody';
+  ], { bottom: .27, axles: [1.2, -1.15], wheelRadius: R, radius: .43 }), WIDTH, BEVEL)), paint).name = 'spiderBody';
+  const sideAt = (y, z) => shape.x(WIDTH / 2 + BEVEL, y, z);
+  // Wing crests over the front wheels and haunches over the rear ones (both
+  // clear of the tyre tops at 2R), a low bulge on the bonnet: squashed
+  // spheres sunk into the body.
+  const bulge = (pos, size, name) => {
+    const m = mesh(new THREE.SphereGeometry(1, k.segments, 12), paint, pos);
+    m.scale.set(...size);
+    m.name = name;
+  };
+  for (const side of [-1, 1]) {
+    bulge([side * .5, .72, 1.22], [.2, .09, .62], 'wingCrest');
+    bulge([side * .52, .72, -1.12], [.2, .09, .56], 'rearHaunch');
+    // Headrest humps behind the seats, faired into the rear deck.
+    bulge([side * .3, .74, -1.25], [.17, .15, .48], 'headrestHump');
+  }
+  bulge([0, .72, .95], [.22, .05, .42], 'bonnetBulge');
   // Open cockpit: leather tub over the solid body, two seat backs.
   box(1.1, .03, 1.15, leather, [0, .765, -.3]).name = 'cockpitTub';
   for (const side of [-1, 1]) {
@@ -401,33 +420,46 @@ function buildSpider({ primary = 0xb3121b } = {}, { scale = 1, detail = false } 
   screen.rotation.x = -.5;
   rod([-.59, 1.032, .378], [.59, 1.032, .378], .015, mats.chrome);
   for (const side of [-1, 1]) rod([side * .59, .768, .522], [side * .59, 1.032, .378], .015, mats.chrome);
-  // Roll hoop behind the seats.
-  for (const side of [-1, 1]) rod([side * .42, .75, -.86], [side * .42, 1.12, -.9], .03, mats.chrome);
-  rod([-.42, 1.12, -.9], [.42, 1.12, -.9], .03, mats.chrome);
   // Faired round headlamps, oval grille, slim bumpers, round tail lamps.
   for (const side of [-1, 1]) {
-    k.roundLamp(side * .55, .6, 1.77);
-    const tail = mesh(new THREE.SphereGeometry(.055, 10, 8), mats.tail, [side * .52, .55, -1.97]);
+    k.roundLamp(side * .52, .6, 1.74);
+    if (detail) {
+      const fairing = mesh(new THREE.SphereGeometry(.13, k.segments, 10, 0, Math.PI * 2, 0, Math.PI / 2), mats.glass, [side * .52, .6, 1.74]);
+      fairing.rotation.x = Math.PI / 2;
+      fairing.scale.set(1, 1.5, .8);
+      fairing.name = 'lampFairing';
+      // Three vents behind each front wheel.
+      for (let i = 0; i < 3; i++) box(.012, .025, .16, mats.dark, [side * (sideAt(.5, .62) + .004), .44 + i * .05, .62]).name = 'sideVent';
+    }
+    const tail = mesh(new THREE.SphereGeometry(.055, 10, 8), mats.tail, [side * .44, .55, -1.97]);
     tail.scale.set(1, 1, .5);
     const mirror = mesh(new THREE.SphereGeometry(.05, 12, 8), mats.chrome, [side * .62, .82, .32]);
     mirror.scale.set(1, .75, .55);
-    rod([side * .9, .3, 1.85], [side * .62, .3, 2.03], .022, mats.chrome);
+    // Bumper ends wrapping round the pinched nose and tail.
+    rod([side * .62, .3, 1.88], [side * .48, .3, 2.02], .022, mats.chrome);
+    rod([side * .58, .3, -1.88], [side * .44, .3, -1.99], .022, mats.chrome);
+    // Door shut lines and the wipers' arms.
+    k.seam([[side * (sideAt(.34, .35) + .004), .34, .35], [side * (sideAt(.66, .35) + .002), .66, .35]]);
+    k.seam([[side * (sideAt(.34, -.62) + .004), .34, -.62], [side * (sideAt(.66, -.62) + .002), .66, -.62]]);
+    k.wiper([side * .32, .78, .525], [side * .32 + .22, .84, .49]);
   }
+  k.seam([[-.5, .752, .58], [.5, .752, .58]]);
   const grille = mesh(new THREE.CylinderGeometry(.18, .18, .04, k.segments), mats.dark, [0, .42, 1.97]);
   grille.rotation.x = Math.PI / 2;
   grille.scale.set(1.5, 1, .65);
   const surround = mesh(new THREE.TorusGeometry(.18, .014, 6, k.segments), mats.chrome, [0, .42, 1.99]);
   surround.scale.set(1.5, .65, 1);
-  rod([-.62, .3, 2.03], [.62, .3, 2.03], .022, mats.chrome);
-  rod([-.6, .3, -2.0], [.6, .3, -2.0], .022, mats.chrome);
+  rod([-.48, .3, 2.02], [.48, .3, 2.02], .022, mats.chrome);
+  rod([-.44, .3, -1.99], [.44, .3, -1.99], .022, mats.chrome);
   for (const side of [-1, 1]) {
     const pipe = mesh(new THREE.CylinderGeometry(.03, .03, .16, 10), mats.chrome, [side * .2, .24, -1.95]);
     pipe.rotation.x = Math.PI / 2;
   }
+  k.plate(.43, -2.0, -1, .32);
   // Wood-rimmed wheel and a painted dash under the screen.
   box(1.15, .06, .1, paint, [0, .79, .42]).name = 'dashboard';
   const driverSteeringWheel = k.steeringWheel({ pos: [0, .87, .12], tilt: -.7, radius: .15, rim: wood, column: [[0, .84, .15], [0, .79, .38]] });
-  const parts = k.wheels({ x: .66, front: 1.2, rear: -1.15, radius: R, hub: 'spinner' });
+  const parts = k.wheels({ x: .66, front: 1.2, rear: -1.15, radius: R, hub: 'wire' });
   return k.finish({ ...parts, driverSteeringWheel }, scale, R, [0, 1.0, -.45]);
 }
 
