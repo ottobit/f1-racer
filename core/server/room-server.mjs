@@ -5,12 +5,15 @@
 //
 // Opt-in, separate process — never imported by race.html/garage.html/
 // index.html. Run from inside core/ with `npm run start:room-server`
-// (PORT, ROOM_GRACE_MS, ROOM_QUALI_MS env vars optional).
+// (PORT, ROOM_GRACE_MS, ROOM_QUALI_MS env vars optional). Hosted on Render
+// (#333, render.yaml): one HTTP server carries the WebSocket upgrade and a
+// GET /health for Render's health check and the keep-awake pinger.
 //
 // State is in-memory only (see rooms.mjs) and resets on restart. Fine for
 // Stage 1's casual, short-lived rooms; not a database.
 
 import { randomBytes } from "node:crypto";
+import { createServer } from "node:http";
 import { WebSocketServer } from "ws";
 import {
   createStore,
@@ -164,8 +167,22 @@ function scheduleQualifyingEnd(roomCode) {
   qualifyingTimers.set(roomCode, timer);
 }
 
-const wss = new WebSocketServer({ port: PORT });
-console.log(`[room-server] listening on ws://localhost:${PORT} (grace ${GRACE_MS}ms, qualifying ${QUALI_MS}ms, heartbeat ${HEARTBEAT_MS}ms)`);
+// Plain HTTP: /health answers 200 (any origin may ping it); everything else
+// keeps the old "Upgrade Required", which tells a human the server is up.
+const httpServer = createServer((req, res) => {
+  const path = (req.url || "").split("?")[0];
+  if (req.method === "GET" && path === "/health") {
+    res.writeHead(200, { "content-type": "text/plain", "access-control-allow-origin": "*", "cache-control": "no-store" });
+    res.end("ok");
+    return;
+  }
+  res.writeHead(426, { "content-type": "text/plain" });
+  res.end("Upgrade Required");
+});
+const wss = new WebSocketServer({ server: httpServer });
+httpServer.listen(PORT, () => {
+  console.log(`[room-server] listening on :${PORT} (ws + GET /health; grace ${GRACE_MS}ms, qualifying ${QUALI_MS}ms, heartbeat ${HEARTBEAT_MS}ms)`);
+});
 
 const heartbeat = setInterval(() => {
   for (const ws of wss.clients) {

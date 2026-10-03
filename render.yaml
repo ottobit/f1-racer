@@ -1,0 +1,16 @@
+# Render Blueprint (#333): the multiplayer room server. The game itself stays
+# on GitHub Pages; this only runs core/server/room-server.mjs.
+services:
+  - type: web
+    name: f1-racer-rooms
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: core
+    buildCommand: npm ci --omit=dev
+    startCommand: node server/room-server.mjs
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
