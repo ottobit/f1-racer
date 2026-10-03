@@ -141,6 +141,6 @@ user asks.
 
 Race over (`session.state` = `finished`): tell the user the result. On
 "Rivincita" the running bots go back to the room and ready up by themselves
-(#224 closed). When the user says to stop:
-`pkill -f room-bot.mjs; pkill -f "http.server 8080"` (fleet: Ctrl-C or
-`pkill -f bot-fleet.mjs`).
+When the user says to stop: Ctrl-C the fleet or
+`pkill -f bot-fleet.mjs; pkill -f room-bot.mjs` (the fleet's :8080 server
+stops with it).
