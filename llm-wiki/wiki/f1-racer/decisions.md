@@ -233,8 +233,11 @@ card swipes between the F1 page and the Classiche page; the last pick sets
 the series (`f1racer-series`) and the race link adds `&series=classic`.
 
 - Solo only: a room always races F1s (multiplayer ignores `series`).
-- No championship points: Classiche results show and offer a rematch, the
-  F1 standings are untouched; the F1 driver lock does not apply.
+- Own championship (#345, superseding "no points" from #317): Classiche
+  races score with the F1 points table into a separate championship
+  (`f1racer-championship-classic-v1`); the F1 standings are untouched. Each
+  series locks its own driver while its season is under way, so a Classiche
+  season is also one car (one-make).
 - Mixed field on purpose: each car keeps its own physics and AI limits
   (`race-ai.js` reads `car.ai`), so qualifying sorts by car as much as by
   driver.

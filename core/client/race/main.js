@@ -1,7 +1,7 @@
 import { finishPullOver } from "./finish-pull-over.js?v=2";
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { CIRCUITS, getCircuit, LAPS_PER_RACE, QUALIFYING_DURATION_MS, TYRE_LIFE_LAPS } from "../../shared/circuits.js?v=41";
-import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?v=3";
+import { POINTS_BY_POSITION } from "../shared/championship.js?v=4";
 import { loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
@@ -10,7 +10,7 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
 import { VEHICLES } from "../shared/vehicle.js?v=1";
 import { buildVehicleModel } from "../shared/vehicle-view.js?v=1";
-import { SERIES, seriesById } from "../shared/series.js?v=1";
+import { SERIES, seriesById } from "../shared/series.js?v=2";
 import { applyCarToMesh } from "./race-car-view.js?v=39";
 import { setupRaceInput } from "./race-input.js?v=58";
 import { escapeHtml, setupRaceHud } from "./race-hud.js?v=41";
@@ -1073,22 +1073,16 @@ function finishRace() {
     .join("");
 
   const nextLink = document.getElementById("results-next");
-  if (!RACE_SERIES.awardsPoints) {
-    // Classiche (#317): no points, the F1 championship is untouched.
-    document.getElementById("results-points").textContent = `${RACE_SERIES.label} · nessun punto`;
-    nextLink.href = location.href;
-    nextLink.textContent = "Rivincita";
-    showResultsOverlay();
-    return;
-  }
   // Solo only: multiplayer returned above with the room's shared results,
-  // which never touch the solo championship.
-  const state2 = recordRaceResult(circuit.id, order);
+  // which never touch the solo championships. Each series scores its own
+  // (#345).
+  const { championship } = RACE_SERIES;
+  const state2 = championship.record(circuit.id, order);
   const points = POINTS_BY_POSITION[position - 1] || 0;
-  document.getElementById("results-points").textContent = `+${points} punti`;
-  const nextCircuitId = getNextUnracedCircuitId(state2);
+  document.getElementById("results-points").textContent = `+${points} punti · ${RACE_SERIES.label}`;
+  const nextCircuitId = championship.nextUnraced(CIRCUITS, state2);
   if (nextCircuitId) {
-    nextLink.href = `race.html?circuit=${nextCircuitId}`;
+    nextLink.href = `race.html?circuit=${nextCircuitId}${RACE_SERIES.query}`;
     nextLink.textContent = "Prossimo circuito";
   } else {
     nextLink.href = "index.html";
@@ -1096,12 +1090,6 @@ function finishRace() {
   }
 
   showResultsOverlay();
-}
-
-function getNextUnracedCircuitId(champState) {
-  const raced = new Set(Object.keys(champState.raceResults));
-  const next = CIRCUITS.find((c) => !raced.has(c.id));
-  return next ? next.id : null;
 }
 
 const pitCrew = setupPitCrew({

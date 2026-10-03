@@ -2038,3 +2038,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `room.js` shows a message per status; the race shows it in the radio banner and re-registers the agent bridge with the same token (an attached controller gets `bridge_replaced` and must re-attach). Server unchanged.
 - Known limits: a server restart (deploy) still loses in-memory rooms (`lost`); voice chat is not re-established.
 - Verified without a browser: `node --check`; Node test against a local room server through a TCP proxy (cut → `connected,reconnecting,connected`, participant back to connected; server restart → `lost`, session cleared). Badge 344.
+
+## 2026-10-03 — Classiche championship (#345)
+
+- Classiche races now score: a separate championship with the F1 points table, superseding "no points" from #317.
+- `core/client/shared/championship.js`: `Championship` class (storage key, roster, player id; `record` / `reset` / `standings` / `nextUnraced` / `inProgress`), `CHAMPIONSHIPS.f1` (same key as before, no data loss) and `.classic` (`f1racer-championship-classic-v1`). `Series` carries `championship` (replaces `awardsPoints`) and `driverColors()`.
+- `home/menu.js`: standings, banner, circuit status, rival count, title and reset follow the current series; each series locks its driver while its season is under way (Classiche one-make: the car too). `race/main.js` records into `RACE_SERIES.championship`; "Prossimo circuito" keeps the series.
+- Wiki ingest + lint: decisions/architecture/F1-RACER-WIKI updated; stale `index.md` (driver names) and `c4-local.md` (`recordRaceResult`) fixed; no broken links.
+- Verified without a browser: `node --check`; Node test of points, lock and next circuit. Badge 346.
