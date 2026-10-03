@@ -214,7 +214,7 @@ function createKit(detail) {
   return { group, segments, detail, mats, mesh, box, rod, roundLamp, wheels, seam, wiper, plate, steeringWheel, finish };
 }
 
-// Cinquino (#311, #315): round 1960s city car, rear engine, canvas roof
+// Cinquino (#311, #315, #325): round 1960s city car, rear engine, canvas roof
 // rolled back. The shaper gives it the bubble plan and tumblehome; trim is
 // placed through shape.x() so it sits on the curved sides.
 function buildCinquino({ primary = 0x5c371f } = {}, { scale = 1, detail = false } = {}) {
@@ -268,6 +268,17 @@ function buildCinquino({ primary = 0x5c371f } = {}, { scale = 1, detail = false 
   for (let i = 0; i < 6; i++) box(.4, .012, .02, mats.dark, [0, .52 + i * .032, -1.44 + i * .003]).name = 'engineSlat';
   const exhaust = mesh(new THREE.CylinderGeometry(.03, .03, .14, 10), mats.chrome, [.26, .22, -1.4]);
   exhaust.rotation.x = Math.PI / 2;
+  // Front luggage lid: shut lines on the bonnet's curve (outline + bevel
+  // along its normal), door shut lines, vent-window posts, wipers, plate.
+  const lid = [[.847, .726], [.815, .927], [.75, 1.138]];
+  k.seam([[-.38, ...lid[0]], [.38, ...lid[0]]]);
+  for (const side of [-1, 1]) {
+    k.seam(lid.map(([y, z]) => [side * .38, y, z]));
+    for (const z of [.45, -.4]) k.seam([[side * (sideAt(.34, z) + .004), .34, z], [side * (sideAt(.76, z) + .004), .76, z]]);
+    if (detail) rod([side * glassShape.x(.56, .86, .36), .86, .36], [side * glassShape.x(.56, 1.2, .3), 1.2, .3], .01, mats.chrome).name = 'ventWindow';
+    k.wiper([side * .3, .86, .58], [side * .3 - side * .2, .96, .5]);
+  }
+  k.plate(.41, -1.455, -1, .3);
 
   // The body is solid up to the belt line (y ~.86): dashboard and wheel sit
   // above it, on the centreline in front of the default cockpit eye.
@@ -280,7 +291,7 @@ function buildCinquino({ primary = 0x5c371f } = {}, { scale = 1, detail = false 
     back.name = 'seatBack';
     back.rotation.x = -.15;
   }
-  const parts = k.wheels({ x: .56, front: .88, rear: -.88, radius: R, width: .15, whitewall: true });
+  const parts = k.wheels({ x: .56, front: .88, rear: -.88, radius: R, width: .15, hub: 'flat', whitewall: true });
   return k.finish({ ...parts, driverSteeringWheel }, scale, R);
 }
 
