@@ -17,7 +17,7 @@ import { surfaceTexture } from "../race/track-art.js?v=43";
 import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=4";
 import { FREE_OVAL } from "./oval.js?v=1";
 import { createFreeSim } from "./free-sim.js?v=3";
-import { buildRoadVehicle } from "../shared/vehicle-models.js?v=3";
+import { buildRoadVehicle } from "../shared/vehicle-models.js?v=4";
 import { roadColors, roadSetupParams } from "../shared/road-garage.js?v=1";
 import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=2";
 
@@ -218,9 +218,10 @@ function buildCar(id, { detail = false, color = livery, paint = VEHICLES[id].col
   scene.add(model.group);
   return model;
 }
-// Your road car in its garage paint (#323); rivals in stock colours.
+// Your road car in its garage paint (#323) and detail trim (#325); rivals
+// in stock colours.
 const playerPaint = vehicleId === "f1" ? undefined : roadColors(vehicleId);
-const playerCar = buildCar(vehicleId, { paint: playerPaint });
+const playerCar = buildCar(vehicleId, { paint: playerPaint, detail: vehicleId !== "f1" });
 const cockpitCar = buildCar(vehicleId, { detail: true, paint: playerPaint });
 cockpitCar.group.visible = false;
 

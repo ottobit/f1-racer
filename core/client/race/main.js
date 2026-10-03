@@ -8,7 +8,7 @@ import { liveryById } from "../shared/driver-themes.js?v=28";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=30";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
-import { buildRoadVehicle } from "../shared/vehicle-models.js?v=3";
+import { buildRoadVehicle } from "../shared/vehicle-models.js?v=4";
 import { ROAD_CARS } from "../shared/road-cars.js?v=1";
 import { roadColors, roadSetupParams } from "../shared/road-garage.js?v=1";
 import { CLASSIC_ROSTER, classicDriverById, loadClassicDriverId } from "../shared/classic-series.js?v=2";
@@ -555,8 +555,8 @@ function buildCar(color, { detail = false, roadCar = null } = {}) {
 const PLAYER_COLORS = CLASSIC ? roadColors(CLASSIC_DRIVER.car, { ...ROAD_CARS[CLASSIC_DRIVER.car].colors, ...CLASSIC_DRIVER.colors }) : PLAYER_LIVERY;
 const PLAYER_ROAD_CAR = CLASSIC ? CLASSIC_DRIVER.car : null;
 
-// Player car
-const playerCar = buildCar(PLAYER_COLORS, { roadCar: PLAYER_ROAD_CAR });
+// Player car (a period car keeps its detail trim, #325: one car, no batching)
+const playerCar = buildCar(PLAYER_COLORS, { roadCar: PLAYER_ROAD_CAR, detail: Boolean(PLAYER_ROAD_CAR) });
 // Make the player's car easier to read in chase view without changing the
 // shared car geometry, wheel metadata, physics or collision dimensions.
 playerCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
