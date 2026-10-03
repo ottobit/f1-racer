@@ -91,6 +91,8 @@ connects architecture, decisions, roadmap and external patterns.
   import starts at `?v=1`); bump it on every import/script/link whose file
   changed, all the way up to the HTML page. Unversioned imports can be
   served stale from the GitHub Pages cache (~10 min) after a deploy.
+- The release badge (`shared/version.js?v=` on every page) is the merged
+  cycle PR's number, set by `Concludi`; it never goes down.
 - Token budget matters (user's explicit request, 2026-09-24):
   - no browser/Playwright tests — syntax checks only; the user plays on
     `master` and reports (browser tests only if the user asks);
