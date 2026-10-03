@@ -29,11 +29,10 @@ const el = {
   startBtn: document.getElementById("room-start-btn"),
   raceStarted: document.getElementById("room-race-started"),
   sessionTitle: document.getElementById("room-session-title"),
-  sessionHint: document.getElementById("room-session-hint"),
   circuitHost: document.getElementById("room-circuit-host"),
   circuitSelect: document.getElementById("room-circuit-select"),
   difficultySelect: document.getElementById("room-difficulty-select"),
-  qualifyingCheckbox: document.getElementById("room-qualifying-checkbox"),
+  qualifyingSelect: document.getElementById("room-qualifying-select"),
   circuitDisplay: document.getElementById("room-circuit-display"),
 };
 
@@ -113,18 +112,13 @@ function renderRoom(room) {
 
   const inLobby = room.sessionPhase === "lobby";
   el.sessionTitle.textContent = isHost ? "Configura la sessione" : "Sessione scelta dall'host";
-  el.sessionHint.textContent = inLobby
-    ? (isHost
-      ? "Scegli circuito, difficoltà e formato. Gli invitati gestiscono solo le proprie scelte."
-      : "Tu scegli nome, pilota e quando sei pronto. Circuito, difficoltà e formato li decide l'host.")
-    : "";
   el.circuitHost.hidden = !isHost || !inLobby;
   if (isHost && inLobby) {
     if (el.circuitSelect.value !== (room.circuitId || "")) el.circuitSelect.value = room.circuitId || "";
     if (el.difficultySelect.value !== room.difficulty) el.difficultySelect.value = room.difficulty;
-    el.qualifyingCheckbox.checked = room.qualifying !== false;
+    el.qualifyingSelect.value = room.qualifying === true ? "qualifying" : room.qualifying === false ? "race" : "";
   }
-  const formatLabel = room.qualifying === false ? "senza qualifica" : "con qualifica";
+  const formatLabel = room.qualifying === true ? "qualifica + gara" : room.qualifying === false ? "solo gara" : "formato da scegliere";
   const circuitName = room.circuitId ? (CIRCUITS.find((c) => c.id === room.circuitId)?.name || room.circuitId) : null;
   el.circuitDisplay.textContent = inLobby
     ? (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]} · ${formatLabel}` : (isHost ? "" : "In attesa che l'host scelga il circuito."))
@@ -132,7 +126,7 @@ function renderRoom(room) {
 
   const allReady = room.participants.length > 0 && room.participants.every((p) => p.driverId && p.ready);
   el.startBtn.hidden = !isHost || !inLobby;
-  el.startBtn.disabled = !room.circuitId || !allReady;
+  el.startBtn.disabled = !room.circuitId || typeof room.qualifying !== "boolean" || !allReady;
 
   if (inLobby) {
     sawLobbyThisLoad = true;
@@ -295,11 +289,14 @@ el.readyCheckbox.addEventListener("change", () => {
 
 function submitCircuitChoice() {
   if (!el.circuitSelect.value) return;
-  client.setCircuit(el.circuitSelect.value, el.difficultySelect.value, el.qualifyingCheckbox.checked).catch((err) => { el.viewStatus.textContent = err.message; });
+  const qualifying = el.qualifyingSelect.value === ""
+    ? undefined
+    : el.qualifyingSelect.value === "qualifying";
+  client.setCircuit(el.circuitSelect.value, el.difficultySelect.value, qualifying).catch((err) => { el.viewStatus.textContent = err.message; });
 }
 el.circuitSelect.addEventListener("change", submitCircuitChoice);
 el.difficultySelect.addEventListener("change", submitCircuitChoice);
-el.qualifyingCheckbox.addEventListener("change", submitCircuitChoice);
+el.qualifyingSelect.addEventListener("change", submitCircuitChoice);
 
 el.startBtn.addEventListener("click", async () => {
   el.viewStatus.textContent = "";

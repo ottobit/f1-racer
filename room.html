@@ -73,7 +73,6 @@
 
       <div id="room-session-setup" class="room-session-setup">
         <h2 id="room-session-title">Sessione</h2>
-        <p id="room-session-hint" class="room-status"></p>
         <div id="room-circuit-host" class="room-session-fields" hidden>
           <label class="room-field">Circuito
             <select id="room-circuit-select"><option value="">— scegli —</option></select>
@@ -85,9 +84,15 @@
               <option value="difficile">Difficile</option>
             </select>
           </label>
-          <label class="room-ready-toggle"><input id="room-qualifying-checkbox" type="checkbox" checked /> Qualifica prima della gara</label>
+          <label class="room-field">Formato
+            <select id="room-qualifying-select">
+              <option value="">— scegli —</option>
+              <option value="qualifying">Qualifica + gara</option>
+              <option value="race">Solo gara</option>
+            </select>
+          </label>
         </div>
-        <p id="room-circuit-display" class="room-status"></p>
+        <p id="room-circuit-display"></p>
       </div>
 
       <div class="room-actions">
@@ -98,7 +103,7 @@
     </div>
   </section>
 
-  <script type="module" src="core/client/multiplayer/room.js?v=17"></script>
+  <script type="module" src="core/client/multiplayer/room.js?v=19"></script>
   <script src="core/client/shared/version.js?v=350" defer></script>
 </body>
 </html>
