@@ -4,8 +4,6 @@ import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
 import { CIRCUITS } from "../../shared/circuits.js?v=41";
 
-const DIFFICULTY_LABELS = { facile: "Facile", normale: "Normale", difficile: "Difficile" };
-
 const client = createRoomClient();
 
 const el = {
@@ -13,10 +11,8 @@ const el = {
   view: document.getElementById("room-view"),
   nickname: document.getElementById("room-nickname"),
   createBtn: document.getElementById("room-create-btn"),
-  codeInput: document.getElementById("room-code-input"),
   joinBtn: document.getElementById("room-join-btn"),
   entryStatus: document.getElementById("room-entry-status"),
-  codeDisplay: document.getElementById("room-code-display"),
   leaveBtn: document.getElementById("room-leave-btn"),
   shareBtn: document.getElementById("room-share-btn"),
   shareStatus: document.getElementById("room-share-status"),
@@ -29,11 +25,10 @@ const el = {
   startBtn: document.getElementById("room-start-btn"),
   raceStarted: document.getElementById("room-race-started"),
   sessionTitle: document.getElementById("room-session-title"),
-  circuitHost: document.getElementById("room-circuit-host"),
+  sessionFields: document.getElementById("room-session-fields"),
   circuitSelect: document.getElementById("room-circuit-select"),
   difficultySelect: document.getElementById("room-difficulty-select"),
   qualifyingSelect: document.getElementById("room-qualifying-select"),
-  circuitDisplay: document.getElementById("room-circuit-display"),
 };
 
 el.circuitSelect.innerHTML += CIRCUITS.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
@@ -75,7 +70,6 @@ function renderRoom(room) {
     return;
   }
   showView(true);
-  el.codeDisplay.textContent = room.code;
   el.participantCount.textContent = `(${room.participants.length}/${room.maxParticipants})`;
 
   const me = room.participants.find((p) => p.participantId === client.participantId);
@@ -112,17 +106,15 @@ function renderRoom(room) {
 
   const inLobby = room.sessionPhase === "lobby";
   el.sessionTitle.textContent = isHost ? "Configura la sessione" : "Sessione scelta dall'host";
-  el.circuitHost.hidden = !isHost || !inLobby;
-  if (isHost && inLobby) {
+  el.sessionFields.hidden = !inLobby;
+  if (inLobby) {
     if (el.circuitSelect.value !== (room.circuitId || "")) el.circuitSelect.value = room.circuitId || "";
     if (el.difficultySelect.value !== room.difficulty) el.difficultySelect.value = room.difficulty;
     el.qualifyingSelect.value = room.qualifying === true ? "qualifying" : room.qualifying === false ? "race" : "";
+    el.circuitSelect.disabled = !isHost;
+    el.difficultySelect.disabled = !isHost;
+    el.qualifyingSelect.disabled = !isHost;
   }
-  const formatLabel = room.qualifying === true ? "qualifica + gara" : room.qualifying === false ? "solo gara" : "formato da scegliere";
-  const circuitName = room.circuitId ? (CIRCUITS.find((c) => c.id === room.circuitId)?.name || room.circuitId) : null;
-  el.circuitDisplay.textContent = inLobby
-    ? (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]} · ${formatLabel}` : (isHost ? "" : "In attesa che l'host scelga il circuito."))
-    : (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]} · ${formatLabel}` : "");
 
   const allReady = room.participants.length > 0 && room.participants.every((p) => p.driverId && p.ready);
   el.startBtn.hidden = !isHost || !inLobby;
@@ -199,10 +191,8 @@ function rememberNickname() {
   try { localStorage.setItem(NICKNAME_KEY, el.nickname.value.trim()); } catch { /* storage unavailable */ }
 }
 
-if (inviteCode) {
-  el.codeInput.value = inviteCode;
-  el.entryStatus.textContent = `Invito alla stanza ${inviteCode}: scrivi il tuo nome e premi Entra.`;
-}
+el.createBtn.hidden = !!inviteCode;
+el.joinBtn.hidden = !inviteCode;
 
 el.shareBtn.addEventListener("click", async () => {
   const room = client.room;
@@ -252,16 +242,12 @@ el.createBtn.addEventListener("click", async () => {
 });
 
 el.joinBtn.addEventListener("click", async () => {
+  if (!inviteCode) return;
   el.entryStatus.textContent = "";
-  const code = el.codeInput.value.trim().toUpperCase();
-  if (!code) {
-    el.entryStatus.textContent = "Inserisci un codice stanza.";
-    return;
-  }
   el.joinBtn.disabled = true;
   try {
     rememberNickname();
-    await client.joinRoom(code, el.nickname.value);
+    await client.joinRoom(inviteCode, el.nickname.value);
   } catch (err) {
     el.entryStatus.textContent = err.message;
   } finally {
@@ -288,7 +274,8 @@ el.readyCheckbox.addEventListener("change", () => {
 });
 
 function submitCircuitChoice() {
-  if (!el.circuitSelect.value) return;
+  const room = client.room;
+  if (!room || room.hostParticipantId !== client.participantId || !el.circuitSelect.value) return;
   const qualifying = el.qualifyingSelect.value === ""
     ? undefined
     : el.qualifyingSelect.value === "qualifying";
