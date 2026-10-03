@@ -7,14 +7,14 @@
 // index.html. Run from inside core/ with `npm run start:room-server`
 // (PORT, ROOM_GRACE_MS, ROOM_QUALI_MS env vars optional). Provider-neutral
 // (#333, service/README.md): one HTTP server carries the WebSocket upgrade and
-// a GET /health for the host's health check and the keep-awake cron
-// (server/keep-awake.mjs).
+// a GET /health for the host's health check and the keep-awake cron below.
 //
 // State is in-memory only (see rooms.mjs) and resets on restart. Fine for
 // Stage 1's casual, short-lived rooms; not a database.
 
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
+import cron from "node-cron";
 import { WebSocketServer } from "ws";
 import {
   createStore,
@@ -181,6 +181,27 @@ const httpServer = createServer((req, res) => {
   res.end("Upgrade Required");
 });
 const wss = new WebSocketServer({ server: httpServer });
+
+// Keep-awake (#333), for hosts that put an idle service to sleep: with
+// KEEP_AWAKE_URL set (the server's public https://… address), an in-process
+// cron calls its own /health so the host sees traffic. KEEP_AWAKE_CRON is a
+// cron pattern (default every 10 minutes from 9:00 to 2:50) read in
+// KEEP_AWAKE_TZ (default UTC). Once the host puts the service to sleep
+// outside those hours the cron sleeps with it: the next visitor wakes it.
+const KEEP_AWAKE_URL = (process.env.KEEP_AWAKE_URL || "").replace(/\/+$/, "");
+const KEEP_AWAKE_CRON = process.env.KEEP_AWAKE_CRON || "*/10 9-23,0-2 * * *";
+const KEEP_AWAKE_TZ = process.env.KEEP_AWAKE_TZ || "UTC";
+if (KEEP_AWAKE_URL) {
+  if (!cron.validate(KEEP_AWAKE_CRON)) {
+    console.error(`[room-server] KEEP_AWAKE_CRON "${KEEP_AWAKE_CRON}" is not a cron pattern; keep-awake off`);
+  } else {
+    cron.schedule(KEEP_AWAKE_CRON, () => {
+      fetch(`${KEEP_AWAKE_URL}/health`, { cache: "no-store" })
+        .catch((err) => console.error("[room-server] keep-awake ping failed:", err.message));
+    }, { timezone: KEEP_AWAKE_TZ });
+    console.log(`[room-server] keep-awake ${KEEP_AWAKE_URL}/health on "${KEEP_AWAKE_CRON}" ${KEEP_AWAKE_TZ}`);
+  }
+}
 
 httpServer.listen(PORT, () => {
   console.log(`[room-server] listening on :${PORT} (ws + GET /health; grace ${GRACE_MS}ms, qualifying ${QUALI_MS}ms, heartbeat ${HEARTBEAT_MS}ms)`);

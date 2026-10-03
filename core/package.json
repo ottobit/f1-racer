@@ -11,6 +11,7 @@
     "start:agent-mcp:http": "node tools/agent-mcp-http.mjs"
   },
   "dependencies": {
+    "node-cron": "3.0.3",
     "ws": "8.18.0"
   },
   "devDependencies": {

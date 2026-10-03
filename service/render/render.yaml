@@ -16,26 +16,12 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
-
-  # Keep-awake (#333): the free web service sleeps after 15 idle minutes.
-  # This cron pings its /health every 10 minutes; keep-awake.mjs only calls
-  # between 9:00 and 3:00 Italian time (the schedule is UTC and covers both
-  # summer and winter time). Render bills cron jobs separately from the free
-  # web service. Update KEEP_AWAKE_URL if Render assigns a different address.
-  - type: cron
-    name: f1-racer-rooms-keep-awake
-    runtime: node
-    region: frankfurt
-    rootDir: core
-    schedule: "*/10 0-2,7-23 * * *"
-    buildCommand: "true"
-    startCommand: node server/keep-awake.mjs
-    envVars:
-      - key: NODE_VERSION
-        value: "20"
+      # The free plan sleeps after 15 idle minutes: the server's own cron
+      # pings /health every 10 minutes from 9:00 to 3:00 Italian time.
+      # Update the URL if Render assigns a different address.
       - key: KEEP_AWAKE_URL
         value: https://f1-racer-rooms.onrender.com
-      - key: KEEP_AWAKE_WINDOW
-        value: "09:00-03:00"
+      - key: KEEP_AWAKE_CRON
+        value: "*/10 9-23,0-2 * * *"
       - key: KEEP_AWAKE_TZ
         value: Europe/Rome

@@ -11,7 +11,7 @@ contratto va bene. Ogni provider ha la sua sottocartella con i file specifici
 |---|---|
 | Cartella del progetto | `core/` (il server importa anche `core/client/shared/`) |
 | Runtime | Node 20 o successivo |
-| Installazione | `npm ci --omit=dev` (installa solo `ws`) |
+| Installazione | `npm ci --omit=dev` (installa `ws` e `node-cron`) |
 | Avvio | `node server/room-server.mjs` |
 | Porta | variabile d'ambiente `PORT` (predefinita 8787) |
 | Protocollo | HTTP + WebSocket sulla stessa porta; serve `https`/`wss` (TLS dal provider) |
@@ -24,24 +24,24 @@ contratto va bene. Ogni provider ha la sua sottocartella con i file specifici
 1. Metti l'indirizzo pubblico (`wss://…`) in `HOSTED_ROOM_SERVER`,
    `core/client/multiplayer/room-server.js`: il gioco su GitHub Pages lo usa
    da solo.
-2. Se il piano addormenta il servizio quando non c'è traffico, fai girare
-   `node server/keep-awake.mjs` (dalla cartella `core/`) con lo scheduler
-   del provider, ogni 10 minuti. Lo script chiama una volta `/health` ed
-   esce; fuori fascia non chiama, e il servizio può addormentarsi.
+2. Se il piano addormenta il servizio quando non c'è traffico, attiva il cron
+   interno del server con le variabili d'ambiente:
 
    | Variabile | Significato |
    |---|---|
-   | `KEEP_AWAKE_URL` | indirizzo pubblico `https://…` del server (obbligatoria) |
-   | `KEEP_AWAKE_WINDOW` | fascia oraria `HH:MM-HH:MM`, può passare la mezzanotte (predefinita: tutto il giorno) |
-   | `KEEP_AWAKE_TZ` | fuso orario della fascia (predefinito `UTC`); così lo scheduler può ragionare in UTC senza cambi per l'ora legale |
+   | `KEEP_AWAKE_URL` | indirizzo pubblico `https://…` del server; senza, il cron è spento |
+   | `KEEP_AWAKE_CRON` | pattern cron (predefinito `*/10 9-23,0-2 * * *`: ogni 10 minuti dalle 9:00 alle 2:50) |
+   | `KEEP_AWAKE_TZ` | fuso orario del pattern (predefinito `UTC`) |
 
-   Home e pagina stanza chiamano comunque `/health` appena si aprono.
+   Il server chiama il proprio `/health` secondo il pattern. Fuori orario il
+   provider lo addormenta e il cron dorme con lui: lo risveglia il primo
+   visitatore (home e pagina stanza chiamano `/health` appena si aprono).
 
 ## Provider
 
 - `render/render.yaml` — Blueprint di Render: piano gratuito, Francoforte,
-  deploy automatico da `master`; più un Cron Job (a pagamento, separato) che
-  lo tiene sveglio dalle 9:00 alle 3:00, ora italiana. Su Render: **New → Blueprint**, indica il
+  deploy automatico da `master`; il cron interno lo tiene sveglio dalle 9:00
+  alle 3:00, ora italiana. Su Render: **New → Blueprint**, indica il
   percorso `service/render/render.yaml`. In alternativa crea un **Web Service**
   a mano con i valori della tabella qui sopra.
 

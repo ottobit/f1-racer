@@ -31,9 +31,10 @@ le connessioni a un server `ws://` non cifrato. Il provider dà `https` di suo.
 
 Il server non dipende dal provider: il contratto (porta, avvio, `/health`) e
 la configurazione di ogni provider stanno in [`service/`](service/README.md).
-Oggi è su Render (`service/render/render.yaml`, piano gratuito): un Cron Job
-lo chiama ogni 10 minuti dalle 9:00 alle 3:00, ora italiana; fuori fascia si
-addormenta e lo sveglia il primo visitatore (circa un minuto di attesa).
+Oggi è su Render (`service/render/render.yaml`, piano gratuito): un cron
+interno al server chiama il proprio `/health` ogni 10 minuti dalle 9:00 alle
+3:00, ora italiana; fuori fascia si addormenta e lo sveglia il primo
+visitatore (circa un minuto di attesa).
 
 ### Server sul tuo computer (sviluppo, o senza server online)
 
