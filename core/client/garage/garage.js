@@ -4,13 +4,13 @@ import {
   playerLivery,
   saveGarageSetup,
   setupEffects,
-} from "../shared/garage-setup.js?v=30";
+} from "../shared/garage-setup.js?v=31";
 import { createShowroom } from "./showroom.js?v=43";
 import { mountRoadGarage } from "./road-garage-ui.js?v=2";
 import { ROAD_CARS } from "../shared/road-cars.js?v=1";
 import { classicDriverById, loadClassicDriverId, loadSeries } from "../shared/classic-series.js?v=2";
-import { getCircuit } from "../shared/circuits.js?v=40";
-import { loadSelectedDriverId } from "../shared/driver-selection.js?v=2";
+import { getCircuit } from "../../shared/circuits.js?v=41";
+import { loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=4";
 import { setupDiagnosticsOverlay } from "../race/race-diagnostics.js?v=1";
 

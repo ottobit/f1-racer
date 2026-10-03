@@ -1,8 +1,8 @@
-import { CIRCUITS, LAPS_PER_RACE } from "../shared/circuits.js?v=40";
-import { computeStandings, resetChampionship } from "../shared/championship.js?v=2";
-import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
+import { CIRCUITS, LAPS_PER_RACE } from "../../shared/circuits.js?v=41";
+import { computeStandings, resetChampionship } from "../shared/championship.js?v=3";
+import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
-import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=2";
+import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { CLASSIC_ROSTER, loadClassicDriverId, loadSeries, saveClassicDriverId, saveSeries } from "../shared/classic-series.js?v=2";
 import { ROAD_CARS } from "../shared/road-cars.js?v=1";
 import { wakeRoomServer } from "../multiplayer/room-server.js?v=1";

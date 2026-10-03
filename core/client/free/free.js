@@ -4,8 +4,8 @@
 // race (race.html) and from multiplayer, on purpose: it shares the physics,
 // input, camera and car model, not the session flow.
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { loadSelectedDriverId } from "../shared/driver-selection.js?v=2";
-import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=30";
+import { loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
+import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=31";
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
 import { applyCarToMesh, buildRaceCar } from "../race/race-car-view.js?v=38";
 import { headingOf, offsetEdge, sideNormal } from "../shared/track-geometry.js?v=39";
@@ -16,10 +16,10 @@ import { setupRaceAudio } from "../race/race-audio.js?v=4";
 import { surfaceTexture } from "../race/track-art.js?v=43";
 import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=4";
 import { FREE_OVAL } from "./oval.js?v=1";
-import { createFreeSim } from "./free-sim.js?v=3";
+import { createFreeSim } from "./free-sim.js?v=4";
 import { buildRoadVehicle } from "../shared/vehicle-models.js?v=4";
 import { roadColors, roadSetupParams } from "../shared/road-garage.js?v=1";
-import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=2";
+import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=3";
 
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;

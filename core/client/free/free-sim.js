@@ -4,7 +4,7 @@
 // the car is on a banked road. Free of DOM and three.js, so Node can drive it.
 import { setupPlayerPhysics } from "../race/player-physics.js?v=9";
 import { steeringYaw } from "../race/steering.js?v=8";
-import { createTrackBoundary, playerCarParams } from "../race/race-rules.js?v=3";
+import { createTrackBoundary, playerCarParams } from "../race/race-rules.js?v=4";
 import { headingOf, nearestTrackInfo as nearestOnCenterline, sampleCenterline, sideNormal } from "../shared/track-geometry.js?v=39";
 import { bankGripFactor, createBanking, poseOnSurface } from "./banking.js?v=1";
 

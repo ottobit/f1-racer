@@ -1,4 +1,4 @@
-import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
+import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 
 // Race rules shared by the browser runtime (main.js) and the headless room
 // bot (core/tools/headless-room-bot.mjs, #214): car limits, tyres, ERS, DRS,

@@ -12,20 +12,18 @@
 // "player" pseudo-id from driver-selection.js is never a valid value here
 // — solo play and room play are deliberately independent.
 
-import { DRIVER_ROSTER } from "../client/shared/driver-roster.js";
-import { CIRCUITS } from "../client/shared/circuits.js";
+import { DRIVER_ROSTER } from "../shared/driver-roster.js";
+import { CIRCUITS, QUALIFYING_DURATION_MS } from "../shared/circuits.js";
 
 const ROOM_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"; // no 0/O, 1/I/L
 const ROOM_CODE_LENGTH = 4;
 const MAX_NICKNAME_LENGTH = 24;
 export const MAX_PARTICIPANTS = DRIVER_ROSTER.length; // one slot per reservable driver
 export const DEFAULT_GRACE_MS = 30000;
-// Stage 2 (#44): must match main.js's own QUALIFYING_DURATION_MS — the two
-// can't share an import across the browser/Node boundary, so this is a
-// deliberately duplicated constant, not a typo. The server times qualifying
-// out itself (see room-server.mjs) so every client transitions together
-// instead of each browser's own clock deciding independently.
-export const QUALIFYING_DURATION_MS = 60000;
+// Stage 2 (#44): the server times qualifying out itself (see
+// room-server.mjs) so every client transitions together instead of each
+// browser's own clock deciding independently. Same constant as main.js.
+export { QUALIFYING_DURATION_MS };
 
 const VALID_DRIVER_IDS = new Set(DRIVER_ROSTER.map((d) => d.id));
 const VALID_CIRCUIT_IDS = new Set(CIRCUITS.map((c) => c.id));

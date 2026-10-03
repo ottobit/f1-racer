@@ -165,7 +165,7 @@ part of #1) — a new, separate opt-in Node process (`npm run
 start:room-server`, run from inside `core/`), not something the shipped
 static site loads. State is in-memory only, resets on restart; deliberate
 for Stage 1's casual rooms, not a database stand-in. Reservable driver ids
-are exactly `shared/driver-roster.js`'s ten `rival-*` entries;
+are exactly `core/shared/driver-roster.js`'s ten `rival-*` entries;
 `shared/driver-selection.js`'s client-only `"player"` id is never valid
 here — solo and room identity never touch each other's `localStorage` key.
 
@@ -275,16 +275,26 @@ core/
     multiplayer/  room.js, room-client.js, race-bootstrap.js,
                   race-multiplayer.js (client-side multiplayer only —
                   server/ is the backend, kept separate)
-    shared/       anything used by 2+ of race/garage/home/tools:
-                  car-model.js, circuits.js, driver-roster.js,
-                  driver-selection.js, driver-themes.js, championship.js,
-                  graphics-profiles.js, track-geometry.js, garage-setup.js
+    shared/       browser-only code used by 2+ of race/garage/home:
+                  car-model.js, driver-selection.js, driver-themes.js,
+                  championship.js, graphics-profiles.js, track-geometry.js,
+                  garage-setup.js
                   (garage-setup.js is here, not garage/, because
                   race/main.js reads it too, for the player's setup effects)
     home/         menu.js
+  shared/         code both the browser and the room server load (#335):
+                  circuits.js (+ race format: laps, tyre life, qualifying
+                  length), driver-roster.js — no DOM, no three, no packages
   server/         rooms.mjs, room-server.mjs
-  tools/          validate-circuits.mjs
+  tools/          validate-circuits.mjs, check-boundaries.mjs, ...
 ```
+
+**Boundary rule (#335):** the backend never imports the frontend.
+`server/` and `shared/` import only `shared/`, node built-ins and (server
+only) npm packages; `client/` and `tools/` may import anything.
+`npm run check:boundaries` (`tools/check-boundaries.mjs`) enforces it. A
+module moves to `core/shared/` only when the server needs it; browser-only
+shared code stays in `client/shared/`.
 
 The 4 HTML entry points (`index.html`, `race.html`, `garage.html`,
 `room.html`) and `assets/` **stay at the repo root** — GitHub Pages in this
