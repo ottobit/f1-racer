@@ -103,7 +103,7 @@ export function createRoom(store, { nickname } = {}) {
     createdAt: Date.now(),
     circuitId: null,
     difficulty: "normale",
-    qualifying: true, // false: straight to the race on a random grid (#107)
+    qualifying: null, // host must explicitly choose qualifying + race or race only
     sessionPhase: "lobby", // "lobby" -> "qualifying" -> "racing"
     qualifyingStartedAt: null,
     raceStartedAt: null,
@@ -188,6 +188,7 @@ export function startRace(store, { roomCode, participantId }) {
   if (room.hostParticipantId !== participantId) throw new RoomError("not_host", "Solo l'host può avviare la gara.");
   if (room.sessionPhase !== "lobby") throw new RoomError("race_started", "La gara è già iniziata.");
   if (!room.circuitId) throw new RoomError("no_circuit", "Scegli prima un circuito.");
+  if (typeof room.qualifying !== "boolean") throw new RoomError("no_format", "Scegli se fare qualifica + gara oppure solo gara.");
   for (const p of room.participants.values()) {
     if (!p.driverId || !p.ready) throw new RoomError("not_ready", "Tutti i partecipanti devono aver scelto un pilota ed essere pronti.");
   }
