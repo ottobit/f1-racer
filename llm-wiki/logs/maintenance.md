@@ -2022,3 +2022,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Callers no longer branch on `id === "f1"`: `race/main.js` (player `PLAYER_VEHICLE`; every rival carries its `vehicle`; AI params and simulated flying lap cached per car), `free/free.js` + `free/vehicles.js`, `garage/garage.js`, `showroom.js` (API now `{ vehicle, colors }`), `road-garage-ui.js`, `home/menu.js`, `tools/calibrate-ai.mjs`, `tools/validate-free-oval.mjs`.
 - Only deliberate behaviour change: the free-drive rival F1 runs stock instead of the player's F1 setup. Series branching (`CLASSIC ? …`) remains for R2 (`Series`).
 - Verified without a browser: params identical to the old formulas for all 7 cars, dry and wet, F1 and road setups; 3D models identical (mesh count, bounds, wheels, env maps) via a Node loader; `validate-free-oval`, `check:boundaries`, `node --check`, all relative imports resolve. Badge 340.
+
+## 2026-10-03 — Series class: F1Series / ClassicSeries (#341)
+
+- R2 of the refactor plan. New `core/client/shared/series.js`: `Series` → `F1Series`, `ClassicSeries`, registry `SERIES` / `seriesById()`; `loadSeries()` / `saveSeries()` moved here from `classic-series.js` and now return/take the object. A series answers `loadDriverId()`, `vehicle()`, `playerColors()`, `rivals()`, `driverName()`, `raceTitle()`, `awardsPoints`, `drsErs`, `query`, `launchLabel`; `ClassicSeries.baseColors()` replaces the garage's inline merge.
+- `race/main.js` (`RACE_SERIES`, `PLAYER_DRIVER_ID`), `home/menu.js` and `garage/garage.js` no longer branch on `"classic"`. A room is always `SERIES.f1`; `PLAYER_LIVERY` stays the F1 driver's for the pit lane.
+- `classic-series.js` keeps only the Classiche roster and driver pick. Architecture page documents Series.
+- Behaviour unchanged. Verified without a browser: `node --check`, `git diff --check`, a Node script over both series (driver, car, colours, 11 rivals, names, title). Badge 342.
+- Next: separate Classiche championship built on `Series`.
