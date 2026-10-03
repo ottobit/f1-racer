@@ -295,8 +295,9 @@ function buildCinquino({ primary = 0x5c371f } = {}, { scale = 1, detail = false 
   return k.finish({ ...parts, driverSteeringWheel }, scale, R);
 }
 
-// Pandina (#315): boxy early-1980s city car. Flat panels, tall glasshouse,
-// grey plastic bumpers and side strips, square lamps, upright tail.
+// Pandina (#315, #325): boxy early-1980s city car. Flat panels, tall
+// glasshouse leaning in a little, grey plastic bumpers, side strips and
+// wheel-arch flares, square lamps, upright tail.
 function buildPandina({ primary = 0xf1f1ee } = {}, { scale = 1, detail = false } = {}) {
   const k = createKit(detail);
   const { mats, mesh, box, rod } = k;
@@ -304,18 +305,28 @@ function buildPandina({ primary = 0xf1f1ee } = {}, { scale = 1, detail = false }
   const plastic = new THREE.MeshStandardMaterial({ color: 0x3b4046, roughness: .85 });
   const R = .29, BEVEL = .05, WIDTH = 1.36;
   const shape = bodyShaper({ halfLength: 1.7, pinch: .04 });
+  const cabin = bodyShaper({ halfLength: 1.7, pinch: .04, shoulder: .86, top: 1.44, tumble: .06 });
   mesh(shape.apply(extrudeAcross(outline([-1.6, .27], [
     [-1.65, .28, -1.65, .4], [-1.65, .84], [.7, .84], [1.55, .74], [1.66, .72, 1.66, .6],
     [1.66, .36], [1.66, .27, 1.56, .27],
   ], { bottom: .27, axles: [1.05, -1.0], wheelRadius: R, radius: .4 }), WIDTH, BEVEL)), paint).name = 'pandinaBody';
-  mesh(extrudeAcross(outline([-1.62, .86], [[-1.6, 1.36], [.35, 1.38], [.78, .86]]), 1.28, .05), mats.glass).name = 'pandinaGlass';
-  mesh(extrudeAcross(outline([-1.62, 1.32], [[-1.62, 1.42], [.36, 1.44], [.42, 1.34]]), 1.32, .05), paint).name = 'roof';
+  mesh(cabin.apply(extrudeAcross(outline([-1.62, .86], [[-1.6, 1.36], [.35, 1.38], [.78, .86]]), 1.28, .05)), mats.glass).name = 'pandinaGlass';
+  mesh(cabin.apply(extrudeAcross(outline([-1.62, 1.32], [[-1.62, 1.42], [.36, 1.44], [.42, 1.34]]), 1.32, .05)), paint).name = 'roof';
   const sideX = WIDTH / 2 + BEVEL;
   for (const side of [-1, 1]) {
     rod([side * .68, .88, .76], [side * .67, 1.38, .37], .045, paint);
     rod([side * .69, .88, -.15], [side * .68, 1.4, -.15], .04, paint);
     box(.04, .5, .32, paint, [side * .68, 1.13, -1.42]).name = 'cPillar';
-    box(.035, .15, 2.7, plastic, [side * (sideX + .012), .4, .03]).name = 'sideStrip';
+    // Side strip between the arches; grey flares round the arches.
+    box(.035, .15, 1.1, plastic, [side * (sideX + .012), .4, .025]).name = 'sideStrip';
+    for (const z of [1.05, -1.0]) {
+      const flare = mesh(new THREE.TorusGeometry(.46, .035, 6, 16, Math.PI), plastic, [side * (sideX + .005), R, z]);
+      flare.rotation.y = Math.PI / 2;
+      flare.name = 'archFlare';
+    }
+    // Door shut lines, roof gutter.
+    for (const z of [.74, -.17]) k.seam([[side * (sideX + .004), .32, z], [side * (sideX + .004), .84, z]]);
+    if (detail) rod([side * cabin.x(.7, 1.32, -1.6), 1.32, -1.6], [side * cabin.x(.7, 1.32, .36), 1.32, .36], .012, plastic).name = 'roofGutter';
     box(.03, .04, .14, plastic, [side * (sideX + .01), .74, -.2]).name = 'doorHandle';
     const mirror = box(.05, .1, .12, plastic, [side * .78, .98, .66]);
     mirror.name = 'mirror';
@@ -330,6 +341,10 @@ function buildPandina({ primary = 0xf1f1ee } = {}, { scale = 1, detail = false }
   box(1.5, .18, .12, plastic, [0, .36, 1.68]).name = 'bumper';
   box(1.5, .18, .12, plastic, [0, .36, -1.68]).name = 'bumper';
   box(.3, .08, .02, mats.dark, [0, .5, -1.7]).name = 'plateRecess';
+  // Tailgate shut lines, plate, one wiper across the flat screen.
+  k.seam([[-.48, .86, -1.705], [-.48, .48, -1.705], [.48, .48, -1.705], [.48, .86, -1.705]]);
+  k.plate(.5, -1.705, -1, .3);
+  k.wiper([.3, .935, .789], [-.25, .995, .739]);
   // Shelf dashboard, upright wheel; the eye sits higher in the tall cabin.
   box(1.24, .07, .2, plastic, [0, .96, .62]).name = 'dashboard';
   const driverSteeringWheel = k.steeringWheel({ pos: [0, 1.0, .4], tilt: -.5, radius: .15, column: [[0, .97, .42], [0, .92, .58]] });
@@ -337,6 +352,11 @@ function buildPandina({ primary = 0xf1f1ee } = {}, { scale = 1, detail = false }
     const back = box(.42, .48, .08, mats.seat, [side * .32, .98, -.45]);
     back.name = 'seatBack';
     back.rotation.x = -.15;
+    // Hammock seat: canvas slung on a tube frame.
+    if (detail) {
+      const tube = [[-.21, .74, -.41], [-.21, 1.22, -.48], [.21, 1.22, -.48], [.21, .74, -.41]].map(([x, y, z]) => [side * .32 + x, y, z]);
+      for (let n = 1; n < tube.length; n++) rod(tube[n - 1], tube[n], .014, mats.chrome).name = 'seatTube';
+    }
   }
   const parts = k.wheels({ x: .64, front: 1.05, rear: -1.0, radius: R, hubMaterial: plastic });
   return k.finish({ ...parts, driverSteeringWheel }, scale, R, [0, 1.12, -.1]);
