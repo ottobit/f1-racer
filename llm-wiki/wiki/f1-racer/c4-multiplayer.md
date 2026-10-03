@@ -23,7 +23,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  host["Host player<br/>Creates the room and starts the session"]:::person
+  host["Host player<br/>Runs the room service and controls room setup"]:::person
   guest["Guest player<br/>Joins from an invitation URL"]:::person
   agent["Agent operator<br/>May join an automated driver"]:::person
 
@@ -239,7 +239,7 @@ classDiagram
 | Message family | Handler | Stored? | Authority |
 |---|---|---:|---|
 | `create_room`, `join_room`, `reconnect` | Transport + state machine | Yes | Room server |
-| `reserve_driver`, `set_ready`, `set_circuit` | State machine | Yes | Any room participant; server validates shared lobby state |
+| `reserve_driver`, `set_ready`, `set_circuit` | State machine | Yes | Room server |
 | `start_race`, qualifying timer, `rematch` | State machine + transport timer | Yes | Room server |
 | `report_quali_time`, `report_finish` | State machine | Yes | Client value trusted by server |
 | `car_state` | Direct transport relay | No | Originating browser |
@@ -257,7 +257,7 @@ sequenceDiagram
 
   H->>S: create_room
   H->>S: reserve_driver + set_circuit + set_ready
-  G->>S: join_room + reserve_driver + set_circuit + set_ready
+  G->>S: join_room + reserve_driver + set_ready
   S-->>H: room_state
   S-->>G: room_state
   H->>S: start_race
