@@ -232,7 +232,10 @@ entirely for a multiplayer session (see decisions.md).
 
 ## Championship and Drivers
 
-`shared/championship.js` owns championship state and scoring.
+`shared/championship.js` owns championship state and scoring: a
+`Championship` class (storage key, roster, player id; `record()`, `reset()`,
+`standings()`, `nextUnraced()`, `inProgress()`), one instance per series in
+`CHAMPIONSHIPS` (#345). Each `Series` carries its own as `championship`.
 `shared/driver-selection.js` maps the selected identity to the player
 display name. Race startup removes that identity from `DRIVER_ROSTER` and
 creates the nine AI cars from the remainder, guaranteeing ten unique names
@@ -304,7 +307,7 @@ garages stay separate UIs (different parts).
 `F1Series` and `ClassicSeries`, registry `SERIES` / `seriesById()`, home's
 pick via `loadSeries()` / `saveSeries()`. The series answers who the player
 drives (`loadDriverId()`, `vehicle()`, `playerColors()`), the field
-(`rivals()`), `driverName()`, `raceTitle()`, `awardsPoints`, `drsErs` and the
+(`rivals()`), `driverName()`, `driverColors()`, `raceTitle()`, `championship` (#345), `drsErs` and the
 home link (`query`, `launchLabel`); `race/main.js`, `home/menu.js` and
 `garage/garage.js` no longer branch on `"classic"`. A room is always
 `SERIES.f1`. `classic-series.js` keeps only the Classiche roster and driver

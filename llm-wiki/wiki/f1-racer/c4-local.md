@@ -199,7 +199,7 @@ classDiagram
     CIRCUITS
     DRIVER_ROSTER
     loadGarageSetup()
-    recordRaceResult()
+    Championship.record()
   }
 
   MainRuntime --> RaceInput : reads normalized input

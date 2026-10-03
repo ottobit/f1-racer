@@ -779,8 +779,9 @@ link becomes `race.html?...&series=classic` ("CLASSICHE →").
   with `classicAiParams(car)` (the F1's AI/player ratios) on `car.ai`, which
   `race-ai.js` prefers over the shared limits. Qualifying simulates one
   flying lap per kind of car. DRS/ERS are forced off every frame and hidden
-  (`html.series-classic`). Names come from the classic roster. Results skip
-  `recordRaceResult`: no points, "Rivincita" reloads the race.
+  (`html.series-classic`). Names come from the classic roster. Results score
+  into the Classiche championship (`SERIES.classic.championship`, #345),
+  separate from the F1 one.
 - Without `series` the race is unchanged.
 
 ## Free drive (`free.html`, `core/client/free/`, #274)

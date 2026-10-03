@@ -11,7 +11,8 @@ browser game built with plain HTML/CSS/JavaScript and Three.js.
 - The procedural car is shared between race and garage through
   `car-model.js`.
 - The garage persists setup choices through `garage-setup.js`.
-- Driver names are stored in `championship.js`; player display selection is
+- Driver names are stored in `shared/driver-roster.js` (F1) and
+  `classic-series.js` (Classiche); player display selection is
   handled by `driver-selection.js`.
 - The user prefers the top HUD panel as-is and wants manual gameplay validation
   instead of automated browser smoke tests by default.
