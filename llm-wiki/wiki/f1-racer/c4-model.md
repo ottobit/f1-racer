@@ -209,7 +209,7 @@ flowchart TB
 | Player physics and controls | Each player's browser | Client-authoritative; the server does not validate motion |
 | Remote car position | Originating browser | `car_state` is ephemeral and relayed without storage or reconciliation |
 | Room membership and driver reservation | Room server | Shared and authoritative while the process is alive |
-| Circuit, difficulty and session start | Host command validated by room server | Broadcast as room state |
+| Circuit, difficulty and qualifying format | Any lobby participant; server validates shared state | Broadcast as room state; latest accepted change wins |\n| Session start | Host command validated by room server | Broadcast as shared phase |
 | Qualifying end and grid | Room-server timer plus client-reported lap times | One shared deadline; times are trusted client reports |
 | Race finish order | Room server, ordered by first finish report received | Network arrival order; not server-simulated track crossing |
 | Reconnection | Room server plus reconnect token in browser storage | 30-second default grace period; token is the only resume credential |
@@ -275,7 +275,7 @@ sequenceDiagram
 
   H->>S: create_room, reserve_driver, set_circuit
   S-->>H: room_state
-  G->>S: join_room, reserve_driver, set_ready
+  G->>S: join_room, reserve_driver, set_circuit, set_ready
   S-->>H: broadcast room_state
   S-->>G: broadcast room_state
   H->>S: start_race
