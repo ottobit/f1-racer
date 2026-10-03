@@ -12,6 +12,9 @@ import { roomServerUrl } from "./room-server.js?v=1";
 const SESSION_KEY = "f1racer-room-session-v1";
 const REQUEST_TIMEOUT_MS = 8000;
 const PING_INTERVAL_MS = 15000;
+// Auto-reconnect (#343): retries after an unwanted drop, ~23 s in total so
+// it ends inside the server's 30 s grace (rooms.mjs DEFAULT_GRACE_MS).
+const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 8000];
 
 
 function loadSession() {
@@ -45,6 +48,11 @@ export function createRoomClient() {
   let lastRoom = null;
   let pingTimer = null;
   let manuallyClosed = false;
+  let retryTimer = null;
+  // Set once a session is live on a socket: a first connect that never got
+  // that far (race-bootstrap falling back to solo) must not retry on its own.
+  let live = false;
+  let retryAttempt = 0;
   // Server clock minus local clock, from the serverNow stamped on every
   // server reply (#109); 0 until the first one (or with an older server).
   let clockOffsetMs = 0;
@@ -113,21 +121,94 @@ export function createRoomClient() {
     }
   }
 
+  // Connection status, to onConnectionChange listeners:
+  // "connected" | "reconnecting" | "disconnected" (gave up; a reload may
+  // still work) | "lost" (the server refused the session: room gone).
   function connect() {
     return new Promise((resolve, reject) => {
       manuallyClosed = false;
-      ws = new WebSocket(roomServerUrl());
-      ws.addEventListener("open", () => {
+      const sock = new WebSocket(roomServerUrl());
+      ws = sock;
+      sock.addEventListener("open", () => {
+        if (sock !== ws) return;
         notifyConnection("connected");
-        pingTimer = setInterval(() => { send("ping").catch(() => {}); }, PING_INTERVAL_MS);
+        clearInterval(pingTimer);
+        // An unanswered ping means a dead socket the browser hasn't noticed
+        // (phone back from sleep): drop it and reconnect.
+        pingTimer = setInterval(() => {
+          send("ping").catch(() => { if (sock === ws) dropSocket(); });
+        }, PING_INTERVAL_MS);
         resolve();
       });
-      ws.addEventListener("message", (e) => handleMessage(e.data));
-      ws.addEventListener("close", () => {
+      sock.addEventListener("message", (e) => { if (sock === ws) handleMessage(e.data); });
+      sock.addEventListener("close", () => {
+        if (sock !== ws) return;
         clearInterval(pingTimer);
-        if (!manuallyClosed) notifyConnection("disconnected");
+        failPending();
+        if (!manuallyClosed) scheduleReconnect();
       });
-      ws.addEventListener("error", () => reject(new Error("Impossibile connettersi al server della stanza.")));
+      sock.addEventListener("error", () => reject(new Error("Impossibile connettersi al server della stanza.")));
+    });
+  }
+
+  function failPending() {
+    for (const { reject, timer } of pending.values()) {
+      clearTimeout(timer);
+      reject(new Error("Non connesso al server della stanza."));
+    }
+    pending.clear();
+  }
+
+  // Abandons the current socket without waiting for its close event; its
+  // listeners ignore it from now on (sock !== ws). The server sees the
+  // close later and, since we already reconnected, ignores it (#95).
+  function dropSocket() {
+    const sock = ws;
+    ws = null;
+    clearInterval(pingTimer);
+    failPending();
+    try { sock?.close(); } catch {}
+    if (!manuallyClosed) scheduleReconnect();
+  }
+
+  function scheduleReconnect() {
+    if (!live || !session || manuallyClosed || retryTimer) return;
+    if (retryAttempt >= RECONNECT_DELAYS_MS.length) {
+      notifyConnection("disconnected");
+      return;
+    }
+    notifyConnection("reconnecting");
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      resumeNow();
+    }, RECONNECT_DELAYS_MS[retryAttempt++]);
+  }
+
+  async function resumeNow() {
+    if (!session || manuallyClosed) return;
+    if (ws && ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) return;
+    try {
+      await tryResume();
+      retryAttempt = 0;
+    } catch (err) {
+      if (!session) notifyConnection("lost");
+      else scheduleReconnect();
+    }
+  }
+
+  // Back to the page or the network: retry now, with a fresh budget.
+  function wake() {
+    if (!live || !session || manuallyClosed) return;
+    if (ws && ws.readyState === WebSocket.OPEN) return;
+    clearTimeout(retryTimer);
+    retryTimer = null;
+    retryAttempt = 0;
+    resumeNow();
+  }
+  if (typeof window !== "undefined") {
+    window.addEventListener("online", wake);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") wake();
     });
   }
 
@@ -141,6 +222,7 @@ export function createRoomClient() {
     const res = await send("create_room", { nickname });
     session = { roomCode: res.roomCode, participantId: res.participantId, reconnectToken: res.reconnectToken };
     saveSession(session);
+    live = true;
     notifyState(res.room);
     return res;
   }
@@ -150,22 +232,29 @@ export function createRoomClient() {
     const res = await send("join_room", { roomCode: roomCode.toUpperCase(), nickname });
     session = { roomCode: res.room.code, participantId: res.participantId, reconnectToken: res.reconnectToken };
     saveSession(session);
+    live = true;
     notifyState(res.room);
     return res;
   }
 
-  // Resumes a session saved from a previous visit (e.g. after a reload).
-  // A no-op — no connection even opened — when nothing was saved.
+  // Resumes a session saved from a previous visit (e.g. after a reload)
+  // or a dropped socket (#343). A no-op — no connection even opened — when
+  // nothing was saved. Only the server refusing it (an error code: room
+  // gone, grace expired) forgets the session; a network failure keeps it
+  // for the next try.
   async function tryResume() {
     if (!session) return null;
     await ensureConnected();
     try {
       const res = await send("reconnect", session);
+      live = true;
       notifyState(res.room);
       return res.room;
     } catch (err) {
-      saveSession(null);
-      session = null;
+      if (err.code) {
+        saveSession(null);
+        session = null;
+      }
       throw err;
     }
   }
@@ -219,7 +308,10 @@ export function createRoomClient() {
     try { await send("leave_room"); } catch { /* best-effort — we're leaving anyway */ }
     saveSession(null);
     session = null;
+    live = false;
     manuallyClosed = true;
+    clearTimeout(retryTimer);
+    retryTimer = null;
     if (ws) ws.close();
     notifyState(null);
   }

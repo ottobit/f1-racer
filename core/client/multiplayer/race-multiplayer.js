@@ -39,6 +39,18 @@ export function setupMultiplayer() {
     remoteSamples.set(msg.participantId, { ...msg, receivedAt: performance.now() });
   });
 
+  // A dropped socket comes back on its own (room-client.js, #343); the
+  // server forgets the agent bridge with the old socket, so register it
+  // again with the same token.
+  let bridge = null; // { token }
+  let wasDropped = false;
+  client.onConnectionChange((status) => {
+    if (status !== "connected") { wasDropped = true; return; }
+    if (!wasDropped || !bridge) return;
+    wasDropped = false;
+    client.registerAgentBridge(bridge.token).catch(() => {});
+  });
+
   client.onStateChange((room) => {
     latestRoom = room;
     if (!room) return;
@@ -91,6 +103,9 @@ export function setupMultiplayer() {
       client.sendCarState(data);
     },
 
+    // "connected" | "reconnecting" | "disconnected" | "lost" (room-client.js).
+    onConnectionChange(cb) { client.onConnectionChange(cb); },
+
     get isHost() { return latestRoom.hostParticipantId === client.participantId; },
 
     // Radio messages (#7): short text from the room bot, relayed peer by
@@ -134,6 +149,7 @@ export function setupMultiplayer() {
       });
       try {
         const res = await client.registerAgentBridge(token);
+        bridge = { token: res.token };
         return {
           serverUrl: client.getServerUrl(),
           token: res.token,

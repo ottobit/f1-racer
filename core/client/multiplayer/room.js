@@ -1,4 +1,4 @@
-import { createRoomClient } from "./room-client.js?v=10";
+import { createRoomClient } from "./room-client.js?v=11";
 import { isLocalHost, roomServerUrl, wakeRoomServer } from "./room-server.js?v=1";
 import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
@@ -225,8 +225,15 @@ el.shareBtn.addEventListener("click", async () => {
 });
 
 client.onStateChange(renderRoom);
+// Auto-reconnect (#343): room-client.js retries on its own; this only says so.
+const CONNECTION_MESSAGES = {
+  connected: "",
+  reconnecting: "Connessione persa, riconnessione in corso…",
+  disconnected: "Connessione al server della stanza persa. Ricarica la pagina.",
+  lost: "La stanza non è più disponibile.",
+};
 client.onConnectionChange((status) => {
-  el.connectionStatus.textContent = status === "connected" ? "" : "Connessione al server della stanza persa.";
+  el.connectionStatus.textContent = CONNECTION_MESSAGES[status] ?? "";
 });
 
 el.createBtn.addEventListener("click", async () => {
