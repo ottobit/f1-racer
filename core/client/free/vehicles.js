@@ -1,17 +1,8 @@
-// Free-drive garage (#311, #313, #315): the F1 plus every road car
-// (shared/road-cars.js), the saved pick and the rivals' lanes. The F1 keeps
-// the race's own physics.
-import { playerCarParams } from "../race/race-rules.js?v=4";
-import { ROAD_CARS } from "../shared/road-cars.js?v=1";
+// Free-drive garage (#311, #313, #315): every car (shared/vehicle.js,
+// #339), the saved pick and the rivals' lanes.
+import { VEHICLES, VEHICLE_IDS } from "../shared/vehicle.js?v=1";
 
-export const VEHICLES = {
-  f1: {
-    label: "F1",
-    params: (effects) => playerCarParams(effects, false), // 317 km/h
-  },
-  ...ROAD_CARS,
-};
-export const VEHICLE_IDS = Object.keys(VEHICLES);
+export { VEHICLES, VEHICLE_IDS };
 export const DEFAULT_VEHICLE = "f1";
 
 // Rivals' lanes (autopilot line, x2 units off the racing line) and pace.

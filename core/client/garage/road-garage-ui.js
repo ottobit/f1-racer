@@ -1,29 +1,27 @@
 // Road-car garage page (#323): the period car in the showroom, its setup
 // (road-garage.js) and paint, saved per car. Same page and panes as the F1
 // atelier; the F1-only bits (mount zones, circuit recommendation) are hidden.
-import { ROAD_CARS } from "../shared/road-cars.js?v=1";
 import {
   ROAD_PALETTE,
   ROAD_PARTS,
   ROAD_STATS,
-  loadRoadSetup,
   roadColors,
   roadSetupEffects,
-  roadSetupParams,
   saveRoadSetup,
 } from "../shared/road-garage.js?v=1";
-import { createShowroom } from "./showroom.js?v=43";
+import { createShowroom } from "./showroom.js?v=44";
 
 const KMH_PER_UNIT = 3.6;
 const hex = (color) => `#${color.toString(16).padStart(6, "0")}`;
 
 // baseColors: what the car wears with no paint chosen (the Classiche
 // driver's colours, or the car's own).
-export function mountRoadGarage(vehicle, { baseColors, graphicsProfile, onFrame }) {
-  const car = ROAD_CARS[vehicle];
-  let setup = loadRoadSetup(vehicle);
+// car: a RoadCar (shared/vehicle.js, #339).
+export function mountRoadGarage(car, { baseColors, graphicsProfile, onFrame }) {
+  const vehicle = car.id;
+  let setup = car.loadGarage();
   const showroom = createShowroom(document.getElementById("garage-canvas"), {
-    vehicle, colors: roadColors(vehicle, baseColors, setup), graphicsProfile, onFrame,
+    vehicle: car, colors: roadColors(vehicle, baseColors, setup), graphicsProfile, onFrame,
   });
   const status = document.getElementById("garage-status");
   const roles = car.colors.secondary === undefined ? ["primary"] : ["primary", "secondary"];
@@ -49,7 +47,7 @@ export function mountRoadGarage(vehicle, { baseColors, graphicsProfile, onFrame 
       .map(([stat, label]) => { const value = Math.round(Math.max(10, Math.min(90, 50 + effects[stat] * 500))); return `<div><span>${label}</span><div><i style="width:${value}%"></i></div><b>${value}</b></div>`; })
       .join("");
     document.querySelectorAll("[data-garage-stats]").forEach((el) => { el.innerHTML = stats; });
-    const topSpeed = Math.round(roadSetupParams(vehicle, car.params(), setup).maxSpeed * KMH_PER_UNIT);
+    const topSpeed = Math.round(car.playerParams(false, setup).maxSpeed * KMH_PER_UNIT);
     document.querySelector(".car-caption p").textContent = `CLASSICHE · ${topSpeed} KM/H`;
     document.getElementById("garage-parts").innerHTML = Object.entries(ROAD_PARTS)
       .map(([part, data]) => `<section class="garage-part"><h2>${data.label}</h2><div>${Object.entries(data.variants).map(([id, v]) => `<button type="button" data-road-part="${part}" data-id="${id}" aria-pressed="${setup[part] === id}" class="${setup[part] === id ? "active" : ""}">${v.label}</button>`).join("")}</div></section>`)

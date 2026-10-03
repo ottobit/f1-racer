@@ -2014,3 +2014,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - New `.github/workflows/deploy-room-server.yml`: on master pushes touching `core/server/**`, `core/shared/**` or `core/package*.json` (or a manual run) it POSTs the provider's deploy hook. Provider-neutral secret name `ROOM_SERVER_DEPLOY_HOOK` (Render: service → Settings → Deploy Hook), set by the user; without it the job only warns.
 - `service/README.md` documents it. Render's connector cannot read or create deploy hooks, so that half stays manual.
 - Verified: YAML parses; `git diff --check`. Badge 338.
+
+## 2026-10-03 — Vehicle class hierarchy: F1Car / RoadCar (#339)
+
+- R1 of the refactor plan. New `core/client/shared/vehicle.js`: `Vehicle` → `F1Car`, `RoadCar` (one per `road-cars.js` entry), registry `VEHICLES` / `vehicleById()`. Methods `stockParams(isRaining)` (rivals), `playerParams(isRaining, garage)`, `loadGarage()`, `stockColors()`, `paint()`; fields `showroomScale`, `playerDetail`, `exhaustFlames`, `noun`. Three-free, so Node tools load it.
+- New `core/client/shared/vehicle-view.js`: `buildVehicleModel()` with one builder per `kind` (F1 → `car-model.js`, road → `vehicle-models.js`), optional studio env map. `buildRaceCar` (race-car-view.js) removed.
+- Callers no longer branch on `id === "f1"`: `race/main.js` (player `PLAYER_VEHICLE`; every rival carries its `vehicle`; AI params and simulated flying lap cached per car), `free/free.js` + `free/vehicles.js`, `garage/garage.js`, `showroom.js` (API now `{ vehicle, colors }`), `road-garage-ui.js`, `home/menu.js`, `tools/calibrate-ai.mjs`, `tools/validate-free-oval.mjs`.
+- Only deliberate behaviour change: the free-drive rival F1 runs stock instead of the player's F1 setup. Series branching (`CLASSIC ? …`) remains for R2 (`Series`).
+- Verified without a browser: params identical to the old formulas for all 7 cars, dry and wet, F1 and road setups; 3D models identical (mesh count, bounds, wheels, env maps) via a Node loader; `validate-free-oval`, `check:boundaries`, `node --check`, all relative imports resolve. Badge 340.

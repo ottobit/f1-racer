@@ -93,7 +93,7 @@ for (const pace of [0.9, 1]) {
 const effects = setupEffects(DEFAULT_SETUP);
 for (const id of VEHICLE_IDS) {
   for (const { line, pace } of RIVAL_SLOTS) {
-    const sim = createFreeSim({ circuit, curve, effects, car: VEHICLES[id].params(effects), startFraction: 0.4 });
+    const sim = createFreeSim({ circuit, curve, effects, car: VEHICLES[id].stockParams(false), startFraction: 0.4 });
     const ap = createAutopilotProvider({
       centerline: sim.centerline, headingOf, sideNormal, nearestTrackInfo: sim.nearestTrackInfo,
       maxSpeed: sim.car.maxSpeed, findCar: () => null, trackLength: sim.trackLength,

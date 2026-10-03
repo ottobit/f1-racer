@@ -4,7 +4,7 @@ import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
 import { SELECTABLE_DRIVER_IDS, displayDriverName, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { CLASSIC_ROSTER, loadClassicDriverId, loadSeries, saveClassicDriverId, saveSeries } from "../shared/classic-series.js?v=2";
-import { ROAD_CARS } from "../shared/road-cars.js?v=1";
+import { VEHICLES } from "../shared/vehicle.js?v=1";
 import { wakeRoomServer } from "../multiplayer/room-server.js?v=1";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
@@ -179,7 +179,7 @@ function renderClassicDriverSelect() {
         role="radio"
         aria-checked="${active}"
         style="${style}"
-      ><span>${String(index + 1).padStart(2, "0")}</span><strong>${driver.name}<small>Monomarca ${ROAD_CARS[driver.car].label}</small></strong></button>
+      ><span>${String(index + 1).padStart(2, "0")}</span><strong>${driver.name}<small>Monomarca ${VEHICLES[driver.car].label}</small></strong></button>
     `;
   }).join("");
   document.getElementById("series-tab-f1").classList.toggle("is-series", series === "f1");
