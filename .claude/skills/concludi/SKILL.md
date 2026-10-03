@@ -29,6 +29,6 @@ log entry and commit message in English. No browser tests.
    (if the remote delete is refused, tell the user to delete it on GitHub).
 6. **Subscriptions**: unsubscribe this session from the PR's activity.
 7. **Reply** (short, Italian): PR merged, the version the page must show
-   (`v<N>`, bottom centre), what the user should test in game,
+   (`v<R>`, bottom centre), what the user should test in game,
    any branch left to delete, and finally remind: "Ora lancia `/compact`"
    (`/compact` is a client command — the skill cannot run it).

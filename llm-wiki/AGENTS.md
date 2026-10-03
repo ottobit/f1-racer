@@ -82,7 +82,7 @@ connects architecture, decisions, roadmap and external patterns.
   on that branch (`node --check` + `git diff --check` before each), pushed
   as it lands. When the work is done, stop at the draft PR and report;
   close the cycle only when the user says "Concludi" (user's rule,
-  2026-09-27, replacing the 2026-09-24 auto-close) — steps in the
+  2026-09-27) — steps in the
   `concludi` skill: one `logs/maintenance.md` entry, ready, merge
   ("Closes #N"), pull `master`, delete branch; then remind the user to
   run `/compact`.

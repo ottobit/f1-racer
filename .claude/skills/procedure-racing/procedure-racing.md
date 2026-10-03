@@ -75,7 +75,7 @@ scripts, no loops that apply rules for you. The bot re-reads
   Staying in the turn also keeps a cloud container awake.
 - Loop speed: the real cycle is `--timeout` plus your own tool and thinking
   time (~10-15 s in practice), so a long timeout only adds dead time. Use
-  `--timeout 5` and keep each turn's writes and reasoning short; if cycles
+  `--timeout 5` and keep each turn's writes short; if cycles
   still run longer than ~10 s, drop the extras (skip the per-bot rewrite when
   nothing changed) rather than raising the timeout.
 - Be present (user rule, 2026-09-29): every check, look at `standings` in
@@ -141,6 +141,6 @@ user asks.
 
 Race over (`session.state` = `finished`): tell the user the result. On
 "Rivincita" the running bots go back to the room and ready up by themselves
-(#224 closed). When the user says to stop:
-`pkill -f room-bot.mjs; pkill -f "http.server 8080"` (fleet: Ctrl-C or
-`pkill -f bot-fleet.mjs`).
+When the user says to stop: Ctrl-C the fleet or
+`pkill -f bot-fleet.mjs; pkill -f room-bot.mjs` (the fleet's :8080 server
+stops with it).
