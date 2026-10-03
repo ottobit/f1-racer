@@ -1,0 +1,34 @@
+# Redeploys the hosted room server on every master push that changes it
+# (#337). Provider-neutral: ROOM_SERVER_DEPLOY_HOOK is the provider's deploy
+# hook URL (Render: service → Settings → Deploy Hook), stored as a repository
+# secret. Without the secret the job only warns.
+name: Deploy room server
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "core/server/**"
+      - "core/shared/**"
+      - "core/package.json"
+      - "core/package-lock.json"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-room-server
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the deploy hook
+        env:
+          HOOK: ${{ secrets.ROOM_SERVER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::warning::ROOM_SERVER_DEPLOY_HOOK is not set; nothing deployed."
+            exit 0
+          fi
+          curl -fsS -X POST "$HOOK" -o /dev/null -w "deploy hook: HTTP %{http_code}\n"
