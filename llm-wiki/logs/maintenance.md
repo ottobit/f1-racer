@@ -2030,3 +2030,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `classic-series.js` keeps only the Classiche roster and driver pick. Architecture page documents Series.
 - Behaviour unchanged. Verified without a browser: `node --check`, `git diff --check`, a Node script over both series (driver, car, colours, 11 rivals, names, title). Badge 342.
 - Next: separate Classiche championship built on `Series`.
+
+## 2026-10-03 — Room client auto-reconnect (#343)
+
+- A dropped room WebSocket (phone asleep, network switch) needed a page reload: `room-client.js` only reported "disconnected" and never retried.
+- `core/client/multiplayer/room-client.js`: after an unwanted close it resends `reconnect` with the saved session at 1/2/4/8/8 s (~23 s, inside the server's 30 s grace), at once on `visibilitychange` (visible) and `online`; an unanswered ping drops the socket and reconnects. Armed only once a session went live, so `race-bootstrap.js`'s solo fallback never retries. Statuses: `connected` / `reconnecting` / `disconnected` / `lost`. `tryResume` forgets the session only on a server refusal, not a network error.
+- `room.js` shows a message per status; the race shows it in the radio banner and re-registers the agent bridge with the same token (an attached controller gets `bridge_replaced` and must re-attach). Server unchanged.
+- Known limits: a server restart (deploy) still loses in-memory rooms (`lost`); voice chat is not re-established.
+- Verified without a browser: `node --check`; Node test against a local room server through a TCP proxy (cut → `connected,reconnecting,connected`, participant back to connected; server restart → `lost`, session cleared). Badge 344.

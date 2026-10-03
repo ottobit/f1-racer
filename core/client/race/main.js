@@ -26,7 +26,7 @@ import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=8";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=6";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=11";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=12";
 
 import { steeringYaw } from "./steering.js?v=8";
 import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=43";
@@ -1678,6 +1678,21 @@ function showRadio(from, text) {
   radioHideTimer = setTimeout(() => { radioBannerEl.hidden = true; }, 6000);
 }
 if (multiplayer) multiplayer.onRadio(showRadio);
+// Auto-reconnect (#343): say what the room link is doing.
+const CONNECTION_RADIO = {
+  reconnecting: "connessione persa, riconnessione…",
+  connected: "riconnesso",
+  disconnected: "connessione persa, ricarica la pagina",
+  lost: "la stanza non è più disponibile",
+};
+if (multiplayer) {
+  let dropped = false;
+  multiplayer.onConnectionChange((status) => {
+    if (status === "connected" && !dropped) return;
+    dropped = status !== "connected";
+    showRadio("Server", CONNECTION_RADIO[status]);
+  });
+}
 
 // Room bot driver (#7): the provider's inputs replace the human's, through
 // the same controls (no second physics path). The pit lane keeps its own
