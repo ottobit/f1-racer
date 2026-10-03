@@ -1977,3 +1977,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `llm-wiki/AGENTS.md`: the Concludi rule no longer cites the auto-close it superseded.
 - Left as is: `core/client/shared/version.js:1-2` still says the badge is the issue number (a comment-only fix would need a version bump).
 - Verified with `git diff --check`; the new stop command needs a check at the next race. Badge 293.
+
+## 2026-10-03 — Race rivals at parity with the player (#329)
+
+- Why: rivals had ~15% less top speed but lost only ~7% in the rain (their kinematic model never slides and ignored wet grip in corners), while the player's physics loses 14-45%; a wet pole (Portoscuro) was out of reach.
+- `core/client/race/race-ai.js`: optional `cornerSeverity` (how much a full bend cuts the AI target speed; corner factor floored at 0.2).
+- New `core/client/race/ai-parity.js` + generated `ai-parity-table.js`: rivals take the player's stock limits (rain penalties included) plus per-circuit, per-car tuning. `core/tools/calibrate-ai.mjs` (`npm run calibrate:ai`) finds the player physics' best lap (autopilot, pace swept 0.55-2.0) and bisects severity, then a steering or pace multiplier where the AI's simpler model can't carry the speed. 63 entries, all within ±1.2%. Re-run it when a circuit changes.
+- `core/client/race/main.js`: F1 and Classiche rivals both use `rivalAiParams`; difficulty Normale = parity, Facile/Difficile ±5%. Garage setup stays the player's own.
+- Known limit: the reference is the autopilot, not a human. Verified with `node --check` and the tool's per-entry gaps; not play-tested. Badge 294.

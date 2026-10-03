@@ -5,7 +5,7 @@ import { POINTS_BY_POSITION, recordRaceResult } from "../shared/championship.js?
 import { displayDriverName, loadSelectedDriverId } from "../shared/driver-selection.js?v=2";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js?v=2";
 import { liveryById } from "../shared/driver-themes.js?v=28";
-import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=30";
+import { DEFAULT_SETUP, loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=30";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=36";
 import { buildRoadVehicle } from "../shared/vehicle-models.js?v=4";
@@ -18,7 +18,8 @@ import { escapeHtml, setupRaceHud } from "./race-hud.js?v=41";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=41";
 import { setupPlayerPhysics } from "./player-physics.js?v=9";
-import { setupRaceAi } from "./race-ai.js?v=32";
+import { setupRaceAi } from "./race-ai.js?v=33";
+import { aiFromCar, aiTuning } from "./ai-parity.js?v=1";
 import { setupRaceSystems } from "./race-systems.js?v=32";
 import { setupRaceProgress } from "./race-progress.js?v=29";
 import { setupRaceCommands } from "./race-commands.js?v=2";
@@ -122,36 +123,29 @@ const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
 
 // AI difficulty: chosen on the circuit menu (menu.js), carried here as a
-// query param, scaling how fast and how hard the rivals accelerate. Turn
-// rate is left alone — they already steer within track limits regardless
-// of difficulty, so a harder AI should out-pace you, not out-corner you
-// unrealistically.
+// query param. Normale is parity (#329); the others shift the rivals' pace
+// 5% either way. Turn rate is left alone, so a harder AI out-paces you
+// rather than out-cornering you.
 const DIFFICULTY_PRESETS = {
-  facile: { speedMul: 0.88, accelMul: 0.85 },
+  facile: { speedMul: 0.95, accelMul: 0.95 },
   normale: { speedMul: 1, accelMul: 1 },
-  difficile: { speedMul: 1.1, accelMul: 1.12 },
+  difficile: { speedMul: 1.05, accelMul: 1.05 },
 };
 const difficulty = new URLSearchParams(location.search).get("difficulty");
 const diffPreset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.normale;
 
-const AI = {
-  maxSpeed: 74.4 * diffPreset.speedMul * (isRaining ? RAIN_MAX_SPEED_MULTIPLIER : 1),
-  accel: 14 * diffPreset.accelMul, // same player/AI ratio as the old 47/41
-  turnRate: 2.1 * (isRaining ? RAIN_TURN_RATE_MULTIPLIER : 1),
-  lookahead: 10, // base centerline samples ahead to steer toward
-  cornerLookahead: 22, // samples used to preview upcoming bends
-  brakeDecel: 68,
-};
-// Classiche (#317): a rival's limits from its own car, in the same AI/player
-// ratios as the F1 (74.4/88 top speed, 14/16 accel, 68/75 brakes).
+// Rivals at parity (#329): the player's stock car (default garage setup,
+// same rain penalties) driven by the race AI, tuned per circuit and car so
+// its flying lap matches the player's best (ai-parity.js). The player's own
+// garage setup stays theirs alone.
+function rivalAiParams(carId, car) {
+  const ai = aiFromCar(car, aiTuning(circuit.id, carId));
+  return { ...ai, maxSpeed: ai.maxSpeed * diffPreset.speedMul, accel: ai.accel * diffPreset.accelMul };
+}
+const AI = rivalAiParams("f1", playerCarParams(setupEffects(DEFAULT_SETUP), isRaining));
+// Classiche (#317): a rival's limits from its own car, same parity rule.
 function classicAiParams(carId) {
-  const car = roadCarParams(carId);
-  return {
-    ...AI,
-    maxSpeed: car.maxSpeed * (74.4 / 88) * diffPreset.speedMul,
-    accel: car.accel * (14 / 16) * diffPreset.accelMul,
-    brakeDecel: car.brakeDecel * (68 / 75),
-  };
+  return rivalAiParams(carId, roadCarParams(carId));
 }
 
 // Tyres, ERS and pit constants live in race-rules.js (#214). The player can

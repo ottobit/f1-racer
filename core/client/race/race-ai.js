@@ -122,7 +122,9 @@ export function setupRaceAi({
     while (err > Math.PI) err -= Math.PI * 2;
     while (err < -Math.PI) err += Math.PI * 2;
 
-    const cornerSpeedFactor = 1 - profile.severity * 0.48;
+    // cornerSeverity: how much a full-severity bend cuts the target speed
+    // (main.js tunes it per weather so the AI loses what the player does).
+    const cornerSpeedFactor = Math.max(0.2, 1 - profile.severity * (ai.cornerSeverity ?? 0.48));
     const baseTargetSpeed = ai.maxSpeed * cornerSpeedFactor;
     const tacticalBoost = nearestAhead && profile.severity < 0.25 ? 1.04 : 1;
     const aiMaxSpeed = finishPlan?.targetSpeed ?? (
