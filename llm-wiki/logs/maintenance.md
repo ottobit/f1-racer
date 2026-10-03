@@ -1961,3 +1961,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Garage: car picker (F1 + 6 road cars, `?car=`; default = Classiche driver's car when that series is the home pick). New `garage/road-garage-ui.js` drives the road-car pane; `showroom.js` builds road cars via `buildRoadVehicle` with live `repaint()`. F1 garage unchanged (wrapped in `mountF1Garage`).
 - Applied to the player only: Classiche race (`race/main.js` `roadSetupParams` + `roadColors`) and free drive (`free/free.js`); rivals stay stock. Note: in one-make Classiche this gives the player a small edge.
 - Verified with `node --check` and a Node script (fake localStorage, corrupt JSON, params per car); not play-tested. Badge 291.
+
+## 2026-10-03 — Road cars: richer 3D models (#325)
+
+- `core/client/shared/vehicle-models.js` kit: lathed tyres with a rim, `wire` and `flat` hubs, `rimMaterial`, and `seam` / `wiper` / `plate` helpers, all detail-only; `bodyShaper` gains `waist` (coke-bottle flank).
+- Spider, Muscle and Pulmino now use `bodyShaper` (they had flat slab sides). Each of the 6 cars gets period trim: Spider wing crests, faired lamps, wire wheels; Muscle ducktail and quad lamps; Pulmino side door; Pandina arch flares; Familiare fins and oval grille.
+- Fixed trim buried inside the bevelled body: Pulmino nose V, disc and engine lid; Familiare grille bars. Also fixed the Pandina side strip running across the wheel openings and the Spider bumper ends sticking out.
+- The player's period car now builds with `detail` in race and free drive (chase view); the AI field stays plain (+0–6 meshes per car).
+- Verified with a Node script (local three, CDN URL mapped): wheel positions, `wheelRadius` and `cockpitEye` unchanged, length within 3%. Not play-tested; badge 292. Next: Classiche rivals with setups.
