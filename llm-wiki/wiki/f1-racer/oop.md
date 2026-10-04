@@ -54,7 +54,9 @@ you?" to decide.
 ## Current state
 
 - Done: `Vehicle` (#339), `Series` (#341), `Championship`, vehicle
-  batching in `buildVehicleModel` (#357).
-- Open (known debt): `core/client/home/menu.js` still compares
-  `series === SERIES.f1 / SERIES.classic` for tab state, the championship
-  wording and the page scroll — candidates for `Series` properties.
+  batching in `buildVehicleModel` (#357), home menu without series
+  switches (#359: tabs keyed `series-tab-<id>`, page index read from the
+  tab, `Series.championshipName`).
+- Not a smell: a page that *is* one series naming it (`series =
+  SERIES.classic` when a Classiche driver is picked, the F1/Classiche
+  driver lists).

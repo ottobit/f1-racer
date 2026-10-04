@@ -30,6 +30,8 @@ export class Series {
   driverColors(_driverId) { throw new Error("not implemented"); }
 
   raceTitle(circuitName) { return circuitName; }
+  // "Hai vinto il campionato …" (#359).
+  get championshipName() { return this.label; }
 }
 
 class F1Series extends Series {
@@ -38,6 +40,7 @@ class F1Series extends Series {
   }
 
   loadDriverId() { return loadSelectedDriverId(); }
+  get championshipName() { return "del mondo"; }
   vehicle() { return VEHICLES.f1; }
   playerColors(driverId) { return playerLivery(driverId); }
   rivals(playerDriverId) {
