@@ -1,4 +1,5 @@
 import { DriveController } from "./drive-controller.js?v=1";
+import { F1RacerGameAdapter } from "./f1-game-adapter.js?v=1";
 
 // Agent API MVP (#176): lets an external agent — including Codex — drive
 // the player car from an already-open race page, through
@@ -400,6 +401,8 @@ export function setupAgentApi({
     return getState();
   }
 
+  const gameAdapter = new F1RacerGameAdapter({ getState, drive, release });
+
   // Leaving the page or the tab going away drops any agent command.
   window.addEventListener("pagehide", () => { if (controlMode === "agent") release(); });
   document.addEventListener("visibilitychange", () => {
@@ -417,6 +420,11 @@ export function setupAgentApi({
 
   async function invokeAgentTool(name, args = {}) {
     switch (name) {
+      case "game_describe": return gameAdapter.describe();
+      case "game_observe": return gameAdapter.observe();
+      case "game_frame": return gameAdapter.frame(args?.strategy || null);
+      case "game_act": return gameAdapter.act(args?.intent || {});
+      case "game_release": return gameAdapter.release();
       case "f1_observe": return getState();
       case "f1_act": return act(args || {});
       case "f1_drive": return drive(args || {});
@@ -427,7 +435,17 @@ export function setupAgentApi({
     }
   }
 
-  window._ENVIRONMENT_ = { getState, step, act, drive, enqueue, release, radio, bridge: null };
+  window._ENVIRONMENT_ = {
+    getState, step, act, drive, enqueue, release, radio,
+    game: {
+      describe: () => gameAdapter.describe(),
+      observe: () => gameAdapter.observe(),
+      frame: (strategy) => gameAdapter.frame(strategy),
+      act: (intent) => gameAdapter.act(intent),
+      release: () => gameAdapter.release(),
+    },
+    bridge: null,
+  };
   registerWebMcpTools({ invokeAgentTool });
 
   // Browser-independent realtime bridge (#201). A long, caller-provided
@@ -466,6 +484,57 @@ function registerWebMcpTools({ invokeAgentTool }) {
     brake: { type: "number", minimum: 0, maximum: 1 },
   };
   const tools = [
+    {
+      name: "game_describe",
+      description: "Describe the connected game and its generic observation/action/strategy capabilities.",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => reply(await invokeAgentTool("game_describe", {})),
+    },
+    {
+      name: "game_observe",
+      description: "Read the current game observation through the generic game adapter.",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => reply(await invokeAgentTool("game_observe", {})),
+    },
+    {
+      name: "game_frame",
+      description: "Build a game-specific decision frame containing observation, bounded candidate intents and a default candidate.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          strategy: { type: "object", additionalProperties: true },
+        },
+      },
+      execute: async (args) => reply(await invokeAgentTool("game_frame", args || {})),
+    },
+    {
+      name: "game_act",
+      description: "Apply one generic bounded GameIntent through the connected game's adapter.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          intent: {
+            type: "object",
+            properties: {
+              action: { type: "string" },
+              parameters: { type: "object", additionalProperties: true },
+              horizonMs: { type: "number", minimum: 100, maximum: 5000 },
+              confidence: { type: "number", minimum: 0, maximum: 1 },
+            },
+            required: ["action"],
+            additionalProperties: false,
+          },
+        },
+        required: ["intent"],
+      },
+      execute: async (args) => reply(await invokeAgentTool("game_act", args || {})),
+    },
+    {
+      name: "game_release",
+      description: "Release the generic game adapter's control immediately.",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => reply(await invokeAgentTool("game_release", {})),
+    },
     {
       name: "f1_observe",
       description: "Read the race state of the car this page drives. Signs: steer +1 = right; lateralOffsetMeters > 0 = left of the centerline; headingErrorRad > 0 = nose left of the track direction (positive error is fixed by positive steer).",
