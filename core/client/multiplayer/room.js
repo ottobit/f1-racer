@@ -4,8 +4,6 @@ import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
 import { CIRCUITS } from "../../shared/circuits.js?v=41";
 
-const DIFFICULTY_LABELS = { facile: "Facile", normale: "Normale", difficile: "Difficile" };
-
 const client = createRoomClient();
 
 const el = {
@@ -29,11 +27,10 @@ const el = {
   startBtn: document.getElementById("room-start-btn"),
   raceStarted: document.getElementById("room-race-started"),
   sessionTitle: document.getElementById("room-session-title"),
-  circuitHost: document.getElementById("room-circuit-host"),
+  sessionFields: document.getElementById("room-session-fields"),
   circuitSelect: document.getElementById("room-circuit-select"),
   difficultySelect: document.getElementById("room-difficulty-select"),
   qualifyingSelect: document.getElementById("room-qualifying-select"),
-  circuitDisplay: document.getElementById("room-circuit-display"),
 };
 
 el.circuitSelect.innerHTML += CIRCUITS.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
@@ -112,17 +109,15 @@ function renderRoom(room) {
 
   const inLobby = room.sessionPhase === "lobby";
   el.sessionTitle.textContent = isHost ? "Configura la sessione" : "Sessione scelta dall'host";
-  el.circuitHost.hidden = !isHost || !inLobby;
-  if (isHost && inLobby) {
+  el.sessionFields.hidden = !inLobby;
+  if (inLobby) {
     if (el.circuitSelect.value !== (room.circuitId || "")) el.circuitSelect.value = room.circuitId || "";
     if (el.difficultySelect.value !== room.difficulty) el.difficultySelect.value = room.difficulty;
     el.qualifyingSelect.value = room.qualifying === true ? "qualifying" : room.qualifying === false ? "race" : "";
+    el.circuitSelect.disabled = !isHost;
+    el.difficultySelect.disabled = !isHost;
+    el.qualifyingSelect.disabled = !isHost;
   }
-  const formatLabel = room.qualifying === true ? "qualifica + gara" : room.qualifying === false ? "solo gara" : "formato da scegliere";
-  const circuitName = room.circuitId ? (CIRCUITS.find((c) => c.id === room.circuitId)?.name || room.circuitId) : null;
-  el.circuitDisplay.textContent = inLobby
-    ? (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]} · ${formatLabel}` : (isHost ? "" : "In attesa che l'host scelga il circuito."))
-    : (circuitName ? `Circuito: ${circuitName} · ${DIFFICULTY_LABELS[room.difficulty]} · ${formatLabel}` : "");
 
   const allReady = room.participants.length > 0 && room.participants.every((p) => p.driverId && p.ready);
   el.startBtn.hidden = !isHost || !inLobby;
@@ -288,7 +283,8 @@ el.readyCheckbox.addEventListener("change", () => {
 });
 
 function submitCircuitChoice() {
-  if (!el.circuitSelect.value) return;
+  const room = client.room;
+  if (!room || room.hostParticipantId !== client.participantId || !el.circuitSelect.value) return;
   const qualifying = el.qualifyingSelect.value === ""
     ? undefined
     : el.qualifyingSelect.value === "qualifying";
@@ -311,7 +307,7 @@ el.startBtn.addEventListener("click", async () => {
 // nothing was saved, so a first-time visitor never opens a connection
 // before choosing to create or join.
 // An invite to a different room wins over the saved one: leave it so the
-// entry form (code prefilled) shows up.
+// entry form (code prefilled) is shown.
 client.tryResume()
   .then((room) => {
     if (room && inviteCode && room.code !== inviteCode) return client.leaveRoom();
