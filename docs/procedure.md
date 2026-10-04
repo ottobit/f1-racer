@@ -44,7 +44,7 @@ In assenza di un accordo preventivo esplicito sulla modalita auto-conclusione, v
 
 Quando la sessione dispone di un clone git locale (come in questa sessione), pubblicare **sempre** le modifiche tramite patch/diff mirate sul working tree seguite da `git commit`/`git push`. Non usare la contents API di GitHub (`create_or_update_file`, `push_files`, `delete_file`) per modifiche a codice o sorgenti: richiede il reinvio del file intero anche per una modifica minima e non offre protezioni migliori del push non-fast-forward di git contro aggiornamenti concorrenti.
 
-Dettagli, motivazione e fallback per sessioni senza clone locale (es. contents-API-only): `llm-wiki/wiki/f1-racer/tooling.md`.
+Dettagli, motivazione e fallback per sessioni senza clone locale (es. contents-API-only): `llm-wiki/wiki/entities/tooling.md`.
 
 Questa regola vale per il repository in cui `procedure.md` è presente. Non si applica automaticamente ad altri progetti: per un vincolo valido su ogni progetto serve una preferenza a livello di account Claude, non un file di questo repository.
 
@@ -52,9 +52,9 @@ Questa regola vale per il repository in cui `procedure.md` è presente. Non si a
 
 Mantenere aggiornati quando necessario:
 
-- `llm-wiki/wiki/f1-racer/` (una pagina piccola per argomento) per architettura e comportamento.
+- `llm-wiki/wiki/` (una pagina piccola per argomento) per architettura e comportamento.
 - `RELEASE-CHECKLIST.md` per nuovi casi di regressione e release gate.
-- `llm-wiki/wiki/f1-racer/` per decisioni durevoli, roadmap e memoria di progetto
+- `llm-wiki/wiki/` per decisioni durevoli, roadmap e memoria di progetto
   che non deve perdersi tra chat, issue e PR.
 
 ## LLM Wiki
@@ -67,5 +67,5 @@ una fonte esterna rilevante o un apprendimento riutilizzabile:
 
 1. leggere `llm-wiki/AGENTS.md`;
 2. aggiornare la pagina wiki piu specifica;
-3. aggiungere una fonte in `llm-wiki/sources/` solo se serve;
-4. appendere una nota breve in `llm-wiki/logs/maintenance.md`.
+3. aggiungere una fonte (`llm-wiki/raw/` + riassunto in `llm-wiki/wiki/sources/`) solo se serve;
+4. appendere una nota breve in `llm-wiki/wiki/log.md`.

@@ -15,29 +15,55 @@ current project understanding instead of rediscovering it.
 
 ## Structure
 
-- `sources/` contains immutable source notes. These summarize external or
-  repository sources that informed the wiki.
-- `wiki/` contains synthesized pages maintained by the LLM.
-- `wiki/index.md` is the entry point and map.
-- `logs/` contains append-only ingest and maintenance logs.
+Follows the three layers of Karpathy's LLM Wiki (raw sources, wiki,
+schema); restructured in #373.
+
+```
+llm-wiki/
+  AGENTS.md        the schema: these rules
+  raw/             immutable inputs (reports, transcripts, logs); never edited
+  wiki/
+    index.md       catalog: every page, one line, by type
+    log.md         append-only history, "## [YYYY-MM-DD] <kind> | <title>"
+    overview.md    the game in one page
+    sources/       one summary page per source (external or raw)
+    entities/      concrete parts of the game (a system, a page, a server)
+    concepts/      ideas that cut across the code (rules, models, budgets)
+    synthesis/     the whole picture (architecture, decisions, roadmap, C4)
+    comparisons/   side-by-side analyses of alternatives
+```
+
+Every page except `index.md` and `log.md` starts with YAML frontmatter:
+
+```yaml
+---
+type: entity | concept | synthesis | comparison | source | overview
+updated: YYYY-MM-DD
+sources:            # for a source page: raw:
+  - ../sources/<file>.md
+---
+```
 
 ## Source Rules
 
-- Treat `sources/` as read-mostly. Add new files for new inputs instead of
-  rewriting older source notes unless correcting an obvious transcription error.
-- Every synthesized wiki claim should be traceable to code, issue/PR history,
-  existing repository docs or a file in `sources/`.
+- Files in `raw/` are immutable: add new files, never rewrite them.
+- A source page in `wiki/sources/` summarizes one input (a raw file, an
+  external article, an issue thread) and links it; correct it only for
+  obvious transcription errors.
+- Every wiki claim should be traceable to code, issue/PR history or a
+  source page; list the source pages in the frontmatter.
 - If a claim is uncertain, mark it as `Open` or `Needs verification` instead of
   presenting it as settled.
 
 ## Wiki Rules
 
-- Prefer short, focused pages over one large document.
+- Prefer short, focused pages over one large document; pick the type
+  folder by what the page is about, not by when it was written.
 - Keep pages useful for agents first: file paths, module names, issue numbers,
   invariants and current limitations matter more than polished prose.
-- Link related pages with relative markdown links.
-- Update existing pages when a decision changes; keep a short note in the
-  maintenance log explaining what changed and why.
+- Link related pages with relative markdown links (they work on GitHub and
+  in Obsidian; `[[wikilinks]]` would not render on GitHub).
+- Update existing pages when a decision changes, bump `updated`, and log it.
 - Do not copy large external documents into the repo. Store a source summary and
   a canonical link.
 
@@ -45,34 +71,36 @@ current project understanding instead of rediscovering it.
 
 ### Ingest
 
-1. Add a source note in `sources/` when an external idea, issue thread, PR or
-   handoff materially changes project knowledge.
-2. Update one or more pages under `wiki/`.
-3. Update `wiki/index.md` when a new topic page is added.
-4. Append a log entry under `logs/`.
+1. Put the raw input in `raw/` (or keep only a link if it is external).
+2. Write its summary in `wiki/sources/`.
+3. Update every entity/concept/synthesis page it touches.
+4. Update `wiki/index.md` for new pages.
+5. Append `## [date] ingest | <title>` to `wiki/log.md`.
 
 ### Query
 
-1. Start from `wiki/index.md`.
+1. Start from `wiki/index.md` (or `overview.md`).
 2. Read the smallest set of pages that answer the question.
-3. Fall back to source notes, code and issues when a wiki page is incomplete or
-   stale.
-4. If the answer uncovers reusable knowledge, file it back into the wiki.
+3. Fall back to source pages, code and issues when a wiki page is incomplete
+   or stale.
+4. If the answer uncovers reusable knowledge, file it back into the wiki
+   (a new comparison or synthesis page is fine).
 
 ### Lint
 
-Periodically check for:
+Periodically check for, and log as `## [date] lint | …`:
 
-- pages listed in `wiki/index.md` that no longer exist;
+- pages listed in `wiki/index.md` that no longer exist, and pages missing
+  from it;
+- contradictions between pages, stale claims after merged PRs;
 - important files or modules with no wiki coverage;
-- stale claims after merged PRs;
 - untracked open questions that should become issues;
-- source notes that are not reflected in any wiki page.
+- source pages not reflected in any other page.
 
 ## Local Policy
 
 All project knowledge lives in this wiki (user, 2026-10-04): one short page
-per topic under `wiki/f1-racer/`. `docs/` keeps only the operational files
+per topic under `wiki/<type>/`. `docs/` keeps only the operational files
 (`procedure.md`, `WORK-HANDOFF.md`, `RELEASE-CHECKLIST.md`) and links here.
 ## Session workflow (user rules)
 
@@ -83,16 +111,17 @@ per topic under `wiki/f1-racer/`. `docs/` keeps only the operational files
   as it lands. When the work is done, stop at the draft PR and report;
   close the cycle only when the user says "Concludi" (user's rule,
   2026-09-27) — steps in the
-  `concludi` skill: one `logs/maintenance.md` entry, ready, merge
+  `concludi` skill: one `wiki/log.md` entry (`cycle`), ready, merge
   ("Closes #N"), pull `master`, delete branch; then remind the user to
   run `/compact`.
 - Risky changes (multiplayer protocol, start/race flow) get their own cycle.
 - Small files per context, no clones (user, 2026-10-04): a new topic gets
-  one short page under `wiki/`, linked from `wiki/f1-racer/index.md`; never
+  one short page in the right `wiki/<type>/` folder, listed in
+  `wiki/index.md`; never
   grow a page into a catch-all and never copy a wiki page into `docs/` —
   link it instead.
 - Object-oriented design is a standing rule (user, 2026-10-04): before
-  writing code read `wiki/f1-racer/oop.md` and follow it — variants are
+  writing code read `wiki/concepts/oop.md` and follow it — variants are
   subclasses behind one interface, no type switches in callers, a rule
   shared by all variants lives once at the common entry point.
 - Every relative client import/script/link carries a `?vNN` query (a new
@@ -104,7 +133,7 @@ per topic under `wiki/f1-racer/`. `docs/` keeps only the operational files
 - Token budget matters (user's explicit request, 2026-09-24):
   - no browser/Playwright tests — syntax checks only; the user plays on
     `master` and reports (browser tests only if the user asks);
-  - docs: one entry in `logs/maintenance.md` per cycle; touch `wiki/`
+  - docs: one entry in `wiki/log.md` per cycle; touch `wiki/`
     pages or `docs/RELEASE-CHECKLIST.md` only when
     architecture or a decision changes;
   - no scheduled check-ins (no CI here); the platform auto-subscribes

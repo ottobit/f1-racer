@@ -66,7 +66,7 @@ spazio per un secondo servizio gratuito sullo stesso account).
 
 ## Memoria di progetto
 
-Tutta la conoscenza di progetto sta in `llm-wiki/` (ingresso: `llm-wiki/wiki/f1-racer/index.md`). `docs/WORK-HANDOFF.md` è il punto di ingresso per una nuova sessione agente. `docs/procedure.md` è il flusso di lavoro obbligatorio (issue → branch → PR → `Concludi`).
+Tutta la conoscenza di progetto sta in `llm-wiki/` (ingresso: `llm-wiki/wiki/index.md`). `docs/WORK-HANDOFF.md` è il punto di ingresso per una nuova sessione agente. `docs/procedure.md` è il flusso di lavoro obbligatorio (issue → branch → PR → `Concludi`).
 
 ## Origine
 
