@@ -4,6 +4,7 @@ updated: 2026-10-04
 sources:
   - ../sources/2026-10-04-provider-agnostic-decision-driver-discussion.md
   - ../sources/2026-10-04-decision-driver-render-test.md
+  - ../sources/2026-10-04-layered-ai-driver-discussion.md
   - ../sources/2026-10-01-ollama-jev-decision-models.md
 ---
 
@@ -446,3 +447,128 @@ Then replace only `RulesDecisionProvider` with `JevDecisionProvider`.
 
 If that swap requires no change to Render, `AgentPort`, `DriveController`
 or physics, provider agnosticism has been demonstrated rather than assumed.
+
+
+## Layered intelligence — strategist, decision engine and controller
+
+The target architecture allows different kinds of intelligence to cooperate
+without moving model-specific concerns into F1 Racer.
+
+```mermaid
+flowchart TB
+  strategist["StrategyProvider<br/>~0.1–1 Hz / event driven<br/>ChatGPT · Claude · rules"]:::new
+  directive["StrategyDirective<br/>race objective / mode / pit policy"]:::new
+  decision["DecisionProvider<br/>~5–10 Hz<br/>racing semantics"]:::new
+  model["ModelClient<br/>protocol adapter<br/>System One · OpenAI-compatible · future"]:::new
+  intent["DrivingIntent<br/>short-horizon target"]:::new
+  controller["DriveController<br/>~60 Hz · browser-local"]:::new
+  input["race-input + physics<br/>EXISTING"]:::existing
+
+  strategist --> directive
+  directive --> decision
+  model -. "composed into model-backed provider" .-> decision
+  decision --> intent
+  intent --> controller
+  controller --> input
+
+  classDef existing fill:#2e7d32,color:#fff,stroke:#1b5e20
+  classDef new fill:#9a6700,color:#fff,stroke:#6f4b00
+```
+
+### Why `ModelClient` is separate
+
+`DecisionProvider` belongs to the F1 racing domain. It receives
+`DrivingObservation + StrategyDirective` and returns `DrivingIntent`.
+
+`ModelClient` belongs to infrastructure. It knows how to call a model API,
+but knows nothing about track geometry, multiplayer or physics.
+
+Example:
+
+```text
+JevDecisionProvider
+    -> SystemOneModelClient(model="nimble")
+
+JevDecisionProvider
+    -> SystemOneModelClient(model="tev1")
+
+StructuredDecisionProvider
+    -> OpenAICompatibleModelClient(...)
+```
+
+Nimble → Tev is therefore configuration under the same client. A new protocol
+is a new `ModelClient`, not a race-engine change.
+
+## Runtime — three clocks
+
+```mermaid
+sequenceDiagram
+  participant G as F1 Racer physics [EXISTING ~60 Hz]
+  participant A as AgentPort [NEW abstraction / existing relay]
+  participant S as StrategyProvider [NEW ~0.1–1 Hz]
+  participant D as DecisionProvider [NEW ~5–10 Hz]
+  participant C as DriveController [NEW ~60 Hz]
+
+  loop Strategy events / slow cadence
+    A->>G: observe
+    G-->>A: DrivingObservation
+    A-->>S: race context
+    S-->>D: StrategyDirective
+  end
+
+  loop Decision cadence
+    A->>G: observe
+    G-->>A: DrivingObservation
+    A-->>D: observation + current StrategyDirective
+    D-->>A: DrivingIntent
+    A->>C: bounded intent
+  end
+
+  loop Every game frame
+    C->>G: steer / throttle / brake
+    G->>G: existing input + physics + sync
+  end
+```
+
+The loops are deliberately independent. A strategist does not need to answer
+for every driving decision, and a decision model does not need to answer for
+every rendered frame.
+
+## Heterogeneous multiplayer grid
+
+```mermaid
+flowchart LR
+  human["Human"]:::person --> room["Existing Render room / agent relay"]:::existing
+  chatjev["ChatGPT strategy<br/>+ Jev decision<br/>+ DriveController"]:::new --> room
+  clauderules["Claude strategy<br/>+ Rules decision<br/>+ DriveController"]:::new --> room
+  jev["Jev decision only<br/>+ DriveController"]:::new --> room
+  bot["Existing Room Bot"]:::existing --> room
+  room --> game["F1 Racer participants<br/>same race + physics paths"]:::existing
+
+  classDef person fill:#08427b,color:#fff,stroke:#052e56
+  classDef existing fill:#2e7d32,color:#fff,stroke:#1b5e20
+  classDef new fill:#9a6700,color:#fff,stroke:#6f4b00
+```
+
+The room server never branches on the intelligence source. It only binds
+participants and relays the provider-neutral game-facing commands.
+
+## ChatGPT integration point
+
+The preferred ChatGPT role is the strategy layer:
+
+```text
+ChatGPT
+  -> StrategyDirective
+  -> fast DecisionProvider (Jev / rules / another model)
+  -> DrivingIntent
+  -> browser-local DriveController
+  -> existing physics
+```
+
+This avoids coupling ChatGPT response latency to steering while still letting
+it make the decisions that benefit from broader context: attack/defend,
+overtake policy, pit timing, tyre choice, safety-car reaction and race goals.
+
+Direct ChatGPT-as-`DecisionProvider` remains a valid experimental stack;
+the controller and physics do not change.
