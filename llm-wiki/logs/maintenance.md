@@ -2111,3 +2111,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - The next cycle moves `voice-chat.js` to MoQ on moq.dev, with WebRTC kept as a fallback subclass (`oop.md`).
 - Links from `index.md` and `c4-model.md`. Compact section in `docs/F1-RACER-WIKI.md`.
 - Docs only, no code change. Badge 364.
+
+## 2026-10-04 — All project knowledge in the wiki (#365)
+
+- Deleted `docs/F1-RACER-WIKI.md` (~1100 lines) and the clone `docs/voice.md`. Their content now lives in 13 wiki topic pages: runtime-overview, car-rendering, driving-model, tracks, race-systems, hud-camera-mobile, audio, garage, performance, classic-series, free-drive, agent-api, multiplayer-protocol. All are listed in `wiki/f1-racer/index.md`.
+- Rewrote those pages against the code. Stale facts fixed: 12 drivers and 6 liveries (not 10 and 5); one-make Classiche with stock rival params; per-car engine profiles; hosted room server; race-only rooms, `report_finish` and rematch. Old history and test narratives were dropped.
+- `architecture.md` keeps only the module map and links to the topic pages. The C4 pages now say 12 participants.
+- `AGENTS.md`: all knowledge lives in the wiki, one small page per topic, with no clones in `docs/`. `docs/` keeps only procedure, handoff and release checklist. README, procedure, handoff and two code comments were relinked.
+- Docs only. Verified with grep (no references left) and a link check across the wiki pages. Badge 366.
+- Open, outside this cycle: the two-phone MoQ test with moq.dev worked one way only (A→B). Being retried with an Android phone.
