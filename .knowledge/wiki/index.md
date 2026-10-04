@@ -57,6 +57,7 @@ page is added, renamed or removed.
 - [sources/2026-10-01-ollama-jev-decision-models.md](sources/2026-10-01-ollama-jev-decision-models.md) — Ollama Jev-style decision models
 - [sources/2026-10-04-oop-principles.md](sources/2026-10-04-oop-principles.md) — object-oriented principles
 - [sources/2026-10-04-provider-agnostic-decision-driver-discussion.md](sources/2026-10-04-provider-agnostic-decision-driver-discussion.md) — discussion and rationale for an agnostic high-level AI race driver
+- [sources/2026-10-04-decision-driver-render-test.md](sources/2026-10-04-decision-driver-render-test.md) — OOP implementation order and reuse of the Render room backend for testing
 
 Raw, immutable inputs behind the sources live in [../raw/](../raw/).
 
