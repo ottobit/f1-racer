@@ -28,7 +28,20 @@ browser game built with plain HTML/CSS/JavaScript and Three.js.
 
 ## Entry Points
 
-- Technical handoff: [`docs/F1-RACER-WIKI.md`](../../../docs/F1-RACER-WIKI.md)
+- Topic pages (one per subject, #365):
+  - [runtime-overview.md](runtime-overview.md) — project map, runtime, session state, limits, principles
+  - [car-rendering.md](car-rendering.md) — shared car model, liveries, cockpit, nameplates
+  - [driving-model.md](driving-model.md) — physics, DRS, tyres, damage
+  - [tracks.md](tracks.md) — track system, lap counting, circuit carousel
+  - [race-systems.md](race-systems.md) — AI, qualifying, race systems, ghost, championship
+  - [hud-camera-mobile.md](hud-camera-mobile.md) — HUD, input, camera, mobile
+  - [audio.md](audio.md) — engine audio
+  - [garage.md](garage.md) — garage setup
+  - [performance.md](performance.md) — graphics profiles
+  - [classic-series.md](classic-series.md) — Classiche series
+  - [free-drive.md](free-drive.md) — free drive
+  - [agent-api.md](agent-api.md) — `window._ENVIRONMENT_`
+  - [multiplayer-protocol.md](multiplayer-protocol.md) — rooms, messages, qualifying and race sync
 - Development procedure: [`docs/procedure.md`](../../../docs/procedure.md)
 - Architecture page: [architecture.md](architecture.md)
 - C4 model — game and multiplayer: [c4-model.md](c4-model.md)

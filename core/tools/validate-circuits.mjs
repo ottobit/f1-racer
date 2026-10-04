@@ -39,7 +39,7 @@ function wallMargin(width) {
 // Known, intentionally close geometry that would otherwise trip the
 // non-adjacent-separation check — e.g. Marzamemi's shared coastal corridor,
 // where the real streets run two legs close together (see circuits.js and
-// docs/F1-RACER-WIKI.md). Each entry is a floor, not a blanket exemption: a
+// llm-wiki/wiki/f1-racer/tracks.md). Each entry is a floor, not a blanket exemption: a
 // separation below it is still a real finding, so a future edit that makes
 // the corridor even tighter still gets caught.
 const ALLOWED_MIN_SEPARATION = {

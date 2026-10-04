@@ -15,16 +15,12 @@ The current race runtime is coordinated by `race/main.js`, with focused
 helpers (all under `race/` unless noted):
 
 - `race-input.js`: keyboard, touch pedals and analog steering input.
-- `race-input.js` also owns opt-in device-orientation steering, permission,
-  screen-axis projection, calibration and stale-data fallback. Rotation and
-  backgrounding require explicit reactivation; pedals remain independent.
-  Motion uses atan2 of screen-plane gravity to avoid pitch-dependent gain,
-  averages a stable 500 ms neutral pose and wraps angle differences. Near-flat
-  poses neutralize steering and request a lifted screen. A small direction meter
-  displays the final smoothed command shared with the wheel and vehicle.
+- Motion steering, touch and camera details: [hud-camera-mobile.md](hud-camera-mobile.md).
 - `steering.js`: pure steering shaping and smoothing math.
 - `player-physics.js`: player movement integration and grip behavior.
-- `race-ai.js`: AI car controller and tactical movement.
+- `race-ai.js`, `rival-ai.js`: AI controller and rival parameters — see
+  [race-systems.md](race-systems.md).
+- `race-rules.js`: tyre grip, track boundary and runoff drag.
 - `race-hud.js`: HUD rendering and status formatting.
 - `race-camera.js`: chase/cockpit camera behavior.
 - `race-progress.js`: lap counting and race classification.
@@ -33,71 +29,21 @@ helpers (all under `race/` unless noted):
 - `race-nameplates.js`: screen-space labels projected from visible AI cars.
 - `race-car-view.js`: visual race car mounting and updates.
 - `race-commands.js`: command bindings and race UI actions.
-- `agent-api.js` (#8/#9): `window._ENVIRONMENT_` (`getState`/`step`/`release`)
-  for an external agent to drive the player car without simulating touch or
-  keyboard events. Opt-in only via `?agent=1` in `main.js` — never imported
-  in a normal session. `step()` drives the same `input.forward`/`input.back`
-  booleans and `setExternalSteer()` (a `race-input.js` addition) the human
-  player uses, neutralizes them when the step's duration elapses, and
-  rejects a second concurrent `step()`. `race-input.js`'s real DOM handlers
-  call an `onHumanInput` callback synchronously on any real touch/key/wheel
-  input, which hands control back immediately even mid-step. `getState()`
-  returns a compact, freshly-built snapshot (mutating it cannot affect
-  internal state): session phase, speed, lap/position/progress, lateral
-  offset and heading error from the ideal line, next-corner heuristic
-  (direction/distance/curvature over a lookahead window shared with the AI's
-  own centerline sampling), up to 5 nearby cars, damage/tyres/DRS, and the
-  final result once the race is over.
-- `race-audio.js`: gear mapping, synthesized V6-turbo engine (firing-order
-  PeriodicWave + sub/half harmonics, combustion noise, turbo whistle, tanh
-  saturation), shift click and an ambient "grid chorus" of the other cars.
-  `setupRaceAudio({ getPhase, getThrottle })`: main.js reports the phase
-  ("grid" = held on the line, throttle free-revs; "driving"; "idle" after
-  the flag) instead of a boolean, so the engine is audible before the start
-  of both qualifying and race, not only once moving (#50).
-- Start procedure (main.js): an "Avvia il motore" gate (browsers only allow
-  audio after a user gesture) fires the engine up, then qualifying opens
-  with a pit-exit light red -> green and the race with the F1 five-light
-  gantry (one per second, random 0.2-3s hold, lights out = go, no green).
-  In multiplayer the hold is seeded from the server's `raceStartedAt`, so
-  every client's lights go out together. `startSequenceId` invalidates the
-  timers of a superseded sequence (#50).
+- `agent-api.js` (#8/#9): `window._ENVIRONMENT_`, opt-in via `?agent=1` —
+  see [agent-api.md](agent-api.md).
+- `race-audio.js`: synthesized engines and start procedure — see
+  [audio.md](audio.md).
 - `race-weather.js`: sky cloud billboards, rain particle field and impact
-  spark FX, gated by a `getPlayerState` getter for the same reason.
-- `../shared/track-geometry.js`: pure centerline sampling/query rules,
-  framework-agnostic (takes a curve object rather than importing three.js),
-  shared between `race/main.js` and `tools/validate-circuits.mjs` (#6) — the
-  reason it lives in `shared/`, not `race/`. Also `offsetEdge()` (#28):
-  miter-cut offset edges used by the road mesh and by `track-art.js`'s
-  kerbs/runoff/lines, so tight apexes never fold.
-- `track-art.js`: circuit dressing. `dressCircuit(..., detail)` places
-  scenery on the coarse gameplay centerline but meshes road-hugging strips
-  from the denser render-only `visualCenterline` (#28).
-- `../shared/graphics-profiles.js`: automatic, persisted, device-signal-based
-  rendering-cost profile (DPR/shadows/particle counts only — never physics
-  or race visibility). No new UI (#2). Lives in `shared/` because both
-  `race/main.js` and `garage/garage.js` read it.
-- `race-diagnostics.js`: dev-only FPS/`renderer.info` overlay, a no-op
-  unless explicitly enabled (#2). Also used by `garage/garage.js` — see
-  Garage section.
+  spark FX; takes a `getPlayerState` getter because it is wired before the
+  player state exists.
+- `../shared/track-geometry.js` and `track-art.js`: see [tracks.md](tracks.md).
+- `../shared/graphics-profiles.js`, `race-diagnostics.js`: see
+  [performance.md](performance.md).
 
 ## Shared Car Model
 
-`shared/car-model.js` builds the procedural open-wheel car used by both race
-and garage. It keeps gameplay scale separate from visual scale and exposes
-wheel groups so steering and rolling can be animated.
-
-`shared/driver-roster.js` owns the canonical ten identities.
-`shared/driver-themes.js` owns shared livery and cockpit theme data.
-`car-model.js` tags paint materials by role, so race and garage can apply
-the same primary and secondary colors without rebuilding separate car
-definitions. The same livery records carry fictional team sponsor pairs;
-cached canvas textures place small wordmarks on sidepods, nose and rear
-wing in both race and Garage models.
-
-`race/race-progress.js` counts a lap at the painted finish-line offset
-rather than at the spline origin and locks finish positions as cars
-complete the configured distance.
+Car construction, liveries and drivers: [car-rendering.md](car-rendering.md).
+Lap counting: [tracks.md](tracks.md).
 
 `shared/pit-lane.js` assigns six service bays in canonical `TEAM_LIVERIES`
 order along the flat lane section. `buildPitLane(..., teamId)` selects the
@@ -117,118 +63,14 @@ keeps its original colour. No multiplayer protocol or shared-box queue is
 introduced: remote crew animation and simultaneous teammate service are
 outside this visual cycle (#250). Visual checks remain manual.
 
-Race cars include a lightweight seated driver built from the shared
-procedural model. The suit material carries the primary livery role;
-helmet accents carry the secondary color. A dynamic race steering-wheel
-group owns both gloves and rotates from the same input used for the front
-wheels. The detailed Garage path keeps `showDriver: false`.
-
 ## Garage
 
-`garage.html` (root), `garage/garage.js`, `garage/showroom.js`,
-`garage/garage.css` and `shared/garage-setup.js` implement the setup bay.
-(`garage-setup.js` lives in `shared/`, not `garage/`, because `race/main.js`
-reads it too — see Source layout below.) Setup data is persisted under
-`f1racer-garage-v1` and read by race startup.
+See [garage.md](garage.md).
 
-The garage previews setup families visually. The player car's livery comes
-from the selected driver's team (`playerLivery()` in `garage-setup.js`), in
-both the Garage and the race, matching how AI cars get theirs.
+## Multiplayer
 
-`showroom.js`'s `createShowroom` takes an optional `graphicsProfile`
-(`garage.js` passes `loadGraphicsProfile()`, #2) applied to its own
-renderer's DPR cap and shadow map — the same profile the race applies to
-its own renderer, so a device set to "basso" gets that treatment in both
-places, not just the race. Falls back to its own old viewport-width check
-if no profile is passed. It also takes an optional `onFrame(dt)` from its
-`setAnimationLoop`, which `garage.js` uses to drive the same
-`../race/race-diagnostics.js` overlay the race uses (`?diag=1`, off by
-default) — a cross-folder import, `garage/` reaching into `race/`, because
-this overlay is genuinely race-owned tooling reused by garage, not shared
-data.
-
-`shared/circuits.js` also owns each track's recommended five-component
-setup and its rationale. `home/menu.js` persists the active carousel
-circuit; `garage.js` reads it, renders current-to-recommended differences
-and applies the preset only after an explicit user action.
-
-The detailed showroom car is built with `showDriver: false`. Its exposed
-cockpit interior includes a seat, headrest, harness, bolsters, dashboard,
-display and steering wheel; the lightweight race cars still include a driver.
-
-## Multiplayer Stage 1 (rooms)
-
-`server/rooms.mjs` (pure state machine, no sockets) and
-`server/room-server.mjs` (thin `ws`-based WebSocket transport around it,
-both under `core/server/`) are this project's first backend, ever (#36,
-part of #1) — a new, separate opt-in Node process (`npm run
-start:room-server`, run from inside `core/`), not something the shipped
-static site loads. State is in-memory only, resets on restart; deliberate
-for Stage 1's casual rooms, not a database stand-in. Reservable driver ids
-are exactly `core/shared/driver-roster.js`'s ten `rival-*` entries;
-`shared/driver-selection.js`'s client-only `"player"` id is never valid
-here — solo and room identity never touch each other's `localStorage` key.
-
-`multiplayer/room-client.js` (browser) and `room.html` (root)/
-`multiplayer/room.js` (lobby UI) are the only client-side additions;
-race/garage/qualifying are entirely untouched *when no room is involved*
-(see Stage 2 below for how a room actually reaches the race itself now).
-See `docs/F1-RACER-WIKI.md`'s "Multiplayer" section for the message protocol,
-grace/reconnect/host-handoff rules, and what was and wasn't verified
-without a live public deployment.
-
-Voice is a separate future issue with its own protocol/infra decisions —
-not designed here.
-
-## Multiplayer Stage 2 (qualifying and race sync)
-
-`server/rooms.mjs` gained `sessionPhase` ("lobby" → "qualifying" →
-"racing"), `circuitId`/`difficulty` (host-chosen, see `setCircuit()`),
-per-participant `qualiBestTime`, and `grid` (set once by
-`finishQualifying()`, called by `room-server.mjs`'s own `setTimeout` —
-`ROOM_QUALI_MS`, defaults to 60s — not by any client, so every
-participant's browser transitions off the same clock). `room-server.mjs`
-also relays a new ephemeral, unstored message, `car_state`, straight to a
-room's other sockets — the client-authoritative position broadcast this
-stage is built on (see decisions.md).
-
-Two files under `multiplayer/` bridge a room into an actual race:
-- `race-bootstrap.js`: `race.html`'s real entry point now (not
-  `race/main.js` directly). If `?room=CODE` is present and a saved room
-  session exists, it resolves the WebSocket reconnect *before* `main.js`
-  loads — `main.js`'s own top-level code is entirely synchronous (builds
-  the whole scene top-to-bottom in one pass) and was never made async;
-  this bootstrap is what keeps that true while still needing an async
-  reconnect first. Hands the already-connected client to `main.js` via a
-  one-shot `window.__mpClient`.
-- `race-multiplayer.js`: `setupMultiplayer()` wraps that already-connected
-  client into the small synchronous API `main.js` actually calls
-  (`getRemoteDrivers()`, `getRemoteSample()`, `broadcastState()`,
-  `reportQualiTime()`, `onGridReady()`, `isDriverDisconnected()`). Returns
-  `null` for solo play (no `?room=`, or an unresumable session) — every
-  integration point in `main.js` is an explicit `if (multiplayer)` branch
-  on this one value, never a silently-shared code path. Lives in
-  `multiplayer/` (grouped with `room-client.js`) even though only
-  `race/main.js` imports it — a conceptual grouping choice, see #46's
-  Source layout section.
-
-Inside `race/main.js`: multiplayer's `AI_DRIVERS` come from the room's
-other participants' reserved driver ids instead of `DRIVER_ROSTER`-minus-
-self — no AI padding (see decisions.md). Each resulting `aiCars` entry is
-tagged `isRemote: true` and `participantId`, and driven every frame by
-`updateRemoteCar()` (pulls toward the latest `car_state` sample, smoothed,
-then calls the same `advanceProgress()` everyone else's lap/position
-bookkeeping uses) instead of `updateAiCar()`'s real steering AI — everything
-downstream (`currentRaceOrder`, `applyGridPositions`, DRS eligibility, car
-collisions, the HUD/nameplate rendering) already worked generically over
-`aiCars` and needed no changes to accept remote-driven entries. Qualifying
-itself runs locally exactly like solo (own flying laps, own best time
-tracked, own lap-completion detection) but reports each improved time to
-the room (`reportQualiTime`) instead of only using it locally, and never
-self-triggers the qualifying-to-racing transition — that only ever happens
-from `multiplayer.onGridReady()`, fired once when the server's own timer
-broadcasts the real grid. `finishRace()` skips the solo championship
-entirely for a multiplayer session (see decisions.md).
+Rooms, protocol, race bridge: [multiplayer-protocol.md](multiplayer-protocol.md).
+Voice: [c4-voice.md](c4-voice.md).
 
 ## Championship and Drivers
 
@@ -238,8 +80,8 @@ entirely for a multiplayer session (see decisions.md).
 `CHAMPIONSHIPS` (#345). Each `Series` carries its own as `championship`.
 `shared/driver-selection.js` maps the selected identity to the player
 display name. Race startup removes that identity from `DRIVER_ROSTER` and
-creates the nine AI cars from the remainder, guaranteeing ten unique names
-on the grid.
+creates the rival cars from the remainder (12 drivers in all), so no name
+is duplicated.
 
 `race/race-camera.js` builds a lightweight cockpit overlay from the
 selected driver's theme when cockpit camera mode is active.
@@ -325,7 +167,7 @@ The 4 HTML entry points (`index.html`, `race.html`, `garage.html`,
 repo serves the branch root as-is (no GitHub Action build step), and does
 not support serving from an arbitrary subfolder like `/core`; moving the
 HTML would break the live site without a Pages reconfiguration the user
-would have to do manually. The maintainer docs (`docs/F1-RACER-WIKI.md`,
+would have to do manually. The maintainer docs (
 `docs/RELEASE-CHECKLIST.md`, `docs/WORK-HANDOFF.md`, `docs/procedure.md`) live in
 `docs/` (#300); the racing-agent procedure lives next to its skill in
 `.claude/skills/procedure-racing/`. The root keeps only what a convention or an
@@ -364,12 +206,7 @@ isn't a fully consistent cache-busting scheme; out of #46's scope.
   Ossidiana pair expands the field to 12; championship points still go
   only to the first ten. Livries and cockpit themes remain in
   `driver-themes.js`; garage paint follows the selected driver's team.
-- `voice-chat.js` exposes per-participant connection, microphone, mute and
-  speaking status. `voice_signal` carries `{kind:"voice_state", muted,
-  hasMic}` on greeting and mute changes, using the existing server relay.
-  Speaking is measured locally from each audio stream, without frequent
-  level broadcasts. The timing tower maps driver IDs to participants
-  through `race-multiplayer.js`; only the local speaker icon toggles mute,
-  and solo play has no voice icons.
+- Voice status per participant (connection, mic, mute, speaking) and its
+  HUD icons: [c4-voice.md](c4-voice.md).
 - Gameplay, mobile layout, audio permissions and microphone behavior need
   manual validation; this change set received structural checks only.

@@ -6,7 +6,7 @@ This file is the compact entry point for a new ChatGPT Work session. Do not trea
 
 1. `procedure.md` — mandatory repository workflow.
 2. `WORK-HANDOFF.md` — this operational snapshot.
-3. `F1-RACER-WIKI.md` — architecture and current behavior.
+3. `../llm-wiki/wiki/f1-racer/index.md` — architecture and current behavior, one page per topic.
 4. `RELEASE-CHECKLIST.md` — release/regression gates.
 5. Inspect the current files and open GitHub issues/PRs before changing code. Repository state wins over this snapshot if they differ.
 
@@ -72,4 +72,4 @@ Before making assumptions, inspect current `master`, because this handoff is int
 
 Use this when opening a fresh Work session:
 
-> Open the GitHub repository `ottobit/f1-racer`. First read `docs/procedure.md`, `docs/WORK-HANDOFF.md`, `docs/F1-RACER-WIKI.md`, and `docs/RELEASE-CHECKLIST.md`. Inspect current master plus open issues/PRs before acting. Follow the repository procedure strictly: issue → branch → development → real tests where available → commit/push → PR → release test. Never write directly to master. Unless auto-conclusion was explicitly agreed before development, leave the PR open until I say `Concludi`. Do not call static/source checks runtime tests; mark unavailable tests `non testato`. Then handle my requested F1 Racer task.
+> Open the GitHub repository `ottobit/f1-racer`. First read `docs/procedure.md`, `docs/WORK-HANDOFF.md`, `llm-wiki/wiki/f1-racer/index.md`, and `docs/RELEASE-CHECKLIST.md`. Inspect current master plus open issues/PRs before acting. Follow the repository procedure strictly: issue → branch → development → real tests where available → commit/push → PR → release test. Never write directly to master. Unless auto-conclusion was explicitly agreed before development, leave the PR open until I say `Concludi`. Do not call static/source checks runtime tests; mark unavailable tests `non testato`. Then handle my requested F1 Racer task.
