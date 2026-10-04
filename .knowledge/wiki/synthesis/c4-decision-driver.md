@@ -5,6 +5,7 @@ sources:
   - ../sources/2026-10-04-provider-agnostic-decision-driver-discussion.md
   - ../sources/2026-10-04-decision-driver-render-test.md
   - ../sources/2026-10-04-layered-ai-driver-discussion.md
+  - ../sources/2026-10-04-game-agnostic-agent-runtime.md
   - ../sources/2026-10-01-ollama-jev-decision-models.md
 ---
 
@@ -578,3 +579,193 @@ overtake policy, pit timing, tyre choice, safety-car reaction and race goals.
 
 Direct ChatGPT-as-`DecisionProvider` remains a valid experimental stack;
 the controller and physics do not change.
+
+
+## Higher-level extraction: Game X × Agent Y
+
+The runtime is now designed one level above F1 Racer. F1 is the first game
+plugin, not the definition of the runtime.
+
+~~~mermaid
+flowchart LR
+  subgraph Y["Agent axis (Y)"]
+    strategy["StrategyProvider"]:::new
+    decision["DecisionProvider"]:::new
+    model["ModelClient"]:::new
+  end
+
+  runtime["GameAgentRuntime<br/>game/model agnostic"]:::new
+  remote["RemoteGameAdapter<br/>generic game_* protocol"]:::new
+
+  subgraph X["Game axis (X)"]
+    f1["F1RacerGameAdapter"]:::existing
+    doom["Future Doom adapter"]:::external
+    other["Future Game Z adapter"]:::external
+  end
+
+  strategy --> runtime
+  decision --> runtime
+  model -. "composed into decision provider" .-> decision
+  runtime --> remote
+  remote --> f1
+  remote -.-> doom
+  remote -.-> other
+
+  classDef existing fill:#2e7d32,color:#fff,stroke:#1b5e20
+  classDef new fill:#9a6700,color:#fff,stroke:#6f4b00
+  classDef external fill:#666,color:#fff,stroke:#444
+~~~
+
+### Generic game-facing protocol
+
+Every compatible game endpoint exposes the same operations:
+
+~~~text
+game_describe
+game_observe
+game_frame
+game_act
+game_release
+~~~
+
+The runtime does not interpret game-specific state or action names.
+
+- game_describe advertises capabilities;
+- game_observe returns a GameObservation envelope;
+- game_frame returns current observation + bounded candidate intents;
+- game_act applies one GameIntent;
+- game_release drops control.
+
+F1-specific low-level tools remain available as an additive expert/debug
+surface.
+
+### Why decision candidates come from the game adapter
+
+A generic model cannot safely invent arbitrary actions for an unknown game.
+The adapter therefore owns domain semantics and constructs a decision frame:
+
+~~~text
+GameObservation
+  + StrategyDirective
+      |
+      v
+game-specific GameAdapter
+      |
+      +-- model state projection
+      +-- instruction
+      +-- bounded candidate GameIntents
+      +-- deterministic default candidate
+      |
+      v
+generic DecisionProvider
+~~~
+
+This is the critical boundary that makes CandidateDecisionProvider reusable
+across racing, shooters, platformers or future domains.
+
+### C4 Level 3 after extraction
+
+~~~mermaid
+flowchart TB
+  shared["Shared contracts<br/>GameAdapter · GameIntent · GameObservation<br/>StrategyProvider · DecisionProvider · ModelClient"]:::new
+
+  runtime["GameAgentRuntime"]:::new
+  candidate["CandidateDecisionProvider"]:::new
+  baseline["DefaultDecisionProvider"]:::new
+  systemone["SystemOneModelClient"]:::new
+  remote["RemoteGameAdapter"]:::new
+
+  tools["generic game_* tools"]:::new
+  f1adapter["F1RacerGameAdapter"]:::existing
+  drive["DriveController"]:::existing
+  physics["F1 input + physics"]:::existing
+
+  shared --> runtime
+  shared --> candidate
+  shared --> baseline
+  shared --> remote
+  systemone --> candidate
+  runtime --> candidate
+  runtime --> baseline
+  runtime --> remote
+  remote --> tools
+  tools --> f1adapter
+  f1adapter --> drive
+  drive --> physics
+
+  classDef existing fill:#2e7d32,color:#fff,stroke:#1b5e20
+  classDef new fill:#9a6700,color:#fff,stroke:#6f4b00
+~~~
+
+### Generic runtime flow
+
+~~~mermaid
+sequenceDiagram
+  participant R as GameAgentRuntime [generic]
+  participant G as RemoteGameAdapter [generic]
+  participant X as Game X adapter [specific]
+  participant S as StrategyProvider [generic/variant]
+  participant D as DecisionProvider [generic/variant]
+  participant M as ModelClient [generic/variant]
+
+  R->>G: describe()
+  G->>X: game_describe
+  X-->>R: capabilities
+
+  loop decision cadence
+    R->>G: frame(strategy)
+    G->>X: game_frame(strategy)
+    X-->>R: observation + candidates + default
+
+    opt strategy refresh
+      R->>S: decideStrategy(observation, descriptor)
+      S-->>R: StrategyDirective
+      R->>G: frame(new strategy)
+      G->>X: game_frame(strategy)
+      X-->>R: refreshed frame
+    end
+
+    R->>D: decide(frame)
+    opt model-backed provider
+      D->>M: choose(state, instruction, candidates)
+      M-->>D: choice + confidence
+    end
+    D-->>R: GameIntent
+    R->>G: act(GameIntent)
+    G->>X: game_act
+    X-->>R: applied
+  end
+~~~
+
+### F1 Racer as plugin #1
+
+The first plugin maps generic concepts to current F1 behavior:
+
+~~~text
+game_describe -> F1 capabilities
+game_observe  -> existing getState()
+game_frame    -> racing candidates: hold / left / right / yield
+game_act      -> action=drive -> existing high-level f1_drive
+game_release  -> existing release()
+~~~
+
+The browser-local DriveController stays intentionally game-specific and still
+owns the 60 Hz conversion to low-level F1 controls.
+
+A future shooter or platform game can use a different local controller while
+the outer GameAgentRuntime, CandidateDecisionProvider and ModelClient remain
+unchanged.
+
+### X × Y acceptance test
+
+A new game must require no changes to agent/provider code.
+
+A new model/agent must require no changes to game adapter code.
+
+Pair-specific branches such as:
+
+~~~text
+if game == f1 and model == jev
+~~~
+
+are forbidden. Only the composition root may choose concrete variants.
