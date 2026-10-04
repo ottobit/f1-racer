@@ -28,8 +28,10 @@ sources: []
   to A/B), shadow map ≤512 and
   only the player's car casts (`applyShadowCasters`, shadow-camera layer
   1); rivals and scenery cast no shadow there.
-- **User preference:** phones keep full fps. Reduce load by other means,
-  never by cutting the frame rate.
+- **Phone frame cap (#385):** 30 fps (`PHONE_FPS_CAP`). The user first
+  wanted full fps, then accepted 30 when the phone still heated in
+  multiplayer with voices. 30 divides 60/120 Hz evenly; physics runs in
+  fixed substeps, so only smoothness changes.
 
 ## Diagnostics overlay (`core/client/race/race-diagnostics.js`)
 

@@ -302,3 +302,13 @@ These pieces do not exist yet:
 
 Related pages: [c4-multiplayer.md](../synthesis/c4-multiplayer.md),
 [c4-model.md](../synthesis/c4-model.md), [decisions.md](../synthesis/decisions.md).
+
+## Shared AudioContext (#385)
+
+`voice-audio-context.js` (`SharedVoiceAudioContext`): while voice is on,
+the libraries' `new AudioContext({latencyHint:"interactive", sampleRate})`
+returns one shared context per sample rate (mic + every heard driver),
+instead of N+1. Other callers (engine sound) are unaffected; the shared
+context's `close()` is a no-op until `uninstall()`. Opus decoding stays one
+per stream. `?diag=1` shows `ctx N` (expected 1). Needs verification on
+iPhone that every voice still plays.

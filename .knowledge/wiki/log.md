@@ -2184,3 +2184,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `graphics-profiles.js`: phones render with MSAA again; with the light shadows of #381 the user measured no heat difference. `?aa=1|0` still forces it per page load.
 - Heat: no web API exposes temperature on iPhone; Compute Pressure (`PressureObserver`) is Chromium-only and coarse. Use `?diag=1` fps/ms drift as the throttling signal.
 - Verified with `node --check` and `git diff --check` only. Badge 384.
+
+## [2026-10-04] cycle | Phone heat: one AudioContext for all voices, 30 fps on touch (#385)
+
+- User report: still hot in multiplayer with voices after the light shadows of #381.
+- New `multiplayer/voice-audio-context.js`: `SharedVoiceAudioContext` patches the `AudioContext` constructor while voice is on, so @moq/watch (one per heard driver) and @moq/publish (mic) share one context per sample rate; engine audio untouched. `voice-moq.js` installs it in the constructor and uninstalls in `stop()`; diagnostics line adds `ctx N`.
+- `graphics-profiles.js`: `PHONE_FPS_CAP = 30` (was 60); the user accepted lower fps. Physics substeps and the 80 ms multiplayer broadcast are unaffected.
+- Verified with `node --check`, `git diff --check` and a Node test of the shim (fake AudioContext). Not tested on a device. Badge 386.
