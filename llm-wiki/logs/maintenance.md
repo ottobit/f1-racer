@@ -2088,3 +2088,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Wiki: OOP made a standing rule — `wiki/f1-racer/oop.md`, source note, decision entry and an `AGENTS.md` pointer; known debt: series switches in `home/menu.js`.
 - Next lever if still hot: lighter shadows on phones.
 - Verified with `node --check` and a Node script (three local) counting meshes/materials before and after; no browser. Badge 358.
+
+## 2026-10-04 — Home menu without series switches (#359)
+
+- `shared/series.js`: `Series.championshipName` (base: the series label; `F1Series` overrides it with "del mondo").
+- `home/menu.js`: tabs toggled by a loop over `SERIES` (`series-tab-<id>`), the opening swipe page read from the tab's `data-series-page`, champion wording from `championshipName` — no more `series === SERIES.f1/classic` branches. Same behaviour.
+- First application of the OOP rule (`wiki/f1-racer/oop.md`), whose debt list is updated; pages that *are* one series naming it are not switches.
+- Verified with `node --check` and a Node script reading both series' `championshipName`; no browser. Badge 360.
