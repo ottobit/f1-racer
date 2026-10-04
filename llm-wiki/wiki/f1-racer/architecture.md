@@ -173,7 +173,7 @@ here — solo and room identity never touch each other's `localStorage` key.
 `multiplayer/room.js` (lobby UI) are the only client-side additions;
 race/garage/qualifying are entirely untouched *when no room is involved*
 (see Stage 2 below for how a room actually reaches the race itself now).
-See `docs/F1-RACER-WIKI.md`'s "Multiplayer" section for the message protocol,
+See [multiplayer-protocol.md](multiplayer-protocol.md) for the message protocol,
 grace/reconnect/host-handoff rules, and what was and wasn't verified
 without a live public deployment.
 
@@ -325,7 +325,7 @@ The 4 HTML entry points (`index.html`, `race.html`, `garage.html`,
 repo serves the branch root as-is (no GitHub Action build step), and does
 not support serving from an arbitrary subfolder like `/core`; moving the
 HTML would break the live site without a Pages reconfiguration the user
-would have to do manually. The maintainer docs (`docs/F1-RACER-WIKI.md`,
+would have to do manually. The maintainer docs (
 `docs/RELEASE-CHECKLIST.md`, `docs/WORK-HANDOFF.md`, `docs/procedure.md`) live in
 `docs/` (#300); the racing-agent procedure lives next to its skill in
 `.claude/skills/procedure-racing/`. The root keeps only what a convention or an

@@ -5,7 +5,7 @@
 // from the real WebSocket transport in room-server.mjs.
 //
 // State lives in memory only and resets on process restart — a deliberate,
-// documented Stage 1 limitation (see docs/F1-RACER-WIKI.md), not an oversight.
+// documented Stage 1 limitation (see llm-wiki/wiki/f1-racer/multiplayer-protocol.md), not an oversight.
 //
 // `driverId` reservations are keyed off the same ten identities `main.js`
 // already treats as AI-able (see driver-roster.js); the client-only

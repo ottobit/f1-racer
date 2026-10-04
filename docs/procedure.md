@@ -52,7 +52,7 @@ Questa regola vale per il repository in cui `procedure.md` è presente. Non si a
 
 Mantenere aggiornati quando necessario:
 
-- `F1-RACER-WIKI.md` per architettura e comportamento.
+- `llm-wiki/wiki/f1-racer/` (una pagina piccola per argomento) per architettura e comportamento.
 - `RELEASE-CHECKLIST.md` per nuovi casi di regressione e release gate.
 - `llm-wiki/wiki/f1-racer/` per decisioni durevoli, roadmap e memoria di progetto
   che non deve perdersi tra chat, issue e PR.

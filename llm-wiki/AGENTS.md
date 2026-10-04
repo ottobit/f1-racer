@@ -71,9 +71,9 @@ Periodically check for:
 
 ## Local Policy
 
-For this repository, keep `docs/F1-RACER-WIKI.md` as the compact
-technical handoff, and use this LLM Wiki as the broader memory system that
-connects architecture, decisions, roadmap and external patterns.
+All project knowledge lives in this wiki (user, 2026-10-04): one short page
+per topic under `wiki/f1-racer/`. `docs/` keeps only the operational files
+(`procedure.md`, `WORK-HANDOFF.md`, `RELEASE-CHECKLIST.md`) and links here.
 ## Session workflow (user rules)
 
 - Talk to the user in Italian; commits, code and code comments in English.
@@ -89,8 +89,8 @@ connects architecture, decisions, roadmap and external patterns.
 - Risky changes (multiplayer protocol, start/race flow) get their own cycle.
 - Small files per context, no clones (user, 2026-10-04): a new topic gets
   one short page under `wiki/`, linked from `wiki/f1-racer/index.md`; never
-  append a new topic to `docs/F1-RACER-WIKI.md` (already ~1100 lines) and
-  never copy a wiki page into `docs/` — link it instead.
+  grow a page into a catch-all and never copy a wiki page into `docs/` —
+  link it instead.
 - Object-oriented design is a standing rule (user, 2026-10-04): before
   writing code read `wiki/f1-racer/oop.md` and follow it — variants are
   subclasses behind one interface, no type switches in callers, a rule
@@ -105,7 +105,7 @@ connects architecture, decisions, roadmap and external patterns.
   - no browser/Playwright tests — syntax checks only; the user plays on
     `master` and reports (browser tests only if the user asks);
   - docs: one entry in `logs/maintenance.md` per cycle; touch `wiki/`
-    pages, `docs/F1-RACER-WIKI.md` or `docs/RELEASE-CHECKLIST.md` only when
+    pages or `docs/RELEASE-CHECKLIST.md` only when
     architecture or a decision changes;
   - no scheduled check-ins (no CI here); the platform auto-subscribes
     the session when a PR is created — leave it, don't spend a call
