@@ -6,7 +6,7 @@
 
 import { WebSocket } from "ws";
 
-export const MCP_SERVER_INFO = { name: "f1-racer-realtime", version: "2.0.0" };
+export const MCP_SERVER_INFO = { name: "f1-racer-realtime", version: "2.1.0" };
 export const MODERN_PROTOCOL_VERSION = "2026-07-28";
 export const LEGACY_PROTOCOL_VERSION = "2025-11-25";
 
@@ -28,6 +28,20 @@ export const MCP_TOOLS = [
     inputSchema: {
       type: "object",
       properties: { ...commandSchema, leaseMs: { type: "number", minimum: 50, maximum: 5000 } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "f1_drive",
+    description: "Set a bounded high-level pace/line intent. The race page converts it to frame-rate controls locally.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        pace: { type: "number", minimum: 0.5, maximum: 1 },
+        line: { type: "number", minimum: -1, maximum: 1 },
+        horizonMs: { type: "number", minimum: 100, maximum: 5000 },
+        confidence: { type: "number", minimum: 0, maximum: 1 },
+      },
       additionalProperties: false,
     },
   },
