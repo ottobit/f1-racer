@@ -65,7 +65,9 @@ function detectDefaultProfileId() {
 // shadows instead of the soft variant, and a 60 fps cap so 90/120 Hz phone
 // screens don't render (and heat up) twice as often for no gameplay gain.
 // Phones also cap the pixel ratio at 1.25 (#355): ~30% fewer pixels than
-// 1.5 — the GPU fill work that heats a phone most — at a full 60 fps.
+// 1.5 — the GPU fill work that heats a phone most — at a full 60 fps — and
+// shade matte surfaces and rival cars with cheaper materials (#357, see
+// lite-materials.js).
 const PHONE_DPR_CAP = 1.25;
 function withDeviceExtras(profile) {
   return {
@@ -73,6 +75,7 @@ function withDeviceExtras(profile) {
     dprCap: IS_COARSE_POINTER ? Math.min(profile.dprCap, PHONE_DPR_CAP) : profile.dprCap,
     softShadows: !IS_COARSE_POINTER,
     frameCapFps: IS_COARSE_POINTER ? 60 : 0,
+    liteMaterials: IS_COARSE_POINTER,
   };
 }
 

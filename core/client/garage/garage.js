@@ -11,7 +11,7 @@ import { VEHICLES, vehicleById } from "../shared/vehicle.js?v=1";
 import { SERIES, loadSeries } from "../shared/series.js?v=2";
 import { getCircuit } from "../../shared/circuits.js?v=41";
 import { loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
-import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=6";
+import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=7";
 import { setupDiagnosticsOverlay } from "../race/race-diagnostics.js?v=1";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";

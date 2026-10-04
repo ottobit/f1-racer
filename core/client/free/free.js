@@ -14,7 +14,8 @@ import { setupRaceCamera } from "../race/race-camera.js?v=41";
 import { createAutopilotProvider } from "../race/driver-providers.js?v=6";
 import { setupRaceAudio } from "../race/race-audio.js?v=4";
 import { surfaceTexture } from "../race/track-art.js?v=43";
-import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=6";
+import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=7";
+import { simplifyMaterials } from "../shared/lite-materials.js?v=1";
 import { FREE_OVAL } from "./oval.js?v=1";
 import { createFreeSim } from "./free-sim.js?v=4";
 import { buildVehicleModel } from "../shared/vehicle-view.js?v=2";
@@ -322,6 +323,7 @@ function updateHud() {
 
 // --- Loop --------------------------------------------------------------------------
 const clock = new THREE.Clock();
+if (graphicsProfile.liteMaterials) simplifyMaterials(scene, { skip: [playerCar.group, cockpitCar.group] });
 const frameGate = createFrameLimiter(graphicsProfile.frameCapFps);
 let dt = 0;
 function animate(now = performance.now()) {

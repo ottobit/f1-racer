@@ -35,7 +35,8 @@ import { setupPitCrew } from "./pit-crew.js?v=4";
 import { setupRaceAudio } from "./race-audio.js?v=4";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
-import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=6";
+import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=7";
+import { simplifyMaterials } from "../shared/lite-materials.js?v=1";
 import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=1";
 import {
   sampleCenterline,
@@ -1643,6 +1644,7 @@ function startRaceCountdown(seed = null) {
   }, anchorMs));
 }
 
+if (graphicsProfile.liteMaterials) simplifyMaterials(scene, { skip: [playerCar.group, cockpitCar.group] });
 const frameGate = createFrameLimiter(graphicsProfile.frameCapFps);
 
 function animate(now = performance.now()) {
