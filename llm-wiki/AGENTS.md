@@ -87,6 +87,9 @@ connects architecture, decisions, roadmap and external patterns.
   ("Closes #N"), pull `master`, delete branch; then remind the user to
   run `/compact`.
 - Risky changes (multiplayer protocol, start/race flow) get their own cycle.
+- Small files per context (user, 2026-10-04): a new topic gets its own short
+  file under `docs/` or `wiki/`, linked from the index; never append a new
+  topic to `docs/F1-RACER-WIKI.md` (already ~1100 lines).
 - Object-oriented design is a standing rule (user, 2026-10-04): before
   writing code read `wiki/f1-racer/oop.md` and follow it — variants are
   subclasses behind one interface, no type switches in callers, a rule
