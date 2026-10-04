@@ -14,7 +14,7 @@ core/client/          moduli di gioco JS/CSS (race, garage, multiplayer, home, s
 core/server/          server delle stanze multiplayer (Node + ws)
 core/tools/           script di sviluppo (validazione circuiti)
 assets/               asset condivisi (stile base, immagini)
-llm-wiki/             memoria di progetto mantenuta con pattern LLM Wiki
+.knowledge/             memoria di progetto mantenuta con pattern LLM Wiki
 ```
 
 ## Multiplayer: il server delle stanze
@@ -66,7 +66,7 @@ spazio per un secondo servizio gratuito sullo stesso account).
 
 ## Memoria di progetto
 
-Tutta la conoscenza di progetto sta in `llm-wiki/` (ingresso: `llm-wiki/wiki/f1-racer/index.md`). `docs/WORK-HANDOFF.md` è il punto di ingresso per una nuova sessione agente. `docs/procedure.md` è il flusso di lavoro obbligatorio (issue → branch → PR → `Concludi`).
+Tutta la conoscenza di progetto sta in `.knowledge/` (ingresso: `.knowledge/wiki/index.md`). `docs/WORK-HANDOFF.md` è il punto di ingresso per una nuova sessione agente. `docs/procedure.md` è il flusso di lavoro obbligatorio (issue → branch → PR → `Concludi`).
 
 ## Origine
 

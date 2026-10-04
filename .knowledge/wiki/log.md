@@ -1,0 +1,2162 @@
+# Log
+
+Append-only, newest last (Karpathy LLM Wiki `log.md`). Every entry starts
+`## [YYYY-MM-DD] <kind> | <title>` so `grep '^## \[' log.md` lists the
+history. Kinds: `cycle` (a closed work cycle, written by `concludi`),
+`ingest` (a new source), `lint` (a wiki health pass), `restructure`.
+Paths inside older entries are as they were then (before #373 the pages
+lived under `wiki/f1-racer/` and this file was `logs/maintenance.md`;
+until #373 the whole folder was `llm-wiki/`, now `.knowledge/`).
+
+## [2026-09-23] cycle | Developer tooling: patch-based publishing (#4)
+
+Added `wiki/f1-racer/tooling.md`, documenting two publishing paths: local
+git clone (patch-based by construction, the default for Claude Code
+sessions on this repo) and contents-API-only fallback (full-file, SHA-
+gated, for shell-less sessions such as ChatGPT Work). Updated `index.md`
+and `roadmap.md` to link it and to point the migrated #143/#144 references
+at the current `ottobit/f1-racer` issue numbers (#3/#4) instead of the
+stale `portfolio-arcade` ones. Added a short pointer in `WORK-HANDOFF.md`
+so a shell-less session reads the fallback rules before writing files.
+
+## [2026-09-23] cycle | Extract race-audio.js from main.js (#3)
+
+First incremental cut of #3 (ex-portfolio-arcade#143): moved gear mapping
+(`gearInfo`) and the synthesized engine/shift-click Web Audio out of
+`main.js` into a new `race-audio.js` (`setupRaceAudio`). The only real
+coupling was `main.js`'s `raceState` module variable used to gate engine
+volume; inverted it into an injected `getRaceState()` getter instead of
+sharing state across modules, following the same pattern already used by
+`setupRaceCommands`. `race-hud.js`'s consumption (`gearInfo`,
+`updateEngineSound`, `playShiftClick`) is unchanged. Updated
+`F1-RACER-WIKI.md` §2/§15 and `architecture.md` to reflect the new module
+boundary; `main.js` still owns everything else roadmap.md lists as open
+under #3.
+
+## [2026-09-23] cycle | Circuit geometry validator (#6)
+
+Extracted the pure centerline-sampling/query rules from `main.js` into
+`track-geometry.js` (framework-agnostic: takes a curve object rather than
+importing three.js, so the exact same rules run in the browser and in
+Node). Added `tools/validate-circuits.mjs`, a Node script checking every
+`circuits.js` entry for closure, winding, segment length, curvature (vs.
+the runtime's own wall margin — same formula as `WALL_LIMIT`) and
+non-adjacent separation, plus an optional `--svg` top-down diagnostic
+preview (gitignored `tools/out/`, dev-only, never shipped). It uses the
+real npm `three@0.160.0` (pinned to the CDN version `main.js` loads) as a
+devDependency — first `package.json`/`package-lock.json` in this repo,
+dev tooling only, no build step or bundler added to the shipped site.
+
+All six existing circuits pass; Marzamemi's known shared coastal corridor
+is a documented warning (a floor, not a blanket exemption) rather than an
+error. Verified the checks actually catch broken geometry against three
+adversarial cases (near-duplicate closure points, a self-crossing figure-
+eight, two legs pushed pathologically close with no allowlist entry) before
+trusting the "all circuits pass" result. Practical dependency for #5 (four
+new circuits).
+
+Also corrected two stale claims found while in this area: `circuits.js`'s
+header referenced "the project's dev notes" for a validation script that
+never existed until now (updated to point at the real one), and
+`F1-RACER-WIKI.md` claimed `tests/steering.test.mjs` verifies steering
+math — no `tests/` directory exists anywhere in this repo's git history
+(confirmed via `git log --all`), so that either never carried over from
+the `portfolio-arcade` extraction or was always aspirational. Noted as a
+real gap rather than removed silently.
+
+## [2026-09-23] cycle | Surface the publish rule in procedure.md (#12)
+
+`procedure.md` is the first file every session reads, so `tooling.md`'s
+Path A rule (local clone → always git diff/commit/push, never the contents
+API) was invisible unless a session also opened the wiki. Added a short
+"Regole di pubblicazione" section in `procedure.md` stating the rule and
+linking `tooling.md`, and noted explicitly that the rule is scoped to this
+repository — a durable cross-project version would need an account-level
+Claude preference, which this repo cannot set.
+
+## [2026-09-23] cycle | Extract race-weather.js from main.js (#3)
+
+Second incremental cut of #3, same pattern as `race-audio.js`: sky cloud
+billboards, the rain particle field and impact spark FX moved out of
+`main.js` into `race-weather.js` (`setupRaceWeather`). Confirmed via grep
+these were entirely self-contained — no other file references
+`cloudGroup`/`rainPoints`/`impactSparks`/`spawnImpactSparks`/`updateRain`/
+`updateImpactSparks`, only `main.js` itself (the collision-impact callback
+and `animate()`). The one coupling, `updateRain`'s read of the player's
+`state.x`/`state.z`, is inverted into an injected `getPlayerState()`
+getter — `state` isn't declared yet at the point in `main.js` where this
+module is wired up, same TDZ-safe pattern `getRaceState` already uses.
+`main.js` drops another ~140 lines. Updated `F1-RACER-WIKI.md` and
+`architecture.md`/`roadmap.md` accordingly; still owns scene/track-mesh
+construction, ghost-lap persistence and the qualifying/race state machines
+per roadmap.md.
+
+## [2026-09-23] cycle | Close #3; sync roadmap.md/tooling.md (#17)
+
+User closed #3 after the two cuts above (#14, #16) — it had no fixed
+acceptance criteria, so closing it is a "enough for now" call, not "fully
+done"; main.js still owns scene/track-mesh construction, ghost-lap
+persistence and the qualifying/race state machines. Updated
+`roadmap.md`'s #3 bullet and `tooling.md`'s Path B mitigation note, both of
+which still described #3 as open, to say closed and point future
+extraction at a new issue instead. This log entry documents that;
+individual past entries above are left as written, per this wiki's
+append-only rule.
+
+## [2026-09-23] cycle | Fix qualifying engine silence; add grid chorus (#10)
+
+Two real bugs the user reported as "feels unnatural": (1) the player's own
+engine was gated by `raceState === "racing"`, a race-phase-only variable
+never touched by the separate qualifying state machine — so the engine was
+silent for an entire qualifying session even while actively driving; (2) AI
+cars never made any engine sound at all, so a ten-car standing start was
+silent except for the player. Renamed `race-audio.js`'s injected getter
+from `getRaceState` to `getEngineActive`, now composed in `main.js` from
+both `raceState` and `qualiState`/`sessionPhase` so it's true whenever the
+player can actually drive, in either session. Added a second, cheap ambient
+"grid chorus" (two detuned low oscillators, not a per-car chain — explicit
+mobile-cost constraint in #10) whose volume scales with how many AI cars
+are within a fixed radius of the player, capped at 6 counted voices: loud
+at a bunched standing start, thins out as the pack spreads. Verified the
+gate logic and the chorus proximity/volume math standalone in Node (pure
+functions, no AudioContext needed for that part); the actual Web Audio
+output is unverifiable without a browser, same limitation as the rest of
+this file's audio code — left for the user's manual playtest per
+`RELEASE-CHECKLIST.md`.
+
+## [2026-09-23] cycle | Graphics profiles and diagnostics overlay (#2, partial)
+
+Added `graphics-profiles.js` (auto-detected, persisted DPR/shadow/particle-
+count profile from cheap device signals — coarse pointer, core count, native
+DPR; `?gfx=` URL override) and `race-diagnostics.js` (dev-only FPS/
+`renderer.info` overlay, opt-in via `?diag=1`, no-op otherwise). Wired both
+into `main.js` (renderer DPR/shadowMap/sun.shadow, `setupRaceWeather`'s
+rain/cloud counts) and `race-weather.js` (accepts the two count
+multipliers, default 1 so the change is backward compatible). Deliberately
+no new home-screen UI: the session-setup panel's two-choice layout
+(difficulty, driver) is a documented, deliberate design
+(`decisions.md`) a third control would disturb — automatic detection plus a
+URL override covers the issue's "regolabili o automatici" either/or.
+
+Verified both modules' pure logic standalone in Node with mocked browser
+globals (`matchMedia`/`navigator`/`localStorage`/`location`/`document`):
+the auto-detection heuristic across desktop/weak-phone/high-DPR-phone/
+mid-phone cases, URL-override application and persistence, invalid-override
+fallback, and the diagnostics enable/persist/clear/re-enable-on-next-load
+cycle — all matched expectations.
+
+**Does not close #2.** The issue's own acceptance bar is a measured
+before/after on a real smartphone and a real desktop; this dev environment
+has neither real mobile hardware nor real GPU rendering (this repo's own
+prior validation records already flag headless/software rendering as non-
+representative of real performance). Reporting that criterion as met without
+having actually measured it would violate this repo's own testing rule, so
+this PR stays open for the user's `Concludi` instead of auto-concluding —
+the one exception in a batch the user otherwise asked to auto-conclude.
+Also out of scope here: distant-scenery/reflection profile-awareness,
+Garage integration. See `roadmap.md`.
+
+## [2026-09-23] cycle | Three new circuits, procedurally generated (#5)
+
+User revised #5 from four new circuits/ten total to three/nine, dropping the
+real-map-based fourth from this issue (a future separate issue if it
+happens — updated the issue title/body accordingly). Added `pianalago`
+(width 15, purely flowing — no corner anywhere near the wall margin),
+`serramonte` (width 10, now the tightest/narrowest circuit in the roster,
+overtaking Montenero — that entry's stale "tightest of the four"
+superlative was fixed) and `baiadoro` (width 17, the widest, a long
+straight into a tighter technical complex rather than uniform sweeps).
+
+Unlike the first six's hand-placed points, all three were generated
+procedurally: star-convex angle placement with a per-circuit radius profile
+(a few sine harmonics at different frequency/amplitude/phase, seeded RNG for
+reproducibility) shaped toward each circuit's intended character, then
+accepted only once `node tools/validate-circuits.mjs <id>` (#6) reported
+zero errors and zero warnings at those exact coordinates — the validator
+built for #6 was the actual design tool here, not just a check run after
+the fact. Picked widths so every circuit in the roster (existing six plus
+these three) now has a distinct integer width, 9 through 17, reinforcing
+the "larghezza... distinti" criterion beyond just the three new ones.
+
+Confirmed the carousel (`menu.js`), championship (`championship.js`) and
+circuit map rendering are all already fully generic over `CIRCUITS` (no
+hardcoded circuit count anywhere in those) — no code changes needed there,
+only the new `circuits.js` entries. Fixed two now-stale hardcoded "5
+circuiti" strings in `index.html` (meta description/og:description and the
+hero stat) to 9 — already inaccurate before this change, since the game
+already had 6 circuits.
+
+Does not touch #1 (multiplayer) or #2 (performance, still open pending
+real-device measurement) despite #5's original framing mentioning both as
+downstream dependents.
+
+## [2026-09-23] cycle | Fix: home carousel crashed for all circuits (#24)
+
+Real regression from #5, live on production (GitHub Pages serves `master`
+directly, no build step) until this fix: `menu.js` has its own
+`CIRCUIT_PERSONALITY` lookup (type/note/level shown on each carousel card),
+separate from and not derived from `circuits.js` — missed during #5's
+"confirmed generic" check, which only verified the carousel/championship/
+map-rendering *logic* was generic, not this second hardcoded per-id table.
+The three new circuits had no entry, so `personality.type` threw on
+`undefined` for the first of them and killed the *entire* carousel-slide
+render loop — not just those three, all nine, because it's one `.map()`
+call with no per-item error isolation. User reported this as "non vedo più
+la prossima gara"; confirmed with headless Chromium against the live
+`master` HTML before fixing (`[pageerror] Cannot read properties of
+undefined (reading 'type')`, 0 slides, 0 dots).
+
+Fix: added the three missing entries, plus a `DEFAULT_PERSONALITY` fallback
+(`CIRCUIT_PERSONALITY[circuit.id] || DEFAULT_PERSONALITY`) so a future
+missing/typo'd id degrades that one slide instead of blanking the whole
+carousel again. Verified in an actual headless browser (Playwright +
+the prebuilt Chromium at `/opt/pw-browsers`, static file served via
+`python3 -m http.server`, not just `node --check`): navigated all nine
+slides via the real arrow button, zero console/page errors, correct
+type/level/note text on each.
+
+Lesson for future circuit-roster changes: grep for the circuit id being
+added across the *whole* repo, not just the files already known to read
+`CIRCUITS` — a per-id lookup table like this one won't show up in a search
+for `CIRCUITS.length` or similar genericity checks.
+
+## [2026-09-23] cycle | Sharpen the three #5 circuits with real hairpins (#26)
+
+User feedback on #5's three new circuits: "troppo semplici... tutti tondi...
+qualche tornante" — the star-convex harmonic shapes were smooth waves with no
+corner anywhere near the wall-margin threshold, unlike Marzamemi's real tight
+corners. Quantified this first (max per-step heading delta and min curvature
+radius on the sampled centerline) before changing anything: all three were
+close to the flattest existing circuits despite differing widths/intents.
+
+Reworked each with a hairpin-insertion pass: one base star-convex point
+replaced by a tight approach/apex/exit triple of closely-angle-spaced points
+(`spreadDeg` apart, apex pulled in to `depthFactor` of its original radius) —
+the same technique Marzamemi's real-street corners already relied on, applied
+here on top of the procedural base shape instead of by hand. Tuned
+`spreadDeg`/`depthFactor` per circuit against the real `validateCircuit()`
+tool (#6), iterating past two failure modes: first configs too aggressive
+(curvature radius below the wall margin, validator errors), then configs that
+passed but with near-zero safety buffer (e.g. minR just 0.9% above the
+margin) — explicitly rejected those as inconsistent with this project's
+"comfortably above the margin" design philosophy and re-searched requiring a
+real buffer, landing on: Pianalago two corners (minR 13.25 vs. margin 11.5,
++15%), Serramonte three hairpins (minR 10.6 vs. margin 9.0, +18%), Baiadoro
+one deep hairpin (minR 14.6 vs. margin 12.5, +17%). All three set
+`curveTension: 0.5` explicitly (previously implicit default) since that's
+the value the final search was validated against.
+
+`node tools/validate-circuits.mjs` reports 0 errors/warnings on all nine
+circuits (Marzamemi's documented corridor floor unchanged). Updated
+`menu.js`'s `CIRCUIT_PERSONALITY` notes for the three (Pianalago's "nessuna
+staccata violenta" was no longer accurate; bumped its difficulty label from
+Facile to Medio) and `circuits.js`'s per-circuit comments. Exploratory point
+search was done via disposable `*.tmp.mjs` scripts (not gitignored, just
+untracked) deleted manually before this commit — never part of the shipped
+diff.
+
+## [2026-09-23] cycle | Welded kerbs and swept guardrails everywhere (#28)
+
+User: kerbs "sono veramente attaccati, sembra che stai giocando a fare i
+collage". Root cause: eight of nine circuits still drew kerbs and guardrails
+as independent tangent-aligned boxes (~7.5 units each, every 3rd sample) —
+the exact pattern `F1-RACER-WIKI.md` already said must not return after
+Marzamemi's rework, but the fix had only ever been applied to Marzamemi.
+Headless screenshots confirmed X-crossings at hairpin apexes and wedge gaps
+outside; #26's tighter hairpins made it more visible. Extracted Marzamemi's
+welded ribbon into `weldedKerb()` for all circuits and replaced rail boxes
+with `sweptRails()` (continuous runs, rail kept only where its own stretch
+of track is nearest — also removes rails that crossed each other).
+
+Three further defects surfaced while verifying, all fixed here:
+1. `ribbon()` in `track-art.js` had reversed winding, so runoff bands and
+   painted lines were back-face culled on every circuit since they were
+   written — confirmed numerically (normal y sign −1 vs road +1).
+2. Inner offset edges fold into bow-ties wherever the spline bends tighter
+   than the offset — including the *road* itself at Marzamemi/#26 apexes
+   (dark shards). Added `offsetEdge()` to `track-geometry.js` (miter-cut of
+   each swallowtail loop); flipped-triangle count across all strips and
+   circuits went 258 → 0. Road/kerb/runoff also mesh from a 4x denser
+   render-only `visualCenterline`; gameplay keeps 360 samples.
+3. The 1400-unit ground was two triangles; at low camera angles its depth
+   interpolation swallowed the road entirely (reproduced on `master` too,
+   Montenero). Subdivided 56x56 plus a small polygon offset.
+
+Not fixed, recorded as **Open** in roadmap/F1-RACER-WIKI: the validator's
+smoothed curvature stencil hides near-cusp apexes (true radius ~1 on
+Serramonte/Baiadoro), so #26's recorded margins overstate how round those
+hairpins are. Bumped `main.js`/`track-art.js`/`track-geometry.js` cache
+versions so a stale cached `track-geometry.js` can't break the new import.
+
+## [2026-09-23] cycle | Garage mobile restyle, driver-based livery (#30)
+
+User: remove the "Livrea …" picker and make the Garage nice on phones, in
+landscape too. Measured first (headless, 5 viewports): portrait phones had a
+nested scroll box (setup pane 456px tall holding 1129px of content) under a
+fixed car, with the stats overlay covering half the car; 740×360 landscape
+fell into the stacked layout with a 175px scroll box. Decision on the livery
+("entrambe"): it follows the selected driver's team, the same source the AI
+grid uses, with Fenice as `liveryById`'s existing fallback —
+`playerLivery(driverId)` in `garage-setup.js`, used by `garage.js` and
+`main.js`. `loadGarageSetup()` now whitelists known part/variant pairs, so old
+saves' `livery` (and any corrupt value) is dropped instead of carried along.
+
+Layout: stats render into two containers (overlay on wide screens, card in the
+pane on phones); portrait phones get one page scroll with a sticky car and a
+sticky CTA; landscape phones (≤520px tall, any width) get two columns. Replaced
+the three overlapping mobile/landscape blocks in `garage.css` with three
+explicit ones. Variant labels translated to Italian.
+
+Found while verifying: `showroom.js` calls `renderer.setSize(w, h, false)` and
+nothing sized the canvas in CSS, so on any DPR > 1 screen the canvas rendered
+at device-pixel size and the Garage showed only a zoomed top-left corner of
+the scene — on every phone, since the Garage existed. Fixed with a
+`#garage-canvas canvas` 100%/100% rule.
+
+Also caught before commit: a TDZ ordering bug in `main.js` (`PLAYER_LIVERY`
+computed one line before `SELECTED_DRIVER_ID` was declared) that would have
+crashed every race start.
+
+## [2026-09-23] cycle | Home carousel zoom trap on phones (#32)
+
+User: an annoying zoom while browsing circuits that they could not undo.
+Not reproducible headless (Chromium there applies neither double-tap zoom
+nor pinch), so the fix rests on the code: carousel arrows sit over the card
+on phones with default `touch-action`, so quick repeated taps read as a
+double-tap zoom; `.circuit-viewport` had `touch-action: pan-y`, which
+excludes pinch, and covers ~71% of a 390×844 screen — once zoomed it filled
+the view and no pinch could start anywhere else. Added a `f1-home` body class
+and, scoped to it, `touch-action: manipulation` on links/buttons/radios plus
+`pan-y pinch-zoom` on the carousel viewport. Page zoom stays enabled. Verified
+the computed values and that swipe/arrow navigation still work; the actual
+gesture behaviour is left for a real-phone check in `RELEASE-CHECKLIST.md`.
+`index.html` now loads `style.css?v=34`, not the next free number for that
+page, because `garage.html` already uses `?v=22` for the same file and a
+shared URL could serve a stale cached copy.
+
+## [2026-09-23] cycle | Close #8 (Agent API), backfill its wiki docs
+
+Issue #8 (window._ENVIRONMENT_ MVP) was already fully implemented and merged
+via PR #9 — from a different Claude Code session than this one's own history,
+timestamped before this conversation ever picked it up. It stayed open only
+because the PR body said "Chiude #8" (Italian), which GitHub does not parse
+as a closing keyword; only English "Closes #N" does. This repo already
+learned that lesson once for issue-closing prose comments and apparently
+never generalized it to PR bodies. Did not just trust the PR description's
+own claim of prior testing: re-verified independently in a real headless
+browser (state snapshot present and correctly shaped, mutating a returned
+snapshot does not affect the next getState() call, out-of-range step()
+input is clamped rather than throwing, a concurrent step() is rejected, a
+step neutralizes throttle/brake/steer once its duration elapses) before
+closing. Also backfilled what PR #9 skipped: neither F1-RACER-WIKI.md nor
+this wiki's architecture.md/roadmap.md ever mentioned the Agent API — every
+other merged feature in this repo's history got a wiki entry, this one had
+none. Added a dedicated F1-RACER-WIKI.md section and an architecture.md
+bullet describing the actual contract (getState/step/release, the
+onHumanInput hand-back path, the digital-pedal and automatic-DRS deviations
+from the issue's original spec).
+
+## [2026-09-23] cycle | Garage graphics-profile and diagnostics integration (#2, partial)
+
+Continued #2 where the earlier pass left off — its own roadmap.md bullet
+already named the two gaps: distant-scenery/reflection profile-awareness and
+Garage integration. Did the second one, skipped the first, and said why:
+without a real measured bottleneck (the issue's own required first step,
+still blocked in this environment), touching distant-scenery density or
+reflections would be tuning against a guess, not a finding — the opposite of
+what #2 asks for.
+
+Garage integration was a real, bounded gap: `showroom.js` had its own
+ad hoc viewport-width heuristic (`matchMedia('(max-width: 760px)')`) for DPR
+cap and shadow map size, completely separate from `graphics-profiles.js`'s
+device-signal profile `main.js` already uses for the race. A phone set to
+`gfx=low` for the race got full-cost rendering in the Garage regardless.
+Added an optional `graphicsProfile` param to `createShowroom` (falls back to
+the old heuristic if omitted, so this is a strict addition) and wired
+`garage.js` to pass `loadGraphicsProfile()` — same profile object, same
+three levels, no new heuristic invented. Verified in headless Chromium at a
+high device pixel ratio that low/medium/high produce visibly different
+canvas backing sizes (843x656 / 1264x984 / 1686x1312) with the car still
+rendering correctly and zero console errors at each level.
+
+Also wired `race-diagnostics.js`'s overlay into the Garage (`showroom.js`
+gained an optional `onFrame(dt)` from its own `setAnimationLoop`), since
+#2's own activity list names "misurare... più garage" explicitly and the
+overlay was already scene-agnostic — it just needed a `renderer` and a
+per-frame `dt`, both of which `showroom.js` already had internally. Confirmed
+`?diag=1` shows the same overlay format the race uses and stays absent
+without it.
+
+While verifying the diagnostics overlay, hit a concrete instance of why real-
+device measurement can't be faked here: at typical headless-run wait times
+(1.5-3s) the FPS reading stayed at 0, not because of a bug but because this
+sandbox's software rendering (swiftshader, no real GPU) is slow enough that
+accumulating one 0.5-second FPS sample took roughly 15 real seconds. Confirmed
+the mechanism was correct by waiting that long (FPS populated correctly:
+21fps/47ms at gfx:medium) rather than assuming a bug — but this is exactly
+the kind of number that would be meaningless as a real performance
+measurement, reinforcing why #2 stays open for the user's own hardware pass.
+
+Does not close #2. Real-device measurement remains the actual acceptance bar
+and remains entirely out of this environment's reach.
+
+## [2026-09-23] cycle | Multiplayer Stage 1: rooms and driver reservation (#36, part of #1)
+
+User wants to move on #1 (multiplayer). #1 itself demands staged delivery
+(rooms, then race sync, then voice — separate PRs, protocol/infra decided
+before each). Used plan mode first: audited the repo (confirmed zero
+backend/server/CI existed anywhere, and that `architecture.md`/
+`RELEASE-CHECKLIST.md` enforced "no backend" as a real constraint, not
+just an absence), had a Plan agent design a concrete Stage 1 (rooms +
+driver reservation only) reusing existing patterns (`driver-roster.js` as
+the reservation source of truth, `driver-selection.js`'s separate
+`"player"` pseudo-id, `menu.js`'s driver-grid UI shape, `agent-api.js`'s
+transport-agnostic precedent), then used `AskUserQuestion` on the two real
+open decisions: scope (user chose plan-only first, then said go) and
+hosting (user chose Render, having used it before with a self-ping trick
+against the free tier's sleep — flagged, not overridden, that a 24/7
+self-pinged service uses most of Render's free monthly instance-hour
+allowance on its own, so it may need the paid tier).
+
+Built: `server/rooms.mjs` (pure in-memory room/participant state machine —
+no sockets, no database, resets on restart, a stated Stage 1 limit not an
+oversight) and `server/room-server.mjs` (thin `ws`-based WebSocket
+transport around it) — this project's first-ever backend, kept as a
+separate opt-in process the shipped static site never imports. Client
+side: `room-client.js` (protocol client, its own
+`f1racer-room-session-v1` localStorage key, deliberately never touching
+solo-play's `f1racer-selected-driver-v1`), `room.html`/`room.js` (lobby
+UI), and a new secondary (not a third co-equal card, to respect
+`decisions.md`'s existing Garage/circuit-selection hierarchy) entry point
+on `index.html`.
+
+Verified, not just read back: 20 direct unit checks against `rooms.mjs`'s
+pure functions (atomic reservation with exactly one winner, grace-period
+retention/expiry/reconnect, host handoff to the longest-connected
+remaining participant, room cleanup, no secret/timer-handle leaks in
+`toPublicRoom()`), then a real `ws` server process plus a real WebSocket
+Node client exercising the full protocol end to end including a real
+1500ms grace-period expiry, then two real headless-browser contexts
+(Playwright) against that same real server driving the actual `room.html`
+UI — room creation/join, a live cross-client driver-reservation broadcast,
+a clean rejection of an already-taken driver, non-host `start_race`
+hidden, host `start_race` reaching both clients as the Stage 1
+confirmation, and session resume after a page reload. Confirmed via grep
+that no solo-play file (`menu.js`, `main.js`, `race.html`, `garage.js`,
+`championship.js`) references any of the new room modules — purely
+additive.
+
+Explicitly not attempted: race-state sync, voice/WebRTC/SFU (separate
+future issues with their own infra decisions), or any live public
+deployment — this sandbox cannot host the room server reachably from a
+real separate device/network, so `wss://`/TLS behaviour and cross-device
+reachability are unverified and flagged as such in
+`RELEASE-CHECKLIST.md`. `RELEASE-CHECKLIST.md`'s former blanket "no
+backend/server dependency" line is reworded to scope that guarantee to
+solo/local play specifically, since Stage 1 intentionally introduces one
+for multiplayer.
+
+## [2026-09-23] cycle | Home command hierarchy: multiplayer replaces solo shortcut (#40)
+
+After #38's numbering fix, the user asked to reorganize the home further: promote
+the multiplayer entry (#36) from a secondary banner to one of the two dominant
+home-command cards, explicitly swapping it with the existing "Scegli la gara"
+solo-circuit-selection shortcut. Confirmed via AskUserQuestion after an initial
+ambiguity ("Prossima gara" vs "Scegli la gara" -- the user meant the latter).
+Rationale given directly by the user: the goal is to get more people playing
+together, so multiplayer deserves Garage-level visual priority, not a secondary
+link.
+
+Implementation: nav card 2 (`home-command--race`, renamed `home-command--multiplayer`)
+now links to `room.html` ("Gioca con altri"). The former "Scegli la gara" link
+moved to the slim secondary-banner position multiplayer used to occupy, renamed
+generically from `home-multiplayer-entry`/`-kicker`/`-body` to `home-secondary-entry`/
+`-kicker`/`-body` in style.css since that slot is no longer multiplayer-specific.
+`decisions.md`'s "Home and Circuit Selection" section rewritten accordingly --
+flagged explicitly as a deliberate product priority reversal, not a style tweak,
+so a future session does not silently revert it.
+
+Verified with real Playwright screenshots (desktop 1440px, mobile 390px) before
+committing. No JS files touched; confirmed via grep that no script depends on the
+renamed CSS classes or the old kicker text (GRIGLIA/Modalita alternativa).
+
+## [2026-09-23] cycle | Multiplayer Stage 2: qualifying and race sync (#44, part of #1)
+
+After #36 (Stage 1: rooms/driver reservation) and the home reorg (#38/#40),
+the user asked to proceed to a real synced race. Design decisions confirmed
+via direct back-and-forth rather than assumed: client-authoritative sync
+(each browser keeps simulating its own car, broadcasts position/heading/
+speed a few times a second, others render it as a network-driven ghost —
+rejected server-side physics as its own separate project); disconnection
+mid-race freezes the car in place and greys out its list/nameplate entry
+(a natural consequence of client-authoritative sync, reusing #36's existing
+grace-period mechanism unchanged); no AI padding for empty room slots (a
+3-person room races with 3 cars, not a mixed AI field); host picks circuit
+and difficulty inside the room, broadcast to everyone at start.
+
+Read main.js in full before touching it (had not been read yet this
+session) and found one more real design gap before writing code: rooms had
+no concept of a circuit at all, since Stage 1 stopped at a bare
+confirmation. Surfaced this explicitly and got the host-picks-in-room
+answer before proceeding, rather than guessing.
+
+Implementation: rooms.mjs gained sessionPhase/circuitId/difficulty/
+qualiBestTime/grid and setCircuit/startRace (now gated on ready+driver for
+everyone)/reportQualiTime/finishQualifying; room-server.mjs added
+set_circuit/report_quali_time handlers, an ephemeral unstored car_state
+relay, and its own setTimeout-driven qualifying timer (ROOM_QUALI_MS) so
+every client transitions off one server clock. room-client.js/room.js
+gained a host-only circuit/difficulty picker and navigation into race.html
+once qualifying begins. Two new files bridge a room into the actual race:
+race-bootstrap.js (resolves the async room reconnect before main.js loads,
+since main.js's own top-level code is entirely synchronous and was never
+rewritten to be async — hands off the connected client via a one-shot
+window.__mpClient) and race-multiplayer.js (wraps that connection into the
+small synchronous API main.js calls). Every multiplayer touchpoint in
+main.js is an explicit branch on one multiplayer variable, null for solo —
+AI_DRIVERS becomes the room's other participants, aiCars entries tagged
+isRemote/participantId and driven by a new updateRemoteCar() instead of
+updateAiCar(), while currentRaceOrder/applyGridPositions/DRS/collisions/
+HUD/nameplates all worked unchanged since they were already generic over
+aiCars. race-hud.js and race-nameplates.js gained an optional isDisconnected
+check for the grey-out treatment; race-hud.js also gained a
+getQualifyingRivals getter alongside its old static array, since
+multiplayer's live times change over the session. finishRace() skips the
+solo championship entirely for a multiplayer session, to avoid polluting
+the user's own solo standings with room results.
+
+Verified in stages, same methodology as Stage 1: 12/12 direct checks
+against rooms.mjs's new functions (host/validation gating, ready+driver
+requirement, DNF-to-the-back grid ordering, idempotency); then a real
+two-browser-context Playwright session against a real room-server.mjs
+process covering the full path — room creation/join, ready-gated
+circuit-chosen "Avvia", both clients navigating to race.html with matching
+params, the server-timed qualifying-to-racing transition actually firing,
+a real computed grid, live position/timing-tower classification for both
+cars, the remote participant's nameplate visible and moving, and — after
+closing one browser context mid-race — the remaining client's nameplate
+and timing-tower row greying out once the grace window expired. A separate
+real-browser run confirmed solo play (no ?room=) is completely unaffected:
+no page errors, HUD/tower/synthesized-AI list all render, acceleration
+responds normally. Three.js was served from the local node_modules copy in
+these tests since this sandbox's network policy blocks the jsdelivr CDN
+main.js normally loads it from in production — an environment-only
+substitution, not a code change.
+
+What this did not verify, said plainly rather than glossed over: no test
+drove a multiplayer race to its actual finish line (would need sustained
+scripted driving matching each circuit's line); real phones/separate
+networks were verified for Stage 1's rooms but not re-verified here for
+qualifying/race sync specifically; collision behavior between a local car
+and a network-driven remote car was not watched by eye (expected to be a
+harmless one-frame jitter self-corrected by the next network sample, not
+confirmed visually). RELEASE-CHECKLIST.md records all of this as explicit
+open items, not silently assumed fine.
+
+## [2026-09-24] cycle | Source restructure: everything under core/ (#46)
+
+The user asked to restructure the flat 37-file repo root, going through
+Plan Mode. First proposal (feature folders sitting directly at repo root:
+race/, garage/, multiplayer/, shared/, home/) was corrected twice by the
+user: everything (except assets/) had to collect under one core/ folder,
+with a standard client/server/tools split inside it. Confirmed with the
+user directly, before moving anything, that the 4 HTML entry points must
+stay at the repo root — GitHub Pages here serves the branch root as-is, no
+build step, and does not support serving from an arbitrary subfolder like
+/core; moving them would have broken the live site. Also confirmed
+package.json belongs at core/ (parent of both server/ and tools/), not
+inside server/ alone as the user first suggested — re-read package.json's
+own description before answering and found it names two distinct
+consumers, three for tools/validate-circuits.mjs and ws for
+server/room-server.mjs, so nesting it under server/ would have broken
+tools/'s access to node_modules or forced a duplicate package.json.
+
+Final layout: core/{package.json,node_modules,client/{style.css,race/,
+garage/,multiplayer/,shared/,home/},server/,tools/}. HTML pages, assets/,
+and llm-wiki/ stay at the repo root. Inside client/, shared/ holds
+anything used by 2+ features (garage-setup.js included, since race/main.js
+reads it too, not just garage/garage.js); race-multiplayer.js stays
+grouped in multiplayer/ with room-client.js even though only race/main.js
+imports it, a conceptual-grouping call flagged in architecture.md rather
+than decided silently.
+
+Executed as a single mechanical pass: git mv for every file (keeps
+history), every relative import rewritten to the new cross-folder paths
+without touching existing ?vNN cache-busting query strings (the move
+itself isn't a functional change), the 4 HTML files' script/link tags
+updated, the two cross-boundary imports in rooms.mjs and
+validate-circuits.mjs repointed into client/shared/, .gitignore's
+node_modules//tools/out/ entries reprefixed with core/, old root
+node_modules deleted and a fresh npm install run inside core/.
+
+Verified before opening the PR: node --check on every moved file; npm run
+validate:circuits and a timed start of npm run start:room-server, both
+from inside core/; a real Playwright pass covering all four pages against
+the actually-restructured files — home (cards/carousel render, no errors),
+garage (showroom canvas renders, no errors), race in solo (qualifying
+marker, acceleration), and the full room-to-race multiplayer flow
+(room create/join, ready+circuit gating, both clients navigating to
+race.html with correct params, server-timed qualifying-to-racing
+transition, remote nameplate visible) — 16/16 checks passed, zero page
+errors across every page.
+
+Updated every file-path mention across architecture.md, F1-RACER-WIKI.md,
+decisions.md and roadmap.md to the new core/ paths (user's explicit call,
+asked before doing the large mechanical doc diff rather than assumed) —
+done with a single sed script over exact backtick-quoted filenames rather
+than by hand, then verified with a diff and a grep for any bare
+(un-prefixed) mention left over before applying, since a bash "python3 -c"
+heredoc approach earlier in this session had corrupted a doc via backtick
+command substitution — this pass deliberately avoided that failure mode by
+keeping the substitution script in its own file, never inline in a
+double-quoted shell string.
+
+## [2026-09-24] cycle | Fix: browser back button trapped users inside a multiplayer race (#48)
+
+User-reported bug: on desktop, once a multiplayer race started, pressing
+the browser's back button did not leave the race. Reproduced with a real
+Playwright `page.goBack()` before touching any code: the URL genuinely
+returned to room.html, but room.js's onStateChange handler saw the room's
+sessionPhase still "qualifying"/"racing" (the server session never
+changed just because this tab navigated away) and called goToRace() again
+immediately, bouncing straight back to race.html in the same tick — from
+the user's perspective indistinguishable from "back does nothing". Also
+checked and ruled out the HUD's own `.back-link` (`← circuiti` in
+race.html) as the culprit: a real synthetic mouse click there did
+navigate correctly, so that path was never the problem.
+
+Fix: room.js now tracks whether the current page load ever actually
+rendered the lobby (`sawLobbyThisLoad`). The auto-navigate-into-race call
+only fires when that's true — i.e. only for a live "the host just started
+it" transition witnessed while sitting in the lobby, never for a page
+load (via back-navigation or a fresh visit) that finds the room already
+mid-race. In that latter case the room-started banner shows a manual
+"Rientra in gara" link instead of forcing navigation, so back-navigating
+users get a real choice: rejoin, or actually leave via the existing "Esci"
+button / header link, both already unaffected by this bug.
+
+Verified with three real Playwright scenarios: back-navigate mid-qualifying
+now correctly stays on room.html (previously bounced straight back); the
+manual "Rientra in gara" link, when clicked, does navigate into the race
+as expected; and Esci from that state correctly returns to the room entry
+form. Zero page errors throughout.
+
+Also changed the home command card's copy from "Gioca con altri" to
+"Corri in multiplayer" per explicit user request ("la frase deve essere
+multiplayer o similari... immagina di dover vendere questa cosa") — kept
+the kicker ("STANZA") and the same verb+preposition+noun rhythm as the
+garage card's "Entra nel garage" for consistency, and punched up the
+subtext to lead with the benefit (challenge your friends) rather than
+just the mechanics (create/join a room). Verified with real screenshots,
+desktop and mobile, that the new copy still fits the card layout cleanly.
+
+## [2026-09-24] cycle | Realistic engine audio and F1 start procedure (#50)
+
+User request: better engine sound, audible before the qualifying/race
+start, and a realistic start "come fanno nelle gare ufficiali".
+
+- `race-audio.js` rewritten: turbo V6 model (fundamental = rpm/20),
+  PeriodicWave firing tone + sub/half voices, combustion noise, turbo
+  whistle, tanh saturation, RPM inertia, fire-up sequence; phase-driven
+  API (`getPhase`/`getThrottle`) so the engine idles and free-revs on the
+  grid; `coolDown()` after the flag.
+- `main.js`: "Avvia il motore" gate (autoplay policy), pit-exit light for
+  qualifying, five-light gantry with random hold for the race (seeded from
+  the server in multiplayer), `startSequenceId` guard against stale timers.
+- Verified in real headless Chromium through a multiplayer room (server
+  qualifying + race): gate blocks audio until a keypress; idle firing
+  peak 242 Hz (model 230); pit light red -> green; car drives after green;
+  race lights 1 -> 5 -> all out, never green; car frozen with 5 reds and
+  engine revving (spectral centroid 1723 Hz vs 912 at idle); launch to
+  137 km/h after lights out; zero page errors.
+- Known limits: gate needed on every page load; multiplayer qualifying
+  clock runs while a player is at the gate; hold range 0.2-3s is an
+  estimate; no jump-start penalty; no clock-skew compensation.
+
+## [2026-09-24] cycle | Lagged chase camera yaw + per-cycle workflow (#52)
+
+- `race-camera.js`: chase camera yaw trails the car heading with an
+  exponential response (`CHASE_CAM_YAW_RESPONSE = 3.2`/s, lag clamped to
+  0.45 rad), so the car visibly rotates into corners instead of staying
+  locked straight on screen. Cockpit camera unchanged.
+- `AGENTS.md`: one issue/branch/PR per work cycle, one commit per change,
+  one log entry per cycle; "Concludi" closes the cycle, then `/compact`.
+- Verified with `node --check` + `git diff --check` only; feel to be
+  judged in play.
+
+## [2026-09-24] cycle | PlayStation pad support (#54)
+
+- `race-input.js`: Gamepad API polled every frame ("standard" mapping).
+  Left stick steers (deadzone 0.12 + `shapeSteering`); R2/L2 are digital
+  gas/brake (threshold 0.25); Cross, Triangle, Square, R1 are replayed as
+  synthetic `keydown` (gate, `KeyC` camera, `KeyP` pit, `KeyE` ERS).
+- `main.js`: a pad press is not a user activation, so after the engine
+  gate the audio context also resumes on the next real key or tap.
+- Decision: analog pedals deferred to a separate cycle (touches physics).
+- Verified with `node --check` + `git diff --check` only.
+
+## [2026-09-24] cycle | Landscape fullscreen + home screen app (#56)
+
+- `race-input.js`: on touch devices, the first tap in landscape during
+  the race calls `requestFullscreen` (a user gesture is required, so
+  rotation alone cannot); rotating back to portrait exits. Skipped when
+  launched from the home screen (`display-mode` fullscreen/standalone).
+- New `manifest.webmanifest` (`display: fullscreen`) + icons
+  `assets/images/app-icon-{180,192,512}.png`; all 4 pages link it and
+  carry `apple-mobile-web-app-*` / `theme-color` meta.
+- Known limits: iPhone Safari has no page fullscreen — "Add to Home
+  Screen" is the only chrome-free route, keeps the iOS status bar, and
+  gets its own `localStorage` separate from Safari.
+- Verified with `node --check` + `git diff --check` only.
+
+## [2026-09-24] cycle | /concludi project skill (#58)
+
+- New `.claude/skills/concludi/SKILL.md`: scripted cycle close (log entry,
+  PR ready, merge with "Closes #N", pull `master`, delete branch,
+  unsubscribe PR activity, `/compact` reminder).
+- Known limit: `/compact` is a client command; no skill or hook can run
+  it, so it stays a manual step for the user.
+- Verified with `git diff --check` only; first real run on the next cycle.
+
+## [2026-09-24] cycle | Versioned imports and iOS home-screen touch controls (#60)
+
+- Every relative import in `core/client` now carries `?vNN` (new ones
+  start at `?v=1`), with version bumps chained up to the HTML pages, so the
+  installed PWA never mixes new pages with modules cached from before a
+  deploy. Rule made explicit in `llm-wiki/AGENTS.md`.
+- Known limit: GitHub Pages caches HTML ~10 min; there is no service
+  worker, so updates show on reopen after that window.
+- `race-controls.css`: in `display-mode: standalone/fullscreen` the touch
+  controls (and landscape motion controls) sit at least 34px above the
+  bottom edge; iOS was swallowing some taps in the home-indicator strip.
+- Verified with `node --check` + `git diff --check` only; the iOS fix still
+  needs confirmation on the user's iPhone.
+
+## [2026-09-24] cycle | Race voice chat, last stage of multiplayer (#1)
+
+- `core/server/room-server.mjs` relays `voice_signal` (offer/answer/ICE/
+  hello) to one named peer in the same room; audio never touches the
+  server. `room-client.js` gains `sendVoiceSignal`/`onVoiceSignal`.
+- New `core/client/multiplayer/voice-chat.js`: peer-to-peer WebRTC mesh,
+  race only (not the lobby), started from the engine-gate tap so the mic
+  prompt has a gesture. Smaller participantId offers; signaling waits for
+  the mic answer; no mic = listen-only. HUD toggle 🎙/🔇 with peer count.
+- Known limits: STUN only (Google), no TURN — some 4G/5G peers may not
+  connect; iOS audio routing/volume with the mic open is unverified.
+- Fixed a pre-existing crash: reloading `race.html` after the grid was set
+  hit engine-gate state before its declaration (TDZ); `onGridReady` is now
+  registered after module evaluation. The reloaded car still restarts from
+  its grid slot (position is not restored).
+- Workflow rule changed: cycles close right after the work (user tests on
+  `master`), no browser tests; PR auto-subscription is left until close.
+- Verified with two Playwright contexts + fake mic against a local room
+  server (connect, mute, reload, leave); not yet on real phones.
+
+## [2026-09-24] cycle | Touch controls no longer start text selection on iOS (#63)
+
+- `race-controls.css`: on touch race pages, `user-select`, touch callout and
+  tap highlight are disabled for the body and every touch control; the
+  wheel's SVG (with its "OB" text) no longer takes pointer events, so the
+  `#wheel-control` div gets them.
+- Cause (probable, from the user's report): in the iPhone home-screen app,
+  landscape, a long press on control labels began a text selection and
+  iOS cancelled the touch, so the upper part of wheel/pedals felt dead.
+- Verified with `git diff --check` only (CSS); confirmation on the iPhone
+  pending.
+
+## [2026-09-24] cycle | Gentler lift-off and brake over throttle (#65)
+
+- Tester feedback: "either stopped or flat out"; no way to dab the brake
+  while holding full gas.
+- `player-physics.js`: brake now wins when both pedals are held (throttle
+  = forward && !back, also used for load transfer/stability). Lift-off
+  decel is `coastDecel * (0.12 + 0.38 * v²/vmax²)`: ~14 m/s² at top speed,
+  ~3.4 m/s² near a standstill (was a flat 28 m/s² at any speed).
+- Not changed: acceleration (still a flat 47 m/s², very quick to top
+  speed) — left for a separate decision since it shifts balance vs AI.
+- Verified with `node --check` + `git diff --check` only.
+
+## [2026-09-24] cycle | Realistic acceleration curve (#67)
+
+- Acceleration was a flat 47 m/s² (player) / 41 (AI): 0-100 km/h in 0.6s,
+  0-300 in 1.8s. Real F1: ~2.6s / ~4.5s (0-200) / ~10s.
+- Now `accel * (1 - 0.85 * (v/vmax)²)` for both player
+  (`player-physics.js`) and AI (`race-ai.js`), with launch accel 16 / 14
+  (same player/AI ratio as before). Player: ~1.8s 0-100, ~4s 0-200, top
+  speed after ~9-10s.
+- Risk: corner exits are much slower, so lap times and the player/AI
+  balance shift; tune `accel` in `main.js` if the AI feels off.
+- Verified with `node --check` + `git diff --check` only.
+
+## [2026-09-24] cycle | Heading-up minimap (#69)
+
+- Tester feedback: the north-up whole-circuit trace with a dot never told
+  where the next corner was or how tight; players ended up on the grass.
+- `race-hud.js` `drawMinimap()`: heading-up and zoomed (~220 m to the rim),
+  player arrow fixed at 2/3 height so more road ahead shows, track drawn
+  as an outlined band, rivals as dots, inside a dark round disc.
+- Bigger: canvas 130→200 px (`MINIMAP_CANVAS_SIZE`, `race.html`), CSS
+  width 4.2rem→8.5rem (6.5rem on short landscape phones, was 3rem).
+- Trade-off: no whole-circuit overview any more during the race.
+- Verified with `node --check` + `git diff --check` only.
+
+## [2026-09-24] cycle | Braking hint on the minimap rim (#71)
+
+- User idea from F1 games: a green/red cue near the map for corners. Built
+  as a *braking* cue, not a mere "corner ahead" flag.
+- `main.js`: `cornerTargetSpeed[]` per centerline sample (AI's severity
+  formula, `maxSpeed * (1 - 0.48 * severity)`) and `centerlineStep[]`,
+  precomputed once; `brakeUrgency()` = max over the next 140 samples of
+  needed decel / (0.8 * brakeDecel).
+- `race-hud.js`: minimap rim green (<0.55), yellow (<0.9), red (>=0.9).
+- Needs verification: thresholds and the 0.48 factor are borrowed from
+  the AI, not tuned for the player — may warn too early or too late.
+- Verified with `node --check` + `git diff --check` only.
+
+## [2026-09-24] cycle | Rimless minimap and on-road brake trail (#73)
+
+- `race-hud.js`: minimap drops the dark disc and the #71 urgency rim; edges fade out via a `destination-in` radial gradient. `brakeUrgency` is no longer a HUD param.
+- `style.css` / `race.html` / `main.js`: minimap 11rem (8.5rem at `max-height:480px`), canvas 256px.
+- `main.js`: `brakeTrail` — additive, soft-edged plane on the tarmac from under the player car forward, sized from the car's bounding box; color green -> yellow -> red with `brakeUrgency()`, opacity rises with urgency, hidden below 8 m/s. Updated in the qualifying and race loops.
+- Chosen over a bottom-left HUD bar because the touch wheel owns that corner.
+- Verified with `node --check` and `git diff --check` only; thresholds and look to be tuned from play on `master`.
+
+## [2026-09-24] cycle | 300 m braking bar replaces minimap and brake trail (#75)
+
+- New `core/client/race/race-brake-bar.js`: vertical strip of the next 300 m of centerline, player arrow at the bottom, rivals as dots (placed via nearest centerline sample). Each stretch is colored by a backwards braking envelope (`cornerTargetSpeed` + `0.8 * CAR.brakeDecel`) against the current speed: green = no braking, yellow -> red = braking zone/corner.
+- `main.js`: removed the minimap geometry, `brakeUrgency()` and the #73 `brakeTrail` mesh; `setupBrakeBar()` runs in the qualifying and race loops.
+- `race-hud.js`: `drawMinimap()` and its params removed. `race.html`: `#minimap` canvas replaced by `#brake-bar`.
+- Layout: right edge, vertically centered on desktop (`style.css`); above the gas pedal on touch (`race-controls.css`), shorter at `max-height:520px`. The canvas backing store follows its CSS box.
+- Verified with `node --check` and `git diff --check` only.
+
+## [2026-09-24] cycle | Rotating braking map with real corner speeds (#77)
+
+- Root cause of "always green" in #75: `cornerTargetSpeed` reused the AI corner-severity formula, whose minimum is ~157-212 km/h on the current (short, 400-1900 m) circuits, so the player rarely exceeded it.
+- `main.js`: `cornerTargetSpeed` now = highest speed where `|steeringYaw(1, v, CAR.maxTurnRate)| * 0.8 >= v * curvature`, curvature over a ±6 m window. Corners come out at ~50-140 km/h.
+- `race-brake-bar.js` renamed to `race-brake-map.js`: heading-up section (30 m behind to 300 m ahead) around the player's dot, per-segment green -> yellow -> red from the braking envelope, rivals in the section as dots, faded edges.
+- Canvas `#brake-map`: 11rem at right-center on desktop, 9rem (7.5rem at `max-height:520px`) above the gas pedal on touch.
+- Verified with `node --check`, `git diff --check` and a node script printing the per-circuit corner speeds; not played.
+
+## [2026-09-24] cycle | Steering no longer caps top speed (#79)
+
+- `core/client/race/player-physics.js`: corner scrub factor 0.9 -> 0.2 and
+  sliding traction cut 0.42 -> 0.15. Before, half lock held the car at
+  ~185 km/h and full lock at ~107 km/h flat out, acting as a hidden limiter.
+- Now (node sim, grip 1): half lock ~289 km/h, full lock ~253 km/h; going
+  in too fast ends off the road instead of being slowed by the game.
+- Version bumps: `player-physics.js?v=4`, `main.js?v=56`,
+  `race-bootstrap.js?v=15`.
+- Verified with `node --check` and `git diff --check`; no browser test.
+
+## [2026-09-25] cycle | Braking map restyle (#81)
+
+- `core/client/race/race-brake-map.js`: the section is drawn as a road
+  (shadow, white edge lines, dark asphalt) with a thinner green/yellow/red
+  warning line down the middle; the player is a white arrow; rivals are
+  smaller dots with a white outline.
+- New label under the arrow: distance to the braking point (first sample
+  where the current speed is above the envelope), rounded to 10 m; "FRENA"
+  in red when it is under 8 m. Drawn after the edge fade so it stays sharp.
+- Stroke widths scale with the canvas size (tuned for 256 px).
+- Version bumps: `race-brake-map.js?v=2`, `main.js?v=57`,
+  `race-bootstrap.js?v=16`.
+- Verified with `node --check`, `git diff --check` and a node smoke test
+  with a mock canvas; no browser test.
+
+## [2026-09-25] cycle | Touch braking map bottom center (#83)
+
+- `race.html`: `#motion-controls` (tilt steering: toggle, calibrate,
+  sensitivity) gets `hidden`; the code in `race-input.js` is kept on the
+  user's request so it can come back.
+- `core/client/race/race-controls.css`: `#motion-controls[hidden]` now
+  really hides (the id rule set `display:flex`); on touch `#brake-map`
+  moves bottom center between wheel and pedals (landscape
+  `min(9rem, 100vw - 380px)`, 7.5rem on short screens, standalone lifted
+  above the iOS home strip); portrait puts it above the controls
+  (bottom 205px). Desktop unchanged (right edge).
+- Version bump: `race-controls.css?v=43`.
+- Verified with `git diff --check`; no browser test.
+
+## [2026-09-25] cycle | Wider, see-through touch braking map (#85)
+
+- `core/client/race/race-controls.css`: touch `#brake-map` is now a 16:10 box
+  (up to 17rem landscape, 14rem portrait), no drop shadow, opacity 0.9.
+- `core/client/race/race-brake-map.js`: zoom and stroke widths scale by the
+  short side of the canvas; black road shadow removed; asphalt is punched out
+  and refilled at 35% alpha, edges at 55%; elliptical fade starts at 35% of
+  the radius. Warning line, rival dots, arrow and label stay opaque.
+- Version chain: `race-brake-map.js?v=3`, `main.js?v=58`,
+  `race-bootstrap.js?v=17`, `race-controls.css?v=44`.
+- Verified with `node --check` and `git diff --check` only (no browser test).
+
+## [2026-09-25] cycle | Stuck touch wheel/pedals (#87)
+
+- User report: while turning, even slowly, the car "loses the road" and then
+  the control stops responding.
+- `core/client/race/race-input.js`: wheel and pedals kept the first pointer id
+  until its release; a lost release left a ghost pointer (steer frozen, new
+  touches ignored). A new touch now takes over when the stored pointer is no
+  longer captured, and window-level `pointerup`/`pointercancel` (capture
+  phase) free any wheel/pedal owned by that pointer.
+- Root cause is probable, not reproduced (no browser tests); if the car still
+  slides at low speed, the next suspect is the lateral-slip model in
+  `player-physics.js`.
+- Version chain: `race-input.js?v=42`, `main.js?v=59`,
+  `race-bootstrap.js?v=18`. Verified with `node --check` + `git diff --check`.
+
+## [2026-09-25] cycle | Driver model, exhaust pops, desktop map at bottom (#89)
+
+- `core/client/style.css`: desktop `#brake-map` moved from the right edge to
+  the bottom center (16:10, `min(22rem, 40vw)`, above `#hint`), matching the
+  see-through touch look of #85.
+- `core/client/shared/car-model.js`: driver helmet gets an accent centre
+  stripe, front-only visor slot, chin bar and rear spoiler; HANS collar;
+  arms bend at the elbow. Shared by race and garage showroom.
+- New `core/client/race/race-exhaust.js`: additive flame sprite on the player
+  car's tailpipe, popping 3-6 times on lift-off above 35% top speed and 1-2
+  times on a downshift; back on the gas cancels the queue. Sound comes from
+  `playExhaustPop()` in `race-audio.js` (band-passed noise + low thump).
+  Player car only; AI cars have no pops.
+- Version chains: `car-model.js?v=29` -> `race-car-view.js?v=29`,
+  `showroom.js?v=31` -> `garage.js?v=42`; `race-audio.js?v=3`,
+  `race-exhaust.js?v=1`, `main.js?v=60`, `race-bootstrap.js?v=19`,
+  `style.css?v=43` (race.html). Verified with `node --check` + `git diff --check`.
+
+## [2026-09-25] cycle | Multiplayer livery and qualifying start slot (#91)
+
+- `core/client/race/main.js`: in a room the local car uses the room-reserved
+  driver (livery + cockpit theme) instead of the solo selection, so every
+  participant sees the same colour for the same car.
+- Multiplayer qualifying: each participant starts from its own grid slot
+  (index in the server's participant list) instead of all on pole;
+  `prevRawProgress` is derived from the actual start point.
+- Version chain: `main.js?v=61`, `race-bootstrap.js?v=20` (race.html).
+- Verified with `node --check` only; to be tested in a real two-player room.
+
+## [2026-09-25] cycle | Voice chat diagnostics (#93)
+
+- Real test (iPhone + desktop on the same LAN): mic granted, HUD stuck on
+  "Voce · 0", no audio. Cause not yet known (stale room server vs. missing
+  TURN).
+- `voice-chat.js`: the HUD label now says why nobody is connected — room
+  server too old for `voice_signal`, no reply from peers, connecting,
+  connection failed (likely NAT, needs TURN) — and logs each WebRTC
+  connection/ICE state to the console.
+- `room-client.js`: an `unknown_type` error without reqId (old server
+  rejecting `voice_signal`) is forwarded to the voice layer.
+- Version chain: `voice-chat.js?v=2`, `race-multiplayer.js?v=3`,
+  `main.js?v=62`, `room-client.js?v=4`, `race-bootstrap.js?v=21`,
+  `room.js?v=5`. Verified with `node --check` only.
+
+## [2026-09-25] cycle | Voice: stale socket close and late hellos (#95)
+
+- Real test: joiner showed "Voce · nessun altro", creator "Solo ascolto · nessuna risposta" — the joiner saw the creator as not connected.
+- `core/server/room-server.mjs`: a socket close is ignored when the participant is already bound to a newer socket (the room.html -> race.html navigation can deliver the old close after the new reconnect, which marked the live participant "grace" and dropped its socket from the relay map).
+- `core/client/multiplayer/voice-chat.js` (`?v=3`): hellos go to every peer that becomes connected, not only those present at start; chain bumped (`race-multiplayer.js?v=4`, `main.js?v=63`, `race-bootstrap.js?v=22`).
+- Root cause is probable, not proven; TURN is still missing for peers behind strict NAT. Verified with `node --check` only.
+
+## [2026-09-25] cycle | Room invite link (#97)
+
+- `room.html` + `core/client/multiplayer/room.js` (`?v=6`): "Condividi link" button builds `room.html?join=CODE` keeping the current `roomServer`; native share sheet on mobile, clipboard fallback, raw link as last resort.
+- Opening an invite prefills the code and shows a hint; the nickname is remembered in `f1racer-room-nickname-v1`. A saved session for a different room is left so the invite wins.
+- Warns when the link cannot work for friends (page on localhost, or no public `roomServer`) — the host must open the game from GitHub Pages with `?roomServer=wss://…` for the link to be usable.
+- Verified with `node --check` only.
+
+## [2026-09-25] cycle | roomServer accepts https (#99)
+
+- `core/client/multiplayer/room-client.js` (`?v=5`): `?roomServer=` maps `https://` to `wss://`, `http://` to `ws://`, and a bare host to `wss://`, so the ngrok URL can be pasted as printed.
+- Invite warning in `room.js` (`?v=7`) now suggests `?roomServer=https://…`; chain bumped (`race-bootstrap.js?v=23`, `race.html`, `room.html`).
+- Verified with `node --check` and a node run of the mapping.
+
+## [2026-09-25] cycle | Cornering no longer feels like braking (#101)
+
+- Real test: steering made the engine note drop. The tyre scrub in `core/client/race/player-physics.js` (`?v=5`) was linear in slip and, near top speed, beat the engine's remaining push even at half lock.
+- Scrub now starts only past slip 0.3 (rescaled 0..1 above it): light/medium steering holds speed on the throttle; full lock at top speed still loses some (estimated ~5 km/h/s instead of ~15), so overdriving a corner still costs.
+- Player physics only; AI untouched. Chain bumped (`main.js?v=64`, `race-bootstrap.js?v=24`, `race.html`).
+- Verified with `node --check` only; the numbers are estimates from the formulas, to be confirmed in game.
+
+## [2026-09-25] cycle | Brake no longer goes straight into reverse (#103)
+
+- Real test: holding the brake stopped the car and immediately reversed it — `brakeDecel` (75 m/s²) kept applying below zero down to `reverseMaxSpeed`.
+- `core/client/race/player-physics.js` (`?v=6`): braking clamps at 0; reverse starts only after the brake is held 0.6 s at a standstill, at 9 m/s² instead of full brake force. Releasing the brake resets the hold.
+- Also noted from the same test: a ~244 km/h top speed was probably collision damage (`(1 - damage)` in the speed cap), not a physics regression — the user will check the "Danni" HUD row.
+- Chain bumped (`main.js?v=65`, `race-bootstrap.js?v=25`, `race.html`). Verified with `node --check` only.
+
+## [2026-09-25] cycle | Multiplayer race without qualifying (#107)
+
+- Part of the multiplayer experience list (#105). New room flag `qualifying` (default `true`), set by the host with `set_circuit` via the "Qualifica prima della gara" checkbox in `room.html`.
+- `core/server/rooms.mjs`: with `qualifying: false`, `startRace` shuffles the reserved drivers into `grid` and goes straight to `sessionPhase: "racing"` with `raceStartedAt`; `room-server.mjs` schedules the qualifying timer only when the phase is `qualifying`.
+- Client needs no race-page change: `race.html` already handles a room that is already `racing` through `onGridReady` (the reload-mid-race path).
+- Chain: `room-client.js?v=6`, `room.js?v=8`, `race-bootstrap.js?v=26`. Verified with `node --check` and a node run of `startRace` without qualifying. Requires restarting the room server.
+
+## [2026-09-25] cycle | Synced multiplayer start lights (#109)
+
+- Found in code (part of #105): the lights-out hold was already seeded by `raceStartedAt`, but each browser began the sequence at its own engine fire-up, so whoever tapped first started first.
+- `core/server/room-server.mjs`: every server reply carries `serverNow`; `room-client.js` (`?v=7`) keeps the clock offset and exposes `serverNow()`, surfaced by `race-multiplayer.js` (`?v=5`).
+- `core/client/race/main.js`: `runRaceStartLights` takes an absolute anchor; in multiplayer the sequence starts `MP_START_LEAD_MS` (8 s) after `raceStartedAt` on the server clock. A late engine start joins the sequence in progress, or goes at once if the lights are already out. Solo is unchanged (anchor = now).
+- Clock offset ignores one-way latency (tens of ms). Chain: `room.js?v=9`, `main.js?v=66`, `race-bootstrap.js?v=27`. Verified with `node --check` only; needs the room server restarted.
+
+## [2026-09-25] cycle | Smoother remote cars (#111)
+
+- Part of #105. `updateRemoteCar` chased the last `car_state` (~12/s); at 300 km/h samples are ~7 m apart, so the car eased towards a point it had already passed and stuttered.
+- `race-multiplayer.js` (`?v=6`) stamps each sample with `receivedAt`; `core/client/race/main.js` now chases the sample projected forward along its heading by `speed × age` (age capped at 250 ms, so a stalled stream stops the car quickly).
+- Chain: `main.js?v=67`, `race-bootstrap.js?v=28`. Verified with `node --check` only.
+
+## [2026-09-25] cycle | Shared multiplayer results and rematch (#113)
+
+- Part of #105. `core/server/rooms.mjs`: participants carry `finishedAt`; `reportFinish` records the first finish report (server arrival order is the result); `rematch` (host only) puts the room back in `lobby`, keeping drivers and circuit, clearing ready flags, grid, quali times and finishes. `room-server.mjs` handles `report_finish` / `rematch`.
+- `core/client/race/main.js`: in multiplayer `finishRace` reports the finish and shows the room's shared order (finished by `finishedAt`, then "(in gara)" in running order, "N/M arrivati"), re-rendered on every room update. The host's primary button is "Rivincita"; any room back in `lobby` sends every race page to `room.html` (keeping `roomServer`). The old per-browser multiplayer order and "Torna alla home" branch is gone; solo results are unchanged.
+- Chain: `room-client.js?v=8`, `race-multiplayer.js?v=7`, `main.js?v=68`, `race-bootstrap.js?v=29`, `room.js?v=10`. Verified with `node --check` and a node run of finish + rematch in `rooms.mjs`; needs the room server restarted.
+
+## [2026-09-25] cycle | Touch offset in iOS home-screen mode (#115)
+
+- User report: launched from the home screen, the race controls were drawn higher than their tap zone.
+- `race.html`: `viewport-fit=cover` plus `black-translucent` status bar, so the standalone viewport covers the whole screen and the status bar no longer shifts the layout.
+- `race.html`: an inline script pins the document scroll at 0,0 on resize, rotation and scroll.
+- Known limit: in portrait the top HUD can now sit under the status bar; the existing CSS already honours the left, right and bottom safe-area insets.
+- Verified by syntax check only; needs a test on the device from the home screen.
+
+## [2026-09-26] cycle | Results overlay in landscape (#117)
+
+- `core/client/style.css`: under `(orientation: landscape) and (max-height: 560px)` the results card becomes a two-column grid: the standings scroll on the left, while the title, points and actions (stacked, 44px tall) sit on the right. The overlay padding follows the safe-area insets, which matters now that `viewport-fit=cover` is set (#115).
+- `style.css?v` bumped on all four HTML pages.
+- Portrait layout is unchanged. Verified with a syntax check only; the user tests on the phone.
+
+## [2026-09-26] cycle | Brake/gas inset from the right edge (#119)
+
+- `core/client/race/race-controls.css`: in landscape the throttle group gets `margin-right: clamp(28px, 6vw, 64px)` and is raised 10px, so the right thumb reaches it without bending (user report). The steering group is unchanged.
+- Bumped `race-controls.css?v=45` in `race.html`.
+- Verified with a syntax check only; the user tests on the phone.
+
+## [2026-09-26] cycle | Game modes guide page (#121)
+
+- New `modes.html` (root, with `core/client/home/modes.css?v=1`): controls for keyboard, PlayStation pad (Gamepad API mapping from `race-input.js`) and touch/motion; game types: solo championship, multiplayer via ngrok (recommended), multiplayer on a local network.
+- LAN section states the real limit: the https GitHub Pages site cannot open `ws://<LAN IP>` (mixed content), so LAN without ngrok needs the game served over http from the host (`python3 -m http.server`), which loses mic (voice send) and iOS motion steering (secure-context only).
+- Linked from the home command center as a full-width strip; `style.css` bumped on all pages (index/modes `v=43`, garage `v=28`, race `v=45`, room `v=41`).
+- Known gap: tyre compound has no pad button (keyboard 1/2/3 only).
+- Verified with `git diff --check` and an HTML parse only.
+
+## [2026-09-26] cycle | Game modes guide redesign, "?" entry (#123)
+
+- `modes.html` rewritten: game types first (three picker tiles with players/requirements/voice, then step-by-step cards with numbered rail and copy buttons on commands), controls second (keyboard cluster, PS face buttons, phone sketch, binding lists).
+- Pad ✕ described as "start the engine" (it only fires the pre-start engine gate in `main.js`), not a generic start.
+- Home: the full-width guide strip is gone; a small round "?" (`.home-help`) sits in the hero corner. `style.css` bumped on all pages (index/modes `v=44`, garage `v=29`, race `v=46`, room `v=42`); `modes.css?v=2`.
+- Verified with `git diff --check`, HTML parse and `node --check` of the inline copy script.
+
+## [2026-09-26] cycle | Guide: no LAN mode, interactive controls (#125)
+
+- `modes.html`: local-network mode removed (tile + card) at the user's request, it repeated the ngrok flow; the picker is now two tiles.
+- Keyboard rows no longer wrap a parenthesis onto its own line: explanations are plain sentences in their own `<p>` cell, keys in a fixed 6.4rem column.
+- Drawn controls (keyboard keys, pad shoulders/stick/face buttons, phone wheel/pedals/motion) are buttons: a tap lights the key and its explanation row (`data-bind`, inline script); tapping a row lights it too. `modes.css?v=3`.
+- Verified with `git diff --check`, HTML parse, `node --check` of the inline script and a check that every `data-bind` has both a drawn key and a row.
+
+## [2026-09-26] cycle | Multiplayer setup to README, guide is controls-only, room "?" (#127)
+
+- User's call: hosting (Node, room server, ngrok) is infrastructure, so it moved to `README.md` ("Multiplayer: avviare il server delle stanze"); README structure block also updated to the `core/` layout.
+- `modes.html` is now "Comandi": interactive controls plus a short "Con gli amici" box pointing to `room.html` and the README; game-type tiles, step cards and copy script removed (`modes.css?v=4`, unused rules pruned).
+- `room.html`: `<details>` "?" in the hero corner (reuses `.home-help`) with a 5-step how-to for invited players and links to controls/README. No JS.
+- `style.css` bumped on all pages (index/modes `v=45`, garage `v=30`, race `v=47`, room `v=43`).
+- Verified with `git diff --check`, HTML parse and `node --check` of the inline script.
+
+## [2026-09-26] cycle | Guide no longer mentions tilt steering (#129)
+
+- `modes.html`/`modes.css?v=5`: removed the "Attiva movimento" phone button, its row and the iPhone permission note — the motion panel has been hidden in `race.html` since #83, so the guide described a control players cannot reach.
+- The tilt code in `race-input.js` is untouched (still dead code behind the hidden panel).
+- Verified with `git diff --check` and a grep for leftover "movimento"/"motion" in the guide, room page and README.
+
+## [2026-09-26] cycle | Phone camera and ERS buttons (#131)
+
+- `race.html`: new `#touch-actions` bar (VISUALE, ERS), top center, shown only on `html.touch`.
+- `race-input.js`: the buttons replay `KeyC`/`KeyE` keydown events, same path as the pad, so camera and ERS logic is untouched.
+- `race-controls.css`: small 36px buttons under the start lights' z-index; pit stop deliberately left off the phone (accidental taps).
+- `modes.html`: phone card lists the two new buttons. Versions: race-controls.css v46, race-input v43, main v69, race-bootstrap v30.
+- Verified with `node --check` and `git diff --check` only; to be tested on the phone.
+
+## [2026-09-26] cycle | Phone ERS/VIEW in the speedo cluster (#133)
+
+- The #131 top bar covered the speedo (`#hud-bottomright` sits top center); removed.
+- `race.html`: `#ers-indicator` is now a button (tap toggles ERS on touch); new `#view-toggle` "VIEW" right of the speedo, touch only.
+- `race-input.js`: buttons under `#hud-bottomright [data-key]` replay `KeyE`/`KeyC`, same path as the pad.
+- `race-controls.css`: button reset, see-through badge style like ERS/DRS, 28px min height, pointer events only on touch.
+- `modes.html` phone rows updated. Versions: race-controls.css v47, race-input v44, main v70, race-bootstrap v31. Syntax checks only.
+
+## [2026-09-26] cycle | Phone BOX/tyres, ERS dimming, cockpit wheel (#135)
+
+- `race.html`, `race-controls.css`: `#hud-shortcuts` row under the speedo
+  (touch only) with VIEW, BOX and S/M/H; S/M/H replace VIEW/BOX while
+  `html.pit-servicing`. ERS/BOX dim under `html.hud-not-racing`.
+- `race-hud.js` (new `getRaceState` option) toggles those root classes and
+  `#pit-toggle.pit-armed`.
+- `race-commands.js`/`race-systems.js`: KeyP toggles an armed pit call that
+  waits until the car is inside the pit zone below the pit speed limit
+  (18 units ≈ 65 km/h) instead of being discarded.
+- `race-camera.js`: cockpit rebuilt — team badge removed (it covered the
+  road), steering wheel turning with `steering.value` (new `getSteer`),
+  gloves/forearms, nose and front wing. Wheel spin sign unverified in game.
+- Why ERS "did nothing" on the phone: ERS is race-only by design, and the
+  user was likely in qualifying. Verified with `node --check` only.
+
+## [2026-09-26] cycle | Phone landscape driver list fade (#137)
+
+- `race-controls.css` (v49): under landscape + max-height 520px on touch,
+  `.qualifying-timing` rows fade from P5 (.55, .3, then .14 from P7);
+  `li.is-player` stays at full opacity. The list covered the touch wheel.
+- CSS only, no JS; verified with `git diff --check`.
+
+## [2026-09-26] cycle | VIEW/BOX below the speedo, real-model cockpit (#139)
+
+- `race.html`, `core/client/style.css`: new `#hud-cluster` wrapper holds the
+  top-center position; the speedo panel and the phone shortcut row
+  (VIEW/BOX, S/M/H while servicing) stack in it, the row below the panel.
+- `race-controls.css`, `race-input.js`: selectors moved to `#hud-cluster`.
+- `race-camera.js`: the #135 primitive cockpit (built at a different scale
+  than the car, eye above the halo) is replaced by an unbatched copy of the
+  player's car (`buildCar(..., { detail: true })` in `main.js`) seen from
+  inside the helmet (helmet parts hidden). Pose, wheel roll, front-wheel
+  steer and steering wheel are mirrored from the visible player car; near
+  plane is 0.03 in cockpit. `cockpitThemeForDriver` is no longer used here.
+- Verified with `node --check` and `git diff --check` only; eye position
+  (model 0, 0.9, 0.1) and look-down need an in-game check.
+
+## [2026-09-26] cycle | Cockpit: halo hidden, eye raised (#141)
+
+- `car-model.js` (v30): the halo tube and its centre pillar are named
+  `halo`/`haloPillar` (no visual change; batched cars ignore names).
+- `race-camera.js` (v30): both are added to `COCKPIT_HIDDEN_PARTS`, so only
+  the cockpit copy loses them; eye moved from model y 0.9 to 1.02. On the
+  phone the black halo bars covered most of the road.
+- Version chain bumped for race (`race-car-view`, `main`, `race-bootstrap`,
+  `race.html`) and garage (`showroom`, `garage.js`, `garage.html`).
+- Verified with `node --check` and `git diff --check` only.
+
+## [2026-09-26] cycle | Cockpit halo see-through (#143)
+
+- `race-camera.js` (v31): the cockpit copy keeps `halo`/`haloPillar`
+  (hidden in #141) with a cloned material at opacity 0.28, no depth write.
+  User preference: keep the realistic reference, just don't block the road.
+- Version chain: `main.js` v74 via `race-bootstrap` v35, `race.html`.
+- Verified with `node --check` and `git diff --check` only.
+
+## [2026-09-26] cycle | Pit limiter, wheel direction, list behind controls (#145)
+
+- `race-systems.js` (v29): new `applyPitLimiter(dt)`, called in `main.js`
+  right after `integratePlayerMotion`. With `pitRequested` armed, from 3% of
+  a lap before the pit zone to its end, speed is pulled down to the pit
+  limit at 45 units/s², so `startPitStop` always fires. User found the
+  "cross the line under 65 km/h" rule impossible to discover.
+- `race-car-view.js` (v32): steering wheel `rotation.z` sign flipped to
+  `+steer * 0.55`; it turned opposite to the front tyres (pivots go to -x
+  for positive steer; +rotation.z tips the rim's top to -x). Also affects
+  the chase-view car; the cockpit copy mirrors it.
+- `race-controls.css` (v51): `html.touch #touch-controls{z-index:120}`,
+  above the driver list (115).
+- `modes.html`: P/BOX rows describe the automatic slow-down.
+- Verified with `node --check` and `git diff --check` only.
+
+## [2026-09-26] cycle | Real pit lane with visible tyre change (#147)
+
+- New `core/client/shared/pit-lane.js` (v1): lane path offset `half+6`
+  from the centerline, from 64 units before to 56 after the line (capped at
+  14%/13% of a lap), smoothstep ramps, box 8 units past the line, side +1
+  (the pit building's). Start/finish is never straight (29–85° within ±6%),
+  so the lane follows the curve. `validate-circuits.mjs` checks it: clear of
+  every leg on the flat stretch, nearest centerline sample only moving
+  forward; all 9 circuits pass.
+- `race-systems.js` (v30): `pitState` none → entering → servicing →
+  exiting. Autopilot drives the lane at `PIT_SPEED_LIMIT`, blends the car
+  onto the lane, stops in the box, services, releases at the lane end.
+  `PIT_ZONE_START/END` removed. Entry distance uses `prevRawProgress`
+  (`totalProgress` is offset by the grid start).
+- `main.js` (v76): the race no longer freezes during a stop; in the pit the
+  player skips physics, grass drag and car contact. Fix: `applyPitLimiter`
+  had been wired into the qualifying loop only (a no-op) since #145.
+- `track-art.js` (v40): `dressPitLane` (asphalt, lines, pit wall, yellow
+  box, BOX canopy); rails and Marzamemi scenery skip the lane.
+  `pit-crew.js` (v1): six mechanics, jack lift, wheels off/on.
+  `race-camera.js` (v32): fixed TV shot while servicing; chase clamp off in
+  the pit.
+- Known limits: AI never pits; the stop is local in multiplayer; the pit
+  wall is visual only.
+- Verified with `node --check`, `git diff --check`, `npm run
+  validate:circuits` and a Node simulation of the autopilot on every
+  circuit; no browser test.
+
+## [2026-09-26] cycle | Five-lap races, tyre wear for all, pit scenery rework (#149)
+
+- `circuits.js` (v39): `LAPS_PER_RACE` 3 → 5; new `TYRE_LIFE_LAPS = 3`, so
+  wear no longer scales with race length and a car that never boxes runs
+  laps 4-5 on dead tyres. `agent-api.js` (v2) reports wear against it.
+- `main.js` (v77): `tyreSpeedFactor` cuts top speed by up to 5% at full
+  wear (× compound wear rate), applied in `player-physics.js` (v7) and
+  `race-ai.js` (v29) — about 1 s a lap, for player and AI alike.
+- `track-art.js` (v41): pit lane asphalt stops past the kerb toe (wedge
+  ramps, UVs, road material); pit wall and a garage row are single meshes
+  swept along the lane curve; the old straight pit building at the start
+  is dropped when a pit lane exists; palms keep 6 units off the lane.
+- `pit-crew.js` (v2): capsule-built mechanics (legs, torso, arms, visor
+  helmet, wheel guns, jacks) that walk, turn and crouch.
+- Open: at ~1 s/lap the wear malus still does not repay a 7-12 s stop;
+  raise the malus or shorten the stop. Verified with `node --check`,
+  `git diff --check` and `npm run validate:circuits` (new garage clearance
+  check); no browser test.
+
+## [2026-09-26] cycle | Top speed recalibration, circuit pick after garage, team colours in home (#151)
+
+- `race/main.js`: player base top speed 84 → 88 m/s (~317 km/h), AI 71 → 74.4 (same ratio); DRS multiplier 1.15 → 1.08, closer to real DRS. ERS unchanged (1.05). A low-drag setup with ERS now reaches ~340 km/h on long straights.
+- `home/menu.js`: on load, restore the stored circuit pick if unraced, else the next unraced circuit after it (previously always the first unraced one, so a detour through the garage lost the pick).
+- `home/menu.js` + `style.css`: driver picker and standings carry the team livery (`TEAM_LIVERIES` primary/secondary) as a two-tone stripe, team name under each driver, active border in the team colour.
+- Known limit: faster straights move braking points; brake hint recomputes from `CAR.maxSpeed`. `race-audio.js` still normalises by 84 (audio only).
+- Verified with `node --check` and `git diff --check` only; no browser tests.
+
+## [2026-09-26] cycle | Touch steering: missed touches and sensitivity (#153)
+
+- `race-input.js`: touch wheel is now absolute (finger offset from the wheel centre, 8 px dead band, full lock at 42% of the width) instead of relative to the first contact; full left lock no longer drags the finger into the screen edge, where Android/iOS system gestures cancel the touch.
+- `race-input.js`: landscape auto-fullscreen fires only on a `touchend` with no fingers left, so lifting the throttle no longer resizes the page and drops the finger held on the wheel (Android).
+- `race-controls.css`: landscape wheel gets a 14–40 px left margin, away from edge gestures.
+- `steering.js`: high-speed authority floor 0.22 -> 0.30 (~48% vs ~42% at top speed); the brake hint follows automatically.
+- Verified with `node --check` only; feel to be judged in game (iPhone + Android).
+
+## [2026-09-26] cycle | Relative steering back, BOX above throttle, driver lock (#155)
+
+- `race-input.js`: absolute touch steering from #153 reverted (thumb placement jerked the car); relative drag is back with shorter travel (38% of the wheel width, ~70px to full lock). #153's edge margin, fullscreen fix and steering floor stay.
+- `race.html` / `race-controls.css`: touch BOX button moved from the HUD row to a `.gas-stack` above the throttle (44px tall, pedal width); `race-input.js` binds `[data-key]` in `#touch-controls` too. Armed/servicing/not-racing states keep their existing selectors.
+- `menu.js` / `index.html`: driver picker locked (other drivers disabled, note "Bloccato fino a fine campionato") from the first recorded result until all circuits are raced or the championship is reset.
+- Verified with `node --check` only.
+
+## [2026-09-26] cycle | Finish: roll past the flag, results fade in (#157)
+
+- `main.js`: `update()` no longer freezes the scene when `raceState === "finished"`; `driveFinishCoast()` steers the player toward the centerline 12 samples ahead (via `setExternalSteer`), lifts, and brakes down to 25 m/s, then coasts. AI, collisions, camera and multiplayer broadcast keep running; pit requests are ignored after the flag.
+- Audio: `getPhase()` reports "driving" while finished, so the engine follows the off-throttle deceleration; `raceAudio.coolDown()` moved from the flag to the moment the results appear.
+- `showResultsOverlay()`: results (solo and multiplayer) appear 2.6 s after the flag and fade in over 0.9 s (`#results-overlay.is-visible` in `style.css`). The championship result is still recorded at the flag.
+- Verified with `node --check` only.
+
+## [2026-09-26] cycle | Mobile render cost: 60 fps cap, AA and shadow type (#159)
+
+- `shared/graphics-profiles.js`: new `antialias` per profile (off on `low`),
+  plus touch-only extras `softShadows: false` and `frameCapFps: 60`;
+  new `createFrameLimiter(fps)` with carry-over so 90/120 Hz screens average 60.
+- `race/main.js` and `garage/showroom.js` use the limiter, the profile's
+  antialias flag and `PCFShadowMap` on touch; physics `dt` unchanged.
+- Verified: `node --check`, limiter simulated at 60/90/120/144 Hz. No FPS
+  data from real phones yet — adaptive profile and Lambert materials on
+  `low` are deferred until `?diag=1` numbers come in.
+
+## [2026-09-26] cycle | Steering feel: revert, grip ceiling, wheel rate (#161)
+
+- Reverted #153/#155 sensitivity (touch travel 0.38 -> 0.48, high-speed
+  authority floor .30 -> .22): together they gave ~45% more yaw per thumb
+  movement at top speed and made the car twitchy.
+- `steering.js` `gripLimitYaw`: soft ceiling at 5.5 g x tyre grip (knee at
+  75%); full-lock lateral accel unchanged up to ~30 m/s, 7.5 g -> 5.5 g at
+  top speed. Brake hint follows since it calls `steeringYaw`. AI untouched.
+- `smoothSteering(…, speedRatio)`: max wheel rate, lock-to-lock 0.2 s
+  standstill -> 0.4 s flat out, centring 2x faster. Simulated: 0->95% lock
+  0.30 s at rest, 0.33 s flat out — mild, only bites on fast flicks.
+- Verified with `node --check` and node simulations; feel to be judged in game.
+
+## [2026-09-26] cycle | Antialiasing back on the low profile (#163)
+
+- `core/client/shared/graphics-profiles.js`: `low.antialias` true again; the
+  user found the jagged edges hurt enjoyment more than the cost justified.
+- Other #159 mobile savings (60 fps cap, hard PCF shadows on touch) unchanged.
+- `?vNN` chain bumped up to `race.html` and `garage.html`; `node --check` only.
+- User-reported ~33.4 ms/frame (30 fps) on phone is still open: steady 30
+  suggests an OS cap (e.g. iOS Low Power Mode) rather than GPU load.
+
+## [2026-09-26] cycle | Precise steering values back (#165)
+
+- `race-input.js`: touch travel back to 0.38 of the wheel width (#153).
+- `steering.js`: `speedLimit` floor back to .30 (#155); user prefers the
+  precision over the softer #161 values and will adapt.
+- Kept from #161: tyre-grip yaw ceiling (5.5 g, knee .75) and speed-dependent
+  wheel rate; at full lock the .30 floor adds little past ~60 m/s because the
+  ceiling caps it (5.45 vs 5.38 g at 60 m/s).
+- `?vNN` chain bumped up to `race.html`; `node --check` only.
+
+## [2026-09-26] cycle | Phones default to the medium graphics profile (#167)
+
+- `graphics-profiles.js` `detectDefaultProfileId`: touch devices start on
+  `medium`; `low` only with `navigator.deviceMemory` <= 4 GB (Chromium) or
+  fewer than 4 cores. The DPR >= 3 rule is gone: it sent every recent iPhone
+  to `low`.
+- Evidence (user, iPhone 17): auto picked `low`; `?gfx=high` still at
+  16.7 ms (60 fps cap); 30 fps earlier was iOS Low Power Mode, not load.
+- Desktop unchanged (`high` with >= 8 cores, else `medium`). Auto choice is
+  not persisted, so existing players move on next load; `?gfx=` overrides stay.
+- Open: `high` as phone default not chosen — one device is not enough data.
+
+## [2026-09-26] cycle | VIEW above the brake, cockpit camera pitched down (#169)
+
+- `race.html` / `race-controls.css`: the touch VIEW button leaves the HUD row under the speedo and sits above FRENO in a `.gas-stack`, mirroring BOX above GAS. It is still hidden while the car is in the pit box.
+- `race-camera.js`: `COCKPIT_EYE` is now (0, 1.0, −0.02), with a ~12° downward pitch (`COCKPIT_PITCH_DROP`). The old gaze was almost level and left the wheel ~50° below the eye, outside the 58° FOV, so the wheel top and gloves were never in frame; now they are.
+- Version chain: css v54, race-input v50 (comment only), race-camera v33, main v88, race-bootstrap v49.
+- Verification: `node --check` and `git diff --check` only; not yet tried in game. If the wheel covers too much road, lower `COCKPIT_PITCH_DROP`.
+
+## [2026-09-26] cycle | VIEW stacked above BOX (#171)
+
+- `race.html`: the touch VIEW button moves from above FRENO (#169) into the throttle `.gas-stack`, above BOX. FRENO is a single button again. The user dropped the double-tap alternative.
+- Comments updated in `race-controls.css` and `race-input.js`, plus the `modes.html` copy.
+- Version chain: css v55, race-input v51, main v89, race-bootstrap v50.
+- Verification: `node --check` and `git diff --check` only. The throttle column now holds VIEW, BOX and GAS, about 220 px on short landscape screens.
+
+## [2026-09-26] cycle | Cockpit wheel and moving hands (#173)
+
+- Root cause of the "still hands": `detail` cars carried two wheels at the same spot. The static `cockpitSteeringWheel` had grips bigger than the gloves and hid them while `driverSteeringWheel` turned. The static wheel is now built only when there is no driver (empty seat).
+- `car-model.js` `f1Wheel()`: `detail` cars (cockpit copy, garage) get a realistic F1 wheel: flat-bottomed butterfly body, rubber grips, display, shift LEDs, rotaries, buttons and paddles on the driver's face (-z). Gloves wrap the outer grips and there is a thumb. Low-detail AI and chase cars are unchanged (41 meshes).
+- `race-camera.js`: each frame the cockpit copy re-aims the named `driverForearm` rods at the grips, so the arms follow the wheel. It also doubles the wheel rotation (`COCKPIT_WHEEL_GAIN`, ~63° at full lock).
+- Version chain: car-model v31, race-car-view v33, race-camera v34, main v91, race-bootstrap v52, showroom v36, garage v48.
+- Verification: `node --check`, plus a node smoke test against local three. Forearm ends meet the wrists exactly at steer 0 and ±1; both gloves are in frame at centre, and at full lock the outer glove leaves the frame. Not yet tried in the browser.
+
+## [2026-09-26] cycle | Livery-coloured gloves (#175)
+
+- `car-model.js`: gloves and thumb now use the livery's secondary colour (`stripe`, role `secondary`) instead of `black`, on every car, detailed or not. Team colours are kept, and the gloves stand out against the carbon wheel.
+- Version chain: car-model v32, race-car-view v34, main v92, race-bootstrap v53, showroom v37, garage v49.
+- Verification: `node --check` and `git diff --check` only.
+
+## [2026-09-26] cycle | Root package.json for the room server (#177)
+
+- On the user's Windows PC, `npm --prefix core run start:room-server` failed from the repo root with no root `package.json`. Here (npm 10.9.7) it works, so the cause is local; the shortcut makes both work.
+- New root `package.json`: `postinstall` runs `npm --prefix core install`, and `start:room-server` / `validate:circuits` delegate to `core/`. The static site does not read it.
+- `.gitignore`: root `node_modules/` and `package-lock.json` are ignored, since the root package has no dependencies.
+- README: install and start now run from `f1-racer/` (`npm install`, then `npm run start:room-server`).
+- Verification: clean copy of the tracked files. Root `npm install` installed `three` and `ws` into `core/node_modules`, and `npm run start:room-server` printed `listening on ws://localhost:8787`.
+
+## [2026-09-26] cycle | Room bot: driver providers and radio banner (#7)
+
+- Preliminary test from the cloud sandbox, rooms GF7W and BQGN: the bot joins, reserves a driver, readies up and races as a normal participant, with no protocol change. Its WebRTC voice fails ("collegamento fallito"): the sandbox only has HTTPS egress through a proxy, with no UDP or STUN. The user picked on-screen radio messages and rejected running the bot on their PC.
+- New `core/client/race/driver-providers.js`. Every provider shares `decide(car, dt)`, so a single fast model can later replace both layers.
+  - `AutopilotProvider` uses the AI line from `race-ai.js`, turned into player inputs.
+  - `LayeredProvider` adds strategy targets (pace, line, ERS, tyre) and one-shot commands (pit, radio), validated field by field.
+- `main.js`: `?driver=autopilot|layered` skips the engine gate and enables the Agent API state. It drives through `setExternalSteer` and `input.forward/back`, and exposes `window._DRIVER_`. The pit lane keeps its own autopilot.
+- Radio: `race-multiplayer.js` sends `{kind:"radio"}` over the existing `voice_signal` relay, with no server change, and it shows in `#radio-banner` (`style.css`).
+- New `core/tools/room-bot.mjs` (Playwright): it reads `strategy.json` and writes `state.json`. Behind the sandbox proxy it relays the WebSocket locally, because Chromium's handshake returned 426, and serves three.js from `core/node_modules`, because jsdelivr is blocked.
+- Verification: `node --check`, plus a headless solo autopilot run that stayed on track in every sample (Vallechiara 20/20, Altomare 15/15). Version chain: style v52, race-multiplayer v8, main v93, race-bootstrap v54. Multiplayer play with the user is still pending.
+
+## [2026-09-26] cycle | Race gaps and voice status icon (#180)
+
+- `race-hud.js`: the race timing tower shows the gap to the leader instead of each car's lap. There are 50 timing loops per lap; a car's gap is its crossing time minus the first crossing of the same loop. A lapped car shows "+N G", the leader keeps "G<lap>", and times freeze at the flag.
+- `voice-chat.js`: the text toggle becomes a mic icon, with `data-tone` set to ok/pending/fail/idle and styled in `race-controls.css`. The diagnosis (#93) moves to `aria-label`/`title`; a muted mic shows a slash.
+- Waveform: each peer gets an `AnalyserNode`, not routed to the speakers. `readWaveform()` returns the loudest peer, and the canvas line appears only above an RMS of 0.015.
+- Version chain: race-hud v39, voice-chat v4, race-multiplayer v9, main v95, race-bootstrap v56, race-controls.css v56.
+- Verification: `node --check` and `git diff --check` only.
+
+## [2026-09-26] cycle | Bot station keeping (#182)
+
+- `driver-providers.js`: new strategy target `station: {car, gap, side}`, cleared with `station: null`. The speed target is the reference car's speed plus 0.8 m/s per metre off the spot, clamped to -15/+25 and capped at the corner speed. The line goes to `side * 2.5`.
+- `main.js`: the autopilot gets `findCar(driverId)`, which searches `aiCars` (remote cars included), and `TRACK_LENGTH`. Versions: driver-providers v2, main v96, race-bootstrap v57.
+- Teleporting was rejected: writing x/z directly would break the sync, lap counting and collisions.
+- Verification: `node --check`. A headless solo run held station correctly in qualifying, where the reference AI car is parked. Race-phase behaviour is still to verify with the user, because headless qualifying is too slow to reach the race.
+
+## [2026-09-26] cycle | Room bot smooth broadcast and strategy resend (#184)
+
+- User report from the C8AR race: the bot's car moved in jerks on their phone. Cause: the headless bot renders with software GL at a few fps, and it simulates and broadcasts `car_state` only once per frame. The sparse samples outlast the 0.25 s extrapolation window on other clients.
+- `main.js`: `renderer.render` is skipped when a driver provider is active (`?driver=`). Versions: main v97, race-bootstrap v58.
+- `core/tools/room-bot.mjs`: every new page resends `strategy.json`, so a Rivincita no longer starts without targets. The one-shot `pit` and `radio` are stripped from that resend.
+- The live race also confirmed that radio banners arrive, station keeping works (1.9 m alongside, 10 m ahead) and the auto box call fitted softs at 2.5 laps.
+- Verification: `node --check` and `git diff --check`. Smoothness still needs the next race with the user.
+
+## [2026-09-26] cycle | Bot smoothness via extrapolation, richer agent state (#186)
+
+- The user still saw the bot's car jerk, while friends' cars were smooth. A local headless measurement showed a steady 60 fps (12–17 ms frames) and no speed sawtooth. The likely cause is burst delivery of the bot's `car_state` through the sandbox proxy and relay.
+- `main.js`: `REMOTE_MAX_EXTRAPOLATION_S` goes from 0.25 to 0.6 s, so late samples no longer stop the car. `room-bot.mjs`: `setNoDelay(true)` on the tunnel socket.
+- `agent-api.js`: `getState()` adds `circuit`, `weather`, `safetyCar`, `lapTimes {currentMs,lastMs,bestMs}`, `ers {chargePct,active}`, `pit {state,requested}`, `gapAheadS`, `gapBehindS` and `standings[]` (position, id, name, lap, gap to the leader in metres). `main.js` now records `state.lastLapTime`.
+- Versions: agent-api v3, main v98, race-bootstrap v59.
+- Verification: `node --check`, plus a headless solo read of the new fields. Smoothness is still to be confirmed with the user.
+
+## [2026-09-26] cycle | Car silhouette (#188)
+
+- `core/client/shared/car-model.js`: `shell()` now takes superelliptic sections `[z, w, y, h, p, wb]` (flat sides, rounded corners, narrower lower half); monocoque, engine cover and sidepods redrawn with them, sidepod tails ramp into the floor, new shark fin.
+- Wings are extruded inverted-camber airfoils with stepped flaps and sculpted endplates (`extrudeX`, `airfoil`, `endplate`); the floor is an extruded plan shape; tyres are `LatheGeometry` with rounded shoulders.
+- Still fully procedural: livery roles, sponsor decals and the non-detail batching are unchanged; rear sponsor plane rotated so it reads correctly from behind.
+- `car-model.js` v33, chain bumped up to `race.html` and `garage.html`.
+- Verified with `node --check` and a one-off headless render (rear/side/front) compared with `master`.
+
+## [2026-09-27] cycle | Close cycles only on "Concludi" (#190)
+
+- `llm-wiki/AGENTS.md`: the 2026-09-24 auto-close rule is replaced; when the work is done the cycle stops at the draft PR and is closed only when the user says "Concludi" (steps in the `concludi` skill).
+
+## [2026-09-27] cycle | Driver model proportions (#192)
+
+- `core/client/shared/car-model.js`: driver seated lower (smaller torso/shoulders/arms), cockpit side walls (`cockpitSide`) up to the helmet midline and a livery headrest ring (`cockpitHeadrest`), so only the helmet shows.
+- Helmet radius .19 → .155, longer shape, glossy `helmet`-role paint, wide visor band, primary-colour crown (`driverHelmetCrown`, also hidden by the cockpit camera in `race-camera.js`), protruding chin; smaller gloves.
+- User still finds the driver toy-like; follow-up thread opened. From the chase camera the driver is hidden by the engine cover.
+- Verified with `node --check` and headless close-up renders.
+
+## [2026-09-27] cycle | Restore 25/09 handling (#194)
+
+- `core/client/race/steering.js`: removed the #161 yaw grip ceiling (`gripLimitYaw`, 5.5 g/v) — it washed the car wide as speed rose on corner exits — and the speed-dependent wheel rate limit in `smoothSteering`; #165's .30 high-speed floor kept.
+- `race-input.js` / `main.js`: `speedRatio` plumbing dropped; versions steering v5, race-input v52, main v101, race-bootstrap v62.
+- Physics follow-up thread opened (fairness: fixed timestep; aero grip/braking/drag).
+- Verified with `node --check`; handling to be judged in game.
+
+## [2026-09-27] cycle | Cockpit hands (#196)
+
+- Race-camera renders showed the driver hidden by the engine cover in the chase view; the toy look came from the cockpit view (white sphere gloves, sausage forearms).
+- `core/client/shared/car-model.js` (detail cars only): hands built round the wheel grips — dark matte back of hand, four two-segment fingers, thumb on the rotary, livery-secondary strap (#175 identity), suit cuff; forearms taper to the wrist (`rod` gains an end radius) with 16 radial segments.
+- Versions: car-model v35, race-car-view v37, main v102, race-bootstrap v63, showroom v40, garage v52.
+- Open: helmet still reads as a ball from side/pit-TV views — next step of #196.
+- Verified with `node --check` and headless cockpit renders.
+
+## [2026-09-27] cycle | Touch shortcuts on pointerdown (#199)
+
+- `core/client/race/race-input.js`: VIEW, BOX, S/M/H tyres and ERS replayed their key on `click`, which phones only synthesise for a lone touch — with the throttle or wheel held they needed 4-5 taps. Now `pointerdown` + `preventDefault`, like the pedals.
+- Versions: race-input v53, main v103, race-bootstrap v64.
+- Verified with `node --check`; multitouch to be confirmed on the phone.
+
+## [2026-09-27] cycle | Physics substeps, 25/09 steering back (#197, cycle 1)
+
+- `core/client/race/player-physics.js`: each frame integrated in equal substeps of at most 1/120 s (`stepMotion`); track-limit counting once per frame. Node sim, same inputs 15 vs 150 fps: gap 1.57 m / 0.8° -> 0.28 m / 0.1°. AI still integrates per frame.
+- `steering.js` / `race-input.js`: user could no longer win on the phone after #194; #194 had kept #165's travel .38 and floor .30 without the grip ceiling (~45% more yaw per thumb at top speed than 25/09). Back to 25/09: travel .48, floor .22.
+- Versions: player-physics v8, steering v6, race-input v54, main v105, race-bootstrap v66.
+- Next in #197: aero (v² grip/braking, drag, slipstream), tuned on the player's phone lap times; then AI on the same physics.
+- Verified with `node --check`; feel to be judged in game.
+
+## [2026-09-27] cycle | C4 architecture atlas (#203)
+
+- Added `c4-model.md` as the combined map of the static game, optional room backend, deployment topology, runtime flow, authority boundaries and planned Browser Copilot integration.
+- Added separate `c4-local.md` and `c4-multiplayer.md` documents. Each follows all four C4 levels explicitly: System Context, Containers, Components and selective Code views, with additional deployment and sequence diagrams.
+- Local architecture documents the browser-only consistency boundary, per-frame simulation path and `localStorage` ownership. Multiplayer documents the client-authoritative car simulation, server-authoritative room lifecycle, ephemeral `car_state` relay and peer-to-peer WebRTC audio.
+- Updated the F1 Racer wiki index to link the overview and both detailed architecture tracks. Planned agent controls remain clearly separated from the as-is runtime.
+- Verification: `git diff --check`, balanced Markdown fences, and structural checks confirming levels 1–4 plus seven Mermaid diagrams in each detailed document. No browser tests, per project policy.
+
+## [2026-09-27] cycle | Touch wheel: short travel, steeper curve (#197)
+
+- Regression from #202: at the qualifying start the steering froze, then came back. Likely cause: the 25/09 .48 travel (~80px) put a left-lock thumb in Android's back-gesture strip, which cancels the touch (same problem #153/#155 fixed).
+- `race-input.js`: travel back to .38 (~60px to full lock); `TOUCH_STEER_EXPONENT` 1.6 passed to `shapeSteering` (new optional exponent in `steering.js`, pad keeps 1.22). Same gain as 25/09 up to ~30px of drag, full lock at ~60px. #202's .22 high-speed floor kept.
+- Versions: steering v7, race-input v55, main v106, race-bootstrap v67.
+- Headless two-finger start (CDP touch) showed the wheel responding at once; the edge gesture can't be simulated — to be confirmed on the phone. `node --check` only otherwise.
+
+## [2026-09-27] cycle | Aero: downforce braking and slipstream (#197)
+
+- `core/client/race/player-physics.js`: brake force scales with speed²
+  (0.8x slow, ~1.2x at top speed); slipstream behind a visible car
+  (30 m range, 3 m half-width) cuts drag and adds up to 3.5% top speed,
+  exposed as `state.slipstream`.
+- Steering yaw deliberately untouched: it is tuned for phone thumbs and
+  extra high-speed yaw (#194) made the car undrivable on mobile.
+- Not done, closes #197 anyway: AI still integrates its own simpler model
+  (variable step, no aero); brake hint still assumes flat `usableBrake`.
+- Verified with `node --check` and `git diff --check` only.
+
+## [2026-09-27] cycle | Touch wheel dead zone against thumb drift (#207)
+
+- Symptom: on phone the car "pulled" right unless corrected. Code audit
+  (player physics, track boundary, collisions, tilt, gamepad) found no
+  bias; cause was a resting thumb creeping a few px on the relative wheel
+  with a ~2px dead zone (10px = ~4% steer, tens of metres on a straight).
+- `steering.js`: `shapeSteering` takes the dead zone as a parameter
+  (default .035 kept for keyboard/pad).
+- `race-input.js`: touch dead zone .13 of travel (~8px), exponent 1.6 ->
+  1.4 so the 20-60px response of #205 is unchanged.
+- Verified with `node --check`, `git diff --check` and the curve in Node.
+
+## [2026-09-27] cycle | Racing procedure for agent drivers (#209)
+
+- New `procedure-racing.md` at the root: self-contained play session guide
+  (inputs, static server + `core/tools/room-bot.mjs` launch, `strategy.json`
+  keys, useful `state.json` fields, rules of thumb, shutdown).
+- New skill `.claude/skills/procedure-racing/`: triggered by intent (any
+  wording, a room-server URL or a room code), points to the file only.
+- `llm-wiki/AGENTS.md`: same rule for other agents, so a play session skips
+  wiki and history.
+- Known limit: two bots on one machine collide on ports 8080/8081; a chat-only
+  agent without a shell cannot run the bot.
+- Verified by joining room PDFP as `rival-red` with the documented commands.
+
+## [2026-09-27] cycle | Room server heartbeat against ghost participants (#211)
+
+- `core/server/room-server.mjs`: protocol-level ping every `ROOM_HEARTBEAT_MS`
+  (default 15 s); a socket that missed the previous pong is `terminate()`d,
+  which runs the existing close -> grace -> removal path.
+- Why: a cloud bot suspended mid-room left a half-open socket that ngrok kept
+  alive; no close ever fired, the ghost blocked the race start.
+- Worst case a ghost leaves after ~30 s heartbeat + 30 s grace. Browsers answer
+  pings natively: no client change, no `?vNN` bump.
+- Verified server-only with a paused-socket client (2 -> 1 participants);
+  the user must restart the room server to pick it up.
+
+## [2026-09-27] cycle | Bot strategy ers:"auto" and ERS re-arm (#212)
+
+- `core/client/race/driver-providers.js` (v3): `setStrategy` accepts
+  `ers: "auto"`; the fast layer deploys on straights/gentle kinks
+  (`severity < 0.2`), starting at >= 20% charge, until flat or a corner.
+- `core/client/race/main.js` (v109): bug fix — the bot only wrote
+  `state.ersActive` when its ERS target changed, so after `race-systems.js`
+  switched off a flat battery a steady `ers:true` never re-armed it. Now it
+  follows the bot's decision every frame (only with charge left).
+- Version chain: `race-bootstrap.js` v70, `race.html`.
+- `procedure-racing.md`: documents `"auto"`, now the recommended start value.
+- Bot sessions only; human driving unchanged. Syntax checks only.
+
+## [2026-09-27] cycle | Racing procedure: keep-alive and post-race issue hunt (#213)
+
+- `procedure-racing.md`: "Stay alive" (cloud agents keep a background loop
+  for the whole play session, rematches included, so the container isn't
+  suspended mid-room) and "Bug and requirement hunt" (user rule: note
+  findings while racing, open deduplicated Italian issues after each race).
+- `core/tools/room-bot.mjs`: logs `ready` when it ticks the ready box.
+- Origin: first agent races (rooms PDFP, Z47X) produced #211 and #212.
+- Syntax checks only.
+
+## [2026-09-27] cycle | Headless room bot on the real player physics (#214)
+
+- New `core/client/race/race-rules.js`: player car limits, tyres, ERS, DRS,
+  pit, runoff drag, grid slots and contact constants moved out of `main.js`
+  (values unchanged) so the browser and Node share one source.
+- `main.js` v110 imports them; chain `race-bootstrap.js` v71, `race.html`.
+- `core/tools/headless-room-bot.mjs`: ChatGPT's WebGL-free transport (PR #218,
+  superseded) kept; its on-rails model replaced by `player-physics.js`,
+  `race-systems.js` (real pit lane), `race-progress.js`, `race-collisions.js`
+  and the layered driver — same car as `?driver=layered`, no Chromium.
+  Start lights now correct for the server clock offset.
+- Verified with a local room server (Vallechiara, 5 laps 15.7–17.2 s, finish
+  reported). Qualifying and pit stop not yet exercised headless.
+
+## [2026-09-27] cycle | Room nicknames in multiplayer (#220)
+
+- `main.js` v111: `displayName(driverId)` returns the room nickname of the
+  participant who reserved that driver (own car included); solo keeps roster
+  names. Used by nameplates, race tower, qualifying times and results.
+- Security: nicknames are free text (server only trims/truncates) and several
+  of those views use `innerHTML` — new `escapeHtml` (`race-hud.js` v40)
+  applied to every name built into HTML; nameplates/radio use `textContent`.
+- Chain `race-bootstrap.js` v72, `race.html` (skipped v110/v71 used by #219).
+- Syntax checks only.
+
+## [2026-09-27] cycle | Hotfix: import race-rules.js in main.js (#222)
+
+- `core/client/race/main.js`: #219 moved car params, tyres, ERS/pit/DRS,
+  grid and damage constants into `race-rules.js` but never imported them;
+  the race page threw `playerCarParams is not defined` (black screen).
+- Added the import (`race-rules.js?v=1`); bumped `main.js` v112 and
+  `race-bootstrap.js` v73 in `race.html`.
+- Lesson: `node --check` does not catch undeclared identifiers; after a
+  module extraction, grep that every moved export is imported.
+- Verified: the local browser bot loaded the race and wrote `state.json`.
+
+## [2026-09-27] cycle | Agent bots page: browser vs headless and usage (#225)
+
+- New `llm-wiki/wiki/entities/agent-bots.md`: browser bot (`room-bot.mjs`,
+  real game in Playwright) vs headless bot (`headless-room-bot.mjs`, Node
+  with the shared physics modules) — hosting, protocol, clock, fidelity,
+  weak points — plus usage concepts (two bots, strategy loop, radio,
+  keep-alive, fresh room instead of rematch while #224 is open).
+- Source note `llm-wiki/wiki/sources/2026-09-27-agent-bots-session.md`; linked
+  from `index.md` and `c4-model.md`.
+- `decisions.md`: the "no physics on Node" note now points out that the
+  headless bot runs the player physics (#214/#219); the server still has none.
+- `procedure-racing.md`: two-bot default setup, radio rule, rematch caveat.
+- Docs only; UMGY race confirmed radio and the headless pit stop (slow: #227).
+
+## [2026-09-27] cycle | Tasks #228–#231 prepared for publication
+
+Implemented shared bot tactics, kerb pull-over after finishing, per-driver
+voice status and the Ossidiana pair (12-driver roster). Updated architecture
+and bot documentation. Structural checks passed for 20 JavaScript modules
+and relative module paths; gameplay/audio remain for manual validation.
+User authorized push and PR closure. Publication is pending: local Git has
+no GitHub credentials. Integrated branch: cycle/228-231-integration.
+
+## [2026-09-27] cycle | Many browser bots in one process (#233)
+
+- `core/tools/room-bot.mjs`: `--names a,b,c` runs one isolated Playwright
+  context per bot in a single Chromium, files in `<dir>/<name>/`; `--name`
+  unchanged. Joins staggered 1.5 s (two bots asking the same driver at once
+  made the loser silently pick another).
+- Relay on :8081 is shared: a process finding the port taken reuses the
+  running relay instead of crashing (it was the one-browser-bot-per-box limit).
+- Bots render with `gfx=low` in a 480×270 viewport; `state.json` reports
+  `botFps` (in-page physics degrades when fps drops).
+- Measured on the 4-core cloud box, solo `race.html?driver=layered`:
+  8 bots high/1280×720 ~42 fps, 8 low/small 60, 11 low/small ~58.
+- Smoke test: two bots via `--names` plus a second process reusing the relay
+  reached the room server. Not yet raced in a real room with N browser bots.
+- Docs: `procedure-racing.md`, `wiki/f1-racer/agent-bots.md`.
+
+## [2026-09-27] cycle | Ingest: 12-car bot races (#237)
+
+- Source note `sources/2026-09-27-twelve-car-bot-races.md` (rooms PFDT, 6KEY,
+  F5XQ, ZJYD; 1 human + 11 bots).
+- `wiki/f1-racer/agent-bots.md`: fresh checkout, grid size = roster, live
+  strategy changes via `strategy.json`; new "Strategy findings (Open)".
+- `procedure-racing.md`: `git pull` as first start step.
+- New issues from the races: #235 (headless position/finish), #236 (pace vs
+  track limits, lap-3 slowdown, suspicious lap).
+- Correction: the "#228–#231 prepared for publication" entry above says
+  publication pending; the user pushed and merged it as #232.
+
+## [2026-09-27] cycle | Ingest: browser bot capacity (#239)
+
+- Source note `sources/2026-09-27-browser-bot-capacity.md` (rooms HBKY,
+  1 human + 11 browser bots, and XK5Z, 1 human + 7).
+- `wiki/f1-racer/agent-bots.md`: new section on many browser bots sharing
+  :8080 and the :8081 relay, with the measured race capacity; corrected
+  the "11 bots ~58 fps" claim (solo benchmark, 30–33 fps in a race);
+  rematch works (#224 closed); position duplicates affect browser bots too.
+- Room 3WK4 (5 bots) added: smoothest for the human; the residual jump
+  looks like network. Shared Chromium explained (renderer per page).
+- `procedure-racing.md`: 5 bots recommended, 7 at most; "Rivincita" no longer needs a
+  fresh room.
+- Open: residual network jump; final `tyreWearPct` 100% on softs and
+  68–72% on mediums/hards regardless of stops (new issue).
+
+## [2026-09-27] cycle | Wiki: Chromium sharing and GPU impact (#242)
+
+- `wiki/f1-racer/agent-bots.md`: new subsection "What is shared inside Chromium" under the many-browser-bots section; it replaces the one-line sharing bullet.
+- Table of layers: browser, GPU and network process shared per `room-bot.mjs` process; context and page/renderer one per bot. Corrects the "one Chromium per bot" misreading.
+- Cost model: each renderer runs the full race (JS, physics, three.js of every car); `gfx=low` trims only drawing; the cloud box has no GPU (`/dev/nvidia*` and `/dev/dri` absent), so WebGL runs in software on the same 4 cores.
+- GPU impact marked Probable/Needs verification: it would offload drawing but not simulation; `room-bot.mjs` launches Chromium without GPU flags.
+- Docs only, verified with `git diff --check`.
+
+## [2026-09-27] cycle | Bot fleet from a local PC, agent-driven strategy (#244)
+
+- `core/tools/room-bot.mjs`: `--gpu` (GPU flags for headless Chromium) and `--headed`; `state.json` gains `gpuRenderer` (WebGL renderer string, "SwiftShader" = software GL), also logged once per page.
+- `core/tools/bot-fleet.mjs` (new): one cross-platform command; Node static server on :8080, N bots via `room-bot.mjs --names`, finds a global Playwright, prints `botFps`/position every 10 s. It holds no strategy logic.
+- `core/tools/bot-watch.mjs` (new): waits for a decision-worthy change (lap, pit, safety car, wear 50/70/85%, damage) or a timeout, then prints one line per bot; it only reports.
+- User rule: the agent decides every bot's strategy live (watch → decide → write `strategy.json`); no strategy loops. `driver-providers.js` gets `autoPit` (default true); `false` disables the layered driver's own wear-based box call. Version chain: driver-providers v5, main v114, race-bootstrap v75.
+- `procedure-racing.md` and wiki `agent-bots.md` updated (fleet, local-PC setup with `ws://localhost:8787`, live strategy). Verified with `node --check` and `git diff --check` only; first real run is the user's local-PC race.
+
+## [2026-09-28] cycle | Race VSN2 from the player's PC: bot tool fixes and ingest (#246)
+
+- `core/tools/room-bot.mjs`: back in the room `state.json` reads `phase: "room"` with `lastRace` instead of freezing mid-race (race 1 classification was lost); 3 s timeouts on the join fill/click (30 s stall); every `pit.requested`/`pit.state` transition is logged to trace unrequested stops (#247, still open).
+- `core/tools/bot-watch.mjs`: prints `armed` for a pending box call (the double stops came from re-sending `pit`) and the driver's tactical mode; handles bots in the room. README: root script is `npm start`.
+- Ingest: new source `sources/2026-09-28-race-vsn2-local-pc.md` over the raw report and fleet log. It corrects two raw claims against the code: `pit.requested` was already exposed, and wear % grows ~33%/lap on every compound (`wearRate` only scales the grip/speed cost). `agent-bots.md` gets "Live strategy in practice" and "Running on the player's PC"; no jump with server and bots on one PC, so the cloud jump was the network path.
+- Role made explicit for new sessions: `procedure-racing.md` opens with "Your role" (team principal of one or more bots, default 5, strategy decided live every race) and starts from `bot-fleet.mjs`; the skill description and `AGENTS.md` say the same.
+- Verified with `node --check` and `git diff --check` only; GPU capacity (8–11 bots with `--gpu`) is tomorrow's test.
+
+## [2026-09-28] cycle | Driver helmet and aerodynamic wheel covers (#196)
+
+- `core/client/shared/car-model.js`: replaced the layered spherical helmet with one lathed shell, a front visor and cached team-colour canvas graphics; added lightweight aerodynamic wheel covers and centre nuts.
+- `core/client/race/race-camera.js`: updated the cockpit camera's hidden helmet parts to match the new geometry.
+- Garage and race module imports and HTML entry points received cache-version bumps; wheel radius, steering pivots, physics and collision geometry are unchanged.
+- Verified with `node --check` on the changed model and camera, `git diff --check`, and matching local/remote source trees; visual appearance on mobile and in a live race remains for manual inspection.
+
+## [2026-09-28] cycle | Team pit bays and separate wheel sets (#250, PR #251)
+
+- Added six signed, team-coloured bays with deterministic team stopping distances shared by browser and headless drivers.
+- Replaced the same-wheel out/in animation with four removers, four fitters and two jack mechanics. A separate wheel set is mounted; used wheels remain in the garage, compound markings stay distinct, and geometry is reused across stops.
+- Updated architecture notes and client cache versions. Static syntax and whitespace checks passed; published source tree matched the local implementation. Gameplay, successive stops and mobile fluidity remain manual checks.
+- User authorized conclusion with "Concludi"; no remote crew synchronization or teammate service queue was added.
+
+## [2026-09-28] cycle | Review of #249/#251 and race-camera cache version (#256)
+
+- Reviewed the ChatGPT-authored cycles #249 (helmet, wheel covers) and #251 (team pit bays): `node --check`, `validate-circuits`, Node import of `pit-lane.js` for the headless bot, and client/headless box assignment (both use the driver's team) all pass.
+- Found one defect: #249 changed `race-camera.js` (`COCKPIT_HIDDEN_PARTS`) without bumping its import, so a cached copy could leave the new helmet visible in cockpit view.
+- Fix: `race-camera.js?v=36`, `main.js?v=117`, `race-bootstrap.js?v=78` in `race.html`.
+- #249 history has eight identical "Improve driver helmet" commits; left as is (already on `master`).
+- Verified with `node --check` and `git diff --check` only.
+
+## [2026-09-28] cycle | Pit working apron and seated crews (#258)
+
+- Recovered two parts of the user's pit request lost in the #250 issue text: room to drive past a car in its box, and crews that wait idle instead of standing at the car.
+- `shared/pit-lane.js`: `pitLanePose` shifts the car 4 m onto its team's apron over a 9 m ramp (`PIT_LANE.bay`, `bayRamp`); client and headless bots share it. `track-art.js`: garages set back by `PIT_LANE.apron` (3.1 m), pillars at bay dividers, scenery margins widened; `validate-circuits` garage check includes the apron (no errors).
+- `race/pit-crew.js`: crews sit on stools watching the race; the player's crew stands and carries the fresh set out when the box is requested, then puts the used set down and sits again. Other teams' crews stay seated next to instanced tyre stacks; they do not animate for opponents' stops.
+- Cache chain: pit-lane v3, race-systems v32, track-art v43, pit-crew v4, main v118, race-bootstrap v79. Verified with `node --check`, `git diff --check` and a numeric pose check only; visuals and phone fluidity left to play testing.
+
+## [2026-09-28] cycle | Selected driver highlighted in home standings (#253)
+
+- `home/menu.js`: the standings row whose id matches the selected driver gets `is-selected` + `aria-current`; `computeStandings` already maps `player` to the selected driver, so the highlight follows a driver change and survives reloads.
+- `style.css`: tinted background, bold text and an inset white bar on the first cell (not colour alone); no "Tu" label, order and points unchanged.
+- Cache chain: `style.css?v=53` in all pages (previous versions were out of step, 33–52), `menu.js?v=44`. Verified with `node --check` and `git diff --check` only.
+
+## [2026-09-28] cycle | AI qualifying times from a simulated flying lap (#261)
+
+- `race/main.js`: `simulateAiFlyingLapMs()` drives one throwaway car with the race AI (`race-ai.js`, own `setupRaceAi` instance and private progress counter) at a fixed 1/60 s step, fresh mediums, no traffic: out lap from standstill, then a timed lap. Replaces the flat `length / AI top speed x 1.35` estimate, which ignored how twisty each circuit is.
+- Simulated once per session (all AI share the same parameters); each driver gets a -2%..+3% spread. Fallback to the old formula if no lap closes within 600 s simulated. Multiplayer unchanged.
+- Node measurement (normal difficulty): AI faster than before on vallechiara/montenero/colleverde/baiadoro, slower on altomare/pianalago/portoscuro/serramonte; 11–56 ms per circuit.
+- Known limit: on Marzamemi the race AI runs wide in both tight loops (up to 7 m off, crawling), giving an 84.8 s lap vs 33.9 s before; that is a real race-AI defect, left for its own issue. Kerb drag split out to #262.
+- Cache chain: `main.js?v=119`, `race-bootstrap.js?v=80`. Verified with `node --check`, `git diff --check` and the Node sim only.
+
+## [2026-09-28] cycle | Release number visible in-page (#264)
+
+- New `core/client/shared/version.js` (classic script, `defer`): reads its own `?v` and shows it as a small `vN` badge, bottom centre, 10px, semi-transparent, `pointer-events: none`, safe-area aware.
+- Included in `index`, `race`, `garage`, `room` and `modes` as `version.js?v=264`; the number is the issue of the last released cycle and lives in the HTML, so a stale number means a stale cached page.
+- `concludi` skill: step 3 bumps the `?v` in all HTML pages with one `sed`; the final reply names the version to look for.
+- Known limit: not checked in a browser; the badge could overlap a bottom-centre HUD element in race.
+- Also closed #105 (all items done; the TURN item stays in #106).
+- Verified with `node --check` and `git diff --check` only.
+
+## [2026-09-28] cycle | Room home link #254
+- Reapplied desktop link hit target fix on current master; preserved newer styles and version badge.
+- User authorized conclusion. Static diff check; desktop click, keyboard and mobile verification remain manual.
+
+## [2026-09-28] cycle | Held rear view (#252)
+- Hold R or the independent DIETRO touch button to look behind; release restores the selected camera. Driving inputs remain unchanged.
+- Reset held touch on focus loss, page hide and visibility change. Preserve newer qualifying simulation and bump the full import chain.
+- Syntax and diff checks only; desktop/mobile gameplay remains manual. Merge pending authorization review.
+
+## [2026-09-28] cycle | Kerbs are rideable; off track only past them (#262)
+
+- `core/client/race/race-rules.js`: `createTrackBoundary` takes `kerbWidth`; `grassLimit` (runoff drag start and track-limit counting) moves from the asphalt edge to the kerb's outer edge, i.e. roughly all four wheels off the asphalt. New `kerbWidthFor(circuit)`: 0.95 m, 0.70 m on Marzamemi (track-art.js kerb profiles).
+- On the kerb band a light drag of 1.5% of `grassMaxDecel` (~5% of the lightest grass drag, which was ~67 u/s² right at the asphalt edge before); grass behaviour unchanged past the new limit.
+- `main.js` and `core/tools/headless-room-bot.mjs` pass the circuit's kerb width, so player, AI, simulated AI qualifying and the headless bot share the rule. `?v`: race-rules v3, main v121, race-bootstrap v82 (after #252 took v120/v81); release badge v262.
+- Known limit: AI lines don't use the kerbs, so the player gains ~1 m per side over the bots; AI pace may need its own cycle.
+- Verified with `node --check` and `git diff --check` only.
+
+## [2026-09-28] cycle | Headless bot: position and race end (#235)
+
+- `core/tools/headless-room-bot.mjs`: `state.json` position now follows `race-progress.js` order (server `finishedAt` first, then progress, then grid slot) over every car of the room, not only cars heard in the last 3 s — dropping a quiet car was the likely source of duplicate positions. New field `positionSource` (`server-finish` | `progress`).
+- A rematch that closes the race before the flag no longer loses it: the bot keeps a `lastRace` snapshot (`session.state = finished`, `endedBy: finish | rematch`) in the lobby `state.json`, as `room-bot.mjs` does (#246). Remote cars are cleared at each new session.
+- Open: "h2/h3 stay `racing` after 5 laps" not reproduced; in the lobby the state can no longer look live. Verified with `node --check` only.
+
+## [2026-09-28] cycle | Bots: traffic pace, penalty causes; #241 and #227 closed (#236)
+
+- `driver-providers.js` (v6): the layered driver gets a `traffic` mode — with a car within 10 m and `pace` > 0.92 it drops 0.04 (floor 0.92); not with `station`, and it caps `attack`. Version chain: main v122, race-bootstrap v83.
+- `headless-room-bot.mjs`: a penalised lap logs `penalty` with each excursion's lap progress and cause (`contact` within 1.5 s of a hit, else `limit`), to tell contact from pace and check the 22 s lap.
+- #241 closed without code: wear % is compound-independent; the 68–72% finishes were the layered driver's own wear-based stops (~lap 2.9, before `autoPit` existed), unlogged until #247's `pit` line.
+- #227 closed without code: browser and headless share the same pit code; offline `updatePitStop` runs give 8.3–10.9 s in the lane (6.7–8.4 s lost) + limiter and exit, 10–12 s on Baiadoro. The 7 s browser figure counted one lap of the two the lane spans. The real lever is `PIT_SPEED_LIMIT` / `PIT_LANE.before/after`.
+- Release badge is now a monotonic counter (`concludi` skill updated): v263 for #235, v264 here. Verified with `node --check` only.
+
+## [2026-09-28] cycle | Free look with pad, keyboard and touch (#255)
+
+- `race-camera.js` (v38): free look — right stick (axes 2/3, dead zone 0.2), I/J/K/L, or a drag on the scene canvas (`lookSurface`, touch or mouse, 140 px = full turn) turns the view up to ~80° sideways and ±20° up/down; it follows at 9/s and eases back at 5/s on release. Works in chase (camera orbits the car) and cockpit; look back (R) and the pit TV shot keep priority.
+- Reset on blur, pagehide, hidden tab and pointer cancel; the chosen camera mode is untouched.
+- `main.js` (v123) passes `renderer.domElement`; `race.html` hint mentions the keys; race-bootstrap v84.
+- Not verified in a browser (syntax only): the drag needs the canvas to receive touches outside the wheel and pedals. Release badge v265.
+
+## [2026-09-28] cycle | Agent API: continuous control and WebMCP (#201)
+
+- `agent-api.js` (v4): one controller behind `step()`, new `act()` (command held until the next act, lease expiry — default 1 s, max 5 s — `release()` or human input) and `enqueue()` (≤ 10 segments, ≤ 5 s, then neutral). A `generation` counter keeps old timers from neutralising newer commands; `step()` now always resolves, even when a human takes over.
+- `getState().control` = `{ mode: human|agent|released, steer, throttle, brake, leaseRemainingMs, queue }`; `nearbyCars[].remote` flags room participants. `pagehide` / hidden tab release an agent command.
+- WebMCP bridge: with `navigator.modelContext` the tools `f1_observe`, `f1_act`, `f1_enqueue` and `f1_release` wrap the same calls; without it nothing changes. Only loaded with `?agent=1` / bot sessions, as before.
+- Verified with a Node stub run (lease hand-over, expiry, queue, human takeover, step resolve); not run in a browser, WebMCP not exercised. `F1-RACER-WIKI.md` Agent API section updated. Version chain: main v124, race-bootstrap v85; release badge v266.
+- Open from #201: latency measurements and the ChatGPT in-app browser check need a real session.
+
+## [2026-09-28] cycle | Pad: hold L1 to look back (#275)
+
+- `race-input.js` (v58): gamepad L1 (button 4) is a hold that replays KeyR down/up, so `race-camera.js` needs no change; released on button release, pad disconnect, blur and hidden tab (`clearDrivingInput`). Until now look back existed only on keyboard (R) and touch (DIETRO).
+- `race.html` hint mentions L1. Version chain: main v125, race-bootstrap v86; release badge v267.
+- Verified with `node --check` only; to try with a standard pad in chase and cockpit.
+
+## [2026-09-28] cycle | Free drive on a banked oval (#274)
+
+- New page `free.html` + `core/client/free/` (`free.js`, `oval.js`, `banking.js`, `free-sim.js`): one car, no rivals/qualifying/race/laps/results, exit link + Esc. Separate from `race.html` and multiplayer on purpose; `FREE_OVAL` is not in `CIRCUITS`. Home gets a "Guida libera" card (`index.html`, `style.css` v54 on every page).
+- Banking derives from the centerline's signed curvature (24° in the turns, flat straights), pivoting on the inside edge so the infield needs no ramps; the physics stays 2D (`setupPlayerPhysics` unchanged) and only the pose (height, pitch, roll) and a small grip bonus come from it. `race-camera.js` (v39) adds `state.y`; main v126, race-bootstrap v87.
+- `core/tools/validate-free-oval.mjs`: shape, bank profile, pose signs and autopilot laps (3 laps in 120 s at pace 0.9 and 1, 0 s off the road). Everything else is syntax-checked only: look, feel and touch drag are to be tried in the browser. `F1-RACER-WIKI.md` has a new section.
+
+## [2026-09-28] cycle | Free look drag: mouse only (#278)
+
+- `race-camera.js` (v40): the canvas drag-to-look (#255) now starts only for `pointerType === "mouse"`; on touch, a finger that missed the steering wheel landed on the canvas and turned the camera while driving.
+- Touch has no free-look gesture now (keyboard I/J/K/L and pad right stick / L1 are unchanged). A dedicated on-screen look pad (as in PR #268) stays an open option if it is missed.
+- Version chain: main v127, race-bootstrap v88, `free.js` v2; release badge v269. Verified with `node --check` only.
+
+## [2026-09-28] cycle | Driving hint: look-around drag is mouse-only (#280)
+
+- `race.html` and `free.html`: the hint now says "trascina col mouse per guardarti intorno", matching #278 (the canvas drag no longer exists on touch). Text only, no imports touched, so no `?v` chain; release badge v270.
+- Verified with `git diff --check` only. `modes.html` still does not list free look / L1 / free drive (open).
+
+## [2026-09-29] cycle | Finished cars park beyond the kerbs (#282)
+
+- `finish-pull-over.js`: post-finish target now uses the shared outer-kerb boundary (`grassLimit`) and aims about 1.1 m into the runoff, so finished cars clear the racing surface instead of stopping beside/on the kerb.
+- The same behavior is wired for the player, browser AI and headless room bot; movement still uses ordinary steering/braking, never teleportation.
+- Cache chain bumped through `race-ai.js`, `main.js`, `race-bootstrap.js` and `race.html`.
+- Structural review only; final behavior remains for the user's gameplay verification after merge.
+
+## [2026-09-29] cycle | Progressive kerb and runoff slowdown (#283)
+
+- `race-rules.js`: replaced the old runoff drag peak (240 m/s², with a 28% entry floor) with a progressive 5.4→30 m/s² ramp, and set kerb scrub to 2.2 m/s² so kerbs no longer behave like invisible walls.
+- The slowdown transition now uses smoothstep after the outer kerb edge; barriers and car collisions remain separate impact paths.
+- Cache versions were bumped through `main.js`, `race-bootstrap.js` and `race.html`.
+- Release badge bumped from v270 to v271 across all HTML entry points.
+- Structural comparison only; gameplay verification remains at roughly 100, 150 and 200 km/h with different kerb/runoff depths.
+
+## [2026-09-29] cycle | Montenero competitive redesign (#286)
+
+- `circuits.js`: Montenero was redrawn so it is no longer a compact Colleverde lookalike; the new lap has a faster eastern run into a heavy braking zone, a clearer fast S, a slow western restart and a more asymmetric technical final sector.
+- Track width stays at 11 m to preserve the street-circuit identity; the recommended setup now balances rear wing and suspension for the added straight/braking/traction mix.
+- Browser cache chains were bumped for every client that imports `circuits.js` (menu, garage, room and race paths).
+- Release badge bumped from v271 to v272 across all HTML entry points.
+- Structural source review and geometric pre-check completed; the canonical Node circuit validator could not be executed through the GitHub connector-only environment, so gameplay remains the final validation.
+
+## [2026-09-29] cycle | Racing procedure: lobby watch, human tracking, faster cycle (#293)
+
+- `procedure-racing.md`: after the bots join, the agent must stay in a `bot-watch` loop until the lobby turns into `race` and then until `finished`; the host starts with no warning and a turn ended in the lobby missed lights out (BMXE, RTW2).
+- New "be present" rule: each check reads `standings` (the human is in it), gaps to the bots, radio on every event and one chat line per lap; watch cycle cut to `--timeout 5`, tuned to the agent's own latency.
+- Box call moved to ~60-70% wear: a stop at lap 1-2 leaves fresh tyres at 100% before the flag in a 5-lap race.
+- Documentation only; verified with `git diff --check`, checked in play in room H32D (5 bots, stops with radio, standings tracked).
+- Findings filed as #288-#292 (Agent API / room-bot); #201 reopened by the user.
+
+## [2026-09-29] cycle | Browser-independent realtime agent bridge (#201)
+
+- `agent-api.js`: WebMCP and remote control now dispatch through one `f1_observe` / `f1_act` / `f1_enqueue` / `f1_release` controller; native WebMCP prefers `document.modelContext` with the previous navigator surface kept as compatibility fallback.
+- `room-server.mjs` + multiplayer client adapters: added a bearer-token WebSocket relay scoped to one registered race participant, with a four-tool whitelist, call/result correlation and revocation on page close, leave or bridge replacement.
+- `core/tools/agent-mcp-server.mjs`: added a dependency-free MCP stdio adapter (using existing `ws`) so Claude/Codex can control a normal browser through `F1_AGENT_SERVER` + `F1_AGENT_TOKEN`; lobby/race/rematch preserve agent query parameters.
+- Branch was synchronized with the latest master before PR finalization; no new npm dependency was introduced and cache versions were bumped through room/race entry points.
+- Release badge bumped from v273 to v274 across all HTML entry points. Structural/source review only; live MCP → WebSocket → race round-trip, 10+ consecutive actions, three simultaneous agent sessions and human takeover remain gameplay/runtime verification.
+
+## [2026-09-29] cycle | Remote Streamable HTTP MCP endpoint (#296)
+
+- `agent-mcp-common.mjs` now centralizes the four F1 MCP tools and the WebSocket bridge client; the existing stdio adapter reuses it instead of maintaining a second control implementation.
+- `agent-mcp-http.mjs` adds the primary remote Streamable HTTP `/mcp` path for Claude, ChatGPT and other MCP clients, with optional Bearer auth, origin checks, protocol/header validation and a secret-free `/health` endpoint.
+- The architecture remains additive: normal human multiplayer and the existing Room Bot strategy workflow work independently of MCP; all control paths converge on the same browser input/physics pipeline.
+- Added `c4-agent-control.md` with C4 levels 1–4, dynamic and deployment views, plus explicit regression boundaries preserving friends, Room Bot strategy and MCP as coexisting paths.
+- Release badge bumped from v274 to v275 across all HTML entry points. Structural/source review only; remote URL handshake, tool calls and end-to-end driving through an HTTPS tunnel remain runtime verification.
+
+## [2026-09-29] cycle | Focused C4 model for MCP subsystem (#298)
+
+- Added `c4-mcp.md` as a focused architectural zoom of the remote MCP path, complementing rather than replacing the existing coexistence C4.
+- The document covers C4 levels 1–4, registration/attach, `f1_observe`, `f1_act`, failure/reconnect semantics, trust boundaries, deployment and source ownership.
+- Explicit invariants preserve the current runtime shape: MCP remains an optional adapter, one token binds one participant, the room server only relays, and browser input/physics remain the single execution path.
+- Linked the new MCP zoom from both `c4-model.md` and `c4-agent-control.md` for discoverability without changing runtime code.
+- Release badge bumped from v275 to v276 across all HTML entry points. Documentation-only cycle; verified structurally against the current file/component names and no browser test was required.
+
+## [2026-09-30] cycle | Maintainer docs moved out of the repo root (#300)
+
+- `F1-RACER-WIKI.md`, `RELEASE-CHECKLIST.md`, `WORK-HANDOFF.md` and `procedure.md` moved to `docs/` (`git mv`, history kept); `procedure-racing.md` moved next to its skill in `.claude/skills/procedure-racing/`.
+- Division criterion: the root keeps only what a convention or external service expects there (HTML pages, `CLAUDE.md`, `README.md`, `LICENSE`, `package.json`, `manifest.webmanifest`); the rest is grouped by audience.
+- All references updated (`README.md`, `llm-wiki/` pages and `AGENTS.md`, `SKILL.md`, comments in `core/server/rooms.mjs` and `core/tools/validate-circuits.mjs`); `logs/` left untouched (append-only). `architecture.md` no longer claims the docs stay at the root.
+- HTML pages stay in the root on purpose: moving them would break shared URLs (`room.html?roomServer=...`) and every relative import.
+- Release badge bumped from v276 to v277 across all HTML entry points. Verified with `node --check` on the two touched JS files, `git diff --check` and a final `grep` for stale paths; no game code changed.
+
+## [2026-10-01] cycle | Stable race progress with the car off track (#290)
+
+- `core/client/race/race-progress.js`: `advanceProgress` ignores raw-progress steps above 5% of a lap per frame (dt is capped at 0.1 s, so they are projection hops, not movement); it only resyncs `prevRawProgress`, leaving laps and `totalProgress` untouched.
+- Cause: with the car stopped or far from the asphalt, the nearest-centerline index hopped between segments, so `totalProgress` swung and `position` flipped between P1 and P2.
+- Side effect: the first call for remote cars (start from `prevRawProgress: 0`) no longer accumulates a spurious jump.
+- `?vNN` chain bumped up to `race.html`; release badge v277 → v278.
+- Verified with `node --check` and `git diff --check` only; to confirm in game with the agent car off track.
+
+## [2026-10-01] cycle | Agent API: return heading when off track (#292)
+
+- `core/client/race/agent-api.js`: `getState()` adds `returnHeadingErrorRad` (heading minus bearing to the nearest centerline point, same sign as `headingErrorRad`; `null` on track) so an agent knows which way to steer back.
+- The ~29 km/h floor off track is the shared runoff `crawlSpeed` (8 m/s) in `race-rules.js`, identical for player and AI: kept as intended. `MAX_QUEUE_MS` unchanged.
+- `docs/F1-RACER-WIKI.md` documents the new field and the floor; `?vNN` chain bumped up to `race.html`; release badge v278 → v279.
+- Verified with `node --check` and `git diff --check` only; to confirm in game by steering an agent back from the grass using the new field.
+
+## [2026-10-01] cycle | Agent API: sign contract documented (#289)
+
+- `core/client/race/agent-api.js`: file header and `f1_get_state` description now state the signs: `steer` +1 = right, `lateralOffsetMeters` > 0 = left of the centerline, `headingErrorRad` > 0 = nose left of the track direction; positive error is fixed by positive steer.
+- Not a defect: `headingErrorRad` is continuous (wraps only at ±pi) but its reference is the track direction at the nearest sample, so it legitimately changes sign through a left-to-right corner. Signs derived from `steering.js` (`yaw = -steer ...`) and `track-geometry.js` (`sideNormal`).
+- No behaviour change; `?vNN` chain bumped up to `race.html`; release badge v279 → v280.
+- Verified with `node --check` and `git diff --check` only.
+
+## [2026-10-01] cycle | Agent API: f1_radio for the agent car (#288)
+
+- `core/client/race/agent-api.js`: `radio(text)` on `window._ENVIRONMENT_` and the WebMCP tool `f1_radio` (trimmed to 80 characters like `strategy.json`, error on empty text); `main.js` passes a `sendRadio` callback that shows the banner and calls `multiplayer.sendRadio`.
+- `core/tools/agent-mcp-common.mjs` / `agent-mcp-http.mjs` expose `f1_radio` in the MCP bridge; `core/server/room-server.mjs` adds it to `AGENT_TOOL_NAMES` (the room server must be restarted to accept it).
+- `docs/F1-RACER-WIKI.md`, `c4-mcp.md` and `c4-agent-control.md` list the fifth tool; `?vNN` chain bumped up to `race.html`; release badge v280 → v281.
+- Verified with `node --check` on every touched file and `git diff --check`; to confirm in a room by calling `f1_radio` from an MCP client.
+
+## [2026-10-01] cycle | room-bot --agent mode (#291)
+
+- `core/tools/room-bot.mjs`: `--agent` opens `race.html?agent=1` instead of `?driver=layered`, applies `<dir>/cmd.json` (`act`, `enqueue`, `radio`, `release`) through `window._ENVIRONMENT_`, and writes the Agent API `getState()` to `state.json` every 500 ms (2 s in the default mode); the pit-transition log (#247) works in both modes.
+- `bot-fleet.mjs` is unchanged: the fleet keeps the layered driver and its own strategy loop. `wiki/f1-racer/agent-bots.md` documents the option.
+- Not done: the 6–15 fps of a single bot is not investigated (no browser here); `state.json` already reports `botFps` for a test on the player's PC with `--gpu`/`--headed`.
+- Release badge v281 → v282; verified with `node --check` and `git diff --check` only.
+
+## [2026-10-01] cycle | Ingest Ollama Jev-style decision models (#307)
+
+- New source note `llm-wiki/wiki/sources/2026-10-01-ollama-jev-decision-models.md`:
+  `/v1/systemone` contract (`noul`/`choice`/`score`, limits) and mechanism
+  (logit scoring of single-token candidates, one row per question).
+- Built from the Ollama source at `1abe35e`; `ollama.com` is blocked by the
+  container's egress proxy, so press-only facts (models, 91 ms) are marked
+  unverified.
+- `wiki/f1-racer/agent-bots.md`: Open section on the candidate fit, a tactical
+  layer for bots (pit/mode/pace), Node side on the player's PC, not driving.
+- Docs only; release badge v283.
+
+## [2026-10-02] cycle | Raw note: System One decision models discussion (#309)
+
+- New `llm-wiki/raw/2026-10-02-system-one-discussion.md`: the chat on
+  what a System One model is (LLM logit classifier, one prefill per question),
+  who supplies the options (the caller's code), and the Pac-Man and
+  car-dodging claims vs pacman-arena numbers (greedy beat every model;
+  384–668 ms median).
+- Fit recorded: no steering; overtake side at 3–10 Hz or a slow tactical
+  layer; a ready POST to `/v1/systemone` with `nimble` for the user's PC.
+- Not run: the container blocks the Ollama registry and has no GPU.
+- Raw only; synthesis already in #307. Release badge v284.
+
+## [2026-10-02] cycle | Cinquino city car in free drive (#311)
+
+- New `core/client/shared/city-car-model.js`: a brown 1960s city car from
+  extruded side profiles, with the `buildCar` contract so `applyCarToMesh`
+  and the cockpit camera work unchanged. No badges or lettering.
+- New `core/client/free/city-car.js` (~140 km/h, 0-100 in ~10 s);
+  `free-sim.js` takes an optional `car`; `free.js` switches on
+  `?car=cinquino`. The race chain is untouched.
+- Home card "Guida libera · Cinquino" (full row); `style.css` v55 on every
+  page.
+- Verified with headless SwiftShader renders (3 angles, chase and cockpit on
+  `free.html`), no console errors. Feel and mobile not tested. Badge v285.
+
+## [2026-10-02] cycle | Free drive: pick the car, race four rivals (#313)
+
+- The Cinquino's own home card (#311) is gone: free drive keeps one card and
+  a car select (F1, Cinquino, Spider, Pulmino, Muscle; `?car=` or the saved
+  `f1racer-free-car`). The track was always the existing `FREE_OVAL`.
+- `shared/vehicle-models.js` replaces `city-car-model.js`: a shared kit and
+  one builder per road car, `buildCar` contract plus optional `cockpitEye`,
+  now read by `race-camera.js` (v41, chain bumped to `race.html`).
+- `free/vehicles.js`: per-car physics (115-317 km/h) and `RIVAL_SLOTS`. The
+  other four cars line up ahead and start on the first throttle, each a
+  `createFreeSim` driven by `createAutopilotProvider`; no car contact.
+- `validate-free-oval.mjs` laps every car on every lane. It showed slow cars
+  running wide on the oval (outside lanes left the road), so rivals use
+  inside lanes only.
+- Verified: validator green, headless renders of the fleet and of
+  `free.html` (grid, start, chase, cockpit), no console errors. Feel and
+  mobile untested. Badge v286.
+
+## [2026-10-02] cycle | Classic cars: Pandina, Familiare, rounder Cinquino (#315)
+
+- `shared/vehicle-models.js`: `bodyShaper()` deforms an extruded body
+  (plan pinch, tumblehome, sill tuck) so the Cinquino reads as a bubble;
+  new Pandina (boxy 1980s) and Familiare (1960s wood-panelled estate).
+- `shared/road-cars.js` (new): road-car names, colours and physics, shared
+  with the coming Classiche race (#315 cycle B); `free/vehicles.js` adds the
+  F1 and six rival lanes.
+- `validate-free-oval.mjs`: 7 cars x 6 lanes, 0 s off the road.
+- Verified with headless renders (fleet, free drive grid/chase/cockpit), no
+  console errors. Feel untested. Badge v287.
+
+## [2026-10-02] cycle | Classiche series: period-car race (#317)
+
+- Home: the driver card swipes between F1 and Classiche (12 made-up drivers,
+  two per road car, `shared/classic-series.js`); a Classiche pick sets
+  `f1racer-series` and the circuit link adds `&series=classic`.
+- `race/main.js` behind `CLASSIC` (solo only): the player's road car and
+  physics, eleven classic rivals with per-car AI limits (`race-ai.js` reads
+  `car.ai`), one simulated quali lap per kind of car, DRS/ERS off and
+  hidden, no championship points ("Rivincita").
+- Decision recorded in `wiki/f1-racer/decisions.md`; docs section added.
+- Verified headless: home swipe and link, classic quali tower and mixed
+  grid with nameplates, plain F1 race unchanged; no console errors. A full
+  race and the feel are untested. Badge v288.
+
+## [2026-10-02] cycle | Per-car engine sounds (#319)
+
+- `core/client/race/race-audio.js`: `ENGINE_PROFILES` (f1, cinquino,
+  pandina, spider, pulmino, muscle, familiare) with revs, firings per
+  revolution, firing-wave timbre, mix levels and gearbox (8 gears F1, 4–5
+  road). `setupRaceAudio({ engine, field })` returns a profile-bound
+  `gearInfo`; the exported `gearInfo` keeps the F1 gearbox by default.
+- F1 output verified identical to the previous module (mocked AudioContext,
+  9023 parameter updates compared byte for byte).
+- `free.js` voices the chosen vehicle; `main.js` voices the Classiche
+  player's car, the grid chorus as a small four ("pandina"), and skips the
+  exhaust flames for road cars (the flame is placed on the F1 tailpipe).
+- Limits: timbre judged only numerically (road fundamentals 15–47 Hz at
+  idle, carried by 28–56 harmonics); needs an in-game listen.
+
+## [2026-10-02] cycle | Classiche one-make races, 1960s van (#321)
+
+- `core/client/race/main.js`: Classiche rivals all drive the player's car
+  (`roadCar: CLASSIC_DRIVER.car`) in their own colours, so AI pace and lap
+  estimates are equal; the grid chorus uses the player's engine profile.
+- `core/client/home/menu.js`: driver card reads "Monomarca <car>";
+  `classic-series.js` comment documents the one-make rule.
+- `core/client/shared/vehicle-models.js` (`buildPulmino`): split-window
+  rear-engined van look — two-tone V on the nose, plain round disc (no
+  badge), split windscreen post, engine louvres and lid. Same dimensions,
+  wheels and cockpit eye.
+- Verified with `node --check` / `git diff --check` only; looks need an
+  in-game check. Next: road-car garage (setup, colours, showroom).
+
+## [2026-10-02] cycle | Road-car garage: setup, paint, showroom (#323)
+
+- New `core/client/shared/road-garage.js`: per-car setup (tyres, gearing, brakes, suspension; 3 variants, ±2–8% trade-off multipliers on maxSpeed/accel/brakeDecel/maxTurnRate) and paint (primary; secondary on Pulmino and Muscle), stored in `f1racer-road-garage-v1`; corrupt values fall back to stock.
+- Garage: car picker (F1 + 6 road cars, `?car=`; default = Classiche driver's car when that series is the home pick). New `garage/road-garage-ui.js` drives the road-car pane; `showroom.js` builds road cars via `buildRoadVehicle` with live `repaint()`. F1 garage unchanged (wrapped in `mountF1Garage`).
+- Applied to the player only: Classiche race (`race/main.js` `roadSetupParams` + `roadColors`) and free drive (`free/free.js`); rivals stay stock. Note: in one-make Classiche this gives the player a small edge.
+- Verified with `node --check` and a Node script (fake localStorage, corrupt JSON, params per car); not play-tested. Badge 291.
+
+## [2026-10-03] cycle | Road cars: richer 3D models (#325)
+
+- `core/client/shared/vehicle-models.js` kit: lathed tyres with a rim, `wire` and `flat` hubs, `rimMaterial`, and `seam` / `wiper` / `plate` helpers, all detail-only; `bodyShaper` gains `waist` (coke-bottle flank).
+- Spider, Muscle and Pulmino now use `bodyShaper` (they had flat slab sides). Each of the 6 cars gets period trim: Spider wing crests, faired lamps, wire wheels; Muscle ducktail and quad lamps; Pulmino side door; Pandina arch flares; Familiare fins and oval grille.
+- Fixed trim buried inside the bevelled body: Pulmino nose V, disc and engine lid; Familiare grille bars. Also fixed the Pandina side strip running across the wheel openings and the Spider bumper ends sticking out.
+- The player's period car now builds with `detail` in race and free drive (chase view); the AI field stays plain (+0–6 meshes per car).
+- Verified with a Node script (local three, CDN URL mapped): wheel positions, `wheelRadius` and `cockpitEye` unchanged, length within 3%. Not play-tested; badge 292. Next: Classiche rivals with setups.
+
+## [2026-10-03] cycle | Instruction files: prompt-audit fixes (#327)
+
+- `.claude/skills/concludi/SKILL.md`: the reply step announces `v<R>` (release number), matching step 3, instead of the issue number.
+- `.claude/skills/procedure-racing/procedure-racing.md`: the stop command kills `bot-fleet.mjs` / `room-bot.mjs` (the fleet serves :8080 itself; there is no `python http.server`); dropped "(#224 closed)" and "reasoning" from the loop-speed line (thinking depth is the agent's effort setting).
+- `llm-wiki/AGENTS.md`: the Concludi rule no longer cites the auto-close it superseded.
+- Left as is: `core/client/shared/version.js:1-2` still says the badge is the issue number (a comment-only fix would need a version bump).
+- Verified with `git diff --check`; the new stop command needs a check at the next race. Badge 293.
+
+## [2026-10-03] cycle | Race rivals at parity with the player (#329)
+
+- Why: rivals had ~15% less top speed but lost only ~7% in the rain (their kinematic model never slides and ignored wet grip in corners), while the player's physics loses 14-45%; a wet pole (Portoscuro) was out of reach.
+- `core/client/race/race-ai.js`: optional `cornerSeverity` (how much a full bend cuts the AI target speed; corner factor floored at 0.2).
+- New `core/client/race/ai-parity.js` + generated `ai-parity-table.js`: rivals take the player's stock limits (rain penalties included) plus per-circuit, per-car tuning. `core/tools/calibrate-ai.mjs` (`npm run calibrate:ai`) finds the player physics' best lap (autopilot, pace swept 0.55-2.0) and bisects severity, then a steering or pace multiplier where the AI's simpler model can't carry the speed. 63 entries, all within ±1.2%. Re-run it when a circuit changes.
+- `core/client/race/main.js`: F1 and Classiche rivals both use `rivalAiParams`; difficulty Normale = parity, Facile/Difficile ±5%. Garage setup stays the player's own.
+- Known limit: the reference is the autopilot, not a human. Verified with `node --check` and the tool's per-entry gaps; not play-tested. Badge 294.
+
+## [2026-10-03] cycle | Release badge = PR number (#331)
+
+- `.claude/skills/concludi/SKILL.md` step 3: the badge (`shared/version.js?v=` on every page) is the cycle PR's number, or master's badge + 1 when the PR number is not above it, so it never goes down (a lower number would stop telling a stale cached page from a fresh one).
+- `core/client/shared/version.js` comment and `llm-wiki/AGENTS.md` state the same rule (the comment still said "issue number").
+- First applied here: badge 294 → 332 (PR #332). Verified with `node --check` / `git diff --check`.
+
+## [2026-10-03] cycle | Room server hosted on Render (#333)
+
+- `core/server/room-server.mjs`: one HTTP server carries the WebSocket and `GET /health` (200); other GETs still answer 426. In-process keep-awake: `node-cron` pings `KEEP_AWAKE_URL/health` on `KEEP_AWAKE_CRON` (default `*/10 * * * *`) in `KEEP_AWAKE_TZ`; off without the URL. `ws` and `node-cron` are runtime dependencies.
+- Provider-neutral layout: `service/README.md` is the hosting contract (core/, npm ci, start command, PORT, HTTP+WS, /health, single in-memory instance), `service/render/render.yaml` mirrors the live Render service `f1-racer-rooms` (free, Frankfurt, auto-deploy from master; created via Render's API, no rootDir). `database/README.md` states the same rules for a future database (none today).
+- Client: new `core/client/multiplayer/room-server.js` picks the server (`?roomServer=`, else local server on a localhost page, else `HOSTED_ROOM_SERVER` = `wss://f1-racer-rooms.onrender.com`); home and room page ping `/health` on load.
+- Decisions: keep-awake stays inside the server (no paid Render cron), all day: ~744 of the 750 free hours/month, no room for a second free service. Iterations in this cycle: self-ping window, external cron, then node-cron all day.
+- Verified locally (health 200, 426, room creation over WS, cron hits /health, `npm ci --omit=dev`); Render build and start seen in its logs (old master code until this merge). This session's network blocks onrender.com, so `/health` on the live URL is for the user to check. Badge 334.
+
+## [2026-10-03] cycle | core/shared: the room server stops importing the client (#335)
+
+- R0 of the refactor plan (before R1 `Vehicle`, R2 `Series`). `circuits.js` and `driver-roster.js` moved from `core/client/shared/` to `core/shared/`: pure modules (no DOM, no three, no packages) loaded unchanged by the browser and by `core/server/rooms.mjs`.
+- `QUALIFYING_DURATION_MS` now lives in `core/shared/circuits.js`, ending its deliberate duplication in `main.js` and `rooms.mjs` (which re-exports it for `room-server.mjs`).
+- New `core/tools/check-boundaries.mjs` (`npm run check:boundaries`): `server/` and `shared/` never import `client/`; `shared/` imports only `shared/`. Browser-only shared code stays in `core/client/shared/`.
+- Decision: everything stays under `core/` (user's #46 rule), not a root-level `client/`/`server/` split as first proposed.
+- Verified: `node --check`, every relative import resolves, boundary check passes (and fails on a planted import), room server starts, `validate:circuits` passes. `?v` chain bumped to the pages; wiki paths updated. Badge 336.
+
+## [2026-10-03] cycle | Room server redeploy via deploy hook (#337)
+
+- Render's auto-deploy needs its GitHub App, which the user does not want; pushes to master left the old server live (deploys of #334 and #336 were triggered by hand).
+- New `.github/workflows/deploy-room-server.yml`: on master pushes touching `core/server/**`, `core/shared/**` or `core/package*.json` (or a manual run) it POSTs the provider's deploy hook. Provider-neutral secret name `ROOM_SERVER_DEPLOY_HOOK` (Render: service → Settings → Deploy Hook), set by the user; without it the job only warns.
+- `service/README.md` documents it. Render's connector cannot read or create deploy hooks, so that half stays manual.
+- Verified: YAML parses; `git diff --check`. Badge 338.
+
+## [2026-10-03] cycle | Vehicle class hierarchy: F1Car / RoadCar (#339)
+
+- R1 of the refactor plan. New `core/client/shared/vehicle.js`: `Vehicle` → `F1Car`, `RoadCar` (one per `road-cars.js` entry), registry `VEHICLES` / `vehicleById()`. Methods `stockParams(isRaining)` (rivals), `playerParams(isRaining, garage)`, `loadGarage()`, `stockColors()`, `paint()`; fields `showroomScale`, `playerDetail`, `exhaustFlames`, `noun`. Three-free, so Node tools load it.
+- New `core/client/shared/vehicle-view.js`: `buildVehicleModel()` with one builder per `kind` (F1 → `car-model.js`, road → `vehicle-models.js`), optional studio env map. `buildRaceCar` (race-car-view.js) removed.
+- Callers no longer branch on `id === "f1"`: `race/main.js` (player `PLAYER_VEHICLE`; every rival carries its `vehicle`; AI params and simulated flying lap cached per car), `free/free.js` + `free/vehicles.js`, `garage/garage.js`, `showroom.js` (API now `{ vehicle, colors }`), `road-garage-ui.js`, `home/menu.js`, `tools/calibrate-ai.mjs`, `tools/validate-free-oval.mjs`.
+- Only deliberate behaviour change: the free-drive rival F1 runs stock instead of the player's F1 setup. Series branching (`CLASSIC ? …`) remains for R2 (`Series`).
+- Verified without a browser: params identical to the old formulas for all 7 cars, dry and wet, F1 and road setups; 3D models identical (mesh count, bounds, wheels, env maps) via a Node loader; `validate-free-oval`, `check:boundaries`, `node --check`, all relative imports resolve. Badge 340.
+
+## [2026-10-03] cycle | Series class: F1Series / ClassicSeries (#341)
+
+- R2 of the refactor plan. New `core/client/shared/series.js`: `Series` → `F1Series`, `ClassicSeries`, registry `SERIES` / `seriesById()`; `loadSeries()` / `saveSeries()` moved here from `classic-series.js` and now return/take the object. A series answers `loadDriverId()`, `vehicle()`, `playerColors()`, `rivals()`, `driverName()`, `raceTitle()`, `awardsPoints`, `drsErs`, `query`, `launchLabel`; `ClassicSeries.baseColors()` replaces the garage's inline merge.
+- `race/main.js` (`RACE_SERIES`, `PLAYER_DRIVER_ID`), `home/menu.js` and `garage/garage.js` no longer branch on `"classic"`. A room is always `SERIES.f1`; `PLAYER_LIVERY` stays the F1 driver's for the pit lane.
+- `classic-series.js` keeps only the Classiche roster and driver pick. Architecture page documents Series.
+- Behaviour unchanged. Verified without a browser: `node --check`, `git diff --check`, a Node script over both series (driver, car, colours, 11 rivals, names, title). Badge 342.
+- Next: separate Classiche championship built on `Series`.
+
+## [2026-10-03] cycle | Room client auto-reconnect (#343)
+
+- A dropped room WebSocket (phone asleep, network switch) needed a page reload: `room-client.js` only reported "disconnected" and never retried.
+- `core/client/multiplayer/room-client.js`: after an unwanted close it resends `reconnect` with the saved session at 1/2/4/8/8 s (~23 s, inside the server's 30 s grace), at once on `visibilitychange` (visible) and `online`; an unanswered ping drops the socket and reconnects. Armed only once a session went live, so `race-bootstrap.js`'s solo fallback never retries. Statuses: `connected` / `reconnecting` / `disconnected` / `lost`. `tryResume` forgets the session only on a server refusal, not a network error.
+- `room.js` shows a message per status; the race shows it in the radio banner and re-registers the agent bridge with the same token (an attached controller gets `bridge_replaced` and must re-attach). Server unchanged.
+- Known limits: a server restart (deploy) still loses in-memory rooms (`lost`); voice chat is not re-established.
+- Verified without a browser: `node --check`; Node test against a local room server through a TCP proxy (cut → `connected,reconnecting,connected`, participant back to connected; server restart → `lost`, session cleared). Badge 344.
+
+## [2026-10-03] cycle | Classiche championship (#345)
+
+- Classiche races now score: a separate championship with the F1 points table, superseding "no points" from #317.
+- `core/client/shared/championship.js`: `Championship` class (storage key, roster, player id; `record` / `reset` / `standings` / `nextUnraced` / `inProgress`), `CHAMPIONSHIPS.f1` (same key as before, no data loss) and `.classic` (`f1racer-championship-classic-v1`). `Series` carries `championship` (replaces `awardsPoints`) and `driverColors()`.
+- `home/menu.js`: standings, banner, circuit status, rival count, title and reset follow the current series; each series locks its driver while its season is under way (Classiche one-make: the car too). `race/main.js` records into `RACE_SERIES.championship`; "Prossimo circuito" keeps the series.
+- Wiki ingest + lint: decisions/architecture/F1-RACER-WIKI updated; stale `index.md` (driver names) and `c4-local.md` (`recordRaceResult`) fixed; no broken links.
+- Verified without a browser: `node --check`; Node test of points, lock and next circuit. Badge 346.
+
+## [2026-10-04] cycle | Multiplayer lobby host/guest roles (#347)
+
+- `room.html`: clarified the lobby copy so the host owns circuit, difficulty and qualifying/race format while invited players complete only their personal choices and readiness.
+- `core/client/multiplayer/room.js`: added role-aware session title/help; host controls stay editable only for the host, guests keep a read-only summary of the chosen session.
+- Server authority remains unchanged: `set_circuit` and `start_race` are still host-only; no multiplayer protocol, physics, voice or MCP behavior changed.
+- The earlier shared-settings interpretation was fully removed from the final diff; only the lobby UI and its module cache version remain changed.
+- Release badge set from v346 to v348 across all HTML entry points. Structural review only; manual two-browser host/guest verification remains the recommended gameplay check.
+
+## [2026-10-03] cycle | Rivals drive their car's race settings (#349)
+
+- Removed the #329 parity table (`race/ai-parity-table.js`) and its calibrator (`tools/calibrate-ai.mjs`, npm `calibrate:ai`): it raised some rivals up to +25% over their car's top speed to match the player's best possible lap (Altomare Classiche +17-20%), so the player could not catch the field.
+- `race/ai-parity.js` → `race/rival-ai.js` (`rivalAiFromCar`): car stock limits, rain included, one fixed corner severity (0.48); difficulty scales pace ±5% around the car's own.
+- `race/main.js`: "Prossimo circuito" carries `&difficulty=`; a race link without it falls back to the difficulty saved on home (`f1racer-difficulty`). Home and multiplayer already passed it.
+- Known limit: with one corner severity for every circuit, rival pace may be uneven across tracks; adjust the severity, not lap-time calibration.
+- `core/package.json` changed, so the room-server deploy runs on merge (server code unchanged). Verified with `node --check` only. Badge 350.
+
+
+## [2026-10-04] cycle | Explicit multiplayer session format (#351)
+
+- `room.html`: removed the redundant red helper text from the session panel and replaced the pre-checked qualifying toggle with an explicit Format selector: Qualifica + gara or Solo gara.
+- `core/client/multiplayer/room.js`: treats an unset format as a real third state, keeps the guest summary neutral, and disables Avvia until the host has selected the format.
+- `core/server/rooms.mjs`: new rooms now start with `qualifying: null`; `startRace` rejects a session with no explicit format so the rule is enforced server-side as well as in the UI.
+- Host authority is unchanged: circuit, difficulty, format and session start remain host-only; invited players stay read-only for session setup.
+- Release badge set from v350 to v352 across all HTML entry points. Structural/source review only; manual two-browser verification remains the recommended gameplay check.
+
+## [2026-10-04] cycle | Cooler phones at 60 fps (#355)
+
+- `shared/graphics-profiles.js`: on touch devices the pixel ratio is capped at 1.25 (was 1.5 on "medium", 2 on "high"), about 30% fewer pixels per frame; 60 fps, shadows and profiles stay as they were. Desktop unchanged.
+- A first "Risparmio batteria" toggle (low profile at 30 fps, on by default on phones) was dropped before merge: the user wants to play at 60 fps.
+- Next lever if a phone still runs hot: lighter shadows on touch devices, not a lower frame rate.
+- Import chain bumped (graphics-profiles v6 → race/free/garage pages; menu and style also bumped by the dropped toggle). Verified with `node --check` only. Badge 356.
+
+
+## [2026-10-04] cycle | Multiplayer lobby guest setup and stable layout (#353)
+
+- `room.html`: host and invited players now share the same circuit/difficulty/format form; guests see the host values in disabled controls instead of a duplicated text summary, while manual room-code entry and the visible lobby code remain available.
+- `core/client/multiplayer/room.js`: keeps session fields synchronized for every participant, disables them for non-hosts, and ignores guest-side setup submissions; host-only server authority is unchanged.
+- `core/client/style.css`: introduced the wider desktop lobby, read-only guest styling, mobile inline room code, and a stable layout with driver/session controls first and the participant list last so new joins only grow the bottom of the page.
+- No nested participant scroll was added: the room remains capped at ten drivers, so the page scroll stays the single scrolling surface.
+- Release badge set from v356 to v357 across all HTML entry points. Structural/source review only; manual host/guest desktop and mobile verification remains the recommended gameplay check.
+
+## [2026-10-04] cycle | Phones: fewer draw calls and lighter materials at 60 fps (#357)
+
+- `shared/mesh-batch.js` (new): the F1-only batching moved out of `car-model.js`; `buildVehicleModel()` now batches every low-detail Vehicle per group, whatever its kind (F1 42 → 37 meshes, Classiche rivals ~65 → ~20, same triangles).
+- `shared/lite-materials.js` (new), touch devices only (`liteMaterials` profile flag): once the scene is built, matte MeshStandard (roughness ≥ .85, grass/sand/concrete/dry asphalt/rubber) → MeshLambert, rivals' clearcoat MeshPhysical → MeshStandard. Player and cockpit cars untouched; wet asphalt keeps its reflections. Still 60 fps.
+- Wiki: OOP made a standing rule — `wiki/f1-racer/oop.md`, source note, decision entry and an `AGENTS.md` pointer; known debt: series switches in `home/menu.js`.
+- Next lever if still hot: lighter shadows on phones.
+- Verified with `node --check` and a Node script (three local) counting meshes/materials before and after; no browser. Badge 358.
+
+## [2026-10-04] cycle | Home menu without series switches (#359)
+
+- `shared/series.js`: `Series.championshipName` (base: the series label; `F1Series` overrides it with "del mondo").
+- `home/menu.js`: tabs toggled by a loop over `SERIES` (`series-tab-<id>`), the opening swipe page read from the tab's `data-series-page`, champion wording from `championshipName` — no more `series === SERIES.f1/classic` branches. Same behaviour.
+- First application of the OOP rule (`wiki/f1-racer/oop.md`), whose debt list is updated; pages that *are* one series naming it are not switches.
+- Verified with `node --check` and a Node script reading both series' `championshipName`; no browser. Badge 360.
+
+## [2026-10-04] cycle | MoQ voice probe page (#361)
+
+- Why: race voice chat (`multiplayer/voice-chat.js`) is a peer-to-peer WebRTC mesh with STUN only; between phones on mobile networks the connection fails (red speaker icon). TURN was set aside (paid beyond 1,000 GB, no hard spend cap on Cloudflare).
+- `voice-probe.html` + `multiplayer/voice-probe.js` (new, standalone, game untouched): `SupportReport` lists WebTransport/WebSocket/Opus/AudioWorklet support; `MoqVoiceProbe` publishes the mic to a public Media over QUIC relay (`https://relay.cloudflare.mediaoverquic.com` or `https://cdn.moq.dev/anon`) as `f1-racer-probe/<code>/<role>.hang` and listens to the other role, or to itself through a private connection ("Eco").
+- Library: `@moq/publish@0.5.1` and `@moq/watch@0.6.1` from esm.sh, loaded with the page so the start tap reaches the mic prompt.
+- Open: whether iOS Safari works (no WebTransport, WebSocket fallback). If yes, step 2 moves `voice-chat.js` to MoQ with WebRTC kept as fallback; the public relay is a free technical preview with no guarantees.
+- Verified with `node --check` only (the container cannot reach the relay); real test on iPhone by the user. Badge 362.
+
+## [2026-10-04] cycle | Voice C4: WebRTC mesh vs MoQ relay (#363)
+
+- New `llm-wiki/wiki/comparisons/c4-voice.md`: both voice flows at C4 levels 1-4. It has sequences and a comparison table.
+- `decisions.md`: the voice transport is decided. In the user's phone probe, only `cdn.moq.dev/anon` worked; the Cloudflare MoQ relay did not.
+- The next cycle moves `voice-chat.js` to MoQ on moq.dev, with WebRTC kept as a fallback subclass (`oop.md`).
+- Links from `index.md` and `c4-model.md`. Compact section in `docs/F1-RACER-WIKI.md`.
+- Docs only, no code change. Badge 364.
+
+## [2026-10-04] cycle | All project knowledge in the wiki (#365)
+
+- Deleted `docs/F1-RACER-WIKI.md` (~1100 lines) and the clone `docs/voice.md`. Their content now lives in 13 wiki topic pages: runtime-overview, car-rendering, driving-model, tracks, race-systems, hud-camera-mobile, audio, garage, performance, classic-series, free-drive, agent-api, multiplayer-protocol. All are listed in `wiki/f1-racer/index.md`.
+- Rewrote those pages against the code. Stale facts fixed: 12 drivers and 6 liveries (not 10 and 5); one-make Classiche with stock rival params; per-car engine profiles; hosted room server; race-only rooms, `report_finish` and rematch. Old history and test narratives were dropped.
+- `architecture.md` keeps only the module map and links to the topic pages. The C4 pages now say 12 participants.
+- `AGENTS.md`: all knowledge lives in the wiki, one small page per topic, with no clones in `docs/`. `docs/` keeps only procedure, handoff and release checklist. README, procedure, handoff and two code comments were relinked.
+- Docs only. Verified with grep (no references left) and a link check across the wiki pages. Badge 366.
+- Open, outside this cycle: the two-phone MoQ test with moq.dev worked one way only (A→B). Being retried with an Android phone.
+
+## [2026-10-04] cycle | Voice probe: iPhone audio output, MoQ/Opus explained (#367)
+
+- `core/client/multiplayer/voice-probe.js`: new "Uscita audio" status row from the `@moq/watch` player's `audio.out.context`. The player builds its AudioContext only when the remote audio arrives, after the start tap, so iOS Safari keeps it suspended; a yellow "Tocca per attivare l'audio" button resumes it (the library also resumes on any later tap). `navigator.audioSession.type = "play-and-record"` is set on the start tap.
+- `voice-probe.html`: plain-language paragraphs on MoQ (relay) and Opus (voice codec, not an AI model); moq.dev is now the default relay; `voice-probe.js?v=2`.
+- Context: two-phone test was one-way (iPhone sends, does not hear) while Eco worked on the iPhone — likely the late AudioContext when the other phone starts later. Needs verification on a real iPhone.
+- Verified with `node --check` and `git diff --check` only; badge 368.
+
+## [2026-10-04] cycle | Race voice over the MoQ relay (#369)
+
+- `core/client/multiplayer/voice-moq.js` (new): `MoqVoiceChat` publishes the mic as `f1-racer/<roomCode>/<participantId>.hang` on `cdn.moq.dev/anon` and plays one `@moq/watch` player per connected participant; mic prompt and `audioSession` set inside the engine-gate tap; libraries preloaded when the room session starts (`preloadVoice()` in `race-multiplayer.js`).
+- `voice-transport.js` (new): `VoiceChat` interface (`supported`, `preload`, `getState`, `toggleMute`, `stop`) and the shared `LevelMeter` for "is speaking". `voice-chat.js` is now only the transport picker; `race-multiplayer.js` asks `voiceSupported()` instead of checking `RTCPeerConnection`.
+- WebRTC mesh removed (user's call): a fallback phone could hear only other fallback phones. Browsers without AudioWorklet show "Audio non disponibile". Mute/has-mic still go peer to peer as `voice_state` over `voice_signal`; the room server is unchanged.
+- Wiki: `c4-voice.md` status, `decisions.md` voice entry, `c4-model.md` / `c4-multiplayer.md` labels.
+- Known limits: public relay without SLA; anyone with room code + participant id can listen; iOS starts playback at the first tap after a driver's audio arrives.
+- Verified with `node --check` and `git diff --check` only; in-race test by the user. Badge 370.
+
+## [2026-10-04] cycle | Room security: GUID voice key, 6-char crypto codes, join rate limit (#371)
+
+- `core/server/rooms.mjs`: room codes (now 6 chars, ~887M), reconnect tokens and participant ids come from `node:crypto`; each room gets a `voiceKey` (`randomUUID`) in the member-only room snapshot.
+- `core/server/join-limiter.mjs` (new) + `room-server.mjs`: `join_room` / `reconnect` refused with `too_many_attempts` after 10 wrong codes/tokens per address per minute, global ceiling 200/min because `X-Forwarded-For` can be forged.
+- `voice-moq.js`: MoQ path `f1-racer/<voiceKey>/<participantId>.hang`; no key (pre-#371 server) means no voice, never a guessable path. `room.html` code input takes 6 chars.
+- Chosen with the user instead of OTP logins (SMS/email cost, accounts). Limits: the public relay still sees audio; a flood can slow honest joins.
+- Docs: `multiplayer-protocol.md` Security section, `c4-voice.md`, racing skill (6-char code).
+- Verified with `node --check`, `git diff --check` and a Node script (code length, voiceKey, limiter, X-Forwarded-For). Badge 372.
+
+## [2026-10-04] restructure | Knowledge base on Karpathy's page types, folder renamed to .knowledge/ (#373)
+
+- `llm-wiki/` → `.knowledge/`; `CLAUDE.md` imports `.knowledge/AGENTS.md`. Dot folders are skipped by default by ripgrep: search with the explicit path.
+- `wiki/f1-racer/` removed. Pages split by type: `wiki/entities/` (12), `concepts/` (4), `synthesis/` (8), `comparisons/` (c4-voice); source notes → `wiki/sources/`; raw inputs → `raw/`.
+- `logs/maintenance.md` → `wiki/log.md`; 180 entries re-headed `## [date] cycle | title` (paths inside old entries left as they were).
+- New `wiki/overview.md`; `wiki/index.md` is now a catalog by type; YAML frontmatter (`type`, `updated`, `sources`/`raw`) on every page; `AGENTS.md` schema rewritten (structure, ingest/query/lint logging). Links stay relative markdown.
+- References updated in skills (`concludi`, `procedure-racing`), `docs/`, README and code comments.
+- Verified with a script that every relative markdown link resolves (49 files; one link already broken in `WORK-HANDOFF.md` fixed), `git diff --check`, `node --check`. Badge 374.

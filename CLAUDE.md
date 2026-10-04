@@ -1,1 +1,1 @@
-@llm-wiki/AGENTS.md
+@.knowledge/AGENTS.md

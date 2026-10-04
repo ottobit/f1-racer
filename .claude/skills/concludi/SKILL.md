@@ -5,7 +5,7 @@ description: Close the current work cycle of f1-racer (maintenance log entry, PR
 
 # Concludi — close the current work cycle
 
-Follow `llm-wiki/AGENTS.md` (Session workflow). Talk to the user in Italian;
+Follow `.knowledge/AGENTS.md` (Session workflow). Talk to the user in Italian;
 log entry and commit message in English. No browser tests.
 
 1. **Identify the cycle**: current branch must be `cycle/<N>-...`; `<N>` is
@@ -13,9 +13,9 @@ log entry and commit message in English. No browser tests.
    or no PR exists, stop and tell the user.
 2. **Clean tree**: `git status` must be clean and the branch pushed. If there
    are uncommitted changes, stop and ask.
-3. **Log entry**: append to `llm-wiki/logs/maintenance.md` one section in the
+3. **Log entry**: append to `.knowledge/wiki/log.md` one section in the
    existing style:
-   `## <YYYY-MM-DD> — <short title> (#<N>)` followed by 3-6 bullets (files
+   `## [<YYYY-MM-DD>] cycle | <short title> (#<N>)` followed by 3-6 bullets (files
    touched and why, decisions, known limits, how it was verified). Build it
    from `git log master..HEAD` and the PR diff, not from memory.
    Also set the release number shown in-page, `<R>`: the PR's number, or

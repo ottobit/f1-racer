@@ -1,0 +1,357 @@
+---
+type: synthesis
+updated: 2026-10-04
+sources: []
+---
+
+# F1 Racer Decisions
+
+## Development Flow
+
+All changes should go through issue, branch, pull request and merge. The current
+default verification mode is structural-only: `git diff --check`, syntax checks
+and other cheap targeted checks. The user validates gameplay manually unless
+extra runtime/browser testing is explicitly requested.
+
+## Visual Direction
+
+The race and garage should feel more spectacular than the original prototype,
+using Three.js lighting, procedural detail and motion where possible while
+remaining browser-friendly.
+
+The top race HUD is liked by the user and should be preserved.
+
+Session clarity is provided outside that HUD: qualifying uses a dedicated,
+mobile-visible banner with its countdown and grid-purpose text, hidden when the
+race begins.
+
+## Controls
+
+Touch controls must be sized and spaced for real thumbs. Steering should remain
+analog and visually readable, and front wheel visuals must follow steering in a
+mechanically plausible way.
+
+The race steering surface stays at least 164 px across on supported mobile
+layouts. The visible driver's gloves sit on a modeled steering wheel, and that
+assembly rotates from the same analog value as the front wheels.
+
+## Home and Circuit Selection
+
+Circuit selection uses one large map-led carousel instead of equally weighted
+cards. Swipe, visible arrows, keyboard arrows and dot controls all update the
+same selected circuit. The launch action stays inside the active slide and all
+mobile controls keep thumb-sized targets.
+
+Only `Scendi in pista` inside the active circuit slide starts a race. The rest
+of the card is presentation and swipe surface, avoiding competing launch
+buttons and accidental navigation while browsing circuits.
+
+Swipe capture applies only to touch/pen input that starts outside the race CTA.
+Mouse input uses the carousel arrows and must never enter pointer capture, so
+desktop activation of `Scendi in pista` remains a normal link click.
+
+The home keeps browser page zoom enabled (accessibility), but its controls use
+`touch-action: manipulation` so quick repeated taps on carousel arrows/dots
+never trigger double-tap zoom, and the carousel viewport allows `pinch-zoom`
+alongside `pan-y` so a zoomed page can always be pinched back out (#32: with
+`pan-y` alone the carousel, ~70% of a phone screen, trapped users zoomed in).
+
+The home prioritizes actions over reference data. Difficulty and driver live
+in one session-setup panel, and standings follow the circuit carousel instead
+of interrupting the path into a race.
+
+**#40 superseded this section's original pairing.** Garage and solo circuit
+selection were the two dominant commands until #40: the user's explicit call
+was that multiplayer (playing with other real people) is the more important
+thing to grow, and deserves the same visual weight as Garage, not a secondary
+banner (#36's original placement). Garage and **multiplayer** (`room.html`)
+are now the two `home-command` cards. The user then asked to drop the solo-
+play shortcut entirely rather than demote it to a secondary link — there is
+no dedicated "jump to circuit selection" entry point left above the fold;
+solo play is still fully reachable by scrolling to its own numbered section
+further down the page, just not called out separately at the top. If this
+gets revisited, don't silently restore either the pairing or the shortcut —
+re-confirm with the user first, since these were deliberate product priority
+calls, not layout preferences.
+
+**#38 correction:** the two `home-command` cards and the numbered `f1-home-
+section`s (Prepara la sessione / Prossima gara / Campionato) are two
+different index systems that happened to both look like "0N" labels,
+reading as one broken sequence instead of two intentional ones. Fixed by
+dropping numerals from the top command cards (PIT LANE / GRIGLIA, no
+number — they're primary actions, not steps) and renumbering the page
+sections 01→03 with no gaps. The multiplayer banner got an explicit
+"Modalità alternativa" kicker instead of no label, so it reads as a
+deliberate parallel path rather than an afterthought wedged between
+sections. The session-setup panel (difficulty + driver) stacks vertically
+on all viewports now, not just mobile — side-by-side on desktop left a
+visible empty gap under the 3-option difficulty column next to the taller
+10-option driver grid.
+
+## Multiplayer Stage 1 (#36, part of #1)
+
+Stage 1 is rooms and driver reservation only — race-state sync and voice are
+separate future issues, deliberately not designed here, each with their own
+infra/protocol decisions #1 itself demands be made before implementation.
+`startRace()` sets a shared "started" confirmation and stops there on
+purpose; it must not be extended into car/position sync without that being
+its own decision.
+
+Starting a room's race is host-only for Stage 1. Chosen as the simplest rule
+that avoids a race (pun intended) between two participants both hitting
+start, not because "all-ready" was ruled out — revisit if it feels wrong
+once real rooms are used.
+
+Room/participant state is in-memory only, one process, no database — a
+deliberate Stage 1 scope limit given hosting itself was still an open
+question, not an oversight. State resets on server restart; this must stay
+true and documented, not quietly fixed with a database later without saying
+so.
+
+Room identity (`f1racer-room-session-v1`) and solo-play identity
+(`core/client/shared/driver-selection.js`'s `f1racer-selected-driver-v1`) are deliberately
+independent — the local-only `"player"` pseudo-id must never become a valid
+room `driverId`, and joining/leaving a room must never alter the solo
+flow's own saved driver choice.
+
+Hosting for when Stage 1 goes live: the user picked **Render** (prior
+experience with it) over Fly.io's cheaper always-on pricing, with a
+self-ping to dodge the free tier's 15-minute sleep. Flagged, not
+overridden: a self-pinged 24/7 service uses close to Render's free-tier
+monthly instance-hour allowance on its own, so it may need the paid Starter
+tier depending on what else runs on the same account — the user's call, not
+this repo's to solve.
+
+**Verified live (2026-09-23):** the user connected a real phone and a real
+PC, on separate networks, to the same room through the room server tunneled
+with `ngrok http` (not Render itself yet, but the same `wss://` path a real
+deployment uses) — real cross-device `wss://` reachability, not just two
+browser contexts on one sandbox machine.
+
+## Multiplayer Stage 2 (#44, part of #1): qualifying and race sync
+
+Stage 1's `startRace()` deliberately stopped at a bare confirmation and said
+extending it into real sync needed "its own decision" — Stage 2 is that
+decision, made explicitly by the user, not a quiet extension:
+
+- **Sync model: client-authoritative.** Every browser keeps simulating its
+  own car exactly as solo play always has and broadcasts position/heading/
+  speed/progress a few times a second (`car_state`, relayed by
+  `core/server/room-server.mjs`, never stored — see `architecture.md`). No server-side
+  physics; porting `core/client/race/player-physics.js`/`core/client/race/race-ai.js`/`core/client/race/race-collisions.js` to
+  run headless on Node was considered and rejected as its own project, not
+  this stage's job. (Later, #214/#219: the headless room bot does run the
+  player physics on Node through `race-rules.js`, but only for its own car;
+  the server still has no physics — see [agent-bots.md](../entities/agent-bots.md).)
+- **Disconnection during qualifying/race:** the disconnected participant's
+  car simply freezes where it was (no more broadcasts arrive — a natural
+  consequence of client-authoritative sync, not extra logic) and their
+  entry visibly greys out, both the on-track nameplate and the timing
+  tower. Reuses Stage 1's existing grace-period/`connectionState` mechanism
+  unchanged — no new server-side disconnect handling needed for this.
+- **No AI padding.** A room races with exactly as many cars as it has real
+  participants — a 3-person room runs a 3-car race, not a 3-human/7-AI
+  mixed field. Filling empty slots with AI was explicitly rejected: it
+  would need its own synchronization decision (who simulates the shared AI,
+  and how do all clients agree on its state) that isn't worth solving for
+  this stage.
+- **Circuit/difficulty: the host decides**, inside the room (new UI in
+  `room.html`), the same way solo picks them — not a vote, not a fixed
+  track. Broadcast to everyone once qualifying begins so every participant
+  lands on `race.html` with the same `circuit`/`difficulty`/`room` query
+  params.
+
+Qualifying itself is timed **server-side** (`core/server/room-server.mjs`'s own
+`setTimeout`, `ROOM_QUALI_MS` configurable, defaults to matching solo's own
+60s), not by each browser's local countdown — every client must transition
+to racing together off one clock, not whoever's tab happens to reach zero
+first. The grid is real: fastest reported qualifying lap wins pole, a
+participant with no time at all goes to the back (same DNF rule solo
+already used for a null best time).
+
+Multiplayer race results deliberately never touch the solo championship —
+no points recorded, no next-unraced-circuit chain. A room's race is the
+room's own result, not a campaign result; recording it into
+`f1racer-championship-v1`-backed state would silently pollute the user's
+own solo standings with results from races they may not have even driven
+themselves to the finish.
+
+`core/client/race/main.js` itself is only ever touched through explicit `if (multiplayer)`
+branches gated on one variable, `null` for a normal solo session (no
+`?room=` in the URL, or a room session that couldn't be resumed) — see
+`core/client/multiplayer/race-bootstrap.js`/`core/client/multiplayer/race-multiplayer.js` in `architecture.md`. Every
+branch was chosen so solo play's existing code path runs completely
+unchanged when that variable is null, verified by an actual real-browser
+solo smoke test (not just code review) after these changes landed.
+
+Inside session setup, difficulty is a three-segment choice with short intent
+labels. Driver selection is a numbered 3-column touch grid on ordinary phones
+and falls back to 2 columns on very narrow screens. Targets remain at least
+54 px high and the selected state uses more than color alone.
+
+## Collision Fairness
+
+Player and AI cars have equal mass in car-to-car contact. Relative velocity is
+resolved along the contact normal, both cars receive lateral/yaw disturbance,
+and damage is applied symmetrically above a minimum impact speed. Contact
+effects have a short cooldown to avoid repeated damage while cars separate.
+
+## Garage UX
+
+The car preview must stay visible while the player scrolls through selectable
+parts. Choosing a part should immediately show a meaningful preview on the car.
+
+There is no Garage livery picker (#30, user request): the player's car wears
+the chosen driver's team colours, like the AI teammate, with Fenice as the
+fallback. The Garage is for setup, identity comes from the driver choice.
+
+On wide screens live setup parameters sit on the car preview as a compact
+translucent overlay. On phones (portrait, and landscape up to 520px tall) they
+move into the setup pane as a card, because the overlay covered most of the car.
+Portrait phones use a single page scroll with the car pinned on top and the
+"Scegli il circuito" CTA pinned at the bottom — no nested scroll box. Landscape
+phones use two columns (car left, scrolling pane right). Variant labels are
+Italian (Scarica/Bilanciata/Carica, Basso/Alto carico).
+
+The Garage showroom has no driver model. Removing the helmet must reveal a
+modeled cockpit rather than an empty dark cavity; the dedicated `Abitacolo`
+camera preset makes that interior inspectable.
+
+Garage camera presets must remain inside the modeled studio shell. In
+particular, rear-facing views cannot orbit beyond the back wall at z=-8, because
+the opaque backdrop would sit between the camera and the car.
+
+Team sponsorship is fictional and livery-driven. Both drivers in a team share
+the same restrained sponsor package, limited to small sidepod, nose and rear
+wing placements so the base paint remains dominant.
+
+Lap timing and race completion must use the painted start/finish line, not the
+unshifted spline origin. Finish order is locked per car at the configured race
+distance. AI cars must not perform invisible stops on the racing surface; an
+automatic AI pit strategy can return only with a modeled pit lane.
+
+## Classiche series (#315, #317)
+
+A second solo series beside F1: period road cars (Cinquino, Pandina,
+Spider, Pulmino, Muscle, Familiare; `shared/road-cars.js`) driven by twelve
+made-up drivers, two per car (`shared/classic-series.js`). The home driver
+card swipes between the F1 page and the Classiche page; the last pick sets
+the series (`f1racer-series`) and the race link adds `&series=classic`.
+
+- Solo only: a room always races F1s (multiplayer ignores `series`).
+- Own championship (#345, superseding "no points" from #317): Classiche
+  races score with the F1 points table into a separate championship
+  (`f1racer-championship-classic-v1`); the F1 standings are untouched. Each
+  series locks its own driver while its season is under way, so a Classiche
+  season is also one car (one-make).
+- Mixed field on purpose: each car keeps its own physics and AI limits
+  (`race-ai.js` reads `car.ai`), so qualifying sorts by car as much as by
+  driver.
+- No DRS or ERS for period cars; pits, tyres, laps and damage are shared.
+- Collision sizes stay the F1's for every car (Open: the van looks bigger
+  than its contact circle).
+
+## Driver Names
+
+The custom friend names currently assigned across teams are:
+
+| Team | Drivers |
+| --- | --- |
+| Fenice | Dani Muscle, Eddy Nitro |
+| Nettuno | Vivian Wendy, Peppy Bau |
+| Solare | Cookie, Rocker Pino |
+| Smeraldo | Alice AaA, May |
+| Artica | Clopy, Lola |
+
+The ten-driver roster is canonical. The selected identity represents the
+player and is filtered out before the other nine are created as AI rivals, so a
+name cannot appear twice in the same race.
+
+Race drivers must be visible as seated bodies, not floating helmets. Their suit
+uses the car's primary livery color, with dark gloves and the existing
+secondary-color helmet.
+
+Opponent names use small screen-space labels above visible cars. Labels are
+hidden outside the camera frustum and beyond the useful identification range;
+the player's own car has no label to preserve the driving view.
+
+Each selectable friend/driver has a cockpit theme with primary, secondary, glow
+and short motto values in `core/client/shared/driver-themes.js`. Cockpit decoration should stay
+data-driven and readable rather than becoming hard-coded camera logic.
+
+The qualifying timing list is landscape-only and sits on the left without an
+enclosing panel. Its compact mobile rows stay above the steering control. Rival
+times are generated once per session and shared by the list and grid
+calculation; never resynthesize them when qualifying ends.
+At race start the tower switches to the live order returned by
+`currentRaceOrder()` and rerenders only when order or displayed lap changes.
+Equal progress during the standing start is resolved by the qualifying grid
+position; the player's qualifying summary must state that position explicitly.
+
+Marzamemi is an adapted real route, not a literal GIS import. The shared-road
+legs visible in the reference are separated into parallel spline segments so
+the ribbon, AI and wall-distance model remain valid. Its scenery must use the
+dedicated coastal theme and instancing, with standard red/white racing kerbs.
+The user rejected rounded end loops: preserve the map angles using close
+corner supports and per-circuit spline tension (0.18 for Marzamemi).
+Marzamemi's kerbs use continuous ribbons aligned with the actual road edge,
+not disconnected boxes. Paint stripes follow distance along each edge and
+close seamlessly; geometry and texture are created once at scene setup.
+Since #28 this applies to every circuit, and to guardrails too: the user
+described the old per-segment boxes as "sembra che stai giocando a fare i
+collage". Road-hugging strips are built from `offsetEdge()` (miter-cut at
+tight apexes) on a denser render-only sampling; gameplay keeps the
+360-sample centerline.
+
+## Start procedure and engine gate (#50)
+
+The 3-2-1-VIA countdown was replaced with the official F1 procedure, on
+explicit user request ("Lo start rendilo realistico: come fanno nelle gare
+ufficiali?"): race = five red lights one per second, random hold, lights
+out = go, no green light; qualifying = pit-exit light red -> green (real
+qualifying has no standing start). Don't reintroduce a green light or a
+numeric countdown for the race.
+
+The user also asked to hear the engine before the start. Browsers block
+audio until a user gesture, so the race page now opens with an "Avvia il
+motore" gate: the first key/tap fires the engine up and only then do the
+lights start. This is a hard platform constraint, not a design choice to
+"simplify away". Known trade-off: in multiplayer the server's qualifying
+clock keeps running while a player sits at the gate.
+
+The random hold (0.2-3s) is an estimate of the real range, not a sourced
+figure. In multiplayer it is seeded from the server's `raceStartedAt`
+so every participant gets the same hold.
+
+## Object-oriented design as a standing rule (2026-10-04)
+
+The user "ragiona a OOP" and asked that it be applied whenever we develop,
+kept in this wiki rather than in agent memory. Rules and checklist:
+[oop.md](../concepts/oop.md); `AGENTS.md` points every session at it. Trigger: #357
+first batched road cars inside their own builder instead of once for every
+Vehicle in `buildVehicleModel()`.
+
+## Voice transport: WebRTC mesh vs MoQ relay (2026-10-04)
+
+Status: **Decided — MoQ on `cdn.moq.dev/anon`**. In the user's phone test only
+moq.dev worked; the Cloudflare relay did not. #369 moved race voice to it
+and **dropped the WebRTC mesh** (user, 2026-10-04): a fallback phone could
+only hear other fallback phones, so it helped almost nobody; unsupported
+browsers show "Audio non disponibile". The C4 model of both flows is in [c4-voice.md](../comparisons/c4-voice.md).
+
+The problem:
+- Voice is a WebRTC mesh with STUN only. Two phones on mobile networks could
+  not connect, and the HUD showed the red "Audio non disponibile" icon.
+- The usual fix, TURN, costs money past its free tier. Cloudflare has no
+  hard spend cap for TURN, and the user will not risk billing.
+
+The candidate:
+- A public MoQ relay. It needs no account and no card, and it also cuts each
+  phone's uploads from N-1 to 1.
+- #361 shipped `voice-probe.html` to test it on iPhone first.
+
+How it gets decided:
+- If the probe works, voice-chat.js moves to MoQ, with WebRTC kept as a
+  fallback subclass.
+- If it fails on iOS, TURN comes back with anti-abuse gating on the room
+  server: credentials only for active racers, a short TTL and a daily cap.
