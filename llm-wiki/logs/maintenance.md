@@ -2064,3 +2064,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `core/server/rooms.mjs`: new rooms now start with `qualifying: null`; `startRace` rejects a session with no explicit format so the rule is enforced server-side as well as in the UI.
 - Host authority is unchanged: circuit, difficulty, format and session start remain host-only; invited players stay read-only for session setup.
 - Release badge set from v350 to v352 across all HTML entry points. Structural/source review only; manual two-browser verification remains the recommended gameplay check.
+
+## 2026-10-04 — Cooler phones at 60 fps (#355)
+
+- `shared/graphics-profiles.js`: on touch devices the pixel ratio is capped at 1.25 (was 1.5 on "medium", 2 on "high"), about 30% fewer pixels per frame; 60 fps, shadows and profiles stay as they were. Desktop unchanged.
+- A first "Risparmio batteria" toggle (low profile at 30 fps, on by default on phones) was dropped before merge: the user wants to play at 60 fps.
+- Next lever if a phone still runs hot: lighter shadows on touch devices, not a lower frame rate.
+- Import chain bumped (graphics-profiles v6 → race/free/garage pages; menu and style also bumped by the dropped toggle). Verified with `node --check` only. Badge 356.

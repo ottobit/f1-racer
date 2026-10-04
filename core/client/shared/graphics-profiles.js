@@ -64,8 +64,16 @@ function detectDefaultProfileId() {
 // Touch-device extras applied on top of any profile (#159): hard-edged PCF
 // shadows instead of the soft variant, and a 60 fps cap so 90/120 Hz phone
 // screens don't render (and heat up) twice as often for no gameplay gain.
+// Phones also cap the pixel ratio at 1.25 (#355): ~30% fewer pixels than
+// 1.5 — the GPU fill work that heats a phone most — at a full 60 fps.
+const PHONE_DPR_CAP = 1.25;
 function withDeviceExtras(profile) {
-  return { ...profile, softShadows: !IS_COARSE_POINTER, frameCapFps: IS_COARSE_POINTER ? 60 : 0 };
+  return {
+    ...profile,
+    dprCap: IS_COARSE_POINTER ? Math.min(profile.dprCap, PHONE_DPR_CAP) : profile.dprCap,
+    softShadows: !IS_COARSE_POINTER,
+    frameCapFps: IS_COARSE_POINTER ? 60 : 0,
+  };
 }
 
 // Returns a `(now) => boolean` gate for a requestAnimationFrame loop: true
