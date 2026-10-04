@@ -10,7 +10,7 @@
 // module hands those broadcasts to main.js and relays main.js's own local
 // state back out. No physics happen here.
 
-import { preloadVoice, startVoiceChat, voiceSupported } from "./voice-chat.js?v=8";
+import { preloadVoice, startVoiceChat, voiceSupported } from "./voice-chat.js?v=9";
 
 const BROADCAST_INTERVAL_MS = 80; // ~12/s — plenty smooth at N<=10, trivial bandwidth
 
@@ -186,6 +186,7 @@ export function setupMultiplayer() {
       const { excluded } = this.voice.getState(participant.participantId);
       this.voice.setExcluded(participant.participantId, !excluded);
     },
+    get voiceDiagnostics() { return this.voice?.diagnostics ?? "voce: spenta"; },
     setVoicesDeafened(on) {
       voicesDeafened = on;
       this.voice?.setDeafened(on);

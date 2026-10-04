@@ -15,6 +15,8 @@ export class VoiceChat {
   // Listener side (#379): stop hearing one driver, or every driver.
   setExcluded(_participantId, _excluded) { throw new Error("not implemented"); }
   setDeafened(_deafened) { throw new Error("not implemented"); }
+  // One line for the ?diag=1 overlay (#381).
+  get diagnostics() { return ""; }
   stop() { throw new Error("not implemented"); }
 }
 
