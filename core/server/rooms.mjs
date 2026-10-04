@@ -12,11 +12,12 @@
 // "player" pseudo-id from driver-selection.js is never a valid value here
 // — solo play and room play are deliberately independent.
 
+import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import { DRIVER_ROSTER } from "../shared/driver-roster.js";
 import { CIRCUITS, QUALIFYING_DURATION_MS } from "../shared/circuits.js";
 
 const ROOM_CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"; // no 0/O, 1/I/L
-const ROOM_CODE_LENGTH = 4;
+const ROOM_CODE_LENGTH = 6; // ~887M codes; brute force is capped by join-limiter.mjs (#371)
 const MAX_NICKNAME_LENGTH = 24;
 export const MAX_PARTICIPANTS = DRIVER_ROSTER.length; // one slot per reservable driver
 export const DEFAULT_GRACE_MS = 30000;
@@ -36,20 +37,21 @@ export class RoomError extends Error {
   }
 }
 
+// Codes, tokens and ids come from crypto, never Math.random (#371).
 function randomCode() {
   let code = "";
   for (let i = 0; i < ROOM_CODE_LENGTH; i++) {
-    code += ROOM_CODE_ALPHABET[Math.floor(Math.random() * ROOM_CODE_ALPHABET.length)];
+    code += ROOM_CODE_ALPHABET[randomInt(ROOM_CODE_ALPHABET.length)];
   }
   return code;
 }
 
 function randomSecret() {
-  return `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+  return randomBytes(18).toString("base64url");
 }
 
 function randomParticipantId() {
-  return `p_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  return `p_${randomBytes(6).toString("hex")}`;
 }
 
 function sanitizeNickname(nickname) {
@@ -108,6 +110,9 @@ export function createRoom(store, { nickname } = {}) {
     qualifyingStartedAt: null,
     raceStartedAt: null,
     grid: null, // array of driverId, pole first — set once qualifying ends
+    // MoQ voice path segment (#371): unguessable, sent only to members, so
+    // listening on the public relay needs being in the room.
+    voiceKey: randomUUID(),
     participants: new Map([[participantId, participant]]),
   };
   store.rooms.set(code, room);
@@ -360,6 +365,7 @@ export function toPublicRoom(room) {
     qualifyingStartedAt: room.qualifyingStartedAt,
     raceStartedAt: room.raceStartedAt,
     grid: room.grid,
+    voiceKey: room.voiceKey,
     maxParticipants: MAX_PARTICIPANTS,
     participants: [...room.participants.values()].map((p) => ({
       participantId: p.participantId,
