@@ -6,7 +6,7 @@
 
 import { WebSocket } from "ws";
 
-export const MCP_SERVER_INFO = { name: "f1-racer-realtime", version: "2.1.0" };
+export const MCP_SERVER_INFO = { name: "agent-game-realtime", version: "3.0.0" };
 export const MODERN_PROTOCOL_VERSION = "2026-07-28";
 export const LEGACY_PROTOCOL_VERSION = "2025-11-25";
 
@@ -17,6 +17,52 @@ const commandSchema = {
 };
 
 export const MCP_TOOLS = [
+  {
+    name: "game_describe",
+    description: "Describe the connected game and its generic capabilities.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "game_observe",
+    description: "Read the current generic game observation.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "game_frame",
+    description: "Build a game-specific decision frame with bounded candidate intents.",
+    inputSchema: {
+      type: "object",
+      properties: { strategy: { type: "object", additionalProperties: true } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "game_act",
+    description: "Apply one generic bounded GameIntent through the connected game's adapter.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        intent: {
+          type: "object",
+          properties: {
+            action: { type: "string" },
+            parameters: { type: "object", additionalProperties: true },
+            horizonMs: { type: "number", minimum: 100, maximum: 5000 },
+            confidence: { type: "number", minimum: 0, maximum: 1 },
+          },
+          required: ["action"],
+          additionalProperties: false,
+        },
+      },
+      required: ["intent"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "game_release",
+    description: "Release the connected game's generic agent control immediately.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
   {
     name: "f1_observe",
     description: "Read the live state of the F1 Racer car bound to this bridge.",
