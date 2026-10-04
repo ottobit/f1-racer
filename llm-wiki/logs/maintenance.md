@@ -2072,6 +2072,15 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Next lever if a phone still runs hot: lighter shadows on touch devices, not a lower frame rate.
 - Import chain bumped (graphics-profiles v6 → race/free/garage pages; menu and style also bumped by the dropped toggle). Verified with `node --check` only. Badge 356.
 
+
+## 2026-10-04 — Multiplayer lobby guest setup and stable layout (#353)
+
+- `room.html`: host and invited players now share the same circuit/difficulty/format form; guests see the host values in disabled controls instead of a duplicated text summary, while manual room-code entry and the visible lobby code remain available.
+- `core/client/multiplayer/room.js`: keeps session fields synchronized for every participant, disables them for non-hosts, and ignores guest-side setup submissions; host-only server authority is unchanged.
+- `core/client/style.css`: introduced the wider desktop lobby, read-only guest styling, mobile inline room code, and a stable layout with driver/session controls first and the participant list last so new joins only grow the bottom of the page.
+- No nested participant scroll was added: the room remains capped at ten drivers, so the page scroll stays the single scrolling surface.
+- Release badge set from v356 to v357 across all HTML entry points. Structural/source review only; manual host/guest desktop and mobile verification remains the recommended gameplay check.
+
 ## 2026-10-04 — Phones: fewer draw calls and lighter materials at 60 fps (#357)
 
 - `shared/mesh-batch.js` (new): the F1-only batching moved out of `car-model.js`; `buildVehicleModel()` now batches every low-detail Vehicle per group, whatever its kind (F1 42 → 37 meshes, Classiche rivals ~65 → ~20, same triangles).
