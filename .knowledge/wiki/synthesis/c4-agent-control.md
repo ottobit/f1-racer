@@ -12,6 +12,8 @@ sources: []
 > the existing Room Bot strategy workflow, local physics or the room protocol.
 >
 > For a focused zoom of the MCP path itself, see [MCP subsystem — C4 levels 1 to 4](c4-mcp.md).
+> For the proposed provider-neutral high-level driving loop (Jev as one adapter),
+> see [Provider-agnostic decision driver](c4-decision-driver.md).
 
 ## Visual legend
 
