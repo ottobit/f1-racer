@@ -3,7 +3,7 @@
 // lone fallback phone could hear nobody on MoQ. A browser no transport
 // supports shows "Audio non disponibile". A future transport is one more
 // VoiceChat subclass (voice-transport.js) in this list.
-import { MoqVoiceChat } from "./voice-moq.js?v=1";
+import { MoqVoiceChat } from "./voice-moq.js?v=2";
 
 const TRANSPORTS = [MoqVoiceChat];
 

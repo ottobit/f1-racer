@@ -1,10 +1,13 @@
 // MoQ voice transport (#369), the default behind voice-chat.js: every
 // driver publishes their mic once to a public Media over QUIC relay as
-// f1-racer/<roomCode>/<participantId>.hang and plays every other
+// f1-racer/<voiceKey>/<participantId>.hang and plays every other
 // connected participant's broadcast. All connections are outbound, so
 // mobile NAT does not matter (the WebRTC mesh failed there), and a phone
 // uploads one stream whatever the grid size. Proven on two iPhones with
 // voice-probe.html (#361, #367). See wiki c4-voice.md, flow B.
+//
+// voiceKey is a GUID the room server sends only to members (#371): the
+// relay is public, so the path itself is what keeps strangers out.
 //
 // Mute and has-mic still travel peer to peer as "voice_state" over the room
 // server's voice_signal relay; audio never touches the room server.
@@ -30,6 +33,7 @@ export class MoqVoiceChat extends VoiceChat {
 
   #client;
   #myId;
+  #voiceKey = null;
   #track = null;
   #muted = false;
   #ready = false;
@@ -71,8 +75,12 @@ export class MoqVoiceChat extends VoiceChat {
   }
 
   #start(stream, Publish, Watch) {
-    if (this.#stopped) {
+    this.#voiceKey = this.#client.room?.voiceKey ?? null;
+    if (this.#stopped || !this.#voiceKey) {
       for (const track of stream?.getTracks() ?? []) track.stop();
+      // A room server older than #371 sends no key: no voice rather than a
+      // guessable path.
+      if (!this.#voiceKey) this.#failed = true;
       return;
     }
     this.#track = stream?.getAudioTracks()[0] ?? null;
@@ -94,7 +102,7 @@ export class MoqVoiceChat extends VoiceChat {
   }
 
   #path(Net, participantId) {
-    return Net.Path.from(`${PATH_PREFIX}/${this.#client.room.code}/${participantId}.hang`);
+    return Net.Path.from(`${PATH_PREFIX}/${this.#voiceKey}/${participantId}.hang`);
   }
 
   // Publish and watch use separate connections, as in the probe.
