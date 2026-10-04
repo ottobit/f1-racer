@@ -8,6 +8,10 @@
 >   shows "Audio non disponibile". Flow A stays below as history.
 > - `voice-chat.js` picks the transport behind the `VoiceChat` interface in
 >   `voice-transport.js` ([oop.md](oop.md)); a new transport is one subclass.
+> - Path (#371): `f1-racer/<voiceKey>/<participantId>.hang`. `voiceKey` is a
+>   GUID the room server sends only to members, so the public relay path
+>   cannot be guessed from the room code. See
+>   [multiplayer-protocol.md](multiplayer-protocol.md#security).
 > - Probe history: only moq.dev worked (#361); iPhone ↔ iPhone confirmed
 >   after #367. iOS keeps a player's AudioContext suspended until a tap
 >   after the audio arrives; racing gives one at once.
@@ -257,7 +261,7 @@ sequenceDiagram
 ### Step 2 if the probe passes (planned, not built)
 
 These pieces do not exist yet:
-- `voice-chat.js` would publish `f1-racer/<roomCode>/<participantId>.hang`,
+- `voice-chat.js` would publish `f1-racer/<roomCode>/<participantId>.hang` (built in #369; since #371 the segment is the room's GUID `voiceKey`),
   and subscribe to each other participant listed in `room_state`.
 - The same `getState(id)` contract would feed the HUD unchanged.
 - WebRTC would stay as a fallback. Following [oop.md](oop.md), the two

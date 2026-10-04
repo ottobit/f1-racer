@@ -38,6 +38,7 @@ import {
   DEFAULT_GRACE_MS,
   QUALIFYING_DURATION_MS,
 } from "./rooms.mjs";
+import { clientAddress, JoinLimiter } from "./join-limiter.mjs";
 
 const PORT = Number(process.env.PORT) || 8787;
 const GRACE_MS = Number(process.env.ROOM_GRACE_MS) || DEFAULT_GRACE_MS;
@@ -219,7 +220,14 @@ const heartbeat = setInterval(() => {
 }, HEARTBEAT_MS);
 wss.on("close", () => clearInterval(heartbeat));
 
-wss.on("connection", (ws) => {
+// Wrong room codes / reconnect tokens per address (#371).
+const joinLimiter = new JoinLimiter();
+const GUESS_TYPES = new Set(["join_room", "reconnect"]);
+const GUESS_ERRORS = new Set(["room_not_found", "participant_not_found", "invalid_token"]);
+setInterval(() => joinLimiter.prune(), 60_000).unref();
+
+wss.on("connection", (ws, req) => {
+  const address = clientAddress(req);
   ws.isAlive = true;
   ws.on("pong", () => { ws.isAlive = true; });
   // Which room/participant this specific socket currently represents, if
@@ -239,6 +247,9 @@ wss.on("connection", (ws) => {
     }
     const { type, reqId } = msg || {};
     try {
+      if (GUESS_TYPES.has(type) && joinLimiter.blocked(address)) {
+        throw new RoomError("too_many_attempts", "Troppi codici sbagliati: riprova tra un minuto.");
+      }
       switch (type) {
         case "create_room": {
           const { room, participantId, reconnectToken } = createRoom(store, { nickname: msg.nickname });
@@ -477,6 +488,7 @@ wss.on("connection", (ws) => {
           error: err instanceof RoomError ? err.message : "Errore interno del bridge agente.",
         });
       } else if (err instanceof RoomError) {
+        if (GUESS_TYPES.has(type) && GUESS_ERRORS.has(err.code)) joinLimiter.fail(address);
         send(ws, { type: "error", reqId, code: err.code, message: err.message });
       } else {
         console.error("[room-server] unexpected error", err);
