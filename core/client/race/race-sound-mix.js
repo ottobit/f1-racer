@@ -1,17 +1,17 @@
 // Race sound mix (#379): one HUD button (or M) steps through how loud the
-// cars are and whether the drivers' voices play. In multiplayer the race
-// starts with the engines low, so the voice chat is what you hear first.
-// The choice is remembered per context (solo / multiplayer).
+// cars are and whether the drivers' voices play. The race starts with the
+// engines low, so in multiplayer the voice chat is what you hear first; a
+// full-volume engine was dropped as unwanted (#381). The choice is
+// remembered per context (solo / multiplayer).
 const MIX = {
-  full: { label: "MOTORI PIENI", engine: 1, voices: true },
   low: { label: "MOTORI BASSI", engine: 0.2, voices: true },
   off: { label: "MOTORI SPENTI", engine: 0, voices: true },
   mute: { label: "TUTTO SPENTO", engine: 0, voices: false },
 };
 // First entry is the default. Solo has no voices, so no "tutto spento".
 const ORDER = {
-  solo: ["full", "low", "off"],
-  multiplayer: ["low", "full", "off", "mute"],
+  solo: ["low", "off"],
+  multiplayer: ["low", "off", "mute"],
 };
 
 export class SoundMix {

@@ -37,7 +37,8 @@ function resolveEnabled() {
   }
 }
 
-export function setupDiagnosticsOverlay({ renderer, graphicsProfileId }) {
+// `extra()` adds a line (multiplayer voice, #381).
+export function setupDiagnosticsOverlay({ renderer, graphicsProfileId, extra = () => "" }) {
   if (!resolveEnabled()) {
     return { update() {} };
   }
@@ -68,7 +69,8 @@ export function setupDiagnosticsOverlay({ renderer, graphicsProfileId }) {
     el.textContent =
       `gfx:${graphicsProfileId}  FPS ${fps.toFixed(0)}  ${frameMs.toFixed(1)}ms\n` +
       `calls ${info.render.calls}  tris ${info.render.triangles}\n` +
-      `geo ${info.memory.geometries}  tex ${info.memory.textures}`;
+      `geo ${info.memory.geometries}  tex ${info.memory.textures}` +
+      (extra() ? `\n${extra()}` : "");
   }
 
   return { update };

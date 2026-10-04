@@ -26,19 +26,19 @@ import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=8";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=6";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=15";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=16";
 
 import { steeringYaw } from "./steering.js?v=8";
 import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=43";
 import { buildPitLane } from "../shared/pit-lane.js?v=3";
 import { setupPitCrew } from "./pit-crew.js?v=4";
 import { setupRaceAudio } from "./race-audio.js?v=5";
-import { SoundMix } from "./race-sound-mix.js?v=1";
+import { SoundMix } from "./race-sound-mix.js?v=2";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
-import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=7";
+import { applyShadowCasters, loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=8";
 import { simplifyMaterials } from "../shared/lite-materials.js?v=1";
-import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=1";
+import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=2";
 import {
   sampleCenterline,
   headingOf,
@@ -341,7 +341,11 @@ document.getElementById("app").appendChild(renderer.domElement);
 
 // Dev-only overlay (see race-diagnostics.js, #2): a no-op unless explicitly
 // enabled, so normal play never creates or sees the DOM node.
-const diagnostics = setupDiagnosticsOverlay({ renderer, graphicsProfileId: graphicsProfile.id });
+const diagnostics = setupDiagnosticsOverlay({
+  renderer,
+  graphicsProfileId: `${graphicsProfile.id}${graphicsProfile.antialias ? "" : " noAA"}`,
+  extra: () => multiplayer?.voiceDiagnostics ?? "",
+});
 
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -546,6 +550,7 @@ const playerCar = buildCar(PLAYER_VEHICLE, PLAYER_COLORS, { detail: PLAYER_VEHIC
 // shared car geometry, wheel metadata, physics or collision dimensions.
 playerCar.group.scale.multiplyScalar(PLAYER_VISUAL_SCALE);
 scene.add(playerCar.group);
+applyShadowCasters(graphicsProfile, sun, playerCar.group);
 // Cockpit view (#139): an unbatched copy of the player's car, seen from
 // inside the helmet; race-camera.js mirrors the player car onto it.
 const cockpitCar = buildCar(PLAYER_VEHICLE, PLAYER_COLORS, { detail: true });

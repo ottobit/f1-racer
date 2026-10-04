@@ -14,7 +14,7 @@ import { setupRaceCamera } from "../race/race-camera.js?v=41";
 import { createAutopilotProvider } from "../race/driver-providers.js?v=6";
 import { setupRaceAudio } from "../race/race-audio.js?v=5";
 import { surfaceTexture } from "../race/track-art.js?v=43";
-import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=7";
+import { applyShadowCasters, loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=8";
 import { simplifyMaterials } from "../shared/lite-materials.js?v=1";
 import { FREE_OVAL } from "./oval.js?v=1";
 import { createFreeSim } from "./free-sim.js?v=4";
@@ -205,6 +205,7 @@ function buildCar(car, colors, { detail = false } = {}) {
 // in stock colours.
 const playerColors = vehicle.paint(vehicle.stockColors(livery));
 const playerCar = buildCar(vehicle, playerColors, { detail: vehicle.playerDetail });
+applyShadowCasters(graphicsProfile, sun, playerCar.group);
 const cockpitCar = buildCar(vehicle, playerColors, { detail: true });
 cockpitCar.group.visible = false;
 

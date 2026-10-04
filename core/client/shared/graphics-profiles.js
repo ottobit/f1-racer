@@ -68,15 +68,37 @@ function detectDefaultProfileId() {
 // 1.5 — the GPU fill work that heats a phone most — at a full 60 fps — and
 // shade matte surfaces and rival cars with cheaper materials (#357, see
 // lite-materials.js).
+// Phones also render without MSAA (#381): the user reported heat in solo
+// play with no audio. `?aa=1|0` forces it either way for an A/B check
+// (this page load only).
 const PHONE_DPR_CAP = 1.25;
+const AA_OVERRIDE = new URLSearchParams(location.search).get("aa");
 function withDeviceExtras(profile) {
+  const antialias = AA_OVERRIDE === "1" || AA_OVERRIDE === "0"
+    ? AA_OVERRIDE === "1" : profile.antialias && !IS_COARSE_POINTER;
   return {
     ...profile,
+    antialias,
+    // Light shadows (#381): only the player's car casts, on a 512 map.
+    shadowCasters: IS_COARSE_POINTER ? "player" : "all",
+    shadowMapSize: IS_COARSE_POINTER ? Math.min(profile.shadowMapSize, 512) : profile.shadowMapSize,
     dprCap: IS_COARSE_POINTER ? Math.min(profile.dprCap, PHONE_DPR_CAP) : profile.dprCap,
     softShadows: !IS_COARSE_POINTER,
     frameCapFps: IS_COARSE_POINTER ? 60 : 0,
     liteMaterials: IS_COARSE_POINTER,
   };
+}
+
+// Light shadows on phones (#381): the shadow camera sees one layer that
+// only the player's car is on, so the shadow pass draws one car instead of
+// the whole field and the scenery, over a tighter area that keeps the
+// smaller map sharp. Rivals and scenery cast no shadow there.
+export const PLAYER_SHADOW_LAYER = 1;
+export function applyShadowCasters(profile, sun, playerGroup) {
+  if (profile.shadowCasters !== "player") return;
+  sun.shadow.camera.layers.set(PLAYER_SHADOW_LAYER);
+  Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14 });
+  playerGroup.traverse((object) => object.layers.enable(PLAYER_SHADOW_LAYER));
 }
 
 // Returns a `(now) => boolean` gate for a requestAnimationFrame loop: true

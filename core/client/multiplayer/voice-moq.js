@@ -11,7 +11,7 @@
 //
 // Mute and has-mic still travel peer to peer as "voice_state" over the room
 // server's voice_signal relay; audio never touches the room server.
-import { LevelMeter, VoiceChat } from "./voice-transport.js?v=2";
+import { LevelMeter, VoiceChat } from "./voice-transport.js?v=3";
 
 const PUBLISH_URL = "https://esm.sh/@moq/publish@0.5.1";
 const WATCH_URL = "https://esm.sh/@moq/watch@0.6.1";
@@ -46,7 +46,6 @@ export class MoqVoiceChat extends VoiceChat {
   #excluded = new Set(); // participantIds this listener turned off (#379)
   #deafened = false; // "tutto spento" in the sound mix (#379)
   #remote = new Map(); // participantId -> { muted, hasMic }
-  #meterContext = null;
   #localMeter = null;
   #onPageHide = () => this.stop();
 
@@ -88,12 +87,6 @@ export class MoqVoiceChat extends VoiceChat {
     this.#track = stream?.getAudioTracks()[0] ?? null;
     if (this.#track) {
       this.#publish(Publish);
-      try {
-        this.#meterContext = new AudioContext();
-        this.#localMeter = LevelMeter.fromStream(this.#meterContext, stream);
-      } catch (err) {
-        console.warn("[voice-moq] no level meter", err);
-      }
       this.#track.addEventListener("ended", () => this.#broadcastState());
     }
     this.#Watch = Watch;
@@ -117,7 +110,13 @@ export class MoqVoiceChat extends VoiceChat {
     });
     const capture = new Publish.Audio.Capture({ source: new Publish.Signals.Signal(this.#track) });
     const encoder = new Publish.Audio.Encoder("audio", { broadcast, capture, enabled: true });
-    this.#closers.push(encoder, capture, broadcast, connection);
+    // The local meter taps the capture graph: no AudioContext of its own
+    // (#381; every context is one more realtime audio thread on a phone).
+    const unsubscribe = capture.out.root.subscribe((root) => {
+      this.#localMeter?.disconnect();
+      this.#localMeter = root ? LevelMeter.fromNode(root) : null;
+    });
+    this.#closers.push({ close: unsubscribe }, encoder, capture, broadcast, connection);
   }
 
   #otherIds(room) {
@@ -216,6 +215,15 @@ export class MoqVoiceChat extends VoiceChat {
     this.#applySilence();
   }
 
+  // Without native WebCodecs audio the library decodes and encodes Opus in
+  // wasm (libav polyfill); each player also runs its own AudioContext.
+  get diagnostics() {
+    const opus = typeof AudioEncoder === "function" && typeof AudioDecoder === "function" ? "nativo" : "wasm";
+    let listening = 0;
+    for (const id of this.#players.keys()) if (!this.#silenced(id)) listening++;
+    return `voce: opus ${opus}  ascolto ${listening}/${this.#players.size}  mic ${this.#hasMic ? (this.#muted ? "muto" : "on") : "no"}`;
+  }
+
   setDeafened(deafened) {
     this.#deafened = deafened;
     this.#applySilence();
@@ -238,7 +246,6 @@ export class MoqVoiceChat extends VoiceChat {
     try { this.#watchConnection?.close(); } catch {}
     this.#track?.stop();
     this.#localMeter?.disconnect();
-    this.#meterContext?.close().catch(() => {});
     window.removeEventListener("pagehide", this.#onPageHide);
   }
 }
