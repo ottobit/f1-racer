@@ -1092,4 +1092,4 @@ the user) that stays open until this goes properly live.
 
 ## Voice
 
-Moved to its own file: [`voice.md`](voice.md) (WebRTC mesh vs MoQ relay, #361, #363).
+See the wiki: [`c4-voice.md`](../llm-wiki/wiki/f1-racer/c4-voice.md) (WebRTC mesh vs MoQ relay, #361, #363).
