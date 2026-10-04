@@ -26,7 +26,7 @@ import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=8";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=6";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=16";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=17";
 
 import { steeringYaw } from "./steering.js?v=8";
 import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=43";
