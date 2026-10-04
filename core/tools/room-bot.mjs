@@ -195,6 +195,8 @@ async function runBot({ name, dir }) {
     }));
   }
   const page = await ctx.newPage();
+  // Voice errors only show in the page console (#389): pass them through.
+  if (VOICE) page.on("console", (msg) => { if (/voice|moq/i.test(msg.text())) log("console", msg.text().slice(0, 200)); });
   page.on("pageerror", (err) => log("pageerror", err.message));
   let lastStrategy = "";
   let lastCmd = "";
