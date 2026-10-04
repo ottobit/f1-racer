@@ -139,6 +139,15 @@ What the first agent-managed races taught (source: race VSN2):
 
 ## Local decision models — Ollama `/v1/systemone` (#307, Open)
 
+> 2026-10-04 architecture update: the earlier conclusion below ("tactical
+> layer, not driving") still holds for **direct remote steer/throttle at frame
+> rate**, but it no longer excludes using a fast decision model as a real
+> driver. The proposed provider-agnostic design lets a model decide a
+> high-level `DrivingIntent` at ~5–10 Hz while a browser-local deterministic
+> `DriveController` converts that intent to the existing 60 Hz input/physics
+> path. See [provider-agnostic decision driver](../synthesis/c4-decision-driver.md).
+> Nothing from that proposal is implemented yet.
+
 Ollama 0.35 runs Jev-style decision models (`nimble` 9B, `tev1`,
 `tev1:0.8b`): typed questions over a JSON state, answered with
 probabilities by scoring single-token candidates, without generating text.
