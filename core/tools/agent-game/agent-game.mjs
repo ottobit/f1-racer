@@ -25,13 +25,7 @@ const gameAdapters = {
 };
 
 const strategyProviders = {
-  static: () => new StaticStrategyProvider({
-    goal: process.env.AGENT_STRATEGY_GOAL || process.env.F1_STRATEGY_MODE || "default",
-    parameters: {
-      overtakePolicy: process.env.AGENT_OVERTAKE_POLICY || process.env.F1_OVERTAKE_POLICY || "prefer-clean",
-      pitPolicy: process.env.AGENT_PIT_POLICY || process.env.F1_PIT_POLICY || "auto",
-    },
-  }),
+  static: () => new StaticStrategyProvider(staticStrategyConfig()),
 };
 
 const modelClients = {
@@ -95,6 +89,29 @@ await runtime.start();
 
 function envName(name, fallback) {
   return String(process.env[name] || fallback || "").trim().toLowerCase();
+}
+
+function staticStrategyConfig() {
+  const raw = String(process.env.AGENT_STRATEGY_JSON || "").trim();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      return {
+        goal: parsed?.goal || "default",
+        parameters: parsed?.parameters || {},
+      };
+    } catch (error) {
+      throw new Error(`AGENT_STRATEGY_JSON is not valid JSON: ${error.message}`);
+    }
+  }
+
+  const parameters = {};
+  if (process.env.F1_OVERTAKE_POLICY) parameters.overtakePolicy = process.env.F1_OVERTAKE_POLICY;
+  if (process.env.F1_PIT_POLICY) parameters.pitPolicy = process.env.F1_PIT_POLICY;
+  return {
+    goal: process.env.AGENT_STRATEGY_GOAL || process.env.F1_STRATEGY_MODE || "default",
+    parameters,
+  };
 }
 
 function requireFactory(name, selected, factories) {
