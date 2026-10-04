@@ -1,6 +1,6 @@
-// Race voice chat interface (#369). voice-chat.js picks one transport per
-// race (MoQ relay first, WebRTC mesh as fallback); the HUD and
-// race-multiplayer.js only ever talk to this interface.
+// Race voice chat interface (#369). voice-chat.js picks the transport (today
+// only the MoQ relay); the HUD and race-multiplayer.js only ever talk to
+// this interface.
 export class VoiceChat {
   // Whether this browser can run the transport.
   static get supported() { return false; }
