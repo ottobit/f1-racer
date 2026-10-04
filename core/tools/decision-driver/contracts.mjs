@@ -15,8 +15,8 @@ export class DecisionProvider {
 }
 
 export class ModelClient {
-  async decide(_request) {
-    throw new Error("ModelClient.decide() not implemented");
+  async choose(_request) {
+    throw new Error("ModelClient.choose() not implemented");
   }
 }
 
