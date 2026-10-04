@@ -2151,3 +2151,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Chosen with the user instead of OTP logins (SMS/email cost, accounts). Limits: the public relay still sees audio; a flood can slow honest joins.
 - Docs: `multiplayer-protocol.md` Security section, `c4-voice.md`, racing skill (6-char code).
 - Verified with `node --check`, `git diff --check` and a Node script (code length, voiceKey, limiter, X-Forwarded-For). Badge 372.
+
+## [2026-10-04] restructure | Knowledge base on Karpathy's page types, folder renamed to .knowledge/ (#373)
+
+- `llm-wiki/` → `.knowledge/`; `CLAUDE.md` imports `.knowledge/AGENTS.md`. Dot folders are skipped by default by ripgrep: search with the explicit path.
+- `wiki/f1-racer/` removed. Pages split by type: `wiki/entities/` (12), `concepts/` (4), `synthesis/` (8), `comparisons/` (c4-voice); source notes → `wiki/sources/`; raw inputs → `raw/`.
+- `logs/maintenance.md` → `wiki/log.md`; 180 entries re-headed `## [date] cycle | title` (paths inside old entries left as they were).
+- New `wiki/overview.md`; `wiki/index.md` is now a catalog by type; YAML frontmatter (`type`, `updated`, `sources`/`raw`) on every page; `AGENTS.md` schema rewritten (structure, ingest/query/lint logging). Links stay relative markdown.
+- References updated in skills (`concludi`, `procedure-racing`), `docs/`, README and code comments.
+- Verified with a script that every relative markdown link resolves (49 files; one link already broken in `WORK-HANDOFF.md` fixed), `git diff --check`, `node --check`. Badge 374.
