@@ -26,7 +26,7 @@ import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=8";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=6";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=16";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=17";
 
 import { steeringYaw } from "./steering.js?v=8";
 import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=43";
@@ -36,7 +36,7 @@ import { setupRaceAudio } from "./race-audio.js?v=5";
 import { SoundMix } from "./race-sound-mix.js?v=2";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
-import { applyShadowCasters, loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=9";
+import { applyShadowCasters, loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=10";
 import { simplifyMaterials } from "../shared/lite-materials.js?v=1";
 import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=2";
 import {

@@ -62,16 +62,21 @@ function detectDefaultProfileId() {
 }
 
 // Touch-device extras applied on top of any profile (#159): hard-edged PCF
-// shadows instead of the soft variant, and a 60 fps cap so 90/120 Hz phone
+// shadows instead of the soft variant, and a frame cap so 90/120 Hz phone
 // screens don't render (and heat up) twice as often for no gameplay gain.
 // Phones also cap the pixel ratio at 1.25 (#355): ~30% fewer pixels than
 // 1.5 — the GPU fill work that heats a phone most — at a full 60 fps — and
 // shade matte surfaces and rival cars with cheaper materials (#357, see
 // lite-materials.js).
+// The cap is 30 fps since #385: the phone still heated in multiplayer with
+// voices at 60. 30 divides 60 and 120 Hz evenly (no judder), physics runs
+// in fixed substeps and multiplayer broadcasts every 80 ms, so only the
+// smoothness changes, not the driving.
 // MSAA stays on (#383): with light shadows the user measured no heat
 // difference on a phone. `?aa=1|0` forces it either way for an A/B check
 // (this page load only).
 const PHONE_DPR_CAP = 1.25;
+const PHONE_FPS_CAP = 30;
 const AA_OVERRIDE = new URLSearchParams(location.search).get("aa");
 function withDeviceExtras(profile) {
   const antialias = AA_OVERRIDE === "1" || AA_OVERRIDE === "0"
@@ -84,7 +89,7 @@ function withDeviceExtras(profile) {
     shadowMapSize: IS_COARSE_POINTER ? Math.min(profile.shadowMapSize, 512) : profile.shadowMapSize,
     dprCap: IS_COARSE_POINTER ? Math.min(profile.dprCap, PHONE_DPR_CAP) : profile.dprCap,
     softShadows: !IS_COARSE_POINTER,
-    frameCapFps: IS_COARSE_POINTER ? 60 : 0,
+    frameCapFps: IS_COARSE_POINTER ? PHONE_FPS_CAP : 0,
     liteMaterials: IS_COARSE_POINTER,
   };
 }

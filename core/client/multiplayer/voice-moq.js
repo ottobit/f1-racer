@@ -12,6 +12,7 @@
 // Mute and has-mic still travel peer to peer as "voice_state" over the room
 // server's voice_signal relay; audio never touches the room server.
 import { LevelMeter, VoiceChat } from "./voice-transport.js?v=3";
+import { SharedVoiceAudioContext } from "./voice-audio-context.js?v=1";
 
 const PUBLISH_URL = "https://esm.sh/@moq/publish@0.5.1";
 const WATCH_URL = "https://esm.sh/@moq/watch@0.6.1";
@@ -47,6 +48,7 @@ export class MoqVoiceChat extends VoiceChat {
   #deafened = false; // "tutto spento" in the sound mix (#379)
   #remote = new Map(); // participantId -> { muted, hasMic }
   #localMeter = null;
+  #audioContexts = new SharedVoiceAudioContext(); // one context for every voice (#385)
   #onPageHide = () => this.stop();
 
   // Must be constructed inside the user gesture (engine gate): iOS ties the
@@ -55,6 +57,7 @@ export class MoqVoiceChat extends VoiceChat {
     super();
     this.#client = client;
     this.#myId = client.participantId;
+    this.#audioContexts.install();
     if (navigator.audioSession) navigator.audioSession.type = "play-and-record";
     const micRequest = navigator.mediaDevices?.getUserMedia
       ? navigator.mediaDevices.getUserMedia({
@@ -216,12 +219,13 @@ export class MoqVoiceChat extends VoiceChat {
   }
 
   // Without native WebCodecs audio the library decodes and encodes Opus in
-  // wasm (libav polyfill); each player also runs its own AudioContext.
+  // wasm (libav polyfill). Every voice shares one AudioContext per sample
+  // rate (#385): "ctx" counts them, normally 1.
   get diagnostics() {
     const opus = typeof AudioEncoder === "function" && typeof AudioDecoder === "function" ? "nativo" : "wasm";
     let listening = 0;
     for (const id of this.#players.keys()) if (!this.#silenced(id)) listening++;
-    return `voce: opus ${opus}  ascolto ${listening}/${this.#players.size}  mic ${this.#hasMic ? (this.#muted ? "muto" : "on") : "no"}`;
+    return `voce: opus ${opus}  ascolto ${listening}/${this.#players.size}  ctx ${this.#audioContexts.count}  mic ${this.#hasMic ? (this.#muted ? "muto" : "on") : "no"}`;
   }
 
   setDeafened(deafened) {
@@ -246,6 +250,7 @@ export class MoqVoiceChat extends VoiceChat {
     try { this.#watchConnection?.close(); } catch {}
     this.#track?.stop();
     this.#localMeter?.disconnect();
+    this.#audioContexts.uninstall();
     window.removeEventListener("pagehide", this.#onPageHide);
   }
 }
