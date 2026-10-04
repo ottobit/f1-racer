@@ -3,7 +3,7 @@
 //
 // Claude/Codex can launch this process locally. Remote ChatGPT-style clients
 // use agent-mcp-http.mjs instead; both transports share the same bridge
-// client and four f1_* tool definitions from agent-mcp-common.mjs.
+// client and shared f1_* tool definitions from agent-mcp-common.mjs.
 
 import readline from "node:readline";
 import {
