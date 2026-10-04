@@ -2095,3 +2095,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `home/menu.js`: tabs toggled by a loop over `SERIES` (`series-tab-<id>`), the opening swipe page read from the tab's `data-series-page`, champion wording from `championshipName` — no more `series === SERIES.f1/classic` branches. Same behaviour.
 - First application of the OOP rule (`wiki/f1-racer/oop.md`), whose debt list is updated; pages that *are* one series naming it are not switches.
 - Verified with `node --check` and a Node script reading both series' `championshipName`; no browser. Badge 360.
+
+## 2026-10-04 — MoQ voice probe page (#361)
+
+- Why: race voice chat (`multiplayer/voice-chat.js`) is a peer-to-peer WebRTC mesh with STUN only; between phones on mobile networks the connection fails (red speaker icon). TURN was set aside (paid beyond 1,000 GB, no hard spend cap on Cloudflare).
+- `voice-probe.html` + `multiplayer/voice-probe.js` (new, standalone, game untouched): `SupportReport` lists WebTransport/WebSocket/Opus/AudioWorklet support; `MoqVoiceProbe` publishes the mic to a public Media over QUIC relay (`https://relay.cloudflare.mediaoverquic.com` or `https://cdn.moq.dev/anon`) as `f1-racer-probe/<code>/<role>.hang` and listens to the other role, or to itself through a private connection ("Eco").
+- Library: `@moq/publish@0.5.1` and `@moq/watch@0.6.1` from esm.sh, loaded with the page so the start tap reaches the mic prompt.
+- Open: whether iOS Safari works (no WebTransport, WebSocket fallback). If yes, step 2 moves `voice-chat.js` to MoQ with WebRTC kept as fallback; the public relay is a free technical preview with no guarantees.
+- Verified with `node --check` only (the container cannot reach the relay); real test on iPhone by the user. Badge 362.
