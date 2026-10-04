@@ -87,6 +87,10 @@ connects architecture, decisions, roadmap and external patterns.
   ("Closes #N"), pull `master`, delete branch; then remind the user to
   run `/compact`.
 - Risky changes (multiplayer protocol, start/race flow) get their own cycle.
+- Object-oriented design is a standing rule (user, 2026-10-04): before
+  writing code read `wiki/f1-racer/oop.md` and follow it — variants are
+  subclasses behind one interface, no type switches in callers, a rule
+  shared by all variants lives once at the common entry point.
 - Every relative client import/script/link carries a `?vNN` query (a new
   import starts at `?v=1`); bump it on every import/script/link whose file
   changed, all the way up to the HTML page. Unversioned imports can be

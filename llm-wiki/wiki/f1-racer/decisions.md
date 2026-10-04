@@ -316,3 +316,11 @@ clock keeps running while a player sits at the gate.
 The random hold (0.2-3s) is an estimate of the real range, not a sourced
 figure. In multiplayer it is seeded from the server's `raceStartedAt`
 so every participant gets the same hold.
+
+## Object-oriented design as a standing rule (2026-10-04)
+
+The user "ragiona a OOP" and asked that it be applied whenever we develop,
+kept in this wiki rather than in agent memory. Rules and checklist:
+[oop.md](oop.md); `AGENTS.md` points every session at it. Trigger: #357
+first batched road cars inside their own builder instead of once for every
+Vehicle in `buildVehicleModel()`.
