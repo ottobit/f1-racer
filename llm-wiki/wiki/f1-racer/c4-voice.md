@@ -1,13 +1,16 @@
 # F1 Racer voice — two flows, C4 levels 1 to 4
 
-> Status (2026-10-04):
-> - **Flow A, the WebRTC mesh, is current.** It lives in
->   `core/client/multiplayer/voice-chat.js`.
-> - **Flow B, the MoQ relay, is a probe only** (#361): it runs on
->   `voice-probe.html` and is not used by the game.
-> - Probe result (user's phone test, 2026-10-04): **only `cdn.moq.dev/anon`
->   works**; the Cloudflare relay does not. The next cycle adopts flow B on
->   moq.dev, with WebRTC kept as a fallback.
+> Status (2026-10-04, #369):
+> - **Flow B, the MoQ relay on `cdn.moq.dev/anon`, is current** and the only
+>   transport: `core/client/multiplayer/voice-moq.js` (`MoqVoiceChat`).
+> - **Flow A, the WebRTC mesh, was removed** (user's call): a fallback phone
+>   could hear only other fallback phones. A browser without AudioWorklet
+>   shows "Audio non disponibile". Flow A stays below as history.
+> - `voice-chat.js` picks the transport behind the `VoiceChat` interface in
+>   `voice-transport.js` ([oop.md](oop.md)); a new transport is one subclass.
+> - Probe history: only moq.dev worked (#361); iPhone ↔ iPhone confirmed
+>   after #367. iOS keeps a player's AudioContext suspended until a tap
+>   after the audio arrives; racing gives one at once.
 
 ## Why two flows
 
@@ -41,7 +44,7 @@ flowchart LR
 
 ---
 
-## Flow A — WebRTC peer mesh (current)
+## Flow A — WebRTC peer mesh (removed in #369)
 
 ### A · Level 1 — System context
 
@@ -151,7 +154,7 @@ sequenceDiagram
 
 ---
 
-## Flow B — MoQ relay (probe, not adopted)
+## Flow B — MoQ relay (current)
 
 ### B · Level 1 — System context
 
@@ -279,7 +282,9 @@ These pieces do not exist yet:
 
 | Concern | File |
 |---|---|
-| Current voice mesh | `core/client/multiplayer/voice-chat.js` |
+| Transport choice | `core/client/multiplayer/voice-chat.js` |
+| Interface + speaking meter | `core/client/multiplayer/voice-transport.js` |
+| MoQ transport (default) | `core/client/multiplayer/voice-moq.js` |
 | Signaling client | `core/client/multiplayer/room-client.js` (`sendVoiceSignal`) |
 | Signaling relay | `core/server/room-server.mjs` (`case "voice_signal"`) |
 | Voice HUD icon | `core/client/race/race-hud.js`, `race-controls.css` |

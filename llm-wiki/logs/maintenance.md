@@ -2127,3 +2127,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `voice-probe.html`: plain-language paragraphs on MoQ (relay) and Opus (voice codec, not an AI model); moq.dev is now the default relay; `voice-probe.js?v=2`.
 - Context: two-phone test was one-way (iPhone sends, does not hear) while Eco worked on the iPhone — likely the late AudioContext when the other phone starts later. Needs verification on a real iPhone.
 - Verified with `node --check` and `git diff --check` only; badge 368.
+
+## 2026-10-04 — Race voice over the MoQ relay (#369)
+
+- `core/client/multiplayer/voice-moq.js` (new): `MoqVoiceChat` publishes the mic as `f1-racer/<roomCode>/<participantId>.hang` on `cdn.moq.dev/anon` and plays one `@moq/watch` player per connected participant; mic prompt and `audioSession` set inside the engine-gate tap; libraries preloaded when the room session starts (`preloadVoice()` in `race-multiplayer.js`).
+- `voice-transport.js` (new): `VoiceChat` interface (`supported`, `preload`, `getState`, `toggleMute`, `stop`) and the shared `LevelMeter` for "is speaking". `voice-chat.js` is now only the transport picker; `race-multiplayer.js` asks `voiceSupported()` instead of checking `RTCPeerConnection`.
+- WebRTC mesh removed (user's call): a fallback phone could hear only other fallback phones. Browsers without AudioWorklet show "Audio non disponibile". Mute/has-mic still go peer to peer as `voice_state` over `voice_signal`; the room server is unchanged.
+- Wiki: `c4-voice.md` status, `decisions.md` voice entry, `c4-model.md` / `c4-multiplayer.md` labels.
+- Known limits: public relay without SLA; anyone with room code + participant id can listen; iOS starts playback at the first tap after a driver's audio arrives.
+- Verified with `node --check` and `git diff --check` only; in-race test by the user. Badge 370.

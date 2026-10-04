@@ -10,7 +10,7 @@
 // module hands those broadcasts to main.js and relays main.js's own local
 // state back out. No physics happen here.
 
-import { startVoiceChat } from "./voice-chat.js?v=5";
+import { preloadVoice, startVoiceChat, voiceSupported } from "./voice-chat.js?v=6";
 
 const BROADCAST_INTERVAL_MS = 80; // ~12/s — plenty smooth at N<=10, trivial bandwidth
 
@@ -18,6 +18,7 @@ export function setupMultiplayer() {
   const client = window.__mpClient;
   if (!client || !client.room) return null;
   delete window.__mpClient; // one-shot handoff
+  preloadVoice();
 
   const remoteSamples = new Map(); // participantId -> latest car_state payload
   const disconnected = new Set();
@@ -166,7 +167,7 @@ export function setupMultiplayer() {
       const participant = latestRoom.participants.find((p) => driverId === "player"
         ? p.participantId === client.participantId : p.driverId === driverId);
       if (!participant || participant.connectionState !== "connected") return { status: "disconnected" };
-      if (!window.RTCPeerConnection) return { status: "error", hasMic: false };
+      if (!voiceSupported()) return { status: "error", hasMic: false };
       return this.voice?.getState(participant.participantId) || { status: "idle" };
     },
     toggleVoice() {
@@ -177,7 +178,7 @@ export function setupMultiplayer() {
     // Race voice chat (#1). Call from inside a user gesture (the engine
     // gate) so the mic permission prompt is allowed. Idempotent.
     startVoice() {
-      if (this.voice || !window.RTCPeerConnection) return;
+      if (this.voice || !voiceSupported()) return;
       this.voice = startVoiceChat({ client });
     },
   };

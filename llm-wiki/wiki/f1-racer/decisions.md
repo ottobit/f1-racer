@@ -328,8 +328,10 @@ Vehicle in `buildVehicleModel()`.
 ## Voice transport: WebRTC mesh vs MoQ relay (2026-10-04)
 
 Status: **Decided — MoQ on `cdn.moq.dev/anon`**. In the user's phone test only
-moq.dev worked; the Cloudflare relay did not. The next cycle moves
-voice-chat.js to it, with WebRTC kept as a fallback. The C4 model of both flows is in [c4-voice.md](c4-voice.md).
+moq.dev worked; the Cloudflare relay did not. #369 moved race voice to it
+and **dropped the WebRTC mesh** (user, 2026-10-04): a fallback phone could
+only hear other fallback phones, so it helped almost nobody; unsupported
+browsers show "Audio non disponibile". The C4 model of both flows is in [c4-voice.md](c4-voice.md).
 
 The problem:
 - Voice is a WebRTC mesh with STUN only. Two phones on mobile networks could
