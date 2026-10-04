@@ -1,6 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { createStudioEnvironment } from '../shared/car-model.js?v=38';
-import { createFrameLimiter } from '../shared/graphics-profiles.js?v=8';
+import { createFrameLimiter } from '../shared/graphics-profiles.js?v=9';
 import { VEHICLES } from '../shared/vehicle.js?v=1';
 import { buildVehicleModel } from '../shared/vehicle-view.js?v=3';
 

@@ -36,7 +36,7 @@ import { setupRaceAudio } from "./race-audio.js?v=5";
 import { SoundMix } from "./race-sound-mix.js?v=2";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
-import { applyShadowCasters, loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=8";
+import { applyShadowCasters, loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=9";
 import { simplifyMaterials } from "../shared/lite-materials.js?v=1";
 import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=2";
 import {
@@ -122,11 +122,12 @@ const PLAYER_VISUAL_SCALE = 1.25;
 // AI difficulty: chosen on home (menu.js) and saved there; the circuit
 // link and multiplayer carry it as a query param. A link without it (e.g.
 // "Prossimo circuito") falls back to the saved choice (#349), so the pick
-// holds for the whole championship. Normale is the cars' own pace; the
-// others shift the rivals' pace 5% either way. Turn rate is left alone, so
-// a harder AI out-paces you rather than out-cornering you.
+// holds for the whole championship. Normale is the cars' own pace;
+// Difficile is 5% faster, Facile 10% slower (5% was not enough to keep up
+// on Altomare's long straights, #383). Turn rate is left alone, so a harder
+// AI out-paces you rather than out-cornering you.
 const DIFFICULTY_PRESETS = {
-  facile: { speedMul: 0.95, accelMul: 0.95 },
+  facile: { speedMul: 0.9, accelMul: 0.9 },
   normale: { speedMul: 1, accelMul: 1 },
   difficile: { speedMul: 1.05, accelMul: 1.05 },
 };
