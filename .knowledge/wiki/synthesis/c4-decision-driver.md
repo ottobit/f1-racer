@@ -115,7 +115,7 @@ flowchart TB
   observation["DrivingObservation<br/>EXISTING canonical state<br/>based on getState()"]:::existing
 
   base["DecisionProvider<br/>NEW interface<br/>decide(observation, context)"]:::new
-  jev["JevDecisionProvider<br/>NEW adapter"]:::external
+  jev["CandidateDecisionProvider<br/>NEW adapter"]:::external
   claude["ClaudeDecisionProvider<br/>future adapter"]:::external
   rules["RulesDecisionProvider<br/>benchmark adapter"]:::external
 
@@ -179,7 +179,7 @@ decision/
   DriverOrchestrator
   DrivingIntent
   providers/
-    JevDecisionProvider
+    CandidateDecisionProvider
     RulesDecisionProvider
 
 transport/
@@ -304,19 +304,21 @@ tool. Its exact MCP name is **Open**; existing `f1_act`, `f1_enqueue`,
 
 ## Jev as first adapter
 
-A Jev adapter can stay small:
+The first model-backed implementation stays generic:
 
 ```text
 DrivingObservation
-  -> compact Jev state
+  -> CandidateDecisionProvider
   -> bounded candidate intents
-  -> Jev choice/score
+  -> ModelClient.choose(...)
+  -> SystemOneModelClient (first protocol implementation)
   -> selected candidate
   -> DrivingIntent
 ```
 
-This lets Jev experiment with racing without making any Jev request/response
-shape part of the F1 Racer domain.
+Jev/System One request and response shapes stay inside
+`SystemOneModelClient`. Changing Nimble to Tev is configuration; changing
+protocol means a new `ModelClient`, with the racing provider unchanged.
 
 The statement that Jev itself is a diffusion model is **Needs verification**
 and is irrelevant to this boundary.
@@ -353,7 +355,7 @@ variants sit behind one interface and callers do not switch on concrete types.
 ```text
 DecisionProvider
   ├─ RulesDecisionProvider       deterministic baseline
-  ├─ JevDecisionProvider         first model adapter
+  ├─ CandidateDecisionProvider         first model adapter
   └─ future providers
 
 AgentPort
@@ -380,7 +382,7 @@ Development order:
 4. `RelayAgentPort` over the existing agent relay;
 5. browser-local `DriveController`;
 6. full-lap baseline test;
-7. `JevDecisionProvider`;
+7. `CandidateDecisionProvider`;
 8. same-observation rules-vs-Jev comparison.
 
 ## Test deployment — reuse the existing Render backend
@@ -443,7 +445,7 @@ DriveController
 existing input/physics
 ```
 
-Then replace only `RulesDecisionProvider` with `JevDecisionProvider`.
+Then replace only `RulesDecisionProvider` with `CandidateDecisionProvider`.
 
 If that swap requires no change to Render, `AgentPort`, `DriveController`
 or physics, provider agnosticism has been demonstrated rather than assumed.
@@ -486,15 +488,19 @@ but knows nothing about track geometry, multiplayer or physics.
 Example:
 
 ```text
-JevDecisionProvider
+CandidateDecisionProvider
     -> SystemOneModelClient(model="nimble")
 
-JevDecisionProvider
+CandidateDecisionProvider
     -> SystemOneModelClient(model="tev1")
 
-StructuredDecisionProvider
-    -> OpenAICompatibleModelClient(...)
+CandidateDecisionProvider
+    -> future ChoiceModelClient(...)
 ```
+
+The racing provider therefore does not parse System One payloads. The
+`ModelClient.choose(...)` contract normalizes protocol-specific responses to
+`{ choice, confidence }`.
 
 Nimble → Tev is therefore configuration under the same client. A new protocol
 is a new `ModelClient`, not a race-engine change.
