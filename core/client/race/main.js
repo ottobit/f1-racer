@@ -13,7 +13,7 @@ import { buildVehicleModel } from "../shared/vehicle-view.js?v=3";
 import { SERIES, seriesById } from "../shared/series.js?v=3";
 import { applyCarToMesh } from "./race-car-view.js?v=39";
 import { setupRaceInput } from "./race-input.js?v=58";
-import { escapeHtml, setupRaceHud } from "./race-hud.js?v=41";
+import { escapeHtml, setupRaceHud } from "./race-hud.js?v=42";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=41";
 import { setupPlayerPhysics } from "./player-physics.js?v=9";
@@ -26,13 +26,14 @@ import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
 import { setupAgentApi } from "./agent-api.js?v=8";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=6";
-import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=14";
+import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=15";
 
 import { steeringYaw } from "./steering.js?v=8";
 import { dressCircuit, dressPitLane, surfaceTexture } from "./track-art.js?v=43";
 import { buildPitLane } from "../shared/pit-lane.js?v=3";
 import { setupPitCrew } from "./pit-crew.js?v=4";
-import { setupRaceAudio } from "./race-audio.js?v=4";
+import { setupRaceAudio } from "./race-audio.js?v=5";
+import { SoundMix } from "./race-sound-mix.js?v=1";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
 import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=7";
@@ -827,6 +828,13 @@ const raceAudio = setupRaceAudio({
   field: PLAYER_VEHICLE.id,
 });
 const { gearInfo, updateEngineSound, playShiftClick, updateAmbientChorus } = raceAudio;
+// Engine level and voices on/off (#379); multiplayer starts engines low.
+new SoundMix({
+  multiplayer: !!multiplayer,
+  button: document.getElementById("sound-mix"),
+  setEngineVolume: raceAudio.setVolume,
+  setVoicesOn: (on) => multiplayer?.setVoicesDeafened(!on),
+});
 const updateExhaust = !PLAYER_VEHICLE.exhaustFlames ? () => {} : setupExhaustPops({
   carGroup: playerCar.group,
   state,
@@ -921,6 +929,7 @@ const hud = setupRaceHud({
   getRaceState: () => raceState,
   getVoiceState: multiplayer ? (id) => multiplayer.getVoiceState(id) : null,
   toggleVoice: () => multiplayer?.toggleVoice(),
+  toggleListen: (id) => multiplayer?.toggleListen(id),
 });
 
 // --- Main loop -------------------------------------------------------------

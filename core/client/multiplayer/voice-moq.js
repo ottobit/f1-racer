@@ -11,7 +11,7 @@
 //
 // Mute and has-mic still travel peer to peer as "voice_state" over the room
 // server's voice_signal relay; audio never touches the room server.
-import { LevelMeter, VoiceChat } from "./voice-transport.js?v=1";
+import { LevelMeter, VoiceChat } from "./voice-transport.js?v=2";
 
 const PUBLISH_URL = "https://esm.sh/@moq/publish@0.5.1";
 const WATCH_URL = "https://esm.sh/@moq/watch@0.6.1";
@@ -42,7 +42,9 @@ export class MoqVoiceChat extends VoiceChat {
   #Watch = null;
   #watchConnection = null;
   #closers = []; // publish side
-  #players = new Map(); // participantId -> { player, meter, unsubscribe }
+  #players = new Map(); // participantId -> { player, meter, unsubscribe, muted }
+  #excluded = new Set(); // participantIds this listener turned off (#379)
+  #deafened = false; // "tutto spento" in the sound mix (#379)
   #remote = new Map(); // participantId -> { muted, hasMic }
   #meterContext = null;
   #localMeter = null;
@@ -139,11 +141,15 @@ export class MoqVoiceChat extends VoiceChat {
     }
   }
 
+  #silenced(id) { return this.#deafened || this.#excluded.has(id); }
+
   // The player builds its AudioContext when that driver's audio arrives;
   // iOS keeps it suspended until the next tap, which racing on a phone
-  // gives at once (the library resumes it on any pointerup).
+  // gives at once (the library resumes it on any pointerup). A muted
+  // player also stops downloading and decoding (#379): less work on a phone.
   #openPlayer(id) {
     const Watch = this.#Watch;
+    const muted = new Watch.Signals.Signal(this.#silenced(id));
     const player = new Watch.Player({
       origin: this.#watchConnection.origin,
       probe: this.#watchConnection.probe,
@@ -151,8 +157,9 @@ export class MoqVoiceChat extends VoiceChat {
       canvas: document.createElement("canvas"),
       visible: "never",
       volume: 1,
+      muted,
     });
-    const entry = { player, meter: null, unsubscribe: null };
+    const entry = { player, meter: null, unsubscribe: null, muted };
     entry.unsubscribe = player.audio.out.root.subscribe((root) => {
       entry.meter?.disconnect();
       entry.meter = root ? LevelMeter.fromNode(root) : null;
@@ -191,9 +198,27 @@ export class MoqVoiceChat extends VoiceChat {
     }
     const entry = this.#players.get(id);
     const remote = this.#remote.get(id);
-    // A driver without a mic publishes nothing; they are still "in".
-    const status = entry?.meter || remote?.hasMic === false ? "active" : "connecting";
-    return { status, ...remote, speaking: remote?.muted !== true && (entry?.meter?.speaking ?? false) };
+    const excluded = this.#excluded.has(id);
+    // A driver without a mic publishes nothing; they are still "in". A
+    // silenced driver is not downloaded, so there is nothing to wait for.
+    const status = this.#silenced(id) || entry?.meter || remote?.hasMic === false ? "active" : "connecting";
+    const speaking = !this.#silenced(id) && remote?.muted !== true && (entry?.meter?.speaking ?? false);
+    return { status, ...remote, excluded, speaking };
+  }
+
+  #applySilence() {
+    for (const [id, entry] of this.#players) entry.muted.set(this.#silenced(id));
+  }
+
+  setExcluded(id, excluded) {
+    if (excluded) this.#excluded.add(id);
+    else this.#excluded.delete(id);
+    this.#applySilence();
+  }
+
+  setDeafened(deafened) {
+    this.#deafened = deafened;
+    this.#applySilence();
   }
 
   toggleMute() {

@@ -26,7 +26,7 @@
   <meta name="twitter:image" content="https://ottobit.github.io/f1-racer/assets/images/og-f1-racer.jpg" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="stylesheet" href="core/client/style.css?v=57" />
-  <link rel="stylesheet" href="core/client/race/race-controls.css?v=59" />
+  <link rel="stylesheet" href="core/client/race/race-controls.css?v=60" />
   <script>
     // Touch-capability detection done in JS, not just CSS: the
     // (hover: none) and (pointer: coarse) media query is the "correct"
@@ -80,7 +80,10 @@
        numbers share tight quarters. -->
   <div id="hud">
     <div id="hud-topleft">
-      <a class="back-link" href="index.html">← circuiti</a>
+      <div class="hud-topleft-links">
+        <a class="back-link" href="index.html">← circuiti</a>
+        <button type="button" id="sound-mix" tabindex="-1">MOTORI PIENI</button>
+      </div>
       <div id="time">0:00.00</div>
       <div id="hud-topleft-row">
         <span id="position">P-</span>
@@ -218,7 +221,7 @@
       window.addEventListener("scroll", pin);
     })();
   </script>
-  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=117"></script>
+  <script type="module" src="core/client/multiplayer/race-bootstrap.js?v=118"></script>
   <script src="core/client/shared/version.js?v=374" defer></script>
 </body>
 </html>

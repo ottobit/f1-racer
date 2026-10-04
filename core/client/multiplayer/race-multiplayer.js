@@ -10,7 +10,7 @@
 // module hands those broadcasts to main.js and relays main.js's own local
 // state back out. No physics happen here.
 
-import { preloadVoice, startVoiceChat, voiceSupported } from "./voice-chat.js?v=7";
+import { preloadVoice, startVoiceChat, voiceSupported } from "./voice-chat.js?v=8";
 
 const BROADCAST_INTERVAL_MS = 80; // ~12/s — plenty smooth at N<=10, trivial bandwidth
 
@@ -26,6 +26,11 @@ export function setupMultiplayer() {
   let gridCallback = null;
   let gridDelivered = false;
   let lastBroadcastAt = 0;
+  let voicesDeafened = false;
+
+  // "player" is this browser's own driver.
+  const participantOf = (driverId) => latestRoom.participants.find((p) => driverId === "player"
+    ? p.participantId === client.participantId : p.driverId === driverId);
 
   function syncDisconnected(room) {
     disconnected.clear();
@@ -164,8 +169,7 @@ export function setupMultiplayer() {
     },
 
     getVoiceState(driverId) {
-      const participant = latestRoom.participants.find((p) => driverId === "player"
-        ? p.participantId === client.participantId : p.driverId === driverId);
+      const participant = participantOf(driverId);
       if (!participant || participant.connectionState !== "connected") return { status: "disconnected" };
       if (!voiceSupported()) return { status: "error", hasMic: false };
       return this.voice?.getState(participant.participantId) || { status: "idle" };
@@ -174,12 +178,25 @@ export function setupMultiplayer() {
       if (this.voice) this.voice.toggleMute();
       else this.startVoice();
     },
+    // Listener side (#379): tap a rival's name to stop or resume hearing
+    // them; the sound mix's "tutto spento" silences every driver.
+    toggleListen(driverId) {
+      const participant = participantOf(driverId);
+      if (!this.voice || !participant) return;
+      const { excluded } = this.voice.getState(participant.participantId);
+      this.voice.setExcluded(participant.participantId, !excluded);
+    },
+    setVoicesDeafened(on) {
+      voicesDeafened = on;
+      this.voice?.setDeafened(on);
+    },
 
     // Race voice chat (#1). Call from inside a user gesture (the engine
     // gate) so the mic permission prompt is allowed. Idempotent.
     startVoice() {
       if (this.voice || !voiceSupported()) return;
       this.voice = startVoiceChat({ client });
+      this.voice?.setDeafened(voicesDeafened);
     },
   };
 }

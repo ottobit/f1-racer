@@ -112,6 +112,16 @@ html.touch #look-back.is-held{background:#34536b;color:#fff;border-color:#dbe7ef
 button.driver-voice { pointer-events: auto; cursor: pointer; touch-action: manipulation; z-index: 1; }
 button.driver-voice::before { content: ""; position: absolute; inset: -13px -14px; }
 button.driver-voice:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+/* #379: tap a rival's name to stop or resume hearing them. */
+.qualifying-timing__name.is-listenable { pointer-events: auto; cursor: pointer; touch-action: manipulation; }
+.driver-voice.is-excluded { color: #8a96a0; }
+.is-listenable:has(.is-excluded) .driver-name { opacity: .5; text-decoration: line-through; }
+/* #379: sound mix button next to the back link. */
+.hud-topleft-links { display: flex; align-items: center; gap: .6rem; margin-bottom: .35rem; }
+#hud .hud-topleft-links .back-link { margin-bottom: 0; }
+#sound-mix { pointer-events: auto; padding: 3px 7px; border: 1px solid #ffffff38; border-radius: 6px; background: #0b0f15b0;
+  color: #dbe7ef; font: 800 9px system-ui; letter-spacing: .08em; cursor: pointer; touch-action: manipulation; }
+#sound-mix[data-mix="off"], #sound-mix[data-mix="mute"] { color: #f3ce75; border-color: #f3ce7566; }
 .driver-voice.is-speaking { filter: drop-shadow(0 0 3px #86e4b3); animation: voice-pulse .7s ease-in-out infinite alternate; }
 @keyframes voice-pulse { to { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .driver-voice.is-speaking { animation: none; } }
