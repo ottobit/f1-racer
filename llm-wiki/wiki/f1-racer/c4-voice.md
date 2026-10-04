@@ -5,8 +5,9 @@
 >   `core/client/multiplayer/voice-chat.js`.
 > - **Flow B, the MoQ relay, is a probe only** (#361): it runs on
 >   `voice-probe.html` and is not used by the game.
-> - Adopting flow B is **Open**. It depends on the user's iPhone test of the
->   probe page.
+> - Probe result (user's phone test, 2026-10-04): **only `cdn.moq.dev/anon`
+>   works**; the Cloudflare relay does not. The next cycle adopts flow B on
+>   moq.dev, with WebRTC kept as a fallback.
 
 ## Why two flows
 
@@ -158,7 +159,7 @@ sequenceDiagram
 flowchart TB
   drivers["Drivers in a room<br/>Phones"]:::person
   f1["F1 Racer voice over MoQ<br/>voice-probe.html today"]:::container
-  relay["Public MoQ relay<br/>relay.cloudflare.mediaoverquic.com<br/>or cdn.moq.dev/anon<br/>No account, no billing"]:::external
+  relay["Public MoQ relay<br/>cdn.moq.dev/anon (works)<br/>Cloudflare relay failed the probe<br/>No account, no billing"]:::external
   cdn["esm.sh<br/>@moq/publish 0.5.1, @moq/watch 0.6.1"]:::external
 
   drivers -->|"Talk and listen"| f1
@@ -270,7 +271,7 @@ These pieces do not exist yet:
 | Mobile / CGNAT | Fails without TURN | Works (outbound only) |
 | Server we run | Room server (signaling) | None for audio |
 | Cost / account | Free (STUN) | Public relay, no account; no SLA |
-| iOS support | Yes (WebRTC) | **Needs verification** (WebSocket fallback) |
+| Phone test | Fails across mobile NAT | Works on moq.dev only (2026-10-04) |
 | Latency | Lowest when it connects | One relay hop more |
 | Privacy | Encrypted end to end (DTLS-SRTP) | TLS to the relay; relay sees the audio |
 

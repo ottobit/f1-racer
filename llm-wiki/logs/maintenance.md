@@ -2103,3 +2103,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Library: `@moq/publish@0.5.1` and `@moq/watch@0.6.1` from esm.sh, loaded with the page so the start tap reaches the mic prompt.
 - Open: whether iOS Safari works (no WebTransport, WebSocket fallback). If yes, step 2 moves `voice-chat.js` to MoQ with WebRTC kept as fallback; the public relay is a free technical preview with no guarantees.
 - Verified with `node --check` only (the container cannot reach the relay); real test on iPhone by the user. Badge 362.
+
+## 2026-10-04 — Voice C4: WebRTC mesh vs MoQ relay (#363)
+
+- New `llm-wiki/wiki/f1-racer/c4-voice.md`: both voice flows at C4 levels 1-4. It has sequences and a comparison table.
+- `decisions.md`: the voice transport is decided. In the user's phone probe, only `cdn.moq.dev/anon` worked; the Cloudflare MoQ relay did not.
+- The next cycle moves `voice-chat.js` to MoQ on moq.dev, with WebRTC kept as a fallback subclass (`oop.md`).
+- Links from `index.md` and `c4-model.md`. Compact section in `docs/F1-RACER-WIKI.md`.
+- Docs only, no code change. Badge 364.

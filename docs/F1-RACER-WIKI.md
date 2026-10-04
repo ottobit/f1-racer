@@ -1094,7 +1094,8 @@ the user) that stays open until this goes properly live.
 
 The full C4 model (levels 1–4, sequences, comparison) is in
 [`llm-wiki/wiki/f1-racer/c4-voice.md`](../llm-wiki/wiki/f1-racer/c4-voice.md).
-The decision between the two flows is **Open** in `decisions.md`.
+Decision (`decisions.md`): only `cdn.moq.dev/anon` passed the user's phone
+test; the next cycle moves voice to it, with WebRTC as fallback.
 
 **Flow A — WebRTC peer mesh (current, in game).**
 - The room server forwards `voice_signal` only: hello, offer, answer, ice and
