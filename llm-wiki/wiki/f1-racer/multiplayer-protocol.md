@@ -111,6 +111,24 @@ are in [decisions.md](decisions.md). Solo play never opens a socket:
   ([audio.md](audio.md#start-procedure)).
 - **Championship.** `finishRace()` skips the solo championship.
 
+## Security
+
+Threat model: a hobby game among friends on a public server; no accounts,
+no personal data beyond nicknames (decided with the user, #371, instead of
+OTP logins that need SMS/email and risk billing).
+
+- Room codes: 6 chars from a 31-symbol alphabet (~887M), `crypto.randomInt`.
+  Reconnect tokens (`randomBytes`) and participant ids also come from
+  `node:crypto`.
+- Brute force: `core/server/join-limiter.mjs` (`JoinLimiter`) refuses
+  `join_room` / `reconnect` with `too_many_attempts` after 10 wrong codes or
+  tokens per address per minute, plus a global ceiling of 200 per minute
+  because `X-Forwarded-For` can be forged. In memory, resets on restart.
+- Voice: each room has a `voiceKey` (`crypto.randomUUID`) in the room
+  snapshot, sent only to members; the MoQ path is
+  `f1-racer/<voiceKey>/<participantId>.hang` ([c4-voice.md](c4-voice.md)).
+  Limit: the public relay itself still sees the audio.
+
 ## Verification status
 
 - **Verified:**

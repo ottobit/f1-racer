@@ -22,7 +22,7 @@ deciding for you, no plan set once and left alone. Default fleet: 5 bots
   (`https://xxxx.ngrok-free.app`, or `ws://localhost:8787` on the same PC).
   `GET /health` answering `ok` means it is up; a free plan can take ~1 min
   to wake from a nap, so ping it before starting the fleet.
-- `ROOM`: 4-letter room code. The server cannot list rooms: the user creates
+- `ROOM`: 6-character room code (4 before #371). The server cannot list rooms: the user creates
   the room on `room.html?roomServer=<SERVER>` and hosts/starts the race.
 
 ## Start (from the repo root)
