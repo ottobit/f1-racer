@@ -55,7 +55,7 @@ node core/tools/bot-fleet.mjs <SERVER> <ROOM> --count 5    # in the background
 - Headless bot (plain Node, no browser, cheaper, less faithful):
   `node core/tools/headless-room-bot.mjs <SERVER> <ROOM> --name <NAME> --dir <DIR>`;
   same `strategy.json`/`state.json`. Trade-offs:
-  `llm-wiki/wiki/entities/agent-bots.md`.
+  `.knowledge/wiki/entities/agent-bots.md`.
 
 ## During the race
 
@@ -135,7 +135,7 @@ strategy API gaps, physics, HUD. After each race: search existing issues for
 duplicates, then open one GitHub issue per finding, in Italian, with what
 was seen, likely cause (with file paths) and a proposal. Tell the user the
 issue numbers in one line. No `gh`/GitHub tools (e.g. on the player's
-PC): write a raw report in `llm-wiki/raw/<date>-race-<ROOM>.md`
+PC): write a raw report in `.knowledge/raw/<date>-race-<ROOM>.md`
 (setup, fps, decisions per lap, anomalies with file paths) plus the fleet
 log, and push it; a later session files the issues and ingests it. Fixing them is a normal work cycle, only when the
 user asks.

@@ -36,11 +36,11 @@ The primary operations are:
 For F1 Racer the wiki is repo-native (restructured to the gist's page types
 in #373):
 
-- immutable inputs live in `llm-wiki/raw/`; one summary per source in
-  `llm-wiki/wiki/sources/`;
+- immutable inputs live in `.knowledge/raw/`; one summary per source in
+  `.knowledge/wiki/sources/`;
 - the wiki layer has `entities/`, `concepts/`, `synthesis/`, `comparisons/`,
   an `overview.md`, the `index.md` catalog and the `log.md` history;
-- `llm-wiki/AGENTS.md` is the schema;
+- `.knowledge/AGENTS.md` is the schema;
 - links stay relative markdown (GitHub renders them; Obsidian reads them).
 
 The gist itself says the exact layout is up to each project ("This document

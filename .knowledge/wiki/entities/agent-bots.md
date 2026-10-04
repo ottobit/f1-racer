@@ -178,7 +178,7 @@ Nothing is integrated yet; this is the candidate fit.
 - Setup: `claude remote-control` in the repo on the PC, room server and
   bots on the same machine (`ws://localhost:8787`), fleet with `--gpu`.
   `gh` may be missing there: the local agent writes a raw report under
-  `llm-wiki/raw/` and pushes it, and issues are filed later.
+  `.knowledge/raw/` and pushes it, and issues are filed later.
 - GT 640 with `--gpu`: WebGL on the real GPU (ANGLE/D3D11). 5 bots at
   50–60 fps, the same as the 4-core cloud box, so 5 bots do not measure
   the GPU. Test 8–11 bots.

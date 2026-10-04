@@ -83,7 +83,7 @@ wrong, this note says so.
 ## Other
 
 - `gh` is not installed on the user's PC, so the local agent could not
-  file issues. It wrote the raw report into `llm-wiki/sources/raw/`, and
+  file issues. It wrote the raw report into `.knowledge/sources/raw/`, and
   the cloud session filed #246 and #247.
 - The root `package.json` script `start:room-server` was renamed to
   `start` (`npm start`); the README was updated to match.

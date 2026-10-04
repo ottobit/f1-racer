@@ -5,7 +5,8 @@ Append-only, newest last (Karpathy LLM Wiki `log.md`). Every entry starts
 history. Kinds: `cycle` (a closed work cycle, written by `concludi`),
 `ingest` (a new source), `lint` (a wiki health pass), `restructure`.
 Paths inside older entries are as they were then (before #373 the pages
-lived under `wiki/f1-racer/` and this file was `logs/maintenance.md`).
+lived under `wiki/f1-racer/` and this file was `logs/maintenance.md`;
+until #373 the whole folder was `llm-wiki/`, now `.knowledge/`).
 
 ## [2026-09-23] cycle | Developer tooling: patch-based publishing (#4)
 

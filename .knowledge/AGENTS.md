@@ -18,8 +18,12 @@ current project understanding instead of rediscovering it.
 Follows the three layers of Karpathy's LLM Wiki (raw sources, wiki,
 schema); restructured in #373.
 
+The folder is `.knowledge/` (renamed from `llm-wiki/` in #373). Being a dot
+folder, it is skipped by default by ripgrep-based search and some file
+globs: search it with an explicit path (`.knowledge/`) or `rg --hidden`.
+
 ```
-llm-wiki/
+.knowledge/
   AGENTS.md        the schema: these rules
   raw/             immutable inputs (reports, transcripts, logs); never edited
   wiki/

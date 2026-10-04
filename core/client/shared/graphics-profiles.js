@@ -11,7 +11,7 @@
 // for testing and is persisted once used. Covers the DPR/shadow/effects
 // levers with the clearest performance-per-risk payoff; distant-scenery
 // density and reflections are a deliberate follow-up, not done here (see
-// llm-wiki/wiki/synthesis/roadmap.md).
+// .knowledge/wiki/synthesis/roadmap.md).
 
 const STORAGE_KEY = "f1racer-graphics-profile-v1";
 
