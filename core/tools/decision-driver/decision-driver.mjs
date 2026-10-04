@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { DriverOrchestrator } from "./driver-orchestrator.mjs";
-import { JevDecisionProvider } from "./jev-decision-provider.mjs";
+import { CandidateDecisionProvider } from "./candidate-decision-provider.mjs";
 import { RelayAgentPort } from "./relay-agent-port.mjs";
 import { RulesDecisionProvider } from "./rules-decision-provider.mjs";
 import { StaticStrategyProvider } from "./static-strategy-provider.mjs";
@@ -20,7 +20,7 @@ const strategist = new StaticStrategyProvider({
 
 const decisionProviders = {
   rules: () => new RulesDecisionProvider(),
-  jev: () => new JevDecisionProvider({
+  model: () => new CandidateDecisionProvider({
     modelClient: new SystemOneModelClient({
       baseUrl: process.env.F1_MODEL_BASE_URL || "http://localhost:11434",
       model: process.env.F1_MODEL || "nimble",
