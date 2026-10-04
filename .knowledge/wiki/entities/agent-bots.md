@@ -7,6 +7,8 @@ sources:
   - ../sources/2026-09-27-twelve-car-bot-races.md
   - ../sources/2026-09-28-race-vsn2-local-pc.md
   - ../sources/2026-10-01-ollama-jev-decision-models.md
+  - ../sources/2026-10-04-provider-agnostic-decision-driver-discussion.md
+  - ../sources/2026-10-04-decision-driver-render-test.md
 ---
 
 # Agent Bots
