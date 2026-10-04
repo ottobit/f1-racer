@@ -297,7 +297,8 @@ sequenceDiagram
 
 WebRTC signaling travels over the same WebSocket connection as
 `voice_signal`; established audio then flows directly between browsers and is
-not part of the loop above.
+not part of the loop above. Both voice flows (current mesh and the MoQ relay
+probe) are modelled in [c4-voice.md](c4-voice.md).
 
 ## Current architectural properties
 
