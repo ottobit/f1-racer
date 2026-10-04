@@ -23,13 +23,17 @@
     .probe-inline input { width: auto; }
     .probe-buttons { display: flex; gap: 10px; }
     .probe-buttons button { flex: 1; }
+    #probe-unlock { width: 100%; margin-top: 10px; background: #ffd23f; color: #05060a; border: 0; font-weight: 700; }
+    #probe-unlock[hidden] { display: none; }
     #probe-start { background: #3ddc84; color: #05060a; border: 0; font-weight: 700; }
   </style>
 </head>
 <body>
   <main>
     <h1>Prova voce (MoQ)</h1>
-    <p>Telefono 1 sceglie A, telefono 2 sceglie B, stesso codice. Da solo: spunta "Eco" e devi sentire la tua voce con un attimo di ritardo.</p>
+    <p><strong>MoQ</strong> (Media over QUIC) è il sistema che stiamo provando per la radio tra piloti: ogni telefono manda la propria voce a un server ponte (il "relay"), che la gira agli altri. Non serve un collegamento diretto tra i telefoni, quindi funziona anche su rete mobile.</p>
+    <p><strong>Opus</strong> non è una modalità: è il formato che comprime la voce (encoder = comprime, decoder = decomprime). Se una delle due righe dice NO, il telefono non può inviare o sentire.</p>
+    <p>Telefono 1 sceglie A, telefono 2 sceglie B, stesso codice. Da solo: spunta "Eco" e devi sentire la tua voce con un attimo di ritardo. Su iPhone, se "Uscita audio" non dice "attiva", tocca il pulsante giallo.</p>
     <section>
       <h2>Questo browser</h2>
       <ul id="probe-support"><li>controllo…</li></ul>
@@ -37,8 +41,8 @@
     <form id="probe-form">
       <label>Relay
         <select name="relay">
-          <option value="https://relay.cloudflare.mediaoverquic.com">Cloudflare</option>
           <option value="https://cdn.moq.dev/anon">moq.dev</option>
+          <option value="https://relay.cloudflare.mediaoverquic.com">Cloudflare</option>
         </select>
       </label>
       <label>Codice
@@ -59,9 +63,10 @@
     <section>
       <h2>Stato</h2>
       <ul id="probe-status"><li>non avviata</li></ul>
+      <button id="probe-unlock" type="button" hidden>Tocca per attivare l'audio</button>
     </section>
   </main>
-  <script type="module" src="core/client/multiplayer/voice-probe.js?v=1"></script>
+  <script type="module" src="core/client/multiplayer/voice-probe.js?v=2"></script>
   <script src="core/client/shared/version.js?v=366" defer></script>
 </body>
 </html>
