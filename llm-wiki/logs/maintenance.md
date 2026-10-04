@@ -2136,3 +2136,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Wiki: `c4-voice.md` status, `decisions.md` voice entry, `c4-model.md` / `c4-multiplayer.md` labels.
 - Known limits: public relay without SLA; anyone with room code + participant id can listen; iOS starts playback at the first tap after a driver's audio arrives.
 - Verified with `node --check` and `git diff --check` only; in-race test by the user. Badge 370.
+
+## 2026-10-04 — Room security: GUID voice key, 6-char crypto codes, join rate limit (#371)
+
+- `core/server/rooms.mjs`: room codes (now 6 chars, ~887M), reconnect tokens and participant ids come from `node:crypto`; each room gets a `voiceKey` (`randomUUID`) in the member-only room snapshot.
+- `core/server/join-limiter.mjs` (new) + `room-server.mjs`: `join_room` / `reconnect` refused with `too_many_attempts` after 10 wrong codes/tokens per address per minute, global ceiling 200/min because `X-Forwarded-For` can be forged.
+- `voice-moq.js`: MoQ path `f1-racer/<voiceKey>/<participantId>.hang`; no key (pre-#371 server) means no voice, never a guessable path. `room.html` code input takes 6 chars.
+- Chosen with the user instead of OTP logins (SMS/email cost, accounts). Limits: the public relay still sees audio; a flood can slow honest joins.
+- Docs: `multiplayer-protocol.md` Security section, `c4-voice.md`, racing skill (6-char code).
+- Verified with `node --check`, `git diff --check` and a Node script (code length, voiceKey, limiter, X-Forwarded-For). Badge 372.
