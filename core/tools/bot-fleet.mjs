@@ -1,13 +1,13 @@
 // Bot fleet (#244): one command to fill a room with browser bots on any
 // machine (cloud sandbox or a player's PC). Strategy is the agent's job.
 //
-//   node core/tools/bot-fleet.mjs <roomServerUrl> <ROOM> [--count 5] [--dir DIR] [--gpu] [--headed]
+//   node core/tools/bot-fleet.mjs <roomServerUrl> <ROOM> [--count 5] [--dir DIR] [--gpu] [--headed] [--voice]
 //
 // It serves the repo on http://localhost:8080 (unless something already
 // listens there), writes each bot's starting strategy.json and starts
 // room-bot.mjs with --names. Every 10 s it
 // prints each bot's botFps and position. Ctrl-C stops everything.
-// --gpu / --headed are passed to room-bot.mjs (see there).
+// --gpu / --headed / --voice are passed to room-bot.mjs (see there).
 import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
@@ -23,7 +23,7 @@ const opt = (name, fallback) => {
 };
 const [serverUrl, code] = args;
 if (!serverUrl || !code) {
-  console.error("usage: bot-fleet.mjs <roomServerUrl> <ROOM> [--count 5] [--dir DIR] [--gpu] [--headed]");
+  console.error("usage: bot-fleet.mjs <roomServerUrl> <ROOM> [--count 5] [--dir DIR] [--gpu] [--headed] [--voice]");
   process.exit(1);
 }
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -86,7 +86,7 @@ if (!env.PLAYWRIGHT_PATH) {
 const child = spawn(process.execPath, [
   path.join(HERE, "room-bot.mjs"), serverUrl, code,
   "--names", bots.map((b) => b.name).join(","), "--dir", DIR,
-  ...["--gpu", "--headed"].filter((flag) => args.includes(flag)),
+  ...["--gpu", "--headed", "--voice"].filter((flag) => args.includes(flag)),
 ], { env, stdio: "inherit" });
 console.log(stamp(), `[fleet] ${count} bots, files in ${DIR}`);
 

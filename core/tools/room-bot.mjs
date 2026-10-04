@@ -25,6 +25,11 @@
 // GL; --headed opens visible windows, the surest way to get one. state.json
 // carries gpuRenderer (the WebGL renderer string: "SwiftShader" means CPU).
 //
+// --voice (#389) gives Chromium a fake microphone that says one made-up
+// word every ~8 s (a WAV generated here) and opens race.html with
+// ?botVoice=1, so the bot publishes real voice like a talking driver: voice
+// load on a phone can be tested without people.
+//
 // Needs Playwright (global install is fine) and a static server for the repo
 // on http://localhost:8080 (e.g. `python3 -m http.server 8080` at the root).
 // Behind an HTTPS-only egress proxy (HTTPS_PROXY set, as in cloud sandboxes)
@@ -64,6 +69,7 @@ const stamp = () => new Date().toISOString().slice(11, 19);
 const GPU = args.includes("--gpu");
 const HEADED = args.includes("--headed");
 const AGENT = args.includes("--agent");
+const VOICE = args.includes("--voice");
 const STATE_EVERY_MS = AGENT ? 500 : 2000;
 
 // --- WebSocket relay (proxied sandboxes only) ------------------------------
@@ -109,12 +115,46 @@ function startRelay(target) {
   return `ws://localhost:${RELAY_PORT}`;
 }
 
+// --- Fake voice (#389) -------------------------------------------------------
+// 8 s of 48 kHz mono PCM: a two-syllable "word" (a falling voiced tone with
+// a vowel-like formant mix, ~0.7 s) then silence. Chromium loops the file.
+function writeVoiceWav(file) {
+  const rate = 48000;
+  const samples = new Int16Array(rate * 8);
+  const syllables = [[0.0, 0.32, 150, 700], [0.38, 0.7, 120, 1100]]; // start s, end s, pitch Hz, formant Hz
+  for (const [start, end, pitch, formant] of syllables) {
+    let phase = 0;
+    for (let i = Math.floor(start * rate); i < end * rate; i++) {
+      const t = (i / rate - start) / (end - start);
+      phase += (2 * Math.PI * pitch * (1 - 0.2 * t)) / rate;
+      const envelope = Math.sin(Math.PI * t) ** 0.6;
+      let v = 0;
+      for (let h = 1; h <= 12; h++) {
+        const freq = h * pitch;
+        const gain = 1 / h * Math.exp(-(((freq - formant) / 400) ** 2)) + 0.15 / h;
+        v += gain * Math.sin(h * phase);
+      }
+      samples[i] = Math.max(-1, Math.min(1, 0.5 * envelope * v)) * 32767;
+    }
+  }
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0); header.writeUInt32LE(36 + samples.byteLength, 4); header.write("WAVE", 8);
+  header.write("fmt ", 12); header.writeUInt32LE(16, 16); header.writeUInt16LE(1, 20); header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(rate, 24); header.writeUInt32LE(rate * 2, 28); header.writeUInt16LE(2, 32); header.writeUInt16LE(16, 34);
+  header.write("data", 36); header.writeUInt32LE(samples.byteLength, 40);
+  fs.writeFileSync(file, Buffer.concat([header, Buffer.from(samples.buffer)]));
+  return file;
+}
+if (VOICE) fs.mkdirSync(DIR, { recursive: true });
+const voiceWav = VOICE ? writeVoiceWav(path.join(DIR, "bot-voice.wav")) : null;
+
 const roomServer = proxy ? startRelay(serverUrl) : serverUrl;
 const browser = await chromium.launch({
   headless: !HEADED,
   args: [
     "--use-fake-device-for-media-stream",
     "--use-fake-ui-for-media-stream",
+    ...(voiceWav ? [`--use-file-for-fake-audio-capture=${voiceWav}`, "--autoplay-policy=no-user-gesture-required"] : []),
     ...(GPU ? ["--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=default", "--enable-gpu-rasterization"] : []),
     ...(proxy ? [`--proxy-server=${proxy.origin}`, "--proxy-bypass-list=localhost;127.0.0.1", "--ignore-certificate-errors"] : []),
   ],
@@ -173,6 +213,7 @@ async function runBot({ name, dir }) {
       if (AGENT) url.searchParams.set("agent", "1");
       else url.searchParams.set("driver", "layered");
       url.searchParams.set("gfx", "low");
+      if (VOICE) url.searchParams.set("botVoice", "1");
       page.goto(url.href).catch((err) => log("goto", err.message));
     }
   });

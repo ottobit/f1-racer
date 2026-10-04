@@ -1531,6 +1531,14 @@ function armEngine() {
   }, ENGINE_FIREUP_MS);
 }
 
+// Talking room bot (#389): room-bot.mjs --voice opens ?botVoice=1 with a
+// fake mic; it publishes voice with no gesture and hears nobody (decoding
+// the others would only cost the bot's CPU).
+if (multiplayer && isBotSession && new URLSearchParams(location.search).get("botVoice") === "1") {
+  multiplayer.setVoicesDeafened(true);
+  multiplayer.startVoice();
+}
+
 if (!isBotSession) {
   engineGateEl.hidden = false;
   window.addEventListener("keydown", armEngine);
