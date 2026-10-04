@@ -36,7 +36,7 @@ import { setupRaceAudio } from "./race-audio.js?v=5";
 import { SoundMix } from "./race-sound-mix.js?v=2";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
-import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=7";
+import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=8";
 import { simplifyMaterials } from "../shared/lite-materials.js?v=1";
 import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=2";
 import {
@@ -343,7 +343,7 @@ document.getElementById("app").appendChild(renderer.domElement);
 // enabled, so normal play never creates or sees the DOM node.
 const diagnostics = setupDiagnosticsOverlay({
   renderer,
-  graphicsProfileId: graphicsProfile.id,
+  graphicsProfileId: `${graphicsProfile.id}${graphicsProfile.antialias ? "" : " noAA"}`,
   extra: () => multiplayer?.voiceDiagnostics ?? "",
 });
 

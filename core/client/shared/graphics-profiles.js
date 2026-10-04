@@ -68,10 +68,17 @@ function detectDefaultProfileId() {
 // 1.5 — the GPU fill work that heats a phone most — at a full 60 fps — and
 // shade matte surfaces and rival cars with cheaper materials (#357, see
 // lite-materials.js).
+// Phones also render without MSAA (#381): the user reported heat in solo
+// play with no audio. `?aa=1|0` forces it either way for an A/B check
+// (this page load only).
 const PHONE_DPR_CAP = 1.25;
+const AA_OVERRIDE = new URLSearchParams(location.search).get("aa");
 function withDeviceExtras(profile) {
+  const antialias = AA_OVERRIDE === "1" || AA_OVERRIDE === "0"
+    ? AA_OVERRIDE === "1" : profile.antialias && !IS_COARSE_POINTER;
   return {
     ...profile,
+    antialias,
     dprCap: IS_COARSE_POINTER ? Math.min(profile.dprCap, PHONE_DPR_CAP) : profile.dprCap,
     softShadows: !IS_COARSE_POINTER,
     frameCapFps: IS_COARSE_POINTER ? 60 : 0,
