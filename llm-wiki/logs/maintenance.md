@@ -2080,3 +2080,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `core/client/style.css`: introduced the wider desktop lobby, read-only guest styling, mobile inline room code, and a stable layout with driver/session controls first and the participant list last so new joins only grow the bottom of the page.
 - No nested participant scroll was added: the room remains capped at ten drivers, so the page scroll stays the single scrolling surface.
 - Release badge set from v356 to v357 across all HTML entry points. Structural/source review only; manual host/guest desktop and mobile verification remains the recommended gameplay check.
+
+## 2026-10-04 — Phones: fewer draw calls and lighter materials at 60 fps (#357)
+
+- `shared/mesh-batch.js` (new): the F1-only batching moved out of `car-model.js`; `buildVehicleModel()` now batches every low-detail Vehicle per group, whatever its kind (F1 42 → 37 meshes, Classiche rivals ~65 → ~20, same triangles).
+- `shared/lite-materials.js` (new), touch devices only (`liteMaterials` profile flag): once the scene is built, matte MeshStandard (roughness ≥ .85, grass/sand/concrete/dry asphalt/rubber) → MeshLambert, rivals' clearcoat MeshPhysical → MeshStandard. Player and cockpit cars untouched; wet asphalt keeps its reflections. Still 60 fps.
+- Wiki: OOP made a standing rule — `wiki/f1-racer/oop.md`, source note, decision entry and an `AGENTS.md` pointer; known debt: series switches in `home/menu.js`.
+- Next lever if still hot: lighter shadows on phones.
+- Verified with `node --check` and a Node script (three local) counting meshes/materials before and after; no browser. Badge 358.

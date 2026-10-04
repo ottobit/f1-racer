@@ -7,9 +7,9 @@ import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=31";
 
-import { createStudioEnvironment } from "../shared/car-model.js?v=36";
+import { createStudioEnvironment } from "../shared/car-model.js?v=38";
 import { VEHICLES } from "../shared/vehicle.js?v=1";
-import { buildVehicleModel } from "../shared/vehicle-view.js?v=1";
+import { buildVehicleModel } from "../shared/vehicle-view.js?v=3";
 import { SERIES, seriesById } from "../shared/series.js?v=2";
 import { applyCarToMesh } from "./race-car-view.js?v=39";
 import { setupRaceInput } from "./race-input.js?v=58";
@@ -35,7 +35,8 @@ import { setupPitCrew } from "./pit-crew.js?v=4";
 import { setupRaceAudio } from "./race-audio.js?v=4";
 import { setupExhaustPops } from "./race-exhaust.js?v=1";
 import { setupRaceWeather } from "./race-weather.js?v=1";
-import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=6";
+import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=7";
+import { simplifyMaterials } from "../shared/lite-materials.js?v=1";
 import { setupDiagnosticsOverlay } from "./race-diagnostics.js?v=1";
 import {
   sampleCenterline,
@@ -1643,6 +1644,7 @@ function startRaceCountdown(seed = null) {
   }, anchorMs));
 }
 
+if (graphicsProfile.liteMaterials) simplifyMaterials(scene, { skip: [playerCar.group, cockpitCar.group] });
 const frameGate = createFrameLimiter(graphicsProfile.frameCapFps);
 
 function animate(now = performance.now()) {

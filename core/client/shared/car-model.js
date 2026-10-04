@@ -348,36 +348,6 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     const hub=mesh(new THREE.CylinderGeometry(.065,.065,.42,10),gold,[0,0,0],wheel);hub.rotation.z=Math.PI/2;
     return wheel;
   });
-  // Batch static parts by material for the ten-car race grid. Wheels stay
-  // separate groups so the existing rolling animation remains intact.
-  if (!detail) {
-    function batch(parent) {
-      const buckets = new Map();
-      parent.children.filter(o => o.isMesh).forEach(o => {
-        o.updateMatrix();
-        const geometry = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone());
-        geometry.applyMatrix4(o.matrix);
-        if (!buckets.has(o.material)) buckets.set(o.material, []);
-        buckets.get(o.material).push(geometry);
-        parent.remove(o); o.geometry.dispose();
-      });
-      for (const [material, geometries] of buckets) {
-        const merged = new THREE.BufferGeometry();
-        for (const key of ['position', 'normal', 'uv']) {
-          // Procedural shells have no UVs; supply zero UVs for solid paint.
-          const size = key === 'uv' ? 2 : 3;
-          const length = geometries.reduce((n,g) => n + g.attributes.position.count * size, 0);
-          const array = new Float32Array(length); let offset = 0;
-          for (const g of geometries) { const a = g.attributes[key]; if (a) array.set(a.array, offset); offset += g.attributes.position.count * size; }
-          merged.setAttribute(key, new THREE.BufferAttribute(array, size));
-        }
-        mesh(merged, material, [0,0,0], parent);
-        geometries.forEach(g => g.dispose());
-      }
-    }
-    batch(group); wheels.forEach(batch);
-    batch(group.getObjectByName('frontWing')); batch(group.getObjectByName('rearWing'));
-  }
   group.scale.setScalar(scale);
   return {group,wheels,steeringPivots,driverSteeringWheel,wheelRadius:.4*scale};
 }
