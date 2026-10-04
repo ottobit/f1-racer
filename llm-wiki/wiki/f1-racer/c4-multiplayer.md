@@ -109,7 +109,7 @@ flowchart TB
     bootstrap["Pre-race reconnect<br/>race-bootstrap.js"]:::component
     adapter["Race sync adapter<br/>race-multiplayer.js"]:::component
     race["Local race simulation<br/>race/main.js"]:::container
-    voice["Voice mesh<br/>voice-chat.js"]:::component
+    voice["Voice chat, MoQ relay<br/>voice-chat.js"]:::component
     session[("Reconnect session<br/>localStorage")]:::data
   end
 

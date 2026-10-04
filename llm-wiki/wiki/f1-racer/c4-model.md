@@ -175,7 +175,7 @@ flowchart TB
     client["Room protocol client<br/>multiplayer/room-client.js"]
     bootstrap["Race bootstrap<br/>multiplayer/race-bootstrap.js"]
     adapter["Race multiplayer adapter<br/>multiplayer/race-multiplayer.js"]
-    voice["Voice mesh client<br/>multiplayer/voice-chat.js"]
+    voice["Voice chat (MoQ relay)<br/>multiplayer/voice-chat.js"]
     race["Local race simulation<br/>race/main.js"]
   end
 
@@ -354,7 +354,7 @@ the same browser input/physics pipeline.
 | Shared with the room server | `core/shared/circuits.js`, `driver-roster.js` |
 | Lobby and browser protocol | `core/client/multiplayer/room.js`, `room-client.js` |
 | Race multiplayer bridge | `core/client/multiplayer/race-bootstrap.js`, `race-multiplayer.js` |
-| Voice mesh | `core/client/multiplayer/voice-chat.js` |
+| Voice chat (MoQ relay, #369) | `core/client/multiplayer/voice-chat.js`, `voice-moq.js` |
 | Room transport | `core/server/room-server.mjs` |
 | Room state machine | `core/server/rooms.mjs` |
 | Agent facade | `core/client/race/agent-api.js`, `driver-providers.js` |
