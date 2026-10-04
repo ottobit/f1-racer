@@ -34,6 +34,7 @@ browser game built with plain HTML/CSS/JavaScript and Three.js.
 - C4 model — game and multiplayer: [c4-model.md](c4-model.md)
 - C4 solo/local — levels 1 to 4: [c4-local.md](c4-local.md)
 - C4 multiplayer — levels 1 to 4: [c4-multiplayer.md](c4-multiplayer.md)
+- C4 voice — WebRTC mesh (current) vs MoQ relay (probe): [c4-voice.md](c4-voice.md)
 - Decisions page: [decisions.md](decisions.md)
 - OOP design rules (apply when developing): [oop.md](oop.md)
 - Agent bots — browser vs headless, usage: [agent-bots.md](agent-bots.md)

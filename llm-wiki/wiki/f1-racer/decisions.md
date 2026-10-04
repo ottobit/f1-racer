@@ -324,3 +324,24 @@ kept in this wiki rather than in agent memory. Rules and checklist:
 [oop.md](oop.md); `AGENTS.md` points every session at it. Trigger: #357
 first batched road cars inside their own builder instead of once for every
 Vehicle in `buildVehicleModel()`.
+
+## Voice transport: WebRTC mesh vs MoQ relay — Open (2026-10-04)
+
+Status: **Open**. The C4 model of both flows is in [c4-voice.md](c4-voice.md).
+
+The problem:
+- Voice is a WebRTC mesh with STUN only. Two phones on mobile networks could
+  not connect, and the HUD showed the red "Audio non disponibile" icon.
+- The usual fix, TURN, costs money past its free tier. Cloudflare has no
+  hard spend cap for TURN, and the user will not risk billing.
+
+The candidate:
+- A public MoQ relay. It needs no account and no card, and it also cuts each
+  phone's uploads from N-1 to 1.
+- #361 shipped `voice-probe.html` to test it on iPhone first.
+
+How it gets decided:
+- If the probe works, voice-chat.js moves to MoQ, with WebRTC kept as a
+  fallback subclass.
+- If it fails on iOS, TURN comes back with anti-abuse gating on the room
+  server: credentials only for active racers, a short TTL and a daily cap.
