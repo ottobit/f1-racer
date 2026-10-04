@@ -2071,3 +2071,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - A first "Risparmio batteria" toggle (low profile at 30 fps, on by default on phones) was dropped before merge: the user wants to play at 60 fps.
 - Next lever if a phone still runs hot: lighter shadows on touch devices, not a lower frame rate.
 - Import chain bumped (graphics-profiles v6 → race/free/garage pages; menu and style also bumped by the dropped toggle). Verified with `node --check` only. Badge 356.
+
+## 2026-10-04 — Phones: fewer draw calls and lighter materials at 60 fps (#357)
+
+- `shared/mesh-batch.js` (new): the F1-only batching moved out of `car-model.js`; `buildVehicleModel()` now batches every low-detail Vehicle per group, whatever its kind (F1 42 → 37 meshes, Classiche rivals ~65 → ~20, same triangles).
+- `shared/lite-materials.js` (new), touch devices only (`liteMaterials` profile flag): once the scene is built, matte MeshStandard (roughness ≥ .85, grass/sand/concrete/dry asphalt/rubber) → MeshLambert, rivals' clearcoat MeshPhysical → MeshStandard. Player and cockpit cars untouched; wet asphalt keeps its reflections. Still 60 fps.
+- Wiki: OOP made a standing rule — `wiki/f1-racer/oop.md`, source note, decision entry and an `AGENTS.md` pointer; known debt: series switches in `home/menu.js`.
+- Next lever if still hot: lighter shadows on phones.
+- Verified with `node --check` and a Node script (three local) counting meshes/materials before and after; no browser. Badge 358.
