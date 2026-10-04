@@ -14,7 +14,6 @@
 // llm-wiki/wiki/f1-racer/roadmap.md).
 
 const STORAGE_KEY = "f1racer-graphics-profile-v1";
-const BATTERY_SAVER_KEY = "f1racer-battery-saver";
 
 export const GRAPHICS_PROFILES = {
   low: {
@@ -65,8 +64,16 @@ function detectDefaultProfileId() {
 // Touch-device extras applied on top of any profile (#159): hard-edged PCF
 // shadows instead of the soft variant, and a 60 fps cap so 90/120 Hz phone
 // screens don't render (and heat up) twice as often for no gameplay gain.
+// Phones also cap the pixel ratio at 1.25 (#355): ~30% fewer pixels than
+// 1.5 — the GPU fill work that heats a phone most — at a full 60 fps.
+const PHONE_DPR_CAP = 1.25;
 function withDeviceExtras(profile) {
-  return { ...profile, softShadows: !IS_COARSE_POINTER, frameCapFps: IS_COARSE_POINTER ? 60 : 0 };
+  return {
+    ...profile,
+    dprCap: IS_COARSE_POINTER ? Math.min(profile.dprCap, PHONE_DPR_CAP) : profile.dprCap,
+    softShadows: !IS_COARSE_POINTER,
+    frameCapFps: IS_COARSE_POINTER ? 60 : 0,
+  };
 }
 
 // Returns a `(now) => boolean` gate for a requestAnimationFrame loop: true
@@ -84,27 +91,6 @@ export function createFrameLimiter(fps) {
   };
 }
 
-// Battery saver (#355): the "low" profile at 30 fps, so a phone stops
-// heating up mid-race. On by default on touch devices; the home page toggle
-// stores the player's choice. A `?gfx=` override still wins (testing).
-export function loadBatterySaver() {
-  try {
-    const v = localStorage.getItem(BATTERY_SAVER_KEY);
-    if (v === "1" || v === "0") return v === "1";
-  } catch {
-    // storage unavailable — use the device default.
-  }
-  return IS_COARSE_POINTER;
-}
-
-export function saveBatterySaver(on) {
-  try {
-    localStorage.setItem(BATTERY_SAVER_KEY, on ? "1" : "0");
-  } catch {
-    // storage unavailable — the choice just won't persist.
-  }
-}
-
 export function loadGraphicsProfile() {
   const override = new URLSearchParams(location.search).get("gfx");
   if (override && GRAPHICS_PROFILES[override]) {
@@ -115,10 +101,6 @@ export function loadGraphicsProfile() {
       // applies for this session, just doesn't persist.
     }
     return withDeviceExtras({ id: override, ...GRAPHICS_PROFILES[override] });
-  }
-
-  if (loadBatterySaver()) {
-    return { ...withDeviceExtras({ id: "low", ...GRAPHICS_PROFILES.low }), frameCapFps: 30, batterySaver: true };
   }
 
   let stored = null;
