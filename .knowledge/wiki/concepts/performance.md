@@ -24,6 +24,9 @@ sources: []
   - scenery instancing density;
   - reflections (the studio PMREM).
   These wait for a real measured bottleneck.
+- **Phones (#381):** no MSAA (`?aa=1|0` to A/B), shadow map ≤512 and
+  only the player's car casts (`applyShadowCasters`, shadow-camera layer
+  1); rivals and scenery cast no shadow there.
 - **User preference:** phones keep full fps. Reduce load by other means,
   never by cutting the frame rate.
 

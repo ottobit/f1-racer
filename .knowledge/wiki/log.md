@@ -2169,3 +2169,11 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - HUD tower: tapping a human rival's name excludes/resumes their voice (name struck through); bots are not tappable.
 - Phone heat not addressed: needs a `?diag=1` measurement and whether it predates MoQ voice.
 - Verified with `node --check` and `git diff --check` only. Badge 380.
+
+## [2026-10-04] cycle | Phone heat: light shadows, no MSAA, one AudioContext fewer (#381)
+
+- User report: heat in multiplayer with voice, then also solo with no audio → rendering is the main load.
+- `graphics-profiles.js`: on touch devices no MSAA (`?aa=1|0` forces it per page load; `?diag=1` shows `noAA`), shadow map ≤512, `shadowCasters: "player"`. `applyShadowCasters()` puts the shadow camera on `PLAYER_SHADOW_LAYER` (1), which only the player's car enables, over a ±14 m area: rivals and scenery cast no shadow on phones. Used by race and free drive.
+- Voice: the local level meter taps `capture.out.root` (no own AudioContext); `VoiceChat.diagnostics` line in `?diag=1` (Opus native/wasm, drivers heard, mic). Known limit: @moq/watch opens one AudioContext per heard driver.
+- Sound mix without full engines: solo low > off, multiplayer low > off > all off.
+- Verified with `node --check` and `git diff --check` only. Badge 382.
