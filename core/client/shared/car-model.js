@@ -1,5 +1,4 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { batchStaticMeshes } from './mesh-batch.js?v=1';
 
 function materialWithRole(material, role) {
   material.userData.carPaintRole = role;
@@ -349,13 +348,6 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
     const hub=mesh(new THREE.CylinderGeometry(.065,.065,.42,10),gold,[0,0,0],wheel);hub.rotation.z=Math.PI/2;
     return wheel;
   });
-  // Batch static parts by material for the ten-car race grid. Wheels stay
-  // separate groups so the existing rolling animation remains intact.
-  if (!detail) {
-    const batch = batchStaticMeshes;
-    batch(group); wheels.forEach(batch);
-    batch(group.getObjectByName('frontWing')); batch(group.getObjectByName('rearWing'));
-  }
   group.scale.setScalar(scale);
   return {group,wheels,steeringPivots,driverSteeringWheel,wheelRadius:.4*scale};
 }

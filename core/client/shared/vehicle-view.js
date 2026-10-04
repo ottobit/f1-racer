@@ -6,8 +6,9 @@
 //   scale, detail: as the builders take them
 //   environmentTexture: studio reflections (race and free drive)
 //   showroom: the garage plinth model (F1 without its driver)
-import { buildCar } from "./car-model.js?v=37";
-import { buildRoadVehicle } from "./vehicle-models.js?v=5";
+import { buildCar } from "./car-model.js?v=38";
+import { buildRoadVehicle } from "./vehicle-models.js?v=6";
+import { batchModel } from "./mesh-batch.js?v=1";
 
 const BUILDERS = {
   f1: (vehicle, colors, { scale, detail, showroom }) => buildCar(colors, {
@@ -22,6 +23,10 @@ const BUILDERS = {
 
 export function buildVehicleModel(vehicle, colors, { scale = 1, detail = false, environmentTexture = null, envMapIntensity = 0.65, showroom = false } = {}) {
   const model = BUILDERS[vehicle.kind](vehicle, colors, { scale, detail, showroom });
+  // Every low-detail vehicle (#357): one mesh per material per group, so a
+  // race grid costs a few draw calls per car whatever its kind. Groups
+  // (wheels, steering, wings) keep their own transforms and animation.
+  if (!detail) batchModel(model.group);
   if (environmentTexture) {
     model.group.traverse((object) => {
       if (object.isMesh) {

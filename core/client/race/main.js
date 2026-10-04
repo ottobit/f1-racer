@@ -7,9 +7,9 @@ import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=31";
 
-import { createStudioEnvironment } from "../shared/car-model.js?v=37";
+import { createStudioEnvironment } from "../shared/car-model.js?v=38";
 import { VEHICLES } from "../shared/vehicle.js?v=1";
-import { buildVehicleModel } from "../shared/vehicle-view.js?v=2";
+import { buildVehicleModel } from "../shared/vehicle-view.js?v=3";
 import { SERIES, seriesById } from "../shared/series.js?v=2";
 import { applyCarToMesh } from "./race-car-view.js?v=39";
 import { setupRaceInput } from "./race-input.js?v=58";
