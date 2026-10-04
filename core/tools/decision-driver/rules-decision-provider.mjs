@@ -23,8 +23,9 @@ export class RulesDecisionProvider extends DecisionProvider {
 
     let line = 0;
     if (closeAhead && strategy?.overtakePolicy !== "follow") {
-      // nearbyCars lateralOffsetMeters is relative to us: positive means the
-      // other car is left of us, so prefer the opposite free side.
+      // nearbyCars lateralOffsetMeters is relative to us along the track
+      // side normal: positive means the other car is to our right, so choose
+      // the opposite free side.
       const otherSide = Math.sign(Number(closeAhead.lateralOffsetMeters) || 0);
       line = otherSide === 0 ? 0.45 : -otherSide * 0.75;
     } else if (mode === "defend" && observation?.gapBehindS != null && observation.gapBehindS < 0.7) {
