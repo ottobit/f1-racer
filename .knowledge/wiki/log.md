@@ -2177,3 +2177,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Voice: the local level meter taps `capture.out.root` (no own AudioContext); `VoiceChat.diagnostics` line in `?diag=1` (Opus native/wasm, drivers heard, mic). Known limit: @moq/watch opens one AudioContext per heard driver.
 - Sound mix without full engines: solo low > off, multiplayer low > off > all off.
 - Verified with `node --check` and `git diff --check` only. Badge 382.
+
+## [2026-10-04] cycle | Easy rivals 10% slower; MSAA back on phones (#383)
+
+- `race/main.js` `DIFFICULTY_PRESETS.facile`: rivals' `maxSpeed`/`accel` x0.9 (was x0.95); the user could not keep up on Altomare (long straights). Normale and Difficile unchanged.
+- `graphics-profiles.js`: phones render with MSAA again; with the light shadows of #381 the user measured no heat difference. `?aa=1|0` still forces it per page load.
+- Heat: no web API exposes temperature on iPhone; Compute Pressure (`PressureObserver`) is Chromium-only and coarse. Use `?diag=1` fps/ms drift as the throttling signal.
+- Verified with `node --check` and `git diff --check` only. Badge 384.
