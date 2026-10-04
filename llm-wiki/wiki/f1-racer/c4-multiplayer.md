@@ -297,7 +297,7 @@ flowchart LR
 
 ## Multiplayer architectural consequences
 
-- The design is lightweight and appropriate for friendly rooms of up to ten
+- The design is lightweight and appropriate for friendly rooms of up to 12
   participants.
 - It does not provide anti-cheat, server reconciliation or deterministic shared
   physics.

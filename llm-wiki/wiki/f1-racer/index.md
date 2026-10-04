@@ -28,7 +28,7 @@ browser game built with plain HTML/CSS/JavaScript and Three.js.
 
 ## Entry Points
 
-- Topic pages (moved from the old `docs/F1-RACER-WIKI.md`, #365):
+- Topic pages (one per subject, #365):
   - [runtime-overview.md](runtime-overview.md) — project map, runtime, session state, limits, principles
   - [car-rendering.md](car-rendering.md) — shared car model, liveries, cockpit, nameplates
   - [driving-model.md](driving-model.md) — physics, DRS, tyres, damage

@@ -1,56 +1,50 @@
-# Engine audio
+# Engine audio and start procedure
 
-> Moved from `docs/F1-RACER-WIKI.md` (#365). Index: [index.md](index.md).
+## Engine (`core/client/race/race-audio.js`)
 
-## 15. Audio
+All engine sound is synthesized with Web Audio; there are no audio files.
 
-`core/client/race/race-audio.js` owns gear mapping and the synthesized engine/shift sound
-(`setupRaceAudio({ getPhase, getThrottle })`), wired from `core/client/race/main.js`
-through getters rather than shared module variables. The phase is "grid"
-(car held on the line: idle, and the throttle free-revs towards launch
-revs), "driving" (in-gear revs from the HUD's gear-relative ratio) or
-"idle" (after the flag, `coolDown()`), so the engine is audible on the
-grid before both qualifying and race start (#50; before that the engine
-only sounded once the car was allowed to move, #10).
-`core/client/race/race-hud.js` calls the returned `updateEngineSound`/
-`playShiftClick`/`updateAmbientChorus` each frame. The engine sound is
-synthesized with Web Audio rather than external audio assets.
+- `setupRaceAudio({ getPhase, getThrottle, engine, field })` is wired from
+  `main.js` through getters. Each frame, `race-hud.js` calls the functions it
+  returns: `updateEngineSound`, `playShiftClick` and `updateAmbientChorus`.
+- `getPhase()` returns one of three phases:
+  - `"grid"`: the car is held on the line and the throttle free-revs;
+  - `"driving"`: the revs follow the gear-relative ratio;
+  - `"idle"`: after the flag, `coolDown()`.
+  The engine is audible on the grid before both qualifying and the race (#50).
+- One engine profile per car (#319, `engineProfile(id)`).
+  - Each profile sets idle, launch, redline, firings per revolution, gear
+    spread, harmonic wave shape and mix levels.
+  - The F1 profile is a 1.6 V6 turbo-hybrid: idle ~4,600 rpm, launch
+    ~10,800 rpm, 9,800–12,400 rpm through each gear.
+  - The road cars have their own revs, timbre and 4- or 5-speed gearbox.
+- Sound layers:
+  - a PeriodicWave for the firing tone;
+  - a sub voice and a half-order voice;
+  - band-passed combustion noise;
+  - a turbo whistle on the F1 only;
+  - tanh saturation, a low-pass driven by load and revs, and a compressor.
+  RPM has inertia, and a fire-up sequence (crank, flare, settle) plays at
+  start.
+- Grid chorus: two cheap detuned voices stand in for the other cars. Their
+  volume grows with how many rivals are near the player (at most 6 counted)
+  and with their speed (#10).
+- Audio starts from the engine gate's user gesture and is suspended while
+  the tab is hidden.
 
-Engine model (#50): a turbo V6 at 15,000 rpm redline fires 3 times per
-revolution, so the fundamental is rpm/20 Hz (idle ~4,600 rpm ~230 Hz,
-launch ~10,800 rpm, in-gear 9,800-12,400 rpm). Layers: a PeriodicWave with
-28 harmonics for the firing tone plus an amplitude "lump" at low revs, a
-sub (f/3) and half-order voice, band-passed combustion noise, a turbo
-whistle, all through tanh saturation and a load/revs-driven low-pass. RPM
-moves with inertia (fast rise, slower fall), and a fire-up sequence
-(crank, flare, settle) plays when the engine is started.
+## Start procedure
 
-Start procedure (#50), modeled on official F1:
-- an "Avvia il motore" gate appears on load: Web Audio can only start
-  after a user gesture, so the first key/tap fires the engine up and only
-  then (1.2s later) the start sequence runs. `?agent=1` sessions skip it;
-- qualifying: real F1 has no standing start in qualifying, the session
-  opens at the pit-exit light, so a single light goes red -> green;
-- race: five red lights come on one per second, then after a random hold
-  (0.2-3s) all go out together — lights out is the start, there is no
-  green. The grid chorus builds revs as the lights fill. In multiplayer
-  the hold is seeded from the server's `raceStartedAt`, so all clients
-  go out together (client clock skew is not compensated);
-- no jump-start detection/penalty yet.
+The start follows official F1 rules (#50, `main.js`):
 
-A second, cheap "grid chorus" voice (two detuned low oscillators, not a
-per-car chain) hints at the other cars' engines: `updateAmbientChorus`
-scales its volume by how many AI cars are within a fixed radius of the
-player (capped at 6 counted voices) and their average speed, so it swells
-at a bunched-up standing start and thins out as the pack spreads around the
-lap (#10).
-
-It uses:
-- three layered oscillators/harmonics;
-- low-pass and high-pass filtering;
-- dynamics compression;
-- speed ratio for volume;
-- gear-relative RPM ratio for pitch/filter;
-- shift click sound.
-
-Audio initializes on the engine gate's user gesture to satisfy browser autoplay restrictions; it is suspended while the tab is hidden.
+- An "Avvia il motore" gate appears on load. Web Audio needs a user gesture,
+  so the first key or tap fires up the engine, and the sequence starts 1.2 s
+  later. `?agent=1` sessions skip the gate.
+- **Qualifying:** one pit-exit light turns red, then green.
+- **Race:**
+  - five red lights come on one per second;
+  - after a random hold of 0.2–3 s, they all go out;
+  - lights out is the start, and there is no green.
+- In multiplayer the hold is seeded from the server's `raceStartedAt`. Client
+  clock skew is not compensated.
+- `startSequenceId` cancels the timers of a sequence that has been replaced.
+- There is no jump-start detection.

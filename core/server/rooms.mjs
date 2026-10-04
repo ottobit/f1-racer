@@ -7,7 +7,7 @@
 // State lives in memory only and resets on process restart — a deliberate,
 // documented Stage 1 limitation (see llm-wiki/wiki/f1-racer/multiplayer-protocol.md), not an oversight.
 //
-// `driverId` reservations are keyed off the same ten identities `main.js`
+// `driverId` reservations are keyed off the same roster identities `main.js`
 // already treats as AI-able (see driver-roster.js); the client-only
 // "player" pseudo-id from driver-selection.js is never a valid value here
 // — solo play and room play are deliberately independent.

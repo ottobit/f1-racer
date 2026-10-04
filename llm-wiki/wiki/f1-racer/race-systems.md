@@ -1,81 +1,71 @@
 # AI, qualifying and race systems
 
-> Moved from `docs/F1-RACER-WIKI.md` (#365). Index: [index.md](index.md).
+## Rival AI (`core/client/race/race-ai.js`, `rival-ai.js`)
 
-## 8. AI
+The AI works in three layers:
+1. It previews the centerline and estimates how severe the coming corner is.
+2. It picks a dynamic lookahead and a racing-line offset.
+3. It sets a corner-speed target: it brakes before bends and accelerates once
+   the preview clears.
 
-AI cars currently have:
-- acceleration;
-- maximum speed;
-- steering/turn rate;
-- damage;
-- DRS;
-- tyre grip;
-- caution speed multiplier;
-- collision avoidance.
+In traffic:
+- a car close ahead triggers a passing-side line;
+- a car close behind triggers a defensive line;
+- short-range avoidance stays on as a safety layer.
 
-The controller now has three layers:
-1. preview the centerline and estimate upcoming corner severity;
-2. choose a dynamic lookahead and a racing-line offset;
-3. use a corner-speed target to brake before bends and accelerate once the preview clears.
+Each rival's parameters come from its car's `stockParams(isRaining)`
+([architecture.md](architecture.md#source-layout-46)).
 
-Traffic is also considered tactically:
-- a nearby car ahead can trigger a passing-side line;
-- a nearby car behind can trigger a defensive line;
-- the existing short-range collision avoidance remains as a safety layer.
+Not modelled:
+- tyre temperature;
+- per-driver error profiles;
+- multi-lap strategy;
+- an overtaking state machine;
+- automatic AI pit stops. They were removed because stopping on the track
+  was confusing; they can return only with a modelled pit lane
+  ([decisions.md](decisions.md)).
 
-### Current limitation
+## Qualifying
 
-AI is now a lightweight racing controller, but it is not yet a full driver model. It does not simulate explicit tyre temperature, individual driver error profiles, multi-lap strategic decisions, or a detailed overtaking state machine.
+- The player qualifies alone: the best completed lap in 60 s counts.
+- In solo play, rival times are synthesized from track length, the AI's top
+  speed and a controlled variance. They are not driven in real time.
+- Those times feed both the timing tower and the grid.
+- The grid order is applied to fixed physical grid slots.
+- Multiplayer: [multiplayer-protocol.md](multiplayer-protocol.md).
 
-Those are future refinements for the race-systems phase.
+## Race systems
 
-## 9. Qualifying
+- Standing start (see [audio.md](audio.md#start-procedure)), laps and
+  classification.
+- Championship points: [championship](#championship).
+- **DRS** is automatic. **ERS** is manual, with recharge and deployment.
+- **Tyres.** Compounds wear out, and wet grip is lower. The player can make
+  a pit stop with crew animation (`pit-crew.js`, `shared/pit-lane.js`).
+- **Damage.** See [driving-model.md](driving-model.md).
+- **Track-limit penalties** and a **caution** state.
+- **Weather.** `race-weather.js` draws clouds and rain particles.
 
-Qualifying is a solo session.
+### Contacts
 
-The player can complete multiple laps and the best completed lap is retained.
+`race/race-collisions.js` handles car-to-car contact:
+- overlap correction plus an equal-mass impulse along the contact normal;
+- both cars lose speed, slide sideways and yaw;
+- capped damage, with a cooldown so one long overlap does not keep adding
+  damage;
+- sparks and player camera shake.
 
-AI qualifying times are synthesized from track length, AI top speed and controlled variance rather than simulated in real time.
+## Ghost lap
 
-The resulting order is applied to fixed physical grid slots.
+- The player's best lap is sampled about every 100 ms (time, x, z, heading).
+- It is saved per circuit in `localStorage` under `f1racer-ghost-v1`, and
+  replayed against the current lap clock.
 
-## 10. Race systems
+## Championship
 
-Already present:
-- standing start;
-- laps;
-- race classification;
-- championship points;
-- DRS;
-- tyre grip/wear representation;
-- damage;
-- track-limit penalties;
-- caution state;
-- ghost lap;
-- minimap;
-- camera modes.
-
-The current race is intentionally lightweight and browser-friendly.
-
-## 12. Ghost lap
-
-The player's best lap is sampled approximately every 100 ms.
-
-Samples contain:
-- time;
-- x;
-- z;
-- heading.
-
-The best lap is persisted in `localStorage` per circuit and replayed against the current lap clock.
-
-This is a useful foundation for future delta/ghost features.
-
-## 16. Championship and persistence
-
-`core/client/shared/championship.js` stores championship progress/results locally.
-
-The race reports final classification and points, then determines the next unraced circuit.
-
-This means the game remains fully client-side.
+- `core/client/shared/championship.js` defines a `Championship` class, with
+  one instance per series (`CHAMPIONSHIPS`, #345).
+- It is stored locally and is entirely client-side.
+- The race reports the classification and points, then the next circuit not
+  yet raced.
+- A multiplayer race skips the solo championship ([decisions.md](decisions.md)).

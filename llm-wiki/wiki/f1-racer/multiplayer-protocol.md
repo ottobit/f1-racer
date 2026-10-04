@@ -1,164 +1,124 @@
 # Multiplayer protocol and room server
 
-> Moved from `docs/F1-RACER-WIKI.md` (#365). Index: [index.md](index.md).
+C4 views:
+- [c4-multiplayer.md](c4-multiplayer.md): rooms and the race;
+- [c4-voice.md](c4-voice.md): voice;
+- [c4-mcp.md](c4-mcp.md): the agent relay.
 
-## Multiplayer: rooms, driver reservation, qualifying and race sync (`server/`, `core/client/multiplayer/room-client.js`, `room.html`, `core/client/multiplayer/race-bootstrap.js`, `core/client/multiplayer/race-multiplayer.js`)
+Design choices (client-authoritative, no AI padding, no solo championship)
+are in [decisions.md](decisions.md). Solo play never opens a socket:
+`race/main.js`'s `multiplayer` is `null`.
 
-Two of #1's staged deliveries so far. Stage 1 (#36): rooms and driver
-reservation. Stage 2 (#44): a real, synced qualifying session and race —
-what Stage 1 deliberately stopped short of. Voice is still a separate
-future issue with its own protocol/infrastructure decisions. This is the
-**first backend this project has ever had**; everything else in this
-codebase is still a zero-build static site, and solo race/garage/qualifying
-stay entirely local-only regardless of whether the room server is
-reachable — see `core/client/race/main.js`'s `multiplayer` variable (`null` for solo).
+## Room state machine (`core/server/rooms.mjs`)
 
-`core/server/rooms.mjs` is a pure room/participant state machine — plain JS
-`Map`s in memory, no sockets, no database, no framework. State resets on
-process restart; that's a deliberate Stage 1 limitation (casual, short-lived
-rooms among friends), not an oversight to fix later without saying so.
-Every function takes a `store` plus plain data and returns plain data, so
-it's directly unit-testable (`createStore`, `createRoom`, `joinRoom`,
-`reconnectParticipant`, `reserveDriver`/`releaseDriver`, `setReady`,
-`startRace`, `leaveRoom`, `markDisconnected`, `toPublicRoom`). Reservable
-driver ids are exactly `core/shared/driver-roster.js`'s ten `rival-*` entries — the
-client-only `"player"` pseudo-id `core/client/shared/driver-selection.js` uses for solo play is
-never a valid room driverId; solo and room identity are deliberately
-independent, neither reads nor writes the other's `localStorage` key.
+- **Pure functions.** Each takes a `store` plus plain data and returns plain
+  data, with no sockets and no database:
+  - `createRoom`, `joinRoom`, `reconnectParticipant`;
+  - `reserveDriver` / `releaseDriver`, `setReady`;
+  - `setCircuit` (circuit, difficulty, `qualifying` true/false);
+  - `startRace`, `finishQualifying`, `reportQualiTime`;
+  - `reportFinish`, `rematch`, `leaveRoom`, `markDisconnected`;
+  - `toPublicRoom`.
+- **Memory only.** State lives in memory and resets when the process
+  restarts. This is deliberate for casual rooms.
+- **Driver ids.** The reservable ids are the 12 `rival-*` entries of
+  `core/shared/driver-roster.js` (`MAX_PARTICIPANTS`). The solo pseudo-id
+  `"player"` is never valid. Solo and room identities use separate storage
+  keys.
+- **Phases:** `lobby` → `qualifying` → `racing`.
+  - **`startRace`** is host-only. It needs a circuit, a chosen format, and
+    every participant reserved and ready.
+  - **Race only** (`qualifying: false`, #107): the grid is shuffled and
+    racing starts at once.
+  - **With qualifying:** the server's own timer (`ROOM_QUALI_MS`, default
+    `QUALIFYING_DURATION_MS` = 60 s) calls `finishQualifying()`. The grid
+    is fastest first, and drivers with no time go to the back.
+  - **`reportFinish`** (#113): the first report wins, so the shared result
+    is the order in which finishes reached the server.
+  - **`rematch`** (#113): host-only. It goes back to the lobby, keeping
+    drivers and circuit and resetting ready, times and finishes.
+- **Disconnect grace.** A closed socket starts a grace timer
+  (`ROOM_GRACE_MS`, default 30 s).
+  - A reconnect within it reclaims the slot.
+  - When it expires, the participant is removed. If they were host, the
+    longest-connected participant is promoted.
+  - Clients grey out a disconnected driver (nameplate, timing tower).
+  - An empty room is deleted and its 4-character code freed.
 
-`core/server/room-server.mjs` is a thin WebSocket transport (`ws` package) around
-`core/server/rooms.mjs`: parses JSON envelopes (`{type, reqId, ...}`), calls straight
-into the pure state machine, sends a direct `reqId`-correlated response or
-`error{code,message}`, and broadcasts a full `room_state` snapshot to every
-socket bound to that room on any change. Message types: `create_room`,
-`join_room`, `reconnect` (needs the saved `{roomCode, participantId,
-reconnectToken}`), `reserve_driver`/`release_driver`, `set_ready`,
-`set_circuit` (**host-only**, Stage 2), `start_race` (**host-only**; Stage 2
-requires a chosen circuit and every participant driver-reserved + ready,
-and now genuinely begins a timed qualifying session — see below — not just
-a bare confirmation), `report_quali_time` (Stage 2, keeps only a
-participant's best), `car_state` (Stage 2, ephemeral — relayed straight to
-the room's other sockets, never stored in `core/server/rooms.mjs`), `leave_room`
-(immediate slot release), `ping`/`pong` (heartbeat). A closed socket doesn't
-release its slot immediately: `markDisconnected` starts a grace timer
-(`ROOM_GRACE_MS`, default 30s) during which the participant's `driverId` is
-retained; a `reconnect` within that window cancels the timer and reclaims
-the slot, while an expiry deletes the participant outright (freeing their
-driver) and, if they were host, promotes the longest-connected remaining
-participant so a room is never stuck without start authority — and, during
-a race, is what a client-side "disconnected" grey-out (nameplate, timing
-tower) is keyed off, unchanged from Stage 1. An emptied room is deleted and
-its 4-character code freed for reuse. Qualifying itself is timed by this
-transport layer's own `setTimeout` (`ROOM_QUALI_MS`, defaults to matching
-solo's 60s) — see `finishQualifying()` below — so every client transitions
-to racing off one server clock, not whichever browser's local countdown
-happens to reach zero first. Run locally with `npm run start:room-server`
-(`PORT`, `ROOM_GRACE_MS`, `ROOM_QUALI_MS` env vars optional) — opt-in,
-separate Node process, never imported by `race.html`/`garage.html`/
-`index.html`.
+## Transport (`core/server/room-server.mjs`)
 
-`core/client/multiplayer/room-client.js` is the browser-side protocol client — plain WebSocket,
-`reqId`-correlated promises, a `roomCode/participantId/reconnectToken`
-session persisted under its own `f1racer-room-session-v1` localStorage key
-(never touching `f1racer-selected-driver-v1` or championship state), and a
-`tryResume()` that silently no-ops if nothing was saved, so a first-time
-visitor never opens a socket before choosing to create or join. The server
-URL comes from `?roomServer=` (default `ws://localhost:8787` — a
-placeholder until Stage 1 is actually deployed somewhere reachable),
-mirroring the existing `?agent=1`/`?diag=1`/`?gfx=` query-param convention.
+- **Envelopes.** Messages are JSON `{type, reqId, ...}`. Every request gets
+  a `reqId`-correlated reply or `error{code,message}`.
+- **Room state.** Every change broadcasts a full `room_state` to the room.
+- **Message types:**
+  - **Room:** `create_room`, `join_room`, `reconnect`, `reserve_driver`,
+    `release_driver`, `set_ready`, `set_circuit` (host),
+    `start_race` (host), `rematch` (host), `leave_room`.
+  - **Session:** `report_quali_time`, `report_finish`.
+  - **Relayed, never stored:**
+    - `car_state`: ~12/s per client;
+    - `voice_signal`: forwarded `{to, data}` unchanged.
+  - **Agent relay:** `agent_bridge_register`, `agent_attach`, `agent_call`,
+    `agent_result` ([c4-mcp.md](c4-mcp.md)).
+  - **Heartbeat:** `ping` / `pong`.
+- **Running it:**
+  - locally: `npm run start:room-server` from `core/`, with `PORT`,
+    `ROOM_GRACE_MS` and `ROOM_QUALI_MS` optional;
+  - hosted: on Render (`service/README.md`);
+  - the free plan sleeps after 15 idle minutes and takes ~1 minute to wake.
 
-`room.html`/`core/client/multiplayer/room.js` is the lobby page: nickname, create/join, a live
-participant list (name, reserved driver, ready state, host crown, a
-"riconnessione…" tag during another participant's grace period), a driver
-grid modeled on `core/client/home/menu.js`'s `renderDriverSelect()` (taken slots disabled and
-labeled, a livery colour dot per driver via `core/client/shared/driver-themes.js`'s
-`liveryById`), a ready toggle, a host-only circuit/difficulty picker (Stage
-2 — plain `<select>`s, not the home's carousel), and a host-only "Avvia"
-button (disabled until a circuit is chosen and everyone is ready) that now
-navigates every participant's tab to `race.html?circuit=...&difficulty=...
-&room=...` once qualifying actually begins. `index.html` promotes it to one
-of the two dominant `home-command` cards ("Corri in multiplayer", #40) —
-see `decisions.md`'s "Home and Circuit Selection" section for that history.
+## Browser side (`core/client/multiplayer/`)
 
-**Stage 2's bridge into the actual race** — `core/client/multiplayer/race-bootstrap.js` and
-`core/client/multiplayer/race-multiplayer.js`, both new:
-- `core/client/multiplayer/race-bootstrap.js` is `race.html`'s real script entry point now (not
-  `core/client/race/main.js` directly). `core/client/race/main.js`'s own top-level code is entirely
-  synchronous — it builds the whole Three.js scene top-to-bottom in one
-  pass — and was never rewritten to be async. So if `?room=CODE` is present
-  and a saved room session exists, this bootstrap `await`s the WebSocket
-  reconnect *first*, hands the already-connected client to `core/client/race/main.js` via a
-  one-shot `window.__mpClient`, and only then dynamically `import()`s
-  `core/client/race/main.js`. Solo play (no `?room=`) skips straight to importing it.
-- `core/client/multiplayer/race-multiplayer.js`'s `setupMultiplayer()` wraps that already-connected
-  client into the small synchronous API `core/client/race/main.js` actually calls:
-  `getRemoteDrivers()`, `getRemoteSample(participantId)`,
-  `broadcastState(data)` (throttled to ~12/s internally),
-  `reportQualiTime(ms)`, `onGridReady(cb)`, `isDriverDisconnected(driverId)`.
-  Returns `null` for solo play or an unresumable session — mirrors
-  `core/client/race/agent-api.js`'s `?agent=1` opt-in shape.
+- **`room-server.js` (#333): which server a page uses.**
+  - The public site uses `HOSTED_ROOM_SERVER` (`wss://f1-racer-rooms.onrender.com`).
+  - A page served from localhost uses `ws://localhost:8787`.
+  - `?roomServer=` overrides both. It accepts `https://`, `http://` or a
+    bare host.
+  - `wakeRoomServer()` pings `/health` as soon as the page opens.
+- **`room-client.js`: the protocol client.**
+  - It uses `reqId` promises.
+  - It saves the session (`roomCode`, `participantId`, `reconnectToken`)
+    under `f1racer-room-session-v1`.
+  - `tryResume()` does nothing when no session is saved.
+- **`room.html` / `room.js`: the lobby.**
+  - Nickname, create or join, and the participant list (driver, ready,
+    host crown, "riconnessione…").
+  - A driver grid with taken slots disabled.
+  - Host-only pickers for circuit, difficulty and format, plus "Avvia".
+  - When the race starts, every tab goes to
+    `race.html?circuit=…&difficulty=…&room=…`.
+- **`race-bootstrap.js`: `race.html`'s real entry point.**
+  - With `?room=`, it awaits the WebSocket reconnect first.
+  - It hands over the client through the one-shot `window.__mpClient`.
+  - Only then does it `import()` `main.js`, which stays synchronous.
+- **`race-multiplayer.js`: what `main.js` calls.** `setupMultiplayer()`
+  returns:
+  - `getRemoteDrivers()`, `getRemoteSample(id)`;
+  - `broadcastState()`, throttled to ~12/s;
+  - `reportQualiTime()`, `onGridReady(cb)`, `isDriverDisconnected(id)`.
 
-Inside `core/client/race/main.js`, every multiplayer touchpoint is an explicit branch on one
-`multiplayer` variable (`null` for solo): `AI_DRIVERS` comes from the room's
-other participants instead of `DRIVER_ROSTER`-minus-self (no AI padding —
-see decisions.md); each resulting `aiCars` entry is tagged `isRemote`/
-`participantId` and updated every frame by `updateRemoteCar()` (pulls
-smoothly toward the latest `car_state` sample, then calls the same
-`advanceProgress()` everyone else's lap/position bookkeeping already used)
-instead of `updateAiCar()`'s steering AI. `currentRaceOrder`,
-`applyGridPositions`, DRS eligibility, car collisions, the HUD position/
-timing tower and the nameplates all already worked generically over
-`aiCars` and needed no structural changes — `core/client/race/race-hud.js` and
-`core/client/race/race-nameplates.js` only gained an optional `isDisconnected` check for the
-grey-out treatment, and `core/client/race/race-hud.js` gained a `getQualifyingRivals` getter
-alongside its old static `qualifyingRivals` array, since multiplayer's live
-participant times change over the session where solo's synthesized AI times
-don't. Qualifying itself still runs locally exactly like solo (own flying
-laps, own best time, own lap-completion detection) but reports each
-improved time to the room instead of only keeping it locally, and never
-self-triggers the qualifying-to-racing transition — that only ever fires
-from `multiplayer.onGridReady()`, once, when the server's own timer
-broadcasts the real grid. `finishRace()` skips the solo championship
-entirely for a multiplayer session — see decisions.md for why.
+## Inside the race (`race/main.js`)
 
-Verified with a real WebSocket server and real headless-browser clients
-(Playwright, two separate browser contexts against the actual
-`core/server/room-server.mjs` process, `three.js` served from the local `node_modules`
-copy since this sandbox's network policy blocks the CDN it normally loads
-from): room creation/join, live broadcast of a driver reservation, a taken
-driver rejected with a clear error, "Avvia" staying disabled until a
-circuit is chosen and everyone is ready, both participants navigating to
-`race.html` with matching circuit/difficulty/room params, the
-server-timed qualifying-to-racing transition actually firing, a real
-computed grid, the race position/timing tower showing genuine live
-classification for both cars, the remote participant's nameplate visible
-and moving, and — after closing one browser context mid-race — the
-remaining client's nameplate and timing-tower row for that participant
-turning grey once the existing grace window expired. A separate real-
-browser run confirmed solo play (no `?room=`) is completely unaffected: no
-page errors, the qualifying HUD/tower/synthesized-AI list all render, and
-acceleration responds normally. `core/server/rooms.mjs`'s pure functions are
-additionally covered by direct unit checks (`setCircuit` host/validation
-gating, `startRace`'s new "everyone driver-reserved and ready" requirement,
-`reportQualiTime` keeping only the best, `finishQualifying`'s DNF-to-the-
-back grid ordering, idempotency once already racing) — 12/12 passing,
-alongside Stage 1's original 20/20.
+- **Rivals.** The rivals are the other participants, with no AI padding.
+- **Remote cars.** Each one is an `aiCars` entry with `isRemote` and
+  `participantId`. `updateRemoteCar()` smoothly pulls it towards the latest
+  `car_state` sample. After that, the shared code handles it like any other
+  car: progress, order, DRS, collisions, HUD and nameplates.
+- **Qualifying.** It runs locally as in solo play. Each better lap is
+  reported to the room, and only `onGridReady()` moves the session to the
+  race.
+- **Lights.** The hold of the start lights is seeded from `raceStartedAt`
+  ([audio.md](audio.md#start-procedure)).
+- **Championship.** `finishRace()` skips the solo championship.
 
-**What this still hasn't verified, and isn't hiding**: no test here actually
-drove a multiplayer race to its final lap (would need sustained scripted
-driving matching each circuit's line, not just holding the accelerator) —
-the transition and live sync are verified, the finish line isn't. Real
-phones/separate networks were verified for Stage 1's rooms (see below) but
-not re-verified for Stage 2's qualifying/race sync specifically — this
-round reused the same sandbox two-browser-context method. Collision
-behavior between the local car and a network-driven remote car hasn't been
-watched by eye (expected to be a harmless one-frame jitter, corrected by
-the next network sample — see `architecture.md`).
+## Verification status
 
-**What Stage 1's rooms verified live, beyond this sandbox**: on
-2026-09-23 the user connected a real phone and a real PC, on separate
-networks, to the same room through the room server tunneled with `ngrok
-http` (not Render itself yet, but the same `wss://` path a real deployment
-uses) — real cross-device reachability, not just two browser contexts on
-one machine. See `roadmap.md` for the hosting decision (Render, chosen by
-the user) that stays open until this goes properly live.
+- **Verified:**
+  - two headless browser contexts against the real server, from room
+    creation through the qualifying-to-race switch, live order and the
+    disconnect grey-out;
+  - a real phone and a PC on separate networks through a tunnel (Stage 1,
+    2026-09-23).
+- **Not verified:**
+  - a full race to the flag driven by a script;
+  - a contact between a local car and a remote car, watched by eye.

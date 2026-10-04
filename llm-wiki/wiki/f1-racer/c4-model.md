@@ -321,7 +321,7 @@ probe) are modelled in [c4-voice.md](c4-voice.md).
 - Room state disappears on server restart; there is no database or distributed
   room coordination.
 - Finish order and qualifying time depend on trusted client reports.
-- Voice uses a full peer mesh. At the current limit of ten participants this is
+- Voice uses a full peer mesh. At the current limit of 12 participants this is
   simple, but connection count grows quadratically and no TURN server is
   configured.
 - `main.js` is still a large composition root that combines world construction,

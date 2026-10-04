@@ -1,17 +1,54 @@
-# Garage setup
+# Garage
 
-> Moved from `docs/F1-RACER-WIKI.md` (#365). Index: [index.md](index.md).
+## F1 garage (`garage.html`, `core/client/garage/`)
 
-## Garage setup
+- **Files:**
+  - `garage.js`: the UI;
+  - `showroom.js`: the Three.js stage;
+  - `core/client/shared/garage-setup.js`: the shared data and physics
+    contract.
+- **Storage:** setups persist under `f1racer-garage-v1`. `loadGarageSetup()`
+  keeps only known part and variant pairs.
+- **Parts:** five component families (front wing, rear wing,
+  floor/diffuser, brakes, suspension), with three trade-off variants each.
+  They produce modifiers for speed, downforce, braking, stability, traction
+  and runoff. `race/main.js` reads these at race start, so they change real
+  physics.
+- **Visual previews:**
+  - wing, floor, spring and caliper choices change the showroom car;
+  - selecting a part frames that assembly.
+- **Interaction:**
+  - parts are mounted by drag-and-drop onto five labelled zones, or by tap;
+  - only the matching zone highlights.
+- **Live stats:** the five live parameters show as a translucent overlay on
+  the stage.
+- **Recommended setup per circuit:**
+  - `core/shared/circuits.js` stores it, with a rationale;
+  - the circuit selected on home is persisted, and the garage shows the
+    difference from the recommendation;
+  - applying it is always an explicit action.
+- **Layout:**
+  - desktop: a scrolling pane beside a fixed stage;
+  - portrait mobile: the stage above a pane that scrolls on its own.
+- **Livery:** follows the selected driver's team, with no picker
+  ([car-rendering.md](car-rendering.md)).
 
-`garage.html` + `core/client/garage/garage.js` provide an interactive Three.js setup bay with a 360° rotatable open-wheel car. Components can be mounted by drag-and-drop or click/tap. `core/client/shared/garage-setup.js` is the shared data/physics contract and persists the setup under `f1racer-garage-v1`.
+## Showroom (`garage/showroom.js`)
 
-Five component families each expose three trade-off variants: front wing, rear wing, floor/diffuser, brakes and suspension. The setup produces modifiers for speed, downforce, braking, stability, traction and runoff behaviour. `core/client/race/main.js` reads these modifiers at race startup, so Garage choices alter actual race physics rather than only UI stats. Front/rear wing choices also alter the Garage car geometry for immediate visual feedback.
+- Uses the same studio environment as the race, plus ACES tone mapping, a
+  shadowed spotlight, a metal platform and a backdrop.
+- Camera:
+  - four camera presets plus orbit by pointer or touch;
+  - auto-rotation turns off under the reduced-motion preference;
+  - presets must not orbit beyond z = −8, behind the backdrop.
+- `createShowroom` takes:
+  - an optional `graphicsProfile` ([performance.md](performance.md)); the
+    fallback is the old 760 px viewport check;
+  - an optional `onFrame(dt)`, used by the `?diag=1` overlay.
+- Hidden tabs skip rendering.
 
-Each circuit carries a data-driven recommended setup and a short rationale.
-The selected carousel circuit is persisted and passed into the Garage, which
-compares all five current components with the recommendation. Applying the
-preset is explicit; manual tuning remains free.
-The five live setup parameters are rendered as a compact translucent overlay on
-the car stage, with label, bar and numeric value, rather than consuming vertical
-space in the scrolling component panel.
+## Road-car garage
+
+The Classiche cars have their own garage UI with different parts:
+`core/client/shared/road-garage.js` (`ROAD_PARTS`, `roadSetupParams`). See
+[classic-series.md](classic-series.md).
