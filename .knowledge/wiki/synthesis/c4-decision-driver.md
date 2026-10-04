@@ -3,6 +3,7 @@ type: synthesis
 updated: 2026-10-04
 sources:
   - ../sources/2026-10-04-provider-agnostic-decision-driver-discussion.md
+  - ../sources/2026-10-04-decision-driver-render-test.md
   - ../sources/2026-10-01-ollama-jev-decision-models.md
 ---
 
@@ -341,3 +342,107 @@ and is irrelevant to this boundary.
 - Decision cadence and intent lease defaults.
 - Confidence semantics.
 - Jev median/p95 latency and quality against a deterministic rules baseline.
+
+
+## OOP implementation plan
+
+The implementation follows [the project OOP rules](../concepts/oop.md):
+variants sit behind one interface and callers do not switch on concrete types.
+
+```text
+DecisionProvider
+  ├─ RulesDecisionProvider       deterministic baseline
+  ├─ JevDecisionProvider         first model adapter
+  └─ future providers
+
+AgentPort
+  ├─ RelayAgentPort              existing agent relay / AgentBridgeClient
+  ├─ McpAgentPort                remote MCP transport
+  └─ future transports
+
+DriverOrchestrator(provider, port)
+  └─ coordinates observation → decision → intent
+
+DriveController
+  └─ one provider-neutral browser-local controller
+```
+
+A factory/composition root may select implementations once from configuration.
+After construction, neither `DriverOrchestrator` nor race/physics code may
+contain provider/transport type switches.
+
+Development order:
+
+1. value contracts (`DrivingObservation`, `DrivingIntent`);
+2. `DecisionProvider` and `AgentPort` families;
+3. `RulesDecisionProvider` baseline;
+4. `RelayAgentPort` over the existing agent relay;
+5. browser-local `DriveController`;
+6. full-lap baseline test;
+7. `JevDecisionProvider`;
+8. same-observation rules-vs-Jev comparison.
+
+## Test deployment — reuse the existing Render backend
+
+**Feasible and preferred for the first test**, provided Render stays the room
+and agent-relay backend rather than becoming the inference host.
+
+```mermaid
+flowchart LR
+  runner["Local driver runner<br/>DriverOrchestrator + DecisionProvider"]:::new
+  render["Existing Render service<br/>room-server.mjs<br/>room + agent relay"]:::existing
+  pages["GitHub Pages<br/>race.html?agent=1"]:::existing
+  controller["Browser-local DriveController<br/>NEW"]:::new
+  physics["race-input + physics<br/>EXISTING"]:::existing
+
+  runner -->|"AgentPort / relay"| render
+  render <-->|"normal room socket + agent bridge"| pages
+  pages --> controller
+  controller --> physics
+  physics -. "observation" .-> pages
+
+  classDef existing fill:#2e7d32,color:#fff,stroke:#1b5e20
+  classDef new fill:#9a6700,color:#fff,stroke:#6f4b00
+```
+
+The current Render service already provides the exact provider-neutral duties
+needed here: room lifecycle, participant binding and command/result relay.
+
+For the first Jev experiment, run the model and driver runner locally and reuse
+the deployed Render backend. Do **not** put Jev/model inference in
+`room-server.mjs`: that would couple room availability to a provider and
+break the current responsibility boundary.
+
+The existing `agent-mcp-http.mjs` remains a separate optional transport.
+A local Jev test does not need a second Render service: `RelayAgentPort` can
+wrap the existing `AgentBridgeClient` directly. When a remote MCP-native
+client is the decision source, `McpAgentPort` can use the current MCP process.
+
+This matters operationally because the current free Render room service is
+already configured to consume almost the whole monthly free-hour allowance;
+the architecture must not assume a second free Render web service.
+
+### First end-to-end acceptance test
+
+The first meaningful test is:
+
+```text
+RulesDecisionProvider
+        ↓
+DriverOrchestrator
+        ↓
+RelayAgentPort
+        ↓
+existing Render room/agent relay
+        ↓
+GitHub Pages agent browser
+        ↓
+DriveController
+        ↓
+existing input/physics
+```
+
+Then replace only `RulesDecisionProvider` with `JevDecisionProvider`.
+
+If that swap requires no change to Render, `AgentPort`, `DriveController`
+or physics, provider agnosticism has been demonstrated rather than assumed.
