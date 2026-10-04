@@ -8,7 +8,8 @@
     "check:boundaries": "node tools/check-boundaries.mjs",
     "start:room-server": "node server/room-server.mjs",
     "start:agent-mcp": "node tools/agent-mcp-server.mjs",
-    "start:agent-mcp:http": "node tools/agent-mcp-http.mjs"
+    "start:agent-mcp:http": "node tools/agent-mcp-http.mjs",
+    "start:decision-driver": "node tools/decision-driver/decision-driver.mjs"
   },
   "dependencies": {
     "node-cron": "3.0.3",
