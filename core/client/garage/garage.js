@@ -8,7 +8,7 @@ import {
 import { createShowroom } from "./showroom.js?v=48";
 import { mountRoadGarage } from "./road-garage-ui.js?v=7";
 import { VEHICLES, vehicleById } from "../shared/vehicle.js?v=1";
-import { SERIES, loadSeries } from "../shared/series.js?v=2";
+import { SERIES, loadSeries } from "../shared/series.js?v=3";
 import { getCircuit } from "../../shared/circuits.js?v=41";
 import { loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { loadGraphicsProfile } from "../shared/graphics-profiles.js?v=7";

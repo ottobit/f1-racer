@@ -3,7 +3,7 @@ import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
 import { SELECTABLE_DRIVER_IDS, loadSelectedDriverId, saveSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { CLASSIC_ROSTER, loadClassicDriverId, saveClassicDriverId } from "../shared/classic-series.js?v=4";
-import { SERIES, loadSeries, saveSeries } from "../shared/series.js?v=2";
+import { SERIES, loadSeries, saveSeries } from "../shared/series.js?v=3";
 import { VEHICLES } from "../shared/vehicle.js?v=1";
 import { wakeRoomServer } from "../multiplayer/room-server.js?v=1";
 
@@ -184,8 +184,7 @@ function renderClassicDriverSelect() {
       ><span>${String(index + 1).padStart(2, "0")}</span><strong>${driver.name}<small>Monomarca ${VEHICLES[driver.car].label}</small></strong></button>
     `;
   }).join("");
-  document.getElementById("series-tab-f1").classList.toggle("is-series", series === SERIES.f1);
-  document.getElementById("series-tab-classic").classList.toggle("is-series", series === SERIES.classic);
+  for (const each of Object.values(SERIES)) seriesTab(each).classList.toggle("is-series", each === series);
 }
 
 document.getElementById("classic-driver-select").addEventListener("click", (e) => {
@@ -202,6 +201,8 @@ document.getElementById("classic-driver-select").addEventListener("click", (e) =
 // scroll and scroll to their page on tap.
 const seriesPages = document.getElementById("series-pages");
 const seriesTabs = [...document.querySelectorAll("[data-series-page]")];
+// Each series' tab is `series-tab-<id>`; its page index is on the tab.
+const seriesTab = (each) => document.getElementById(`series-tab-${each.id}`);
 function markSeriesTab() {
   const page = Math.round(seriesPages.scrollLeft / Math.max(seriesPages.clientWidth, 1));
   seriesTabs.forEach((tab, i) => tab.setAttribute("aria-selected", String(i === page)));
@@ -243,7 +244,7 @@ function render() {
     bannerEl.hidden = false;
     bannerEl.textContent =
       champion.id === playerId
-        ? `🏆 Hai vinto il campionato ${series === SERIES.f1 ? "del mondo" : series.label} con ${series.driverName("player", playerId)}!`
+        ? `🏆 Hai vinto il campionato ${series.championshipName} con ${series.driverName("player", playerId)}!`
         : `Campionato ${series.label} concluso: vince ${champion.name}. Azzera e riprova.`;
   } else {
     bannerEl.hidden = true;
@@ -336,7 +337,7 @@ document.getElementById("reset-btn").addEventListener("click", () => {
 
 render();
 // Open on the page of the series you race.
-if (series === SERIES.classic) seriesPages.scrollLeft = seriesPages.clientWidth;
+seriesPages.scrollLeft = Number(seriesTab(series).dataset.seriesPage) * seriesPages.clientWidth;
 markSeriesTab();
 
 // Wake the hosted room server early (#333): a free Render instance takes
