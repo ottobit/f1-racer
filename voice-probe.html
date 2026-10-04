@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#05060a" />
+  <title>Prova voce — F1 Racer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>" />
+  <meta name="description" content="F1 Racer — prova della chat vocale tramite relay MoQ." />
+  <style>
+    body { margin: 0; padding: 16px; background: #05060a; color: #e8eef3; font: 16px/1.4 system-ui, sans-serif; }
+    main { max-width: 520px; margin: 0 auto; display: grid; gap: 16px; }
+    h1 { font-size: 1.3rem; margin: 0; }
+    p { margin: 0; color: #9fb3c1; }
+    section { background: #102331; border-radius: 10px; padding: 12px 14px; }
+    h2 { font-size: 1rem; margin: 0 0 8px; }
+    ul { margin: 0; padding-left: 18px; }
+    .probe-missing { color: #ff6b5b; }
+    form { display: grid; gap: 10px; }
+    label { display: grid; gap: 4px; }
+    input, select, button { font: inherit; padding: 10px; border-radius: 8px; border: 1px solid #2c4a5e; background: #0b1822; color: inherit; }
+    .probe-inline { display: flex; align-items: center; gap: 8px; }
+    .probe-inline input { width: auto; }
+    .probe-buttons { display: flex; gap: 10px; }
+    .probe-buttons button { flex: 1; }
+    #probe-start { background: #3ddc84; color: #05060a; border: 0; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Prova voce (MoQ)</h1>
+    <p>Telefono 1 sceglie A, telefono 2 sceglie B, stesso codice. Da solo: spunta "Eco" e devi sentire la tua voce con un attimo di ritardo.</p>
+    <section>
+      <h2>Questo browser</h2>
+      <ul id="probe-support"><li>controllo…</li></ul>
+    </section>
+    <form id="probe-form">
+      <label>Relay
+        <select name="relay">
+          <option value="https://relay.cloudflare.mediaoverquic.com">Cloudflare</option>
+          <option value="https://cdn.moq.dev/anon">moq.dev</option>
+        </select>
+      </label>
+      <label>Codice
+        <input id="probe-code" name="code" autocomplete="off" autocapitalize="off" />
+      </label>
+      <label>Ruolo
+        <select name="role">
+          <option value="a">A</option>
+          <option value="b">B</option>
+        </select>
+      </label>
+      <label class="probe-inline"><input type="checkbox" name="echo" /> Eco (prova da solo)</label>
+      <div class="probe-buttons">
+        <button id="probe-share" type="button">Condividi link</button>
+        <button id="probe-start" type="submit">Avvia prova</button>
+      </div>
+    </form>
+    <section>
+      <h2>Stato</h2>
+      <ul id="probe-status"><li>non avviata</li></ul>
+    </section>
+  </main>
+  <script type="module" src="core/client/multiplayer/voice-probe.js?v=1"></script>
+  <script src="core/client/shared/version.js?v=360" defer></script>
+</body>
+</html>
