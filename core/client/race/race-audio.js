@@ -161,6 +161,7 @@ export function setupRaceAudio({ getPhase, getThrottle, engine = "f1", field = e
   let gridIntensity = 0.3;
   let coolingDown = false;
   let lastPhase = null;
+  let volume = 1; // 0..1, the sound mix's engine level (#379)
 
   function firingWave({ n, decay, even, boost, every, everyBoost }) {
     const real = new Float32Array(n);
@@ -193,7 +194,7 @@ export function setupRaceAudio({ getPhase, getThrottle, engine = "f1", field = e
 
   function arm() {
     if (ctx) {
-      if (ctx.state === "suspended") ctx.resume();
+      if (ctx.state === "suspended" && volume > 0) ctx.resume();
       return;
     }
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -202,7 +203,7 @@ export function setupRaceAudio({ getPhase, getThrottle, engine = "f1", field = e
     const wave = firingWave(E.wave);
 
     master = ctx.createGain();
-    master.gain.value = 0.9;
+    master.gain.value = 0.9 * volume;
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16;
     comp.knee.value = 10;
@@ -269,10 +270,11 @@ export function setupRaceAudio({ getPhase, getThrottle, engine = "f1", field = e
 
     rpm = 0;
     startupAt = ctx.currentTime;
+    if (volume === 0) ctx.suspend();
     document.addEventListener("visibilitychange", () => {
       if (!ctx) return;
       if (document.hidden) ctx.suspend();
-      else ctx.resume();
+      else if (volume > 0) ctx.resume();
     });
   }
 
@@ -481,8 +483,19 @@ export function setupRaceAudio({ getPhase, getThrottle, engine = "f1", field = e
     if (chorusGain) chorusGain.gain.setTargetAtTime(0, now, 1);
   }
 
+  // Engine level from the sound mix (#379). At zero the context is
+  // suspended outright, so a silenced engine costs no audio-thread work.
+  function setVolume(value) {
+    volume = Math.min(Math.max(value, 0), 1);
+    if (!ctx) return;
+    master.gain.setTargetAtTime(0.9 * volume, ctx.currentTime, 0.05);
+    if (volume === 0) ctx.suspend();
+    else if (ctx.state === "suspended" && !document.hidden) ctx.resume();
+  }
+
   return {
     arm,
+    setVolume,
     gearInfo: (speedRatio) => gearInfo(speedRatio, E.gears),
     isArmed: () => !!ctx,
     updateEngineSound,

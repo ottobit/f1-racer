@@ -54,3 +54,13 @@ The start follows official F1 rules (#50, `main.js`):
   clock skew is not compensated.
 - `startSequenceId` cancels the timers of a sequence that has been replaced.
 - There is no jump-start detection.
+
+## Sound mix (#379, `core/client/race/race-sound-mix.js`)
+
+- `SoundMix` steps engine level and voices on/off from a HUD button
+  (`#sound-mix`) or M: multiplayer starts on "motori bassi" (0.2) so the
+  voice chat leads; "tutto spento" also silences every driver's voice.
+- Engine level is `setVolume()` on the master gain; at zero the context is
+  suspended.
+- Per-driver exclusion (tap the name in the tower) lives in the voice
+  transport (`setExcluded`); an excluded MoQ player stops downloading.

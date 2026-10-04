@@ -38,6 +38,7 @@ export function setupRaceHud({
   getRaceState = () => "racing",
   getVoiceState = null,
   toggleVoice = () => {},
+  toggleListen = () => {},
 }) {
   // Solo play passes a static qualifyingRivals array (synthesized once);
   // multiplayer (#44) passes getQualifyingRivals instead, since live
@@ -93,20 +94,34 @@ export function setupRaceHud({
       event.stopPropagation();
       toggleVoice();
       updateVoiceIcons();
+      return;
+    }
+    // Tapping a rival's name stops or resumes hearing them (#379).
+    const rival = event.target.closest(".is-listenable")?.querySelector("[data-voice-driver]");
+    if (rival) {
+      event.stopPropagation();
+      toggleListen(rival.dataset.voiceDriver);
+      updateVoiceIcons();
     }
   });
   function updateVoiceIcons() {
     if (!getVoiceState) return;
     for (const el of qualifyingTimingEl.querySelectorAll("[data-voice-driver]")) {
       const voice = getVoiceState(el.dataset.voiceDriver);
-      const silent = voice.muted || voice.hasMic === false;
+      const silent = voice.muted || voice.excluded || voice.hasMic === false;
       el.dataset.status = voice.status;
+      el.classList.toggle("is-excluded", !!voice.excluded);
+      if (el.tagName !== "BUTTON") {
+        el.parentElement.classList.toggle("is-listenable", voice.status === "active" || voice.status === "connecting");
+      }
       el.classList.toggle("is-muted", !!silent);
       el.classList.toggle("is-speaking", !!voice.speaking);
       const labels = { active: "Audio connesso", connecting: "Audio in connessione", error: "Audio non disponibile",
         disconnected: "Pilota disconnesso", idle: "Audio non attivato", "listen-only": "Solo ascolto" };
       let label = labels[voice.status] || labels.idle;
       if (voice.muted) label += ", microfono silenziato";
+      if (voice.excluded) label += ", escluso da te: tocca il nome per riascoltarlo";
+      else if (el.tagName !== "BUTTON" && voice.status === "active") label += ": tocca il nome per escluderlo";
       if (voice.speaking) label += ", sta parlando";
       if (el.tagName === "BUTTON") {
         el.disabled = voice.status === "connecting" || voice.hasMic === false;

@@ -2160,3 +2160,12 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - New `wiki/overview.md`; `wiki/index.md` is now a catalog by type; YAML frontmatter (`type`, `updated`, `sources`/`raw`) on every page; `AGENTS.md` schema rewritten (structure, ingest/query/lint logging). Links stay relative markdown.
 - References updated in skills (`concludi`, `procedure-racing`), `docs/`, README and code comments.
 - Verified with a script that every relative markdown link resolves (49 files; one link already broken in `WORK-HANDOFF.md` fixed), `git diff --check`, `node --check`. Badge 374.
+
+## [2026-10-04] cycle | Race sound mix: engines low in multiplayer, mute rivals by name (#379)
+
+- New `race/race-sound-mix.js` (`SoundMix`): HUD button next to "← circuiti" (or M) steps the mix; multiplayer low > full > off > all off (default low), solo full > low > off; stored per context (`f1racer-sound-mix-<context>`).
+- `race-audio.js` `setVolume()`: master gain; at zero the AudioContext is suspended (no audio-thread work).
+- `VoiceChat` gains `setExcluded`/`setDeafened`; MoQ drives each `Watch.Player` `muted` signal, which also stops that driver's download and decoding.
+- HUD tower: tapping a human rival's name excludes/resumes their voice (name struck through); bots are not tappable.
+- Phone heat not addressed: needs a `?diag=1` measurement and whether it predates MoQ voice.
+- Verified with `node --check` and `git diff --check` only. Badge 380.

@@ -8,9 +8,13 @@ export class VoiceChat {
   // tap reaches the mic prompt without waiting on the network.
   static preload() {}
 
-  // { status: "idle"|"connecting"|"active"|"listen-only"|"error", hasMic, muted, speaking }
+  // { status: "idle"|"connecting"|"active"|"listen-only"|"error", hasMic, muted, speaking,
+  //   excluded } — excluded: this listener turned that driver off (#379).
   getState(_participantId) { throw new Error("not implemented"); }
   toggleMute() { throw new Error("not implemented"); }
+  // Listener side (#379): stop hearing one driver, or every driver.
+  setExcluded(_participantId, _excluded) { throw new Error("not implemented"); }
+  setDeafened(_deafened) { throw new Error("not implemented"); }
   stop() { throw new Error("not implemented"); }
 }
 
