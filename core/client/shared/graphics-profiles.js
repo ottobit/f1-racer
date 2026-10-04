@@ -14,6 +14,7 @@
 // llm-wiki/wiki/f1-racer/roadmap.md).
 
 const STORAGE_KEY = "f1racer-graphics-profile-v1";
+const BATTERY_SAVER_KEY = "f1racer-battery-saver";
 
 export const GRAPHICS_PROFILES = {
   low: {
@@ -83,6 +84,27 @@ export function createFrameLimiter(fps) {
   };
 }
 
+// Battery saver (#355): the "low" profile at 30 fps, so a phone stops
+// heating up mid-race. On by default on touch devices; the home page toggle
+// stores the player's choice. A `?gfx=` override still wins (testing).
+export function loadBatterySaver() {
+  try {
+    const v = localStorage.getItem(BATTERY_SAVER_KEY);
+    if (v === "1" || v === "0") return v === "1";
+  } catch {
+    // storage unavailable — use the device default.
+  }
+  return IS_COARSE_POINTER;
+}
+
+export function saveBatterySaver(on) {
+  try {
+    localStorage.setItem(BATTERY_SAVER_KEY, on ? "1" : "0");
+  } catch {
+    // storage unavailable — the choice just won't persist.
+  }
+}
+
 export function loadGraphicsProfile() {
   const override = new URLSearchParams(location.search).get("gfx");
   if (override && GRAPHICS_PROFILES[override]) {
@@ -93,6 +115,10 @@ export function loadGraphicsProfile() {
       // applies for this session, just doesn't persist.
     }
     return withDeviceExtras({ id: override, ...GRAPHICS_PROFILES[override] });
+  }
+
+  if (loadBatterySaver()) {
+    return { ...withDeviceExtras({ id: "low", ...GRAPHICS_PROFILES.low }), frameCapFps: 30, batterySaver: true };
   }
 
   let stored = null;

@@ -9,7 +9,7 @@ import {
   roadSetupEffects,
   saveRoadSetup,
 } from "../shared/road-garage.js?v=1";
-import { createShowroom } from "./showroom.js?v=44";
+import { createShowroom } from "./showroom.js?v=45";
 
 const KMH_PER_UNIT = 3.6;
 const hex = (color) => `#${color.toString(16).padStart(6, "0")}`;

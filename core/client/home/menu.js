@@ -5,6 +5,7 @@ import { SELECTABLE_DRIVER_IDS, loadSelectedDriverId, saveSelectedDriverId } fro
 import { CLASSIC_ROSTER, loadClassicDriverId, saveClassicDriverId } from "../shared/classic-series.js?v=4";
 import { SERIES, loadSeries, saveSeries } from "../shared/series.js?v=2";
 import { VEHICLES } from "../shared/vehicle.js?v=1";
+import { loadBatterySaver, saveBatterySaver } from "../shared/graphics-profiles.js?v=5";
 import { wakeRoomServer } from "../multiplayer/room-server.js?v=1";
 
 const SELECTED_CIRCUIT_KEY = "f1racer-selected-circuit";
@@ -53,6 +54,7 @@ function saveDifficulty(v) {
 }
 
 let difficulty = loadDifficulty();
+let batterySaver = loadBatterySaver();
 let selectedDriverId = loadSelectedDriverId();
 // Classiche (#317): which series "Scendi in pista" races, and its driver.
 let series = loadSeries();
@@ -121,6 +123,20 @@ function renderDifficulty() {
     `
   ).join("");
 }
+
+function renderBatterySaver() {
+  const btn = document.getElementById("battery-saver");
+  btn.classList.toggle("active", batterySaver);
+  btn.setAttribute("aria-pressed", String(batterySaver));
+  btn.querySelector("small").textContent = batterySaver ? "Attivo · 30 fps" : "Spento · 60 fps";
+}
+
+document.getElementById("battery-saver").addEventListener("click", () => {
+  batterySaver = !batterySaver;
+  saveBatterySaver(batterySaver);
+  renderBatterySaver();
+});
+renderBatterySaver();
 
 // Delegated on the container (not the buttons themselves) so the listener
 // survives renderDifficulty() replacing the buttons' innerHTML each time.
