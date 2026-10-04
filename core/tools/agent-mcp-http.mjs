@@ -178,7 +178,7 @@ async function handleRpc(message, req) {
         resultType: "complete",
         supportedVersions: [MODERN_PROTOCOL_VERSION],
         capabilities: { tools: {} },
-        instructions: "Control exactly one F1 Racer participant through f1_observe, f1_act, f1_enqueue, f1_radio and f1_release.",
+        instructions: "Control one connected game through game_describe, game_observe, game_frame, game_act and game_release. F1-specific low-level tools remain available when the game is F1 Racer.",
         ttlMs: 300000,
         cacheScope: "private",
       })),

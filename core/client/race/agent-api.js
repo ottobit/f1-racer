@@ -1,3 +1,6 @@
+import { DriveController } from "./drive-controller.js?v=1";
+import { F1RacerGameAdapter } from "./f1-game-adapter.js?v=1";
+
 // Agent API MVP (#176): lets an external agent — including Codex — drive
 // the player car from an already-open race page, through
 // `window._ENVIRONMENT_`, without simulating touch/keyboard events.
@@ -72,6 +75,7 @@ export function setupAgentApi({
   nameOf = (id) => id,
   registerRemoteBridge = null,
   sendRadio = () => {},
+  driveProvider = null,
 }) {
   const KMH_PER_UNIT = 3.6; // matches race-hud.js's own speed readout
   const DEFAULT_STEP_MS = 500;
@@ -83,6 +87,7 @@ export function setupAgentApi({
   const MAX_QUEUE_MS = 5000;
   const CORNER_LOOKAHEAD_SAMPLES = 40;
   const NEARBY_CARS_LIMIT = 5;
+  const driveController = driveProvider ? new DriveController({ provider: driveProvider }) : null;
 
   const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
   const clampRange = (v, min, max) => Math.min(Math.max(v, min), max);
@@ -238,12 +243,22 @@ export function setupAgentApi({
   let leaseEndsAt = 0;
   let queue = null; // { segments, index }
   let generation = 0;
+  let driveFrame = null;
+  let driveLastAt = 0;
+
+  function stopDriveLoop() {
+    if (driveFrame !== null) cancelAnimationFrame(driveFrame);
+    driveFrame = null;
+    driveLastAt = 0;
+    driveController?.release();
+  }
 
   function clearTimers() {
     clearTimeout(leaseTimer);
     leaseTimer = null;
     leaseEndsAt = 0;
     queue = null;
+    stopDriveLoop();
   }
 
   function apply(command) {
@@ -271,6 +286,7 @@ export function setupAgentApi({
       ...applied,
       leaseRemainingMs: leaseEndsAt ? Math.max(0, Math.round(leaseEndsAt - performance.now())) : 0,
       queue: queue ? { index: queue.index, length: queue.segments.length } : null,
+      intent: driveController?.snapshot() || null,
     };
   }
 
@@ -291,6 +307,33 @@ export function setupAgentApi({
     clearTimers();
     const leaseMs = clampRange(Number(command.leaseMs) || DEFAULT_LEASE_MS, 50, MAX_LEASE_MS);
     hold(command, leaseMs, () => neutral("released"));
+    return getState();
+  }
+
+  async function drive(intent = {}) {
+    if (!driveController) throw new Error("f1-agent-api: high-level drive controller is unavailable");
+    generation++;
+    clearTimers();
+    const mine = generation;
+    const startedAt = performance.now();
+    driveController.setIntent(intent, startedAt);
+    driveLastAt = startedAt;
+    const first = driveController.update(state, 0, startedAt);
+    if (first) apply(first);
+
+    const tick = (now) => {
+      if (mine !== generation) return;
+      const dt = Math.min(Math.max((now - driveLastAt) / 1000, 0), 0.1);
+      driveLastAt = now;
+      const command = driveController.update(state, dt, now);
+      if (!command) {
+        neutral("released");
+        return;
+      }
+      apply(command);
+      driveFrame = requestAnimationFrame(tick);
+    };
+    driveFrame = requestAnimationFrame(tick);
     return getState();
   }
 
@@ -358,6 +401,8 @@ export function setupAgentApi({
     return getState();
   }
 
+  const gameAdapter = new F1RacerGameAdapter({ getState, drive, release });
+
   // Leaving the page or the tab going away drops any agent command.
   window.addEventListener("pagehide", () => { if (controlMode === "agent") release(); });
   document.addEventListener("visibilitychange", () => {
@@ -375,8 +420,14 @@ export function setupAgentApi({
 
   async function invokeAgentTool(name, args = {}) {
     switch (name) {
+      case "game_describe": return gameAdapter.describe();
+      case "game_observe": return gameAdapter.observe();
+      case "game_frame": return gameAdapter.frame(args?.strategy || null);
+      case "game_act": return gameAdapter.act(args?.intent || {});
+      case "game_release": return gameAdapter.release();
       case "f1_observe": return getState();
       case "f1_act": return act(args || {});
+      case "f1_drive": return drive(args || {});
       case "f1_enqueue": return enqueue(args?.segments || []);
       case "f1_release": return release();
       case "f1_radio": return radio(args?.text);
@@ -384,7 +435,17 @@ export function setupAgentApi({
     }
   }
 
-  window._ENVIRONMENT_ = { getState, step, act, enqueue, release, radio, bridge: null };
+  window._ENVIRONMENT_ = {
+    getState, step, act, drive, enqueue, release, radio,
+    game: {
+      describe: () => gameAdapter.describe(),
+      observe: () => gameAdapter.observe(),
+      frame: (strategy) => gameAdapter.frame(strategy),
+      act: (intent) => gameAdapter.act(intent),
+      release: () => gameAdapter.release(),
+    },
+    bridge: null,
+  };
   registerWebMcpTools({ invokeAgentTool });
 
   // Browser-independent realtime bridge (#201). A long, caller-provided
@@ -424,6 +485,57 @@ function registerWebMcpTools({ invokeAgentTool }) {
   };
   const tools = [
     {
+      name: "game_describe",
+      description: "Describe the connected game and its generic observation/action/strategy capabilities.",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => reply(await invokeAgentTool("game_describe", {})),
+    },
+    {
+      name: "game_observe",
+      description: "Read the current game observation through the generic game adapter.",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => reply(await invokeAgentTool("game_observe", {})),
+    },
+    {
+      name: "game_frame",
+      description: "Build a game-specific decision frame containing observation, bounded candidate intents and a default candidate.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          strategy: { type: "object", additionalProperties: true },
+        },
+      },
+      execute: async (args) => reply(await invokeAgentTool("game_frame", args || {})),
+    },
+    {
+      name: "game_act",
+      description: "Apply one generic bounded GameIntent through the connected game's adapter.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          intent: {
+            type: "object",
+            properties: {
+              action: { type: "string" },
+              parameters: { type: "object", additionalProperties: true },
+              horizonMs: { type: "number", minimum: 100, maximum: 5000 },
+              confidence: { type: "number", minimum: 0, maximum: 1 },
+            },
+            required: ["action"],
+            additionalProperties: false,
+          },
+        },
+        required: ["intent"],
+      },
+      execute: async (args) => reply(await invokeAgentTool("game_act", args || {})),
+    },
+    {
+      name: "game_release",
+      description: "Release the generic game adapter's control immediately.",
+      inputSchema: { type: "object", properties: {} },
+      execute: async () => reply(await invokeAgentTool("game_release", {})),
+    },
+    {
       name: "f1_observe",
       description: "Read the race state of the car this page drives. Signs: steer +1 = right; lateralOffsetMeters > 0 = left of the centerline; headingErrorRad > 0 = nose left of the track direction (positive error is fixed by positive steer).",
       inputSchema: { type: "object", properties: {} },
@@ -434,6 +546,20 @@ function registerWebMcpTools({ invokeAgentTool }) {
       description: "Hold steer/throttle/brake until the next f1_act, the lease running out (ms, max 5000), f1_release or a human input.",
       inputSchema: { type: "object", properties: { ...command, leaseMs: { type: "number", minimum: 50, maximum: 5000 } } },
       execute: async (args) => reply(await invokeAgentTool("f1_act", args || {})),
+    },
+    {
+      name: "f1_drive",
+      description: "Set a bounded high-level driving intent. A browser-local controller converts pace/line targets into frame-rate steer/throttle/brake using the existing geometry autopilot.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          pace: { type: "number", minimum: 0.5, maximum: 1 },
+          line: { type: "number", minimum: -1, maximum: 1, description: "Normalized lateral racing-line target." },
+          horizonMs: { type: "number", minimum: 100, maximum: 5000 },
+          confidence: { type: "number", minimum: 0, maximum: 1 },
+        },
+      },
+      execute: async (args) => reply(await invokeAgentTool("f1_drive", args || {})),
     },
     {
       name: "f1_enqueue",

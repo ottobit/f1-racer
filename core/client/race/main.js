@@ -24,7 +24,7 @@ import { setupRaceProgress } from "./race-progress.js?v=29";
 import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
-import { setupAgentApi } from "./agent-api.js?v=8";
+import { setupAgentApi } from "./agent-api.js?v=10";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=6";
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=14";
 
@@ -1717,9 +1717,9 @@ function driveWithProvider(provider, dt) {
   if (wantErs !== state.ersActive) state.ersActive = wantErs;
 }
 
-let botDriver = null;
-if (isBotSession && driverMode) {
-  const autopilot = createAutopilotProvider({
+let fastDriver = null;
+if (isBotSession) {
+  fastDriver = createAutopilotProvider({
     centerline,
     headingOf,
     sideNormal,
@@ -1728,7 +1728,12 @@ if (isBotSession && driverMode) {
     findCar: (driverId) => aiCars.find((car) => car.driverId === driverId) || null,
     trackLength: TRACK_LENGTH,
   });
-  botDriver = driverMode === "layered" ? createLayeredProvider({ fast: autopilot, getState: () => window._ENVIRONMENT_?.getState() }) : autopilot;
+}
+let botDriver = null;
+if (fastDriver && driverMode) {
+  botDriver = driverMode === "layered"
+    ? createLayeredProvider({ fast: fastDriver, getState: () => window._ENVIRONMENT_?.getState() })
+    : fastDriver;
 }
 
 // Agent API (#176): opt-in only, via ?agent=1, so normal play is untouched.
@@ -1762,6 +1767,7 @@ if (isBotSession) {
     registerRemoteBridge: multiplayer
       ? (execute, token) => multiplayer.registerAgentBridge(execute, token)
       : null,
+    driveProvider: isAgentSession ? fastDriver : null,
   });
   humanInputListeners.push(agentApi.onHumanInput);
   if (botDriver) {
