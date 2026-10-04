@@ -2120,3 +2120,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `AGENTS.md`: all knowledge lives in the wiki, one small page per topic, with no clones in `docs/`. `docs/` keeps only procedure, handoff and release checklist. README, procedure, handoff and two code comments were relinked.
 - Docs only. Verified with grep (no references left) and a link check across the wiki pages. Badge 366.
 - Open, outside this cycle: the two-phone MoQ test with moq.dev worked one way only (A→B). Being retried with an Android phone.
+
+## 2026-10-04 — Voice probe: iPhone audio output, MoQ/Opus explained (#367)
+
+- `core/client/multiplayer/voice-probe.js`: new "Uscita audio" status row from the `@moq/watch` player's `audio.out.context`. The player builds its AudioContext only when the remote audio arrives, after the start tap, so iOS Safari keeps it suspended; a yellow "Tocca per attivare l'audio" button resumes it (the library also resumes on any later tap). `navigator.audioSession.type = "play-and-record"` is set on the start tap.
+- `voice-probe.html`: plain-language paragraphs on MoQ (relay) and Opus (voice codec, not an AI model); moq.dev is now the default relay; `voice-probe.js?v=2`.
+- Context: two-phone test was one-way (iPhone sends, does not hear) while Eco worked on the iPhone — likely the late AudioContext when the other phone starts later. Needs verification on a real iPhone.
+- Verified with `node --check` and `git diff --check` only; badge 368.

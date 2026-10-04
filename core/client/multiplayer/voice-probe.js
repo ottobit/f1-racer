@@ -39,12 +39,13 @@ class SupportReport {
 // One probe run: a publishing connection with the microphone, and a
 // listening connection of its own so even an echo goes through the relay.
 class MoqVoiceProbe {
-  constructor({ relay, code, role, echo, onStatus }) {
+  constructor({ relay, code, role, echo, onStatus, onOutputLocked }) {
     this.relay = new URL(relay);
     this.code = code;
     this.role = role;
     this.listenRole = echo ? role : OTHER_ROLE[role];
     this.onStatus = onStatus;
+    this.onOutputLocked = onOutputLocked;
     this.disposers = [];
     this.closers = [];
   }
@@ -97,7 +98,31 @@ class MoqVoiceProbe {
     });
     this.#watchConnection("Ascolto", connection);
     this.onStatus("Ascolto di", `${this.code}/${this.listenRole}`);
+    this.#watchOutput(player);
     this.closers.push(player, connection);
+  }
+
+  // The player builds its AudioContext only when the other phone's audio
+  // arrives, after the start tap, so Safari keeps it suspended until the
+  // next tap (the library resumes it on any pointerup).
+  #watchOutput(player) {
+    this.onStatus("Uscita audio", "in attesa dell'audio dell'altro telefono");
+    let stopState = null;
+    this.disposers.push(() => stopState?.());
+    this.disposers.push(player.audio.out.context.subscribe((context) => {
+      stopState?.();
+      stopState = null;
+      this.outputContext = context;
+      if (!context) return;
+      const show = () => {
+        const running = context.state === "running";
+        this.onStatus("Uscita audio", running ? "attiva" : `${context.state} — tocca lo schermo`);
+        this.onOutputLocked(!running);
+      };
+      context.addEventListener("statechange", show);
+      stopState = () => context.removeEventListener("statechange", show);
+      show();
+    }));
   }
 
   #watchConnection(label, connection) {
@@ -137,6 +162,7 @@ const supportList = document.getElementById("probe-support");
 const statusList = document.getElementById("probe-status");
 const startButton = document.getElementById("probe-start");
 const shareButton = document.getElementById("probe-share");
+const unlockButton = document.getElementById("probe-unlock");
 
 codeInput.value = new URLSearchParams(location.search).get("code") || randomCode();
 new SupportReport().collect().then(async (rows) => {
@@ -155,6 +181,11 @@ shareButton.addEventListener("click", async () => {
   }
 });
 
+// Any tap resumes the player's AudioContext; this button asks for one.
+unlockButton.addEventListener("click", () => {
+  probe?.outputContext?.resume().catch((err) => console.warn("[voice-probe] resume", err));
+});
+
 let probe = null;
 const status = new Map();
 form.addEventListener("submit", (event) => {
@@ -163,8 +194,11 @@ form.addEventListener("submit", (event) => {
     probe.stop();
     probe = null;
     startButton.textContent = "Avvia prova";
+    unlockButton.hidden = true;
     return;
   }
+  // iOS: keep speaker output while the mic is on (Safari 16.4+).
+  if (navigator.audioSession) navigator.audioSession.type = "play-and-record";
   const data = new FormData(form);
   status.clear();
   probe = new MoqVoiceProbe({
@@ -175,6 +209,9 @@ form.addEventListener("submit", (event) => {
     onStatus(name, value) {
       status.set(name, value);
       renderRows(statusList, [...status]);
+    },
+    onOutputLocked(locked) {
+      unlockButton.hidden = !locked;
     },
   });
   startButton.textContent = "Ferma";
