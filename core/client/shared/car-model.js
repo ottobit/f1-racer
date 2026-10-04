@@ -1,4 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { batchStaticMeshes } from './mesh-batch.js?v=1';
 
 function materialWithRole(material, role) {
   material.userData.carPaintRole = role;
@@ -351,30 +352,7 @@ export function buildCar(color, { scale = 1, detail = false, showDriver = true, 
   // Batch static parts by material for the ten-car race grid. Wheels stay
   // separate groups so the existing rolling animation remains intact.
   if (!detail) {
-    function batch(parent) {
-      const buckets = new Map();
-      parent.children.filter(o => o.isMesh).forEach(o => {
-        o.updateMatrix();
-        const geometry = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone());
-        geometry.applyMatrix4(o.matrix);
-        if (!buckets.has(o.material)) buckets.set(o.material, []);
-        buckets.get(o.material).push(geometry);
-        parent.remove(o); o.geometry.dispose();
-      });
-      for (const [material, geometries] of buckets) {
-        const merged = new THREE.BufferGeometry();
-        for (const key of ['position', 'normal', 'uv']) {
-          // Procedural shells have no UVs; supply zero UVs for solid paint.
-          const size = key === 'uv' ? 2 : 3;
-          const length = geometries.reduce((n,g) => n + g.attributes.position.count * size, 0);
-          const array = new Float32Array(length); let offset = 0;
-          for (const g of geometries) { const a = g.attributes[key]; if (a) array.set(a.array, offset); offset += g.attributes.position.count * size; }
-          merged.setAttribute(key, new THREE.BufferAttribute(array, size));
-        }
-        mesh(merged, material, [0,0,0], parent);
-        geometries.forEach(g => g.dispose());
-      }
-    }
+    const batch = batchStaticMeshes;
     batch(group); wheels.forEach(batch);
     batch(group.getObjectByName('frontWing')); batch(group.getObjectByName('rearWing'));
   }

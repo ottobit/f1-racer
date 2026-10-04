@@ -1,4 +1,5 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { batchModel } from './mesh-batch.js?v=1';
 
 // Road cars (#311, #313, #315): round period road cars, not F1 cars.
 // Every builder returns buildCar()'s contract (car-model.js) — {group,
@@ -204,6 +205,8 @@ function createKit(detail) {
     return wheel;
   }
   function finish(parts, scale, wheelRadius, cockpitEye = null) {
+    // Race rivals (#357): one mesh per material per group, like the F1 grid.
+    if (!detail) batchModel(group);
     group.scale.setScalar(scale);
     return {
       group, wheels: parts.wheels, steeringPivots: parts.steeringPivots,

@@ -6,7 +6,7 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 import { loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=31";
-import { createStudioEnvironment } from "../shared/car-model.js?v=36";
+import { createStudioEnvironment } from "../shared/car-model.js?v=37";
 import { applyCarToMesh } from "../race/race-car-view.js?v=39";
 import { headingOf, offsetEdge, sideNormal } from "../shared/track-geometry.js?v=39";
 import { setupRaceInput } from "../race/race-input.js?v=58";
@@ -17,7 +17,7 @@ import { surfaceTexture } from "../race/track-art.js?v=43";
 import { loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=6";
 import { FREE_OVAL } from "./oval.js?v=1";
 import { createFreeSim } from "./free-sim.js?v=4";
-import { buildVehicleModel } from "../shared/vehicle-view.js?v=1";
+import { buildVehicleModel } from "../shared/vehicle-view.js?v=2";
 import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=4";
 
 const CAR_SCALE = 0.55;

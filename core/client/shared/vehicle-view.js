@@ -6,8 +6,8 @@
 //   scale, detail: as the builders take them
 //   environmentTexture: studio reflections (race and free drive)
 //   showroom: the garage plinth model (F1 without its driver)
-import { buildCar } from "./car-model.js?v=36";
-import { buildRoadVehicle } from "./vehicle-models.js?v=4";
+import { buildCar } from "./car-model.js?v=37";
+import { buildRoadVehicle } from "./vehicle-models.js?v=5";
 
 const BUILDERS = {
   f1: (vehicle, colors, { scale, detail, showroom }) => buildCar(colors, {
