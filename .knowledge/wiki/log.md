@@ -2191,3 +2191,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - New `multiplayer/voice-audio-context.js`: `SharedVoiceAudioContext` patches the `AudioContext` constructor while voice is on, so @moq/watch (one per heard driver) and @moq/publish (mic) share one context per sample rate; engine audio untouched. `voice-moq.js` installs it in the constructor and uninstalls in `stop()`; diagnostics line adds `ctx N`.
 - `graphics-profiles.js`: `PHONE_FPS_CAP = 30` (was 60); the user accepted lower fps. Physics substeps and the 80 ms multiplayer broadcast are unaffected.
 - Verified with `node --check`, `git diff --check` and a Node test of the shim (fake AudioContext). Not tested on a device. Badge 386.
+
+## [2026-10-05] cycle | Multiplayer: stock cars for everyone (#391)
+
+- User report: in a room with a colleague (the host) he could not catch him despite clean corners; suspected a host advantage.
+- Finding: no host advantage in code (`isHost` only drives start and Rivincita); the real asymmetry was each player's F1 garage, read from their own browser (`vehicle.js` `playerParams`) and invisible to others: up to ~8% top speed between extreme setups (`88 × (1 + 0.006 × speed)`).
+- `race/main.js`: in multiplayer the player's car uses `stockParams` and `DEFAULT_SETUP` effects (runoff); solo races keep the garage. Wiki `entities/garage.md` updated.
+- Verified with `node --check` and `git diff --check` only. Badge 392.
