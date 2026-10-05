@@ -1,6 +1,6 @@
 ---
 type: entity
-updated: 2026-10-04
+updated: 2026-10-05
 sources: []
 ---
 
@@ -19,7 +19,9 @@ sources: []
   floor/diffuser, brakes, suspension), with three trade-off variants each.
   They produce modifiers for speed, downforce, braking, stability, traction
   and runoff. `race/main.js` reads these at race start, so they change real
-  physics.
+  physics — in solo races only. In multiplayer everyone drives the stock
+  setup (#391): the garage is per browser and invisible to the others, and
+  two extreme setups differed by ~8% top speed.
 - **Visual previews:**
   - wing, floor, spring and caliper choices change the showroom car;
   - selecting a part frames that assembly.

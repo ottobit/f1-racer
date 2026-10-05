@@ -5,7 +5,7 @@ import { POINTS_BY_POSITION } from "../shared/championship.js?v=4";
 import { loadSelectedDriverId } from "../shared/driver-selection.js?v=3";
 import { DRIVER_ROSTER } from "../../shared/driver-roster.js?v=3";
 import { liveryById } from "../shared/driver-themes.js?v=28";
-import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=31";
+import { DEFAULT_SETUP, loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-setup.js?v=31";
 
 import { createStudioEnvironment } from "../shared/car-model.js?v=38";
 import { VEHICLES } from "../shared/vehicle.js?v=1";
@@ -53,14 +53,17 @@ import {
   createGridSlot, CAR_RADIUS, DAMAGE_MIN_IMPACT_SPEED, DAMAGE_PER_IMPACT_SPEED, DAMAGE_MAX_SPEED_PENALTY,
 } from "./race-rules.js?v=5";
 
-const GARAGE_SETUP = loadGarageSetup();
-const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
 // Multiplayer Stage 2 (#44): null for a normal solo session (no ?room= in
 // the URL, or a room session that couldn't be resumed — see
 // race-bootstrap.js/race-multiplayer.js). Every integration point below is
 // an explicit branch on this, so solo play's existing behavior is
 // unchanged when it's null — never a silent shared code path.
 const multiplayer = setupMultiplayer();
+// Multiplayer cars are stock for everyone (#391): the garage lives in each
+// browser and nobody else sees it, so a tuned setup was a hidden edge of up
+// to ~8% top speed. Solo races keep the player's garage.
+const GARAGE_SETUP = multiplayer ? { ...DEFAULT_SETUP } : loadGarageSetup();
+const GARAGE_EFFECTS = setupEffects(GARAGE_SETUP);
 
 // In a room the local car is the driver reserved there (#91), which is what
 // every other participant sees; the solo selection only applies offline.
@@ -113,9 +116,10 @@ const trackCurve = new THREE.CatmullRomCurve3(CONTROL_POINTS, true, "catmullrom"
 
 // The player's car (#339): the series' car for the player's driver.
 // Its limits (vehicle.js) are the car's stock ones, rain applied, plus the
-// player's garage setup for that car (#323); rivals drive stock.
+// player's garage setup for that car (#323); rivals drive stock, and so
+// does everyone in multiplayer (#391).
 const PLAYER_VEHICLE = RACE_SERIES.vehicle(PLAYER_DRIVER_ID);
-const CAR = PLAYER_VEHICLE.playerParams(isRaining);
+const CAR = multiplayer ? PLAYER_VEHICLE.stockParams(isRaining) : PLAYER_VEHICLE.playerParams(isRaining);
 const CAR_SCALE = 0.55;
 const PLAYER_VISUAL_SCALE = 1.25;
 
