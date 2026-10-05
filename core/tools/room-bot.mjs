@@ -154,7 +154,7 @@ const browser = await chromium.launch({
   args: [
     "--use-fake-device-for-media-stream",
     "--use-fake-ui-for-media-stream",
-    ...(voiceWav ? [`--use-file-for-fake-audio-capture=${voiceWav}`, "--autoplay-policy=no-user-gesture-required"] : []),
+    ...(voiceWav ? [`--use-file-for-fake-audio-capture=${voiceWav}`, "--autoplay-policy=no-user-gesture-required", "--disable-http2"] : []),
     ...(GPU ? ["--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=default", "--enable-gpu-rasterization"] : []),
     ...(proxy ? [`--proxy-server=${proxy.origin}`, "--proxy-bypass-list=localhost;127.0.0.1", "--ignore-certificate-errors"] : []),
   ],
