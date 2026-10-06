@@ -41,6 +41,7 @@ page is added, renamed or removed.
 - [synthesis/c4-multiplayer.md](synthesis/c4-multiplayer.md) — multiplayer, C4 levels 1 to 4
 - [synthesis/c4-agent-control.md](synthesis/c4-agent-control.md) — humans, room bots and MCP coexisting
 - [synthesis/c4-mcp.md](synthesis/c4-mcp.md) — remote MCP control path
+- [synthesis/c4-decision-driver.md](synthesis/c4-decision-driver.md) — provider-agnostic decision driver, C4 and two-rate runtime flow
 
 ## Comparisons
 
@@ -55,6 +56,10 @@ page is added, renamed or removed.
 - [sources/2026-09-28-race-vsn2-local-pc.md](sources/2026-09-28-race-vsn2-local-pc.md) — race VSN2 from the player's PC
 - [sources/2026-10-01-ollama-jev-decision-models.md](sources/2026-10-01-ollama-jev-decision-models.md) — Ollama Jev-style decision models
 - [sources/2026-10-04-oop-principles.md](sources/2026-10-04-oop-principles.md) — object-oriented principles
+- [sources/2026-10-04-provider-agnostic-decision-driver-discussion.md](sources/2026-10-04-provider-agnostic-decision-driver-discussion.md) — discussion and rationale for an agnostic high-level AI race driver
+- [sources/2026-10-04-decision-driver-render-test.md](sources/2026-10-04-decision-driver-render-test.md) — OOP implementation order and reuse of the Render room backend for testing
+- [sources/2026-10-04-layered-ai-driver-discussion.md](sources/2026-10-04-layered-ai-driver-discussion.md) — three-rate agent stack, generic model client and ChatGPT strategist role
+- [sources/2026-10-04-game-agnostic-agent-runtime.md](sources/2026-10-04-game-agnostic-agent-runtime.md) — extraction from F1-specific driver to Game X × Agent Y runtime
 
 Raw, immutable inputs behind the sources live in [../raw/](../raw/).
 
