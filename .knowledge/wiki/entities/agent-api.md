@@ -1,6 +1,6 @@
 ---
 type: entity
-updated: 2026-10-04
+updated: 2026-10-11
 sources: []
 ---
 
@@ -81,3 +81,15 @@ The relay, the remote MCP server (`core/tools/agent-mcp-http.mjs`, `POST /mcp`,
 `F1_MCP_AUTH_TOKEN`) and the stdio fallback are described in
 [c4-mcp.md](../synthesis/c4-mcp.md) and [c4-agent-control.md](../synthesis/c4-agent-control.md). Bots
 are covered in [agent-bots.md](agent-bots.md).
+
+## Human takeover event (#393)
+
+When a human touches a real control while the agent holds a command (or
+its lease just ran out), `race-input.js` calls `onHumanInput` *before*
+applying the human's key or pedal; the agent API drops the agent's inputs
+and fires `f1-human-takeover` on `window`. `release()` is idempotent and
+only drops pedals the agent itself holds, so an external runtime releasing
+after a takeover never clears the human's pedal. External runtimes (Browser
+Copilot) bind to `_ENVIRONMENT_` with their own JSON config: the game ships
+no adapter code for them. `_ENVIRONMENT_` exists only after
+`f1-environment-ready`, once the race scene is built.
