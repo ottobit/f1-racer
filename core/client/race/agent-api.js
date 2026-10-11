@@ -30,6 +30,12 @@
 // to the room, max 80 characters, like the strategy drivers' radio.
 //   window._ENVIRONMENT_.radio("Box box, tyres gone");
 //
+// Human takeover (#393): when a human touches a real control while an agent
+// command is held or was last given, the agent's inputs are dropped first
+// and `f1-human-takeover` fires on window, before the human input applies.
+// An external runtime listens for it and stays suspended. A later release()
+// only drops what the agent itself holds, never the human's pedals.
+//
 // Known limitation: pedals are digital in this game (input.forward/back are
 // booleans, not an analog throttle/brake channel) — `throttle`/`brake` are
 // accepted as 0..1 per the MVP contract but thresholded to on/off under the
@@ -222,6 +228,12 @@ export function setupAgentApi({
   // gets released.
   let agentHoldsForward = false;
   let agentHoldsBack = false;
+  function releaseAgentPedals() {
+    if (agentHoldsForward) input.forward = false;
+    if (agentHoldsBack) input.back = false;
+    agentHoldsForward = false;
+    agentHoldsBack = false;
+  }
   function setThrottleBrake(throttle, brake) {
     agentHoldsForward = throttle > 0;
     agentHoldsBack = !agentHoldsForward && brake > 0;
@@ -261,7 +273,7 @@ export function setupAgentApi({
     clearTimers();
     applied = { steer: 0, throttle: 0, brake: 0 };
     setExternalSteer(mode === "agent" ? 0 : null);
-    setThrottleBrake(0, 0);
+    releaseAgentPedals();
     controlMode = mode;
   }
 
@@ -348,11 +360,13 @@ export function setupAgentApi({
     applied = { steer: 0, throttle: 0, brake: 0 };
     controlMode = "human";
     setExternalSteer(null);
-    if (agentHoldsForward) { input.forward = false; agentHoldsForward = false; }
-    if (agentHoldsBack) { input.back = false; agentHoldsBack = false; }
+    releaseAgentPedals();
+    window.dispatchEvent(new CustomEvent("f1-human-takeover"));
   }
 
+  // Idempotent; after a takeover the human drives and nothing is touched.
   function release() {
+    if (controlMode === "human") return getState();
     generation++;
     neutral("released");
     return getState();
