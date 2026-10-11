@@ -1,6 +1,6 @@
 ---
 type: entity
-updated: 2026-10-04
+updated: 2026-10-11
 sources: []
 ---
 
@@ -81,3 +81,33 @@ The relay, the remote MCP server (`core/tools/agent-mcp-http.mjs`, `POST /mcp`,
 `F1_MCP_AUTH_TOKEN`) and the stdio fallback are described in
 [c4-mcp.md](../synthesis/c4-mcp.md) and [c4-agent-control.md](../synthesis/c4-agent-control.md). Bots
 are covered in [agent-bots.md](agent-bots.md).
+
+## Human takeover event (#393)
+
+When a human touches a real control while the agent holds a command (or
+its lease just ran out), `race-input.js` calls `onHumanInput` *before*
+applying the human's key or pedal; the agent API drops the agent's inputs
+and fires `f1-human-takeover` on `window`. `release()` is idempotent and
+only drops pedals the agent itself holds, so an external runtime releasing
+after a takeover never clears the human's pedal. External runtimes (Browser
+Copilot) bind to `_ENVIRONMENT_` with their own JSON config: the game ships
+no adapter code for them. `_ENVIRONMENT_` exists only after
+`f1-environment-ready`, once the race scene is built.
+
+## Driving aids for slow agents (#394)
+
+All through `getState()`/`act()`; signs documented at the top of
+`agent-api.js` (positive heading error/offset = steer right).
+- `nextCorner.direction` was inverted (a growing heading is a LEFT turn);
+  `distanceMeters` is now where the turn starts.
+- `trackAhead[]` (20 m steps to 200 m: `headingErrorRad`,
+  `centerOffsetMeters` in the car's frame), `halfWidthMeters`,
+  `edgeLeftMeters`/`edgeRightMeters`, `lapProgress` and
+  `distanceToLineMeters` from the start/finish line, `timing {timeScale, fps}`.
+- `act({timeScale})` 0..1, solo agent sessions only (error in multiplayer),
+  back to 1 on release or human input. `main.js` keeps a game clock
+  (`simNow()` = wall time minus frozen time) so lap times exclude a pause;
+  at scale 1 it equals `performance.now()`.
+- `act({pit: true})` calls the box (race only); `act({reverse: true})` lets
+  the brake reverse. Without it an agent's brake stops the car and never
+  reverses (`input.noReverse` in `player-physics.js`).

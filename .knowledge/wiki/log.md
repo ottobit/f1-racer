@@ -2198,3 +2198,17 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Finding: no host advantage in code (`isHost` only drives start and Rivincita); the real asymmetry was each player's F1 garage, read from their own browser (`vehicle.js` `playerParams`) and invisible to others: up to ~8% top speed between extreme setups (`88 × (1 + 0.006 × speed)`).
 - `race/main.js`: in multiplayer the player's car uses `stockParams` and `DEFAULT_SETUP` effects (runoff); solo races keep the garage. Wiki `entities/garage.md` updated.
 - Verified with `node --check` and `git diff --check` only. Badge 392.
+
+## [2026-10-11] cycle | Agent API: human takeover event, safe release (#393)
+
+- Scope set by the user: the game only exposes its Agent API to the decided contract; Browser Copilot adapts with its own JSON (a facade module was started and dropped).
+- `race-input.js`: keyboard, touch pedals and pad hand back to the human before applying the human's own input (the hand-back could clear the pedal just pressed).
+- `agent-api.js`: on takeover drops the agent's inputs then fires `f1-human-takeover`; `release()` is idempotent and only drops agent-held pedals. Wiki `entities/agent-api.md` updated.
+- Verified with `node --check` and `git diff --check` only. Badge 396.
+
+## [2026-10-11] cycle | Agent API: driving aids for slow agents (#394)
+
+- From a real 5-lap LLM race on Vallechiara via Browser Copilot (last, ~11 min first lap): the agent drove blind and had to stop to think.
+- `agent-api.js`: `nextCorner` direction fixed (was inverted) and its distance now marks the turn start; new `trackAhead`, track edges, `lapProgress`/`distanceToLineMeters`, `timing`; `act()` gains `timeScale` (solo only), `pit`, `reverse`.
+- `main.js`: game clock `simNow()` and per-frame `timeScale`; `player-physics.js`: `input.noReverse` stops an agent's brake from reversing. Wiki `entities/agent-api.md` updated.
+- Verified with `node --check`, `git diff --check` and a Node test of the signs on a synthetic left-hand loop. Not tested in a browser. Badge 397.

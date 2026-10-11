@@ -179,8 +179,10 @@ export function setupRaceInput({
     if (event.target.closest?.("select,input,textarea,button")) return;
     const action = KEY_MAP[event.code];
     if (action) {
-      input[action] = true;
+      // Hand back first (#393): the agent's inputs are dropped before the
+      // human's own key is applied, not after.
       onHumanInput();
+      input[action] = true;
     }
   });
   window.addEventListener("keyup", (event) => {
@@ -198,9 +200,9 @@ export function setupRaceInput({
       if (held !== undefined && el.hasPointerCapture(held)) return;
       pedalPointers.set(action, event.pointerId);
       el.setPointerCapture(event.pointerId);
+      onHumanInput();
       input[action] = true;
       el.classList.add("is-held");
-      onHumanInput();
     });
     const release = (event) => {
       if (pedalPointers.get(action) !== event.pointerId) return;
@@ -309,8 +311,8 @@ export function setupRaceInput({
   function setPadPedal(action, down) {
     if (down === padHeld[action]) return;
     padHeld[action] = down;
-    input[action] = down;
     if (down) onHumanInput();
+    input[action] = down;
   }
 
   // Pad buttons that map to existing keyboard actions are replayed as

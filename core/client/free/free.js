@@ -9,7 +9,7 @@ import { loadGarageSetup, playerLivery, setupEffects } from "../shared/garage-se
 import { createStudioEnvironment } from "../shared/car-model.js?v=38";
 import { applyCarToMesh } from "../race/race-car-view.js?v=39";
 import { headingOf, offsetEdge, sideNormal } from "../shared/track-geometry.js?v=39";
-import { setupRaceInput } from "../race/race-input.js?v=58";
+import { setupRaceInput } from "../race/race-input.js?v=59";
 import { setupRaceCamera } from "../race/race-camera.js?v=41";
 import { createAutopilotProvider } from "../race/driver-providers.js?v=6";
 import { setupRaceAudio } from "../race/race-audio.js?v=5";
@@ -17,7 +17,7 @@ import { surfaceTexture } from "../race/track-art.js?v=43";
 import { applyShadowCasters, loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=10";
 import { simplifyMaterials } from "../shared/lite-materials.js?v=1";
 import { FREE_OVAL } from "./oval.js?v=1";
-import { createFreeSim } from "./free-sim.js?v=4";
+import { createFreeSim } from "./free-sim.js?v=5";
 import { buildVehicleModel } from "../shared/vehicle-view.js?v=3";
 import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=4";
 

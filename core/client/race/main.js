@@ -12,11 +12,11 @@ import { VEHICLES } from "../shared/vehicle.js?v=1";
 import { buildVehicleModel } from "../shared/vehicle-view.js?v=3";
 import { SERIES, seriesById } from "../shared/series.js?v=3";
 import { applyCarToMesh } from "./race-car-view.js?v=39";
-import { setupRaceInput } from "./race-input.js?v=58";
+import { setupRaceInput } from "./race-input.js?v=59";
 import { escapeHtml, setupRaceHud } from "./race-hud.js?v=42";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=41";
-import { setupPlayerPhysics } from "./player-physics.js?v=9";
+import { setupPlayerPhysics } from "./player-physics.js?v=10";
 import { setupRaceAi } from "./race-ai.js?v=33";
 import { rivalAiFromCar } from "./rival-ai.js?v=1";
 import { setupRaceSystems } from "./race-systems.js?v=32";
@@ -24,7 +24,7 @@ import { setupRaceProgress } from "./race-progress.js?v=29";
 import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
-import { setupAgentApi } from "./agent-api.js?v=8";
+import { setupAgentApi } from "./agent-api.js?v=10";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=6";
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=17";
 
@@ -786,7 +786,7 @@ let incidentLog = []; // { time, carId }
 // and countdown/finished don't need caution handling either).
 function logIncident(carId) {
   if (raceState !== "racing") return;
-  const now = performance.now();
+  const now = simNow();
   incidentLog.push({ time: now, carId });
   incidentLog = incidentLog.filter((e) => now - e.time < INCIDENT_WINDOW_MS);
   const distinctCars = new Set(incidentLog.map((e) => e.carId));
@@ -945,6 +945,15 @@ const hud = setupRaceHud({
 // --- Main loop -------------------------------------------------------------
 
 const clock = new THREE.Clock();
+// Game clock (#394): wall time minus the time an agent froze or slowed the
+// world with act({timeScale}). Humans and multiplayer always run at 1, so
+// for them this is exactly performance.now().
+let frozenMs = 0;
+const simNow = () => performance.now() - frozenMs;
+let agentTimeScale = () => 1;
+let fps = null;
+let fpsFrames = 0;
+let fpsSince = performance.now();
 
 // Keeps a car (player or AI) on the track: grass beyond the asphalt bleeds
 // speed off faster (lost grip), and the wall beyond that stops it hard and
@@ -1311,7 +1320,7 @@ if (multiplayer) queueMicrotask(() => {
 });
 
 function updateQualifying(dt) {
-  const now = performance.now();
+  const now = simNow();
 
   if (qualiState === "countdown") {
     // Car sits frozen at the line until the lights go out, same as the
@@ -1385,7 +1394,7 @@ function update(dt) {
     return;
   }
 
-  const now = performance.now();
+  const now = simNow();
   if (raceState === "finished") driveFinishCoast(dt);
   else if (state.pitRequested) raceSystems.startPitStop();
 
@@ -1640,7 +1649,7 @@ function runPitExitLight(onGo) {
 
 function startQualifyingCountdown() {
   whenEngineReady(() => runPitExitLight(() => {
-    state.lapStartTime = performance.now();
+    state.lapStartTime = simNow();
     qualiState = "running";
   }));
 }
@@ -1658,7 +1667,7 @@ function startRaceCountdown(seed = null) {
     // state.lapStartTime is reset to the moment the lights go out, not
     // construction time, so the on-screen lap clock doesn't start ticking
     // during the start sequence itself.
-    state.lapStartTime = performance.now();
+    state.lapStartTime = simNow();
     raceState = "racing";
   }, anchorMs));
 }
@@ -1669,7 +1678,16 @@ const frameGate = createFrameLimiter(graphicsProfile.frameCapFps);
 function animate(now = performance.now()) {
   requestAnimationFrame(animate);
   if (!frameGate(now)) return;
-  const dt = Math.min(clock.getDelta(), 0.1);
+  fpsFrames++;
+  if (now - fpsSince >= 1000) {
+    fps = Math.round((fpsFrames * 1000) / (now - fpsSince));
+    fpsFrames = 0;
+    fpsSince = now;
+  }
+  const realDt = clock.getDelta();
+  const timeScale = agentTimeScale();
+  frozenMs += realDt * 1000 * (1 - timeScale);
+  const dt = Math.min(realDt, 0.1) * timeScale;
   if (botDriver) driveWithProvider(botDriver, dt);
   updateSteeringInput(dt);
   update(dt);
@@ -1781,8 +1799,14 @@ if (isBotSession) {
     registerRemoteBridge: multiplayer
       ? (execute, token) => multiplayer.registerAgentBridge(execute, token)
       : null,
+    trackWidth: TRACK_WIDTH,
+    finishProgress: START_FINISH_OFFSET / TRACK_LENGTH,
+    requestPit: () => { if (sessionPhase === "race" && raceState === "racing") state.pitRequested = true; },
+    getFps: () => fps,
+    allowTimeScale: !multiplayer,
   });
   humanInputListeners.push(agentApi.onHumanInput);
+  agentTimeScale = agentApi.timeScale;
   if (botDriver) {
     window._DRIVER_ = {
       mode: driverMode,
