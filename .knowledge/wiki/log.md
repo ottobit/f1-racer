@@ -2212,3 +2212,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - `agent-api.js`: `nextCorner` direction fixed (was inverted) and its distance now marks the turn start; new `trackAhead`, track edges, `lapProgress`/`distanceToLineMeters`, `timing`; `act()` gains `timeScale` (solo only), `pit`, `reverse`.
 - `main.js`: game clock `simNow()` and per-frame `timeScale`; `player-physics.js`: `input.noReverse` stops an agent's brake from reversing. Wiki `entities/agent-api.md` updated.
 - Verified with `node --check`, `git diff --check` and a Node test of the signs on a synthetic left-hand loop. Not tested in a browser. Badge 397.
+
+## [2026-10-11] cycle | Headless bot: standings and consistent positions (#387)
+
+- `core/tools/headless-room-bot.mjs`: `state.json` gains `standings` (whole field, humans included, shaped like the Agent API's), so the team principal sees the human's position.
+- A remote car's progress is carried forward at its speed by the age of its last `car_state` (max 0.5 s): two close cars no longer both rank themselves ahead.
+- #388 analysed in the same pass, no code: wear % is compound-independent by design (`TYRE_LIFE_LAPS = 3`), the compound only scales its cost.
+- Tools only, game untouched. Verified with `node --check` and `git diff --check`. Badge 395 skipped: the badge never goes down and is already 397.
