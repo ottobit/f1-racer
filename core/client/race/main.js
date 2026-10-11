@@ -12,7 +12,7 @@ import { VEHICLES } from "../shared/vehicle.js?v=1";
 import { buildVehicleModel } from "../shared/vehicle-view.js?v=3";
 import { SERIES, seriesById } from "../shared/series.js?v=3";
 import { applyCarToMesh } from "./race-car-view.js?v=39";
-import { setupRaceInput } from "./race-input.js?v=58";
+import { setupRaceInput } from "./race-input.js?v=59";
 import { escapeHtml, setupRaceHud } from "./race-hud.js?v=42";
 import { setupBrakeMap } from "./race-brake-map.js?v=3";
 import { setupRaceCamera } from "./race-camera.js?v=41";
@@ -24,7 +24,7 @@ import { setupRaceProgress } from "./race-progress.js?v=29";
 import { setupRaceCommands } from "./race-commands.js?v=2";
 import { setupCarCollisions } from "./race-collisions.js?v=1";
 import { setupRaceNameplates } from "./race-nameplates.js?v=1";
-import { setupAgentApi } from "./agent-api.js?v=8";
+import { setupAgentApi } from "./agent-api.js?v=9";
 import { createAutopilotProvider, createLayeredProvider } from "./driver-providers.js?v=6";
 import { setupMultiplayer } from "../multiplayer/race-multiplayer.js?v=17";
 
