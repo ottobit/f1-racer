@@ -649,11 +649,18 @@ function snapshot(now) {
   const people = new Map((room?.participants || []).map((entry) => [entry.participantId, entry]));
   const grid = room?.grid || [];
   const me = participant();
+  // A remote car's progress is as old as its last car_state (80 ms apart,
+  // plus the trip): carried forward at its speed, so two close cars no
+  // longer both see themselves ahead (#387).
+  const ageS = (car) => Math.min(Math.max((Date.now() - car.seenAt) / 1000, 0), 0.5);
   const order = [
-    { id: driverId, self: true, totalProgress: state.totalProgress, speed: state.speed,
+    { id: driverId, name: "TU", self: true, totalProgress: state.totalProgress, speed: state.speed,
       finishedAt: me?.finishedAt ?? (finishedReported ? Infinity : null) },
     ...[...remoteCars.values()].filter((car) => people.get(car.participantId)?.driverId).map((car) => ({
-      id: car.driverId, totalProgress: car.totalProgress, speed: car.speed,
+      id: car.driverId,
+      name: people.get(car.participantId).nickname || car.driverId,
+      totalProgress: car.totalProgress + (car.speed * ageS(car)) / trackLength,
+      speed: car.speed,
       finishedAt: people.get(car.participantId).finishedAt ?? null,
     })),
   ].sort((a, b) => {
@@ -695,6 +702,14 @@ function snapshot(now) {
     gapAheadS: index > 0 ? gapSeconds(order[index - 1], order[index]) : null,
     gapBehindS: index < order.length - 1 ? gapSeconds(order[index], order[index + 1]) : null,
     targets: sim.driver.getTargets(),
+    // Whole field, humans included (#387), shaped like agent-api.js.
+    standings: order.map((entry, i) => ({
+      position: i + 1,
+      id: entry.id,
+      name: entry.name,
+      lap: Math.floor(entry.totalProgress) + 1,
+      gapToLeaderMeters: round1((order[0].totalProgress - entry.totalProgress) * trackLength),
+    })),
   };
 }
 
