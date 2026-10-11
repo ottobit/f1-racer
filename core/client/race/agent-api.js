@@ -55,6 +55,24 @@
 //                        legitimately goes from negative to positive.
 //   returnHeadingErrorRad same sign, relative to the way back to the track.
 // Positive error on either axis is corrected by a positive (right) steer.
+//   nextCorner.direction "left"/"right" as seen from the driver (#394: it was
+//                        inverted); distanceMeters = where the turn starts.
+//   trackAhead[]         every 20 m for 200 m: headingErrorRad (car heading
+//                        minus the track direction there, > 0 = the track
+//                        bends right of the nose) and centerOffsetMeters
+//                        (centerline point in the car's frame, > 0 = right of
+//                        the nose line). Positive on both = steer right.
+//   edgeLeftMeters/edgeRightMeters  distance to each track edge (< 0 = past
+//                        it); halfWidthMeters is half the track width.
+//   lapProgress          0..1 from the start/finish line; distanceToLineMeters.
+//
+// Driving aids for slow agents (#394), only through act():
+//   timeScale 0..1       game time speed until changed, release() or a human
+//                        input (back to 1). 0 pauses. Solo agent sessions only.
+//   pit: true            one-shot box call this lap (race only).
+//   reverse: true        brake may engage reverse at a standstill. Without it
+//                        an agent's brake never reverses (a human's does).
+// timing.timeScale/fps in getState() say how fast the world runs.
 export function setupAgentApi({
   state,
   aiCars,
@@ -78,6 +96,11 @@ export function setupAgentApi({
   nameOf = (id) => id,
   registerRemoteBridge = null,
   sendRadio = () => {},
+  trackWidth = 0,
+  finishProgress = 0,
+  requestPit = () => {},
+  getFps = () => null,
+  allowTimeScale = false,
 }) {
   const KMH_PER_UNIT = 3.6; // matches race-hud.js's own speed readout
   const DEFAULT_STEP_MS = 500;
@@ -89,6 +112,9 @@ export function setupAgentApi({
   const MAX_QUEUE_MS = 5000;
   const CORNER_LOOKAHEAD_SAMPLES = 40;
   const NEARBY_CARS_LIMIT = 5;
+  const CORNER_START_RAD = 0.05;
+  const TRACK_AHEAD_STEP_M = 20;
+  const TRACK_AHEAD_M = 200;
 
   const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
   const clampRange = (v, min, max) => Math.min(Math.max(v, min), max);
@@ -109,26 +135,41 @@ export function setupAgentApi({
   }
 
   // Heuristic, not a geometric radius: the largest heading change found
-  // within a fixed lookahead window, and how far ahead it peaks. Cheap,
-  // and enough for an agent to know "ease off, a corner is coming" without
-  // shipping the whole spline.
+  // within a fixed lookahead window, and where the turn starts (the first
+  // sample past CORNER_START_RAD). Heading grows through a left turn (steer
+  // +1 = right lowers it), so a positive change is a LEFT corner (#394).
   function nextCornerInfo(idx) {
     const base = headingOf(centerline[idx]);
     let maxTurn = 0;
-    let maxAt = 1;
+    let startAt = 0;
     for (let i = 1; i <= CORNER_LOOKAHEAD_SAMPLES; i++) {
       const p = centerline[(idx + i) % centerline.length];
       const dh = wrapAngle(headingOf(p) - base);
-      if (Math.abs(dh) > Math.abs(maxTurn)) {
-        maxTurn = dh;
-        maxAt = i;
-      }
+      if (!startAt && Math.abs(dh) > CORNER_START_RAD) startAt = i;
+      if (Math.abs(dh) > Math.abs(maxTurn)) maxTurn = dh;
     }
     return {
-      direction: maxTurn > 0.05 ? "right" : maxTurn < -0.05 ? "left" : "straight",
-      distanceMeters: round1((maxAt / centerline.length) * trackLength),
+      direction: maxTurn > CORNER_START_RAD ? "left" : maxTurn < -CORNER_START_RAD ? "right" : "straight",
+      distanceMeters: startAt ? round1((startAt / centerline.length) * trackLength) : null,
       curvature: round3(Math.abs(maxTurn)),
     };
+  }
+
+  // The track ahead in the car's own frame (#394). The car's right is
+  // (-cos h, sin h): forward is (sin h, cos h) and steering right lowers h.
+  function trackAhead(idx) {
+    const rightX = -Math.cos(state.heading);
+    const rightZ = Math.sin(state.heading);
+    const points = [];
+    for (let meters = TRACK_AHEAD_STEP_M; meters <= TRACK_AHEAD_M; meters += TRACK_AHEAD_STEP_M) {
+      const p = centerline[(idx + Math.round((meters / trackLength) * centerline.length)) % centerline.length];
+      points.push({
+        distanceMeters: meters,
+        headingErrorRad: round3(wrapAngle(state.heading - headingOf(p))),
+        centerOffsetMeters: round1((p.x - state.x) * rightX + (p.z - state.z) * rightZ),
+      });
+    }
+    return points;
   }
 
   function nearbyCars() {
@@ -167,6 +208,9 @@ export function setupAgentApi({
     const sessionPhase = getSessionPhase();
     const raceState = getRaceState();
     const finished = raceState === "finished";
+    const lateral = lateralOffset(state.x, state.z, info);
+    const halfWidth = trackWidth / 2;
+    const lapProgress = (((state.prevRawProgress ?? 0) - finishProgress) % 1 + 1) % 1;
     return {
       timestamp: Date.now(),
       session: {
@@ -178,7 +222,12 @@ export function setupAgentApi({
       lapsTotal: lapsPerRace,
       position: position || null,
       totalProgress: round3(state.totalProgress),
-      lateralOffsetMeters: round1(lateralOffset(state.x, state.z, info)),
+      lateralOffsetMeters: round1(lateral),
+      halfWidthMeters: round1(halfWidth),
+      edgeLeftMeters: round1(halfWidth - lateral),
+      edgeRightMeters: round1(halfWidth + lateral),
+      lapProgress: round3(lapProgress),
+      distanceToLineMeters: round1((1 - lapProgress) * trackLength),
       headingErrorRad: round3(wrapAngle(state.heading - idealHeading)),
       onTrack,
       // Off track only: heading minus the bearing to the nearest centerline
@@ -190,6 +239,8 @@ export function setupAgentApi({
       tyreWearPct: Math.round(clamp01((state.tyreProgress || 0) / tyreLifeLaps) * 100),
       drsActive: !!state.drsActive,
       nextCorner: nextCornerInfo(info.idx),
+      trackAhead: trackAhead(info.idx),
+      timing: { timeScale, fps: getFps() },
       nearbyCars: nearbyCars(),
       // Richer race picture for strategy agents (#186).
       circuit: circuitName,
@@ -233,12 +284,25 @@ export function setupAgentApi({
     if (agentHoldsBack) input.back = false;
     agentHoldsForward = false;
     agentHoldsBack = false;
+    input.noReverse = false;
   }
-  function setThrottleBrake(throttle, brake) {
+  // An agent's brake never turns into reverse unless the command says so
+  // (#394): one "hold the brake while thinking" drove a car 118 m back.
+  function setThrottleBrake(throttle, brake, reverse = false) {
     agentHoldsForward = throttle > 0;
     agentHoldsBack = !agentHoldsForward && brake > 0;
     input.forward = agentHoldsForward;
     input.back = agentHoldsBack;
+    input.noReverse = agentHoldsBack && !reverse;
+  }
+
+  // Game time speed (#394): only in a solo agent session.
+  let timeScale = 1;
+  function setTimeScale(value) {
+    if (!allowTimeScale) throw new Error("f1-agent-api: timeScale is not available in multiplayer");
+    const next = Number(value);
+    if (!Number.isFinite(next) || next < 0 || next > 1) throw new Error("f1-agent-api: timeScale must be 0..1");
+    timeScale = next;
   }
 
   // One controller for step(), act() and enqueue() (#201). Each command
@@ -265,7 +329,7 @@ export function setupAgentApi({
       brake: clamp01(Number(command.brake) || 0),
     };
     setExternalSteer(applied.steer);
-    setThrottleBrake(applied.throttle, applied.brake);
+    setThrottleBrake(applied.throttle, applied.brake, command.reverse === true);
     controlMode = "agent";
   }
 
@@ -299,6 +363,8 @@ export function setupAgentApi({
   }
 
   async function act(command = {}) {
+    if (Object.hasOwn(command, "timeScale")) setTimeScale(command.timeScale);
+    if (command.pit === true) requestPit();
     generation++;
     clearTimers();
     const leaseMs = clampRange(Number(command.leaseMs) || DEFAULT_LEASE_MS, 50, MAX_LEASE_MS);
@@ -361,6 +427,7 @@ export function setupAgentApi({
     controlMode = "human";
     setExternalSteer(null);
     releaseAgentPedals();
+    timeScale = 1;
     window.dispatchEvent(new CustomEvent("f1-human-takeover"));
   }
 
@@ -368,6 +435,7 @@ export function setupAgentApi({
   function release() {
     if (controlMode === "human") return getState();
     generation++;
+    timeScale = 1;
     neutral("released");
     return getState();
   }
@@ -420,7 +488,7 @@ export function setupAgentApi({
 
   window.dispatchEvent(new CustomEvent("f1-environment-ready"));
 
-  return { onHumanInput: handBackToHuman };
+  return { onHumanInput: handBackToHuman, timeScale: () => timeScale };
 }
 
 // WebMCP adapter (#201): native support is optional. Prefer the current
@@ -446,7 +514,16 @@ function registerWebMcpTools({ invokeAgentTool }) {
     {
       name: "f1_act",
       description: "Hold steer/throttle/brake until the next f1_act, the lease running out (ms, max 5000), f1_release or a human input.",
-      inputSchema: { type: "object", properties: { ...command, leaseMs: { type: "number", minimum: 50, maximum: 5000 } } },
+      inputSchema: {
+        type: "object",
+        properties: {
+          ...command,
+          leaseMs: { type: "number", minimum: 50, maximum: 5000 },
+          reverse: { type: "boolean", description: "brake may reverse at a standstill" },
+          pit: { type: "boolean", description: "box this lap" },
+          timeScale: { type: "number", minimum: 0, maximum: 1, description: "game speed, 0 pauses (solo only)" },
+        },
+      },
       execute: async (args) => reply(await invokeAgentTool("f1_act", args || {})),
     },
     {

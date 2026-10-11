@@ -89,6 +89,10 @@ export function setupPlayerPhysics({
         const brakeAuthority = longitudinalGripBudget * (1 + brakingLoadTransfer * 0.25) * aeroBrake;
         state.speed = Math.max(0, state.speed - car.brakeDecel * brakeAuthority * dt);
         stoppedBrakeTime = 0;
+      } else if (input.noReverse) {
+        // An agent braking without `reverse` (#394): stop, never back up.
+        stoppedBrakeTime = 0;
+        state.speed = Math.min(0, state.speed + car.brakeDecel * dt);
       } else {
         stoppedBrakeTime += dt;
         if (state.speed < 0 || stoppedBrakeTime >= REVERSE_DELAY_S) state.speed -= REVERSE_ACCEL * dt;

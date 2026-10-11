@@ -17,7 +17,7 @@ import { surfaceTexture } from "../race/track-art.js?v=43";
 import { applyShadowCasters, loadGraphicsProfile, createFrameLimiter } from "../shared/graphics-profiles.js?v=10";
 import { simplifyMaterials } from "../shared/lite-materials.js?v=1";
 import { FREE_OVAL } from "./oval.js?v=1";
-import { createFreeSim } from "./free-sim.js?v=4";
+import { createFreeSim } from "./free-sim.js?v=5";
 import { buildVehicleModel } from "../shared/vehicle-view.js?v=3";
 import { RIVAL_SLOTS, VEHICLES, VEHICLE_IDS, loadVehicleId, saveVehicleId } from "./vehicles.js?v=4";
 
