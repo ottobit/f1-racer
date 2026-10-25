@@ -2219,3 +2219,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - A remote car's progress is carried forward at its speed by the age of its last `car_state` (max 0.5 s): two close cars no longer both rank themselves ahead.
 - #388 analysed in the same pass, no code: wear % is compound-independent by design (`TYRE_LIFE_LAPS = 3`), the compound only scales its cost.
 - Tools only, game untouched. Verified with `node --check` and `git diff --check`. Badge 395 skipped: the badge never goes down and is already 397.
+
+## [2026-10-25] cycle | Room server: no crash when an agent bridge closes without a controller (#398)
+
+- `core/server/room-server.mjs`: `detachAgentBridge` read `.OPEN` off a null `controllerSocket`; a `race.html?agent=1` page closing with no controller threw inside `ws.on("close")` and killed the server, and re-registering a bridge answered `internal_error`.
+- Fix: check the controller socket exists before reading its state.
+- New `core/tests/agent-bridge-close.test.mjs` (`npm --prefix core test`, node:test): register twice, close the page socket, server alive and `/health` 200. Fails before the fix, passes after.
+- Server only, client untouched; the room server redeploys on merge (`deploy-room-server.yml`). Badge 399.
