@@ -73,8 +73,11 @@ function agentParticipantKey(roomCode, participantId) {
 function detachAgentBridge(token, reason = "bridge_closed") {
   const bridge = agentBridges.get(token);
   if (!bridge) return;
-  if (bridge.controllerSocket?.readyState === bridge.controllerSocket.OPEN) {
-    send(bridge.controllerSocket, { type: "agent_detached", reason });
+  // A bridge may have no controller (never attached, or it already left):
+  // reading .OPEN off null threw inside ws "close" and killed the server (#398).
+  const controller = bridge.controllerSocket;
+  if (controller && controller.readyState === controller.OPEN) {
+    send(controller, { type: "agent_detached", reason });
   }
   agentBridges.delete(token);
   agentTokenByParticipant.delete(agentParticipantKey(bridge.roomCode, bridge.participantId));
