@@ -2226,3 +2226,10 @@ no GitHub credentials. Integrated branch: cycle/228-231-integration.
 - Fix: check the controller socket exists before reading its state.
 - New `core/tests/agent-bridge-close.test.mjs` (`npm --prefix core test`, node:test): register twice, close the page socket, server alive and `/health` 200. Fails before the fix, passes after.
 - Server only, client untouched; the room server redeploys on merge (`deploy-room-server.yml`). Badge 399.
+
+## [2026-10-26] cycle | Room server on Node 24 after the October 2026 Node.js security release (#400)
+
+- The live Render service `f1-racer-rooms` ran Node 20.20.2: end of life, no fix for the 2026-10-21 release (CVE-2026-111497 Brotli RCE and others).
+- `NODE_VERSION=24` set on the live service; the redeploy built with Node 24.22.1 and `/health` answered 200.
+- `service/render/render.yaml` and `service/README.md` mirror it; major only, so each build picks the latest patched 24.x.
+- Badge 401.
