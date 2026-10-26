@@ -15,8 +15,10 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
+      # Major only: every build picks the latest patched 24.x. Node 20 is
+      # end of life and missed the October 2026 security release (#400).
       - key: NODE_VERSION
-        value: "20"
+        value: "24"
       # The free plan sleeps after 15 idle minutes: the server's own cron
       # pings /health every 10 minutes, all day (~744 of the 750 free hours
       # a month: no room for a second free service on this account).

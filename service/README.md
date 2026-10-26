@@ -10,7 +10,7 @@ contratto va bene. Ogni provider ha la sua sottocartella con i file specifici
 | Cosa | Valore |
 |---|---|
 | Cartella del progetto | `core/` (il server importa anche `core/client/shared/`) |
-| Runtime | Node 20 o successivo |
+| Runtime | Node 24 LTS (≥ 24.22.1, security release di ottobre 2026); la 20 è a fine vita |
 | Installazione | `npm ci --omit=dev` (installa `ws` e `node-cron`) |
 | Avvio | `node server/room-server.mjs` |
 | Porta | variabile d'ambiente `PORT` (predefinita 8787) |
